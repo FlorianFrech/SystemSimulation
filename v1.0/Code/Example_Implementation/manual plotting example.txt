@@ -1,0 +1,51 @@
+from simulation import Simulation
+from module import Module
+import matplotlib.pyplot as plt
+import time
+
+
+# Create modules
+src = Module("SRC", "signal_source.py")
+lpf1 = Module("LPF1", "lowpass_filter.py", parameters={"R": (1000, "ohm"), "C": (0.001, "F")})
+lpf2 = Module("LPF2", "lowpass_filter.py", parameters={"R": (10, "ohm"), "C": (0.001, "F")})
+bpf = Module("BPF", "bandpass_filter.py", parameters={"R": (1.26, "ohm"), "L": (1, "H"), "C": (0.0253, "F")})
+#bpf = Module("BPF", "bandpass_filter.py", parameters={"R": (0.25, "ohm"), "L": (1, "H"), "C": (0.1013, "F")})
+
+# Create simulation
+sim = Simulation(modules=[bpf, src, lpf2, lpf1], dt=0.01, t_end=10) # Module order will be determined automatically
+
+# Define connections
+sim.connect("SRC", "Uin", "LPF1", "Uin")
+sim.connect("LPF1", "Uc", "LPF2", "Uin")
+sim.connect("LPF2", "Uc", "BPF", "U")
+
+# Run simulation
+t0 = time.time()
+sim.run()
+sim.visualise("electrical_circuit", show_edge_labels=True)
+t1 = time.time()
+print(f"Execution took {t1 - t0:.4f} seconds")
+
+# Extract results
+t_vals, uin_vals = zip(*sim.get_output_timeseries("SRC", "Uin")) # zip(*[(t0, v0), (t1, v1), (t2, v2)]) = (t0, t1, t2), (v0, v1, v2)
+_, uc1_vals = zip(*sim.get_output_timeseries("LPF1", "Uc"))
+_, uc2_vals = zip(*sim.get_output_timeseries("LPF2", "Uc"))
+_, i_vals = zip(*sim.get_output_timeseries("BPF", "I"))
+
+unit_U = sim.get_output_unit("LPF1", "Uc")
+unit_A = sim.get_output_unit("BPF", "I")
+
+
+# Plot with high quality
+plt.figure(figsize=(12, 6), dpi=300)
+plt.plot(t_vals, uin_vals, label="Input signal (Uin)", linewidth=1.2)
+plt.plot(t_vals, uc1_vals, label="LPF1 output (Uc1)", linewidth=1.2)
+plt.plot(t_vals, uc2_vals, label="LPF2 output (Uc2)", linewidth=1.2)
+plt.plot(t_vals, i_vals, label="BPF inductor current (I)", linewidth=1.2)
+plt.xlabel("Time [s]")
+plt.ylabel(f"Signal [{unit_U} / {unit_A}]")
+plt.title("Signal → LPF → BPF Simulation")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
