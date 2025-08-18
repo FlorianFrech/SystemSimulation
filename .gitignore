@@ -10,3 +10,6 @@ VenvSysSimX/
 
 # Visual Studio Code
 .vscode/
+
+# Pytest Cache
+.pytest_cache/
