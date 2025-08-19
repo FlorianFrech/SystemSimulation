@@ -1,11 +1,16 @@
 import pytest
-
 import numpy as np
-from typing import Union, Iterable
 
-from SysSimX.core.units import Q, qty, parse_unit, have_same_dimensions, assert_compatible
+from SysSimX.core.units import _ureg, Q
+from SysSimX.core.units import qty, parse_unit
+from SysSimX.core.units import have_same_dimensions, assert_compatible
+
+#-----------------------------------------------------------------------------
+# Test Unit Registry and Quantity
 
 
+#-----------------------------------------------------------------------------
+# Test qty function
 class TestQtyFunction:
     """Test suite for the qty function."""
     
