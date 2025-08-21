@@ -1,0 +1,10 @@
+# Derived System Requirements: Simulation
+
+|U-ID   | SR-ID    | System Requirement | Rationale | Priority |
+|-------|----------|--------------------|-----------|----------|
+| UR_11 | SR_11_01 | The system shall support a simulation loop capable of handling continuous integration and discrete-time updates within a unified time axis. | This allows for flexible simulation scenarios that can accommodate both continuous and discrete dynamics. | Shall |
+| UR_11 | SR_11_02 | The system shall allow users to define the sample times for discrete-time components independently from the integration step size. | Hybrid systems require different time scales—controllers might run at fixed intervals (e.g., 1 ms), while continuous dynamics need finer adaptive steps. Decoupling both improves flexibility and correctness. | Shall |
+| UR_11 | SR_11_03 | The system shall maintain event handling mechanisms for discrete transitions such as switches, zero-crossings, or state changes. | Event handling enables the simulation to react precisely to logical or physical thresholds (e.g., hitting a stop, toggling control logic), which is critical in hybrid simulation. | Shall |
+| UR_12 | SR_12_01 | The system shall provide an interface for selecting from multiple solver types (e.g., fixed-step, variable-step, stiff solvers). | This flexibility allows users to choose the most appropriate numerical methods for their specific simulation scenarios, improving accuracy and performance. | Shall |
+| UR_12 | SR_12_02 | The system shall allow user-defined step sizes for fixed-step solvers and tolerance settings for variable-step solvers. | Tuning these parameters directly affects the numerical accuracy and simulation speed, which is often necessary for control applications or real-time testing. | Shall |
+| UR_12 | SR_12_03 | The system shall validate solver compatibility with the modeled system (e.g., reject explicit solvers for stiff systems with algebraic loops). | Ensuring that the selected solver is appropriate for the system dynamics prevents numerical instability and incorrect results. | Shall |

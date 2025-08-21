@@ -1,0 +1,13 @@
+# Derived System Requirements: Interaction
+
+|U-ID   | SR-ID    | System Requirement | Rationale | Priority |
+|-------|----------|--------------------|-----------|----------|
+| UR_13 | SR_13_01 | The system should generate directed graphs representing components and their interconnections. | Graph-based representations allow intuitive inspection of signal flow, component dependencies, and feedback loops. | Should |
+| UR_13 | SR_13_02 | The system should visualize the hierarchical composition of subsystems through expandable/collapsible views. | Large systems benefit from abstraction layers. Allowing users to focus on relevant subsystems improves navigation and debugging. | Should |
+| UR_13 | SR_13_03 | The system should allow exporting the visual representation to a file (e.g., PNG, SVG, PDF). | External formats support documentation, presentations, and versioning of system architecture snapshots. | Should |
+| UR_14 | SR_14_01 | The system should provide real-time plotting of selected output variables during simulation. | Live graphs help users visually track system behavior over time and react quickly to unexpected dynamics. | Should |
+| UR_14 | SR_14_02 | The system should log simulation progress with time-stamped messages including solver status, time step, and convergence information. | Detailed logs facilitate debugging and performance analysis by providing insights into the simulation's execution. | Should |
+| UR_14 | SR_14_03 | The system should allow users to configure which signals or outputs are monitored during simulation. | Selective monitoring reduces performance overhead and avoids clutter, focusing the user’s attention on relevant signals. | Should |
+| UR_15 | SR_15_01 | The system should allow users to define and execute multiple simulation configurations. | This enables consistent experimentation by systematically varying model parameters, solvers, or subsystem definitions. | Should |
+| UR_15 | SR_15_02 | The system should support time series filtering, resampling, and statistical post-processing of simulation outputs. | These features enhance the analysis of simulation results, allowing users to derive meaningful insights and improve model accuracy. | Should |
+| UR_15 | SR_15_03 | The system should associate exported results with metadata such as model configuration, simulation settings, and timestamps. | Metadata provides context for results, enabling reproducibility and easier comparison across different simulation runs. | Should |
