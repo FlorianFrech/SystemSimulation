@@ -23,7 +23,7 @@ import numpy as np
 
 # Module parameters
 PARAMETERS = [
-    PhysicalValue("length", 1.0, "m"),          # pendulum length
+    PhysicalValue("lnegth", 1.0, "m"),          # pendulum length
     PhysicalValue("mass", 1.0, "kg"),           # point mass
     PhysicalValue("gravity", 9.81, "m/s^2"),    # gravitational acceleration
     PhysicalValue("damping", 0.1, "N*m*s/rad")  # damping coefficient

@@ -20,7 +20,7 @@ class BaseType(str, Enum):
 #--------------------------------------------------------
 # Utilities
 
-def _build_attr_string(name: str, value) -> str:
+def _fmt_attr(name: str, value) -> str:
     """Render a single Modelica attribute as name=value with correct syntax."""
     if value is None:
         return ""
@@ -30,31 +30,15 @@ def _build_attr_string(name: str, value) -> str:
         return f"{name}={value}"
     return f'{name}={value}' if str(value).startswith("StateSelect.") else f'{name}="{value}"'
 
-def _format_attributes_with_comma(attributes: Iterable[str]) -> str:
-    attributes = [i for i in attributes if i]  # drop empties
-    return ", ".join(attributes)
+def _comma_join(items: Iterable[str]) -> str:
+    items = [i for i in items if i]  # drop empties
+    return ", ".join(items)
 
 #--------------------------------------------------------
 # Variable Class
 
 @dataclass
 class Variable:
-    """Represents a Modelica variable with attributes and methods to generate its declaration.
-    Attributes:
-        name: Name of the variable.
-        vtype: BaseType of the variable (e.g., Real, Integer).
-        variability: Variability of the variable (e.g., Continuous, Parameter).
-        quantity: Optional physical quantity associated with the variable.
-        start: Optional initial value for the variable.
-        fixed: Optional flag indicating if the variable is fixed.
-        unit: Optional unit of the variable.
-        display_unit: Optional display unit for the variable.
-        nominal: Optional nominal value for the variable.
-        min: Optional minimum value for the variable.
-        max: Optional maximum value for the variable.
-        value: Optional value for parameters, constants, or discrete variables.
-        comment: Optional documentation comment for the variable.
-    """
     name: str
     vtype: BaseType.REAL
     variability: Variability = Variability.CONTINUOUS
@@ -100,35 +84,35 @@ class Variable:
         # Map Python field names to Modelica attribute identifiers
         if self.vtype == BaseType.REAL:
             attrs += [
-                _build_attr_string("quantity", self.quantity),
-                _build_attr_string("start", self.start),
-                _build_attr_string("fixed", self.fixed) if self.fixed is not None else "",
-                _build_attr_string("min", self.min),
-                _build_attr_string("max", self.max),
-                _build_attr_string("unit", self.unit) if self.unit not in (None, "") else "",
-                _build_attr_string("displayUnit", self.display_unit),
-                _build_attr_string("nominal", self.nominal),
+                _fmt_attr("quantity", self.quantity),
+                _fmt_attr("start", self.start),
+                _fmt_attr("fixed", self.fixed) if self.fixed is not None else "",
+                _fmt_attr("min", self.min),
+                _fmt_attr("max", self.max),
+                _fmt_attr("unit", self.unit) if self.unit not in (None, "") else "",
+                _fmt_attr("displayUnit", self.display_unit),
+                _fmt_attr("nominal", self.nominal),
             ]
         elif self.vtype == BaseType.INTEGER:
             attrs += [
-                _build_attr_string("quantity", self.quantity),
-                _build_attr_string("start", self.start),
-                _build_attr_string("fixed", self.fixed),
-                _build_attr_string("min", self.min),
-                _build_attr_string("max", self.max),
+                _fmt_attr("quantity", self.quantity),
+                _fmt_attr("start", self.start),
+                _fmt_attr("fixed", self.fixed),
+                _fmt_attr("min", self.min),
+                _fmt_attr("max", self.max),
             ]
         elif self.vtype == BaseType.BOOLEAN:
             attrs += [
-                _build_attr_string("quantity", self.quantity),
-                _build_attr_string("start", self.start),
-                _build_attr_string("fixed", self.fixed),
+                _fmt_attr("quantity", self.quantity),
+                _fmt_attr("start", self.start),
+                _fmt_attr("fixed", self.fixed),
             ]
         elif self.vtype == BaseType.STRING:
             attrs += [
-                _build_attr_string("quantity", self.quantity),
-                _build_attr_string("start", self.start),
+                _fmt_attr("quantity", self.quantity),
+                _fmt_attr("start", self.start),
             ]
-        s = _format_attributes_with_comma(attrs)
+        s = _comma_join(attrs)
         return f"({s})" if s else ""
 
     def _lhs_prefix(self) -> str:

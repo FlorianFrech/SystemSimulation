@@ -7,13 +7,12 @@ model SignalSource
   
   // Output connector
   Modelica.Blocks.Interfaces.RealOutput U_in(unit="V") "Output voltage signal";
-  //output Real U_in(unit="V");
   
   // Parameters (matching Python MODULE PARAMETERS)
-  Real A1(unit="V") = 60 "Amplitude of first sine wave";
-  Real A2(unit="V") = 5 "Amplitude of second sine wave";
-  Real f1(unit="Hz") = 0.159 "Frequency of the first sine wave";
-  Real f2(unit="Hz") = 7.96 "Frequency of the second sine wave";
+  parameter Real A1(unit="V") = 60 "Amplitude of first sine wave";
+  parameter Real A2(unit="V") = 5 "Amplitude of second sine wave";
+  parameter Real f1(unit="Hz") = 0.159 "Frequency of the first sine wave";
+  parameter Real f2(unit="Hz") = 7.96 "Frequency of the second sine wave";
   
   // Internal variables
   Real s1(unit="V") "First sine wave component";
