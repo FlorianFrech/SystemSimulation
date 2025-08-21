@@ -1,0 +1,15 @@
+SysSimX.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environment
+VenvSysSimX/
+
+# Visual Studio Code
+.vscode/
+
+# Pytest Cache
+.pytest_cache/
