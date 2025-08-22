@@ -1,4 +1,5 @@
 from .expressions import Symbol
+import numpy as np
 
 class RealInput(Symbol):
     def __init__(self, name: str, unit: str):
