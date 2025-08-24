@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from .expressions import Expression
 
-# Equantion wrapper
+# Equation wrapper
 class Equation:
     """A class to represent an equation in the model.
     It contains a left-hand side (lhs) and a right-hand side (rhs) expression.
@@ -25,3 +26,14 @@ class Equation:
             raise AttributeError("Both lhs and rhs must have a to_mo() method.")
         # Return the formatted equation string
         return f"{self.lhs.to_mo()} = {self.rhs.to_mo()};"
+    
+
+class Connect:
+    a: Expression
+    b: Expression
+
+    def __init__(self, a: Expression, b: Expression):
+        self.a, self.b = a, b
+
+    def to_mo(self):
+        return f"connect({self.a.to_mo()}, {self.b.to_mo()});"

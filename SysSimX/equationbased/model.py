@@ -1,7 +1,8 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
+from dataclasses import dataclass, field
 from .interfaces import RealInput, RealOutput
 from .expressions import Expression, Literal, Symbol, BinaryOperator, FunctionCall, as_expr
-
+from .equation import Connect
 
 class Model:
     """A class to represent a Modelica model.
@@ -30,6 +31,7 @@ class Model:
         add_equation(equation: Any): Adds an equation to the model.
         to_mo(): Converts the model to Modelica code format.
     """
+    # Attributes
     name = None
     within: Any
     extends: Any
@@ -41,11 +43,14 @@ class Model:
     parameters: Any
     variables: Any
 
+    instances: List[object] = []
+
     initial_equations: Any
     equations: Any
 
     modelica_code: Optional[str] = None
 
+    # Constructor
     def __init__(self, name: str = None, within: Any = None, extends: Any = None):
         """Initialize the model with optional name, within, and extends."""
         self.name = name
@@ -58,12 +63,11 @@ class Model:
         self.constants = None
         self.parameters = None
         self.variables = None
-
-        self.components = None
         
         self.initial_equations = None
         self.equations = None
 
+    # Add Data
     def add_input(self, input: Any) -> None:
         """Add an input to the model."""
         if self.inputs is None:
@@ -94,12 +98,11 @@ class Model:
             self.variables = {}
         self.variables[variable.name] = variable
 
-    def add_component(self, component: Any) -> None:
-        """Add a component (sub-model) to the model."""
-        if self.components is None:
-            self.components = []
-        self.components.append(component)
+    def add_instance(self, instance: Any) -> None:
+        """Add a component instance to the model."""
+        self.instances.append(instance)
 
+    # Add Equations
     def add_initial_equation(self, equation: Any) -> None:
         """Add an initial equation to the model."""
         if self.initial_equations is None:
@@ -111,7 +114,14 @@ class Model:
         if self.equations is None:
             self.equations = []
         self.equations.append(equation)
+    
+    def connect(self, a: Any, b: Any) -> None:
+        """Add a connect equation to the model."""
+        if self.equations is None:
+            self.equations = []
+        self.equations.append(Connect(a, b))
 
+    # Convert to Modelica
     def to_mo(self) -> str:
         """Convert the model to Modelica code."""
         mo_code = []
@@ -139,22 +149,22 @@ class Model:
         if self.constants:
             for constant in self.constants.values():
                 mo_code.append(indentation + constant.decl())
-        
-        # Components
-        if self.components:
-            for component in self.components:
-                mo_code.append(indentation + component.decl())
 
         # Parameters
         if self.parameters:
             for parameter in self.parameters.values():
-                mo_code.append(indentation + parameter.decl())
+                mo_code.append(indentation + "parameter " + parameter.decl())
         
         # Variables
         if self.variables:
             for variable in self.variables.values():
                 mo_code.append(indentation + variable.decl())
-        
+
+        # Instances
+        if self.instances:
+            for instance in self.instances:
+                mo_code.append(indentation + instance.decl())
+
         # Initial equations
         if self.initial_equations:
             mo_code.append("initial equation")
@@ -173,6 +183,7 @@ class Model:
         # Join all parts into a single string       
         self.modelica_code =  "\n".join(mo_code)
 
+    # Save and Build
     def save(self, path: str) -> None:
         """Save the model to a file."""
         if self.modelica_code is None:
@@ -181,3 +192,17 @@ class Model:
         with open(path, 'w') as f:
             f.write(self.modelica_code)
         print(f"Model saved to {path}")
+
+    def build(self) -> None:
+        """Build the Modelica code for the model."""
+        # Create the Modelica code
+        self.to_mo()
+
+        # Save the model to a file if within a package
+        if self.within:
+            package_path = self.within.replace('.', '/')
+            model_path = f"{package_path}/{self.name}.mo"
+            self.save(model_path)
+        else:
+            model_path = f"{self.name}.mo"
+            self.save(model_path)

@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List, Dict, Any
 
+from .model import Model
 
 class Package:
     """Class representing a system model."""
