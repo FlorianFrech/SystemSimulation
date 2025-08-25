@@ -14,7 +14,7 @@ model SignalSource
   parameter Real f2(unit="Hz") = 7.96;
   
   // Internal variables
-  Real s1(unit="V", start=0);
+  Real s1(unit="V");
   Real s2(unit="V");
   
 equation
