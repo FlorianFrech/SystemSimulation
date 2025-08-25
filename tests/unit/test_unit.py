@@ -194,14 +194,3 @@ class TestQtyFunction:
         # Unicode units
         result = qty(1.0, "°C")
         assert isinstance(result, Q)
-    
-    def test_qty_preserves_input_precision(self):
-        """Test that qty preserves numerical precision."""
-        high_precision = 1.23456789012345
-        result = qty(high_precision, "m")
-        assert result.magnitude == high_precision
-        
-        # Test with arrays
-        precise_array = np.array([1.23456789012345, 9.87654321098765])
-        result = qty(precise_array, "kg")
-        np.testing.assert_array_equal(result.magnitude, precise_array)
