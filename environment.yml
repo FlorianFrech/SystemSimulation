@@ -1,0 +1,7 @@
+name: EnvSysSimX
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pytest
+prefix: /home/flo/miniconda3/envs/EnvSysSimX
