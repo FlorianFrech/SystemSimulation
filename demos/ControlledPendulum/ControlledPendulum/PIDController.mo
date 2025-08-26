@@ -39,7 +39,7 @@ algorithm
     u_control := u_km1 + a0*e_k + a1*e_km1 + a2*e_km2;
 
     // Apply saturation
-    u_control := min(uMax, max(uMin, u_control));
+    u_control :=  min(uMax, max(uMin, u_control));
     
     // Shift states
     u_km1 := u_control;

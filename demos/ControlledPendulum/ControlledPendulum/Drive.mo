@@ -11,16 +11,16 @@ model Drive
   parameter Real L_M(unit="H") = 121e-6;
   parameter Real n_0(unit="1/min") = 12916;
   parameter Real k_M(unit="N.m/A") = 0.03;
-  parameter Integer i_G = 60;
-  parameter Real eta_G = 0.85;
+  parameter Integer i_M = 60;
+  parameter Real eta_M = 0.85;
   parameter Real k_n(unit="(1/min)/V") = n_0/U_rated;
   
   // Inputs
-  Modelica.Blocks.Interfaces.RealInput u;
-  Modelica.Blocks.Interfaces.RealInput omega_m(unit="rad/s");
+  Modelica.Blocks.Interfaces.RealInput u_control;
+  Modelica.Blocks.Interfaces.RealInput omega(unit="rad/s");
   
   // Outputs
-  Modelica.Blocks.Interfaces.RealOutput M(unit="N.m");
+  Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m");
 
 protected
   Real I(unit="A", start=0);
@@ -29,13 +29,13 @@ protected
 
 equation
   // Electrical input
-  U = U_M * max(-1, min(u,1));
+  U = U_M * u_control;
   
   // Meachanical speed in rpm (omega_m is in rad/s)
-  n = i_G * omega_m * 30 / pi;
+  n = i_M * omega * 30 / pi;
   
   // Current dynamics and torque
-  der(I) = (U - R_M*I - n/k_n) / L_M;
-  M = eta_G * i_G * k_M * I;
+  der(I) = (U - R_M * I - n/k_n) / L_M;
+  torque = eta_M * i_M * k_M * I;
 
 end Drive;

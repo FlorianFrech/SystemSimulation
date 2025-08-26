@@ -1,6 +1,6 @@
 ReferenceTrajectory
 Pendulum
 Sensor
-DemoModel
 Drive
 PIDController
+DemoModel

@@ -1,0 +1,40 @@
+within Tests;
+
+model TestDrive
+  import Modelica.Constants.pi;
+  import SI = Modelica.Units.SI;
+  import Blocks = Modelica.Blocks;
+
+  // Device under test: set supply to rated voltage so u=1 → U = U_rated
+  ControlledPendulum.Drive drive(U_M=48, U_rated=48);
+
+  // Command u = 1
+  Blocks.Sources.Constant u_src(k=1.0);
+
+  // Simple load: inertia + tiny viscous damping (no external torque)
+  parameter SI.Inertia J = 0.05 "Load inertia on omega_m shaft";
+  parameter SI.RotationalDampingConstant b = 0.05 "Tiny damping";
+  SI.AngularVelocity omega(start=0);
+  
+  // Adaptr to expose omega as a connector
+  Blocks.Sources.RealExpression omega_sig(y=omega);
+
+  // Monitors
+  Blocks.Interfaces.RealOutput n_rpm "Load speed as rpm";
+  Blocks.Interfaces.RealOutput n_target "Target rpm (n0)";
+
+equation
+  // Drive the motor
+  connect(u_src.y, drive.u);
+
+  // Mechanical dynamics at the load shaft (omega_m is input of Drive)
+  der(omega) = (drive.M - b*omega)/J;
+  connect(omega_sig.y, drive.omega_m);
+
+  // Observers
+  n_rpm   = drive.i_G * omega * 30 / pi; // rpm at motor (pre-gear), matches drive.n definition
+  n_target = drive.n_0;
+
+  annotation (experiment(StartTime=0, StopTime=0.1, Tolerance=1e-6, Interval=0.0001));
+
+end TestDrive;
