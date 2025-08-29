@@ -20,12 +20,12 @@ model Drive
   Modelica.Blocks.Interfaces.RealInput omega(unit="rad/s");
   
   // Outputs
-  Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m");
+  Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m", start=0, fixed=true);
 
 protected
   Real I(unit="A", start=0);
-  Real U(unit="V");
-  Real n(unit="1/min");
+  Real U(unit="V", start=0);
+  Real n(unit="1/min", start=0);
 
 equation
   // Electrical input
