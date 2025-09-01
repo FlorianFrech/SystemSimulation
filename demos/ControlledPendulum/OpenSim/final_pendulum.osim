@@ -37,20 +37,18 @@
 		<!--List of joints that connect the bodies.-->
 		<JointSet name="jointset">
 			<objects>
-				<PinJoint name="hinge">
+				<PinJoint name="head_joint">
 					<!--Path to a Component that satisfies the Socket 'parent_frame' of type PhysicalFrame (description: The parent frame for the joint.).-->
 					<socket_parent_frame>ground_offset</socket_parent_frame>
 					<!--Path to a Component that satisfies the Socket 'child_frame' of type PhysicalFrame (description: The child frame for the joint.).-->
 					<socket_child_frame>head_offset</socket_child_frame>
 					<!--List containing the generalized coordinates (q's) that parameterize this joint.-->
 					<coordinates>
-						<Coordinate name="q_state">
+						<Coordinate name="q">
 							<!--The value of this coordinate before any value has been set. Rotational coordinate value is in radians and Translational in meters.-->
 							<default_value>0</default_value>
 							<!--The speed value of this coordinate before any value has been set. Rotational coordinate value is in rad/s and Translational in m/s.-->
 							<default_speed_value>0</default_speed_value>
-							<!--The minimum and maximum values that the coordinate can range between. Rotational coordinate range in radians and Translational in meters.-->
-							<range>-3.1415926535897931 3.1415926535897931</range>
 						</Coordinate>
 					</coordinates>
 					<!--Physical offset frames owned by the Joint that are typically used to satisfy the owning Joint's parent and child frame connections (sockets). PhysicalOffsetFrames are often used to describe the fixed transformation from a Body's origin to another location of interest on the Body (e.g., the joint center). When the joint is deleted, so are the PhysicalOffsetFrame components in this list.-->
@@ -68,7 +66,7 @@
 							<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
 							<translation>0 0 0</translation>
 							<!--Orientation offset (in radians) of this frame in its parent frame, expressed as a frame-fixed x-y-z rotation sequence.-->
-							<orientation>0 0 1</orientation>
+							<orientation>0 0 0</orientation>
 						</PhysicalOffsetFrame>
 						<PhysicalOffsetFrame name="head_offset">
 							<!--The geometry used to display the axes of this Frame.-->
@@ -83,7 +81,7 @@
 							<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
 							<translation>0 0.40000000000000002 0</translation>
 							<!--Orientation offset (in radians) of this frame in its parent frame, expressed as a frame-fixed x-y-z rotation sequence.-->
-							<orientation>0 0 1</orientation>
+							<orientation>0 0 0</orientation>
 						</PhysicalOffsetFrame>
 					</frames>
 				</PinJoint>
@@ -93,13 +91,13 @@
 		<!--Controllers that provide the control inputs for Actuators.-->
 		<ControllerSet name="controllerset">
 			<objects>
-				<PrescribedController name="torque_controller">
+				<PrescribedController name="controller">
 					<!--Paths to Components that satisfies the list Socket 'actuators' of type Actuator (description: The list of Actuators that this controller will control.).To specify multiple paths, put spaces between them.-->
-					<socket_actuators>/forceset/input_torque</socket_actuators>
+					<socket_actuators>/forceset/torque</socket_actuators>
 					<!--Functions (one per control) describing the controls for actuators specified for this controller. The control function set must match the number and order of connected actuators.-->
 					<FunctionSet name="ControlFunctions">
 						<objects>
-							<Constant name="torque">
+							<Constant>
 								<value>0</value>
 							</Constant>
 						</objects>
@@ -112,13 +110,13 @@
 		<!--Forces in the model (includes Actuators).-->
 		<ForceSet name="forceset">
 			<objects>
-				<CoordinateActuator name="input_torque">
+				<CoordinateActuator name="torque">
 					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
-					<min_control>-100</min_control>
+					<min_control>-1000000</min_control>
 					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
-					<max_control>100</max_control>
+					<max_control>1000000</max_control>
 					<!--Name of the generalized coordinate to which the actuator applies.-->
-					<coordinate>q_state</coordinate>
+					<coordinate>q</coordinate>
 					<!--The maximum generalized force produced by this actuator.-->
 					<optimal_force>1</optimal_force>
 				</CoordinateActuator>
