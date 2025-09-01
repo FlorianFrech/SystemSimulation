@@ -13,3 +13,6 @@ VenvSysSimX/
 
 # Pytest Cache
 .pytest_cache/
+
+# FMU logs
+*_log.txt

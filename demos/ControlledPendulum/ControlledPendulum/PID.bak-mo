@@ -1,6 +1,0 @@
-within ControlledPendulum;
-
-model PID
-equation
-
-end PID;
