@@ -9,7 +9,7 @@ model Pendulum
   parameter Real m(unit="kg") = 80*0.2;
   parameter Real L(unit="m") = 0.4;
   parameter Real g(unit="m/s2") = 9.81;
-  parameter Real q0(unit="rad") = -pi/2;
+  parameter Real q0(unit="rad") = 0;
 
   // States
   Real q(unit="rad", start = 0);

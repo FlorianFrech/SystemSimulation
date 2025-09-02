@@ -9,7 +9,7 @@ model ReferenceTrajectory
   
   // Parameters
   parameter Real mean(unit="rad") = 0;
-  parameter Real amplitude(unit="rad") = pi/9;
+  parameter Real amplitude(unit="rad") = pi/4;
 
 equation
   q_ref = mean + amplitude * sin(time);
