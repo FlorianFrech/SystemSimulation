@@ -7,9 +7,11 @@ class PendulumModel(osim.Model):
         self.setName('pendulum')
         self.setGravity(osim.Vec3(0, -9.81, 0))
         ground = self.getGround()
+        ground.attachGeometry(osim.Brick(osim.Vec3(0.1, 0.025, 0.1)))
 
         # Define the pendulum head body
         head = osim.Body('head', mass, osim.Vec3(0), inertia)
+        head.attachGeometry(osim.Sphere(0.05))
         self.addBody(head)
 
         # Define the pin joint connecting the head to the ground
@@ -94,3 +96,6 @@ class PendulumModel(osim.Model):
         self.realizeVelocity(self.state)
         self.realizeAcceleration(self.state)
         self.realizeDynamics(self.state)
+
+    def save(self, filename: str):
+        self.printToXML(filename)

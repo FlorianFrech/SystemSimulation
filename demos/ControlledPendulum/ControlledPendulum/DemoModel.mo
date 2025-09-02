@@ -1,6 +1,14 @@
 within ControlledPendulum;
 
 model DemoModel
+  /* 
+  A model of a controlled pendulum system consisting of:
+   - Reference trajectory generator
+   - Sensors for reference and state
+   - PID controller
+   - Drive system
+   - Pendulum dynamics
+  */
   import SI = Modelica.Units.SI;
 
   // Components
