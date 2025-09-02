@@ -1,0 +1,32 @@
+# Configuration for Controlled Pendulum Hybrid Simulation Demo
+
+step:
+  t0: 0.0
+  tf: 10.0
+  h: 0.001
+
+fmus:
+  ReferenceTrajectory:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/ReferenceTrajectory.fmu
+    inputs: {}
+    outputs: {q_ref: "q_ref"}
+  
+  SensorRef:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Sensor.fmu
+    inputs: {q: "q"}
+    outputs: {U_q: "U_q"}
+  
+  SensorState:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Sensor.fmu
+    inputs: {q: "q"}
+    outputs: {U_q: "U_q"}
+  
+  PID:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/PID_Cont.fmu
+    inputs: {ref: "ref", y: "y"}
+    outputs: {u: "u"}
+
+  Drive:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Drive.fmu
+    inputs: {u_control: "u_control", omega: "omega"}
+    outputs: {torque: "torque", omega: "omega"}
