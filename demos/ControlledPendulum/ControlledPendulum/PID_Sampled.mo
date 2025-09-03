@@ -1,71 +1,107 @@
 within ControlledPendulum;
 
 model PID_Sampled
-  /*
-  The model implements a discrete PID controller that samples a reference and a state value
-  at discrete time points defined by dt.
-  Controller behavior is governed by Kp, Ki, and Kd.
-  The output control signal u_control is limited to uMin and uMax values.
-  */
+   /*
+   The model implements a discrete PID controller that samples a reference and a state value
+   at discrete time points defined by dt.
+   Controller behavior is governed by Kp, Ki, and Kd.
+   The output control signal u_control is limited to uMin and uMax values.
+   */
   
-  // Parameters
-  parameter Real Kp = 100;
-  parameter Real Ki = 500;
-  parameter Real Kd = 30;
-  parameter Real dt(unit="s") = 0.01;
+   // Parameters
+   parameter Real Kp = 100 "Proportional gain";
+   parameter Real Ki = 500 "Integral gain";
+   parameter Real Kd = 30 "Derivative gain";
 
-  // Limits
-  parameter Real uMin=-1;
-  parameter Real uMax=1;
+   // Timing
+   parameter Real dt(unit="s") = 0.01;
 
-  // Inputs
-  Modelica.Blocks.Interfaces.RealInput reference;
-  Modelica.Blocks.Interfaces.RealInput state;
+   // Limits
+   parameter Real uMin=-1 "Minimum Control Output";
+   parameter Real uMax=1 "Maximum Control Output";
 
-  // Output
-  Modelica.Blocks.Interfaces.RealOutput u_control(start=0);
+   // Derivative on measurement flag
+   parameter Boolean derivativeOnMeasurement = true "Compute derivative on measurement instead of error";
 
-protected
-  // Make inputs appear in the continuous equations
-  Real ref_cont;
-  Real state_cont;
 
-  // Internal discrete output
-  discrete Real u(start=0, fixed=true);
+   // Inputs
+   Modelica.Blocks.Interfaces.RealInput reference;
+   Modelica.Blocks.Interfaces.RealInput measurement;
 
-  // Discrete internal histories
-  discrete Real e_km1(start=0, fixed=true);
-  discrete Real e_km2(start=0, fixed=true);
-  discrete Real u_km1(start=0, fixed=true);
+   // Output
+   Modelica.Blocks.Interfaces.RealOutput u_control(start=0);
+   Modelica.Blocks.Interfaces.RealOutput error;
+   Modelica.Blocks.Interfaces.BooleanOutput saturated;
 
-  // Scratch variables for algorithm
-  Real e_k(start=0);
-  Real a0(start=0), a1(start=0), a2(start=0);
-  Real u_unsat(start=0);
+ protected
+   // Continuous aliases for FMU compatibility
+   Real ref_cont;
+   Real meas_cont;
 
-equation
-  // Continuous aliases force the inputs to be “continuous variability” in the FMU
-  ref_cont   = reference;
-  state_cont = state;
+   // Internal discrete output
+   discrete Real u(start=0, fixed=true) "Internal control signal";
+   discrete Real e_k(start=0) "Current error";
+   discrete Real e_km1(start=0, fixed=true) "Previous error";
+   discrete Real meas_km1(start=0, fixed=true) "Previous measurement";
+   discrete Real integral_sum(start=0, fixed=true) "Integral sum";
+   discrete Real u_unsat(start=0) "Unsaturated control signal";
+   
+   // Algorithm coefficients
+   discrete Real P_term;
+   discrete Real I_term;
+   discrete Real D_term;
+  
+   // Status flags
+   discrete Boolean isSaturated(start=false);
 
-  u_control = u;
+ equation
+   // Continuous aliases for FMU compatibility
+   ref_cont   = reference;
+   meas_cont  = measurement;
+  
+   // Continuous outputs
+   u_control = u;
+   error = e_k;
+   saturated = isSaturated;
 
-algorithm
-  when sample(0, dt) then
-    e_k := ref_cont - state_cont;
+ algorithm
+   when sample(0, dt) then
+       // Current error
+       e_k := ref_cont - meas_cont;
 
-    // Incremental (velocity) form coefficients
-    a0 := (Kp + Kd/dt);
-    a1 := (Ki*dt - 2*Kd/dt - Kp);
-    a2 := (Kd/dt);
+       // Update integral sum with anti-windup
+       if not isSaturated then
+           integral_sum := integral_sum + e_k * dt;
+       end if;
 
-    u_unsat := u_km1 + a0*e_k + a1*e_km1 + a2*e_km2;
+       // Compute PID terms
+       P_term := Kp * e_k;
+       I_term := Ki * integral_sum;
+       
+       // Derivative on measurement (avoids derivative kick)
+       if derivativeOnMeasurement then
+           D_term := -Kd * (meas_cont - meas_km1) / dt;
+       else
+           D_term := Kd * (e_k - e_km1) / dt;
+       end if;
 
-    u := min(uMax, max(uMin, u_unsat));
+       // Total control signal
+       u_unsat := P_term + I_term + D_term;
 
-    u_km1 := u;
-    e_km2 := e_km1;
-    e_km1 := e_k;
-  end when;
+       // Apply saturation limits
+       u := min(uMax, max(uMin, u_unsat));
+
+       // Check if saturated
+       isSaturated := (u_unsat <= uMin) or (u_unsat >= uMax);
+
+       // Update previous values
+       e_km1 := e_k;
+       meas_km1 := meas_cont;
+   end when;
+
+ initial algorithm
+   // Initialize states
+   e_km1 := ref_cont - meas_cont;
+   meas_km1 := meas_cont;
 
 end PID_Sampled;

@@ -1,8 +1,10 @@
 within Tests;
 
-model TestPID_Cont
+model Test_PID_Sampled
   // Test Component
-  ControlledPendulum.PID_Cont controller(uMin=-1, uMax=1);
+  ControlledPendulum.PID_Sampled controller(
+    Kp=1, Ki=0.5, Kd=0.1, dt=0.01, uMin=-1, uMax=1, derivativeOnMeasurement=true
+  );
   
   // Stimulus
   Modelica.Blocks.Sources.Step refStep(height=1, startTime=0.5);
@@ -11,13 +13,13 @@ model TestPID_Cont
   // Outputs for plotting
   Modelica.Blocks.Interfaces.RealOutput ref = refStep.y;
   Modelica.Blocks.Interfaces.RealOutput state = stateSrc.y;
-  Modelica.Blocks.Interfaces.RealOutput u = controller.u;
+  Modelica.Blocks.Interfaces.RealOutput u = controller.u_control;
  
 equation
-  connect(refStep.y, controller.ref);
-  connect(stateSrc.y, controller.y);
+  connect(refStep.y, controller.reference);
+  connect(stateSrc.y, controller.measurement);
   
   annotation(
     experiment(StartTime = 0, StopTime = 3, Interval = 0.01)
   );
-end TestPID_Cont;
+end Test_PID_Sampled;

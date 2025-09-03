@@ -1,6 +1,7 @@
 within Tests;
 
-model TestPendulum
+model Test_Pendulum
+  
   ControlledPendulum.Pendulum pendulum;
   
   Modelica.Blocks.Sources.Sine torqueSrc(
@@ -9,8 +10,11 @@ model TestPendulum
     );
   
 equation
+  
   connect(torqueSrc.y, pendulum.torque);
+  
   annotation(
-    experiment(StartTime = 0, StopTime = 10, Interval = 0.01)
+    experiment(StartTime = 0, StopTime = 5, Interval = 0.01)
   );
-end TestPendulum;
+
+end Test_Pendulum;
