@@ -6,23 +6,23 @@ step:
   h: 0.001
 
 fmus:
-  ReferenceTrajectory:
-    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/ReferenceTrajectory.fmu
+  Reference:
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Reference.fmu
     inputs: {}
     outputs: {q_ref: "q_ref"}
   
   SensorRef:
-    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Sensor.fmu
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/AngleEncoder.fmu
     inputs: {q: "q"}
     outputs: {U_q: "U_q"}
   
   SensorState:
-    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/Sensor.fmu
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/AngleEncoder.fmu
     inputs: {q: "q"}
     outputs: {U_q: "U_q"}
   
   PID:
-    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/PID_Cont.fmu
+    path: /home/flo/repos/SystemSimulation/demos/ControlledPendulum/FMUs/PID_Continuous.fmu
     inputs: {ref: "ref", y: "y"}
     outputs: {u: "u"}
 
