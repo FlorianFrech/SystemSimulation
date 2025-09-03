@@ -1,6 +1,13 @@
 within ControlledPendulum;
 
-model PIDController
+model PID_Sampled
+  /*
+  The model implements a discrete PID controller that samples a reference and a state value
+  at discrete time points defined by dt.
+  Controller behavior is governed by Kp, Ki, and Kd.
+  The output control signal u_control is limited to uMin and uMax values.
+  */
+  
   // Parameters
   parameter Real Kp = 100;
   parameter Real Ki = 500;
@@ -61,4 +68,4 @@ algorithm
     e_km1 := e_k;
   end when;
 
-end PIDController;
+end PID_Sampled;

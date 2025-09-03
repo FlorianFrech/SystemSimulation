@@ -1,19 +1,35 @@
 within ControlledPendulum;
 
-block PID_Cont
+model PID_Continuous
+  /*
+  The model implements a continuous PID controller which can be used as Co-Sim FMU.
+  The controller behavior is described by the parameters:
+    - k: gain within the total gain block
+    - Ti: Time constant of the integrator block
+    - Td: Time constant of the derivative block
+    - Nd: Parameter for the derivative block
+    - uMin/uMax: Limits for the output signal
+  */
+  
+  // Parameters
   parameter Real k=1;
   parameter Real Ti=0.5;
   parameter Real Td=0.1;
   parameter Real Nd=10;
   parameter Real uMin=-1, uMax=1;
-  parameter Real xi_start=0 "integrator output start";
-  parameter Real xd_start=0 "derivative state start";
-
+  
+  // Inputs
   Modelica.Blocks.Interfaces.RealInput  ref;
   Modelica.Blocks.Interfaces.RealInput  y;
+  
+  // Outputs
   Modelica.Blocks.Interfaces.RealOutput u;
 
 protected
+  // Internal constants
+  constant Real xi_start=0 "integrator output start";
+  constant Real xd_start=0 "derivative state start";
+  
   // Add Error: error = ref - y
   Modelica.Blocks.Math.Add addErr(k1=1, k2=-1);
   
@@ -51,4 +67,4 @@ equation
   
   // Apply the global gain and limit output signal
   connect(sumPID.y, gainK.u); connect(gainK.y, lim.u); connect(lim.y, u);
-end PID_Cont;
+end PID_Continuous;

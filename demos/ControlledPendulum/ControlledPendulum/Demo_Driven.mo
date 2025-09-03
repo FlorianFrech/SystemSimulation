@@ -1,6 +1,6 @@
 within ControlledPendulum;
 
-model DemoModel
+model Demo_Driven
   /* 
   A model of a controlled pendulum system consisting of:
    - Reference trajectory generator
@@ -9,19 +9,21 @@ model DemoModel
    - Drive system
    - Pendulum dynamics
   */
-  import SI = Modelica.Units.SI;
 
   // Components
-  ReferenceTrajectory reference;
+  Reference           reference(frequency=0.25);
   
-  Sensor              sensor_ref;
-  Sensor              sensor_state;
+  AngleEncoder        sensor_ref( q_min = -reference.amplitude,
+                                  q_max =  reference.amplitude);
   
-  PID_Cont            pid;
+  AngleEncoder        sensor_state( q_min = -reference.amplitude,
+                                    q_max =  reference.amplitude);
+  
+  PID_Continuous      pid;
   
   Drive               drive;
   
-  Pendulum            pendulum;
+  Pendulum            pendulum(q0=0);
 
 equation
   // Connect reference and pendulum to sensors
@@ -43,4 +45,4 @@ equation
     experiment(StartTime = 0, StopTime = 20, Interval = 0.001)
   );
 
-end DemoModel;
+end Demo_Driven;

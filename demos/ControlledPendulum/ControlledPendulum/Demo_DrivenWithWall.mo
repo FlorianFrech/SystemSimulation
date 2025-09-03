@@ -1,8 +1,8 @@
 within ControlledPendulum;
 
-model DemoModelWall
+model Demo_DrivenWithWall
   /*
-   Controlled pendulum with a wall:
+   Controlled and driven pendulum with a wall contact:
     - Reference trajectory
     - Two sensors (reference & state)
     - PID controller
@@ -15,12 +15,12 @@ model DemoModelWall
   import Modelica.Constants.pi;
   
   // Components
-  ReferenceTrajectory ref;
+  Reference           ref;
   
-  Sensor              sensor_ref;
-  Sensor              sensor_state;
+  AngleEncoder        sensor_ref;
+  AngleEncoder        sensor_state;
   
-  PID_Cont            pid(Nd=10, Td=0.01, Ti=30, k=100);
+  PID_Continuous      pid(Nd=10, Td=0.01, Ti=30, k=100);
   
   Drive               drive;
   
@@ -32,7 +32,7 @@ model DemoModelWall
   Modelica.Blocks.Math.Add torqueSum(k1=1, k2=1);
   
   // Wall Signals for plotting
-  Modelica.Blocks.Interfaces.RealOutput wall_tau(unit="N.m") = wall.tau;
+  Modelica.Blocks.Interfaces.RealOutput wall_torque(unit="N.m") = wall.torque;
   Modelica.Blocks.Interfaces.RealOutput wall_penetration(unit="rad") = wall.penetration;
   Modelica.Blocks.Interfaces.BooleanOutput wall_contact = wall.contact;
   
@@ -55,11 +55,11 @@ equation
 
   // Torque summation: drive torque + wall torque -> pendulum
   connect(drive.torque,       torqueSum.u1);
-  connect(wall.tau,           torqueSum.u2);
+  connect(wall.torque,        torqueSum.u2);
   connect(torqueSum.y,        pendulum.torque);
   
   annotation(
-    experiment(StartTime = 0, StopTime = 20, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
   );
 
-end DemoModelWall;
+end Demo_DrivenWithWall;
