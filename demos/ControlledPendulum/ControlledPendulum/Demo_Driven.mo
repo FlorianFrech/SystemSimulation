@@ -23,7 +23,7 @@ model Demo_Driven
   
   Drive               drive;
   
-  Pendulum            pendulum(q0=0);
+  Pendulum            pendulum;
 
 equation
   // Connect reference and pendulum to sensors

@@ -15,7 +15,7 @@ model Pendulum
   // Parameters
   parameter Real m(unit="kg") = 80*0.2;
   parameter Real L(unit="m") = 0.4;
-  parameter Real q0(unit="rad") = -pi/6;
+  parameter Real q0(unit="rad") = -pi/4;
   parameter Real omega0(unit="rad/s") = 0;
 
   // Input torque at the pivot

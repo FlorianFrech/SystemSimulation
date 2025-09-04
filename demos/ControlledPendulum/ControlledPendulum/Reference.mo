@@ -13,8 +13,8 @@ model Reference
   
   // Parameters
   parameter Real mean(unit="rad") = 0;
-  parameter Real amplitude(unit="rad") = pi/9;
-  parameter Real frequency(unit="Hz") = 1;
+  parameter Real amplitude(unit="rad") = pi/4;
+  parameter Real frequency(unit="Hz") = 0.25;
 
 equation
   q_ref = mean + amplitude * sin(2 * pi * frequency * time);
