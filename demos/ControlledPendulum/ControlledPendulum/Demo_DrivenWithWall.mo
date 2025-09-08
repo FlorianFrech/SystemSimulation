@@ -15,12 +15,12 @@ model Demo_DrivenWithWall
   import Modelica.Constants.pi;
   
   // Components
-  Reference           ref;
+  Reference           ref(frequency=1);
   
   AngleEncoder        sensor_ref;
   AngleEncoder        sensor_state;
   
-  PID_Continuous      pid(Nd=10, Td=0.01, Ti=30, k=100);
+  PID_Continuous      pid(Nd=10, Td=0.1, Ti=30, k=50);
   
   Drive               drive;
   
@@ -57,6 +57,7 @@ equation
   connect(drive.torque,       torqueSum.u1);
   connect(wall.torque,        torqueSum.u2);
   connect(torqueSum.y,        pendulum.torque);
+
   
   annotation(
     experiment(StartTime = 0, StopTime = 2, Interval = 0.001)

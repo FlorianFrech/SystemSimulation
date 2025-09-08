@@ -13,6 +13,10 @@ class CoSimComponent(Protocol):
         """Prepare the component for simulation starting at time t0."""
         ...
 
+    def set_parameters(self, **parameters: Any) -> None:
+        """Set the parameters of an FMU during initialization."""
+        ...
+
     def set_inputs(self, **signals: float) -> None:
         """Set the input signals for the next step."""
         ...
