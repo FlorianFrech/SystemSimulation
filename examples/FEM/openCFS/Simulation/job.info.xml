@@ -1,0 +1,208 @@
+<?xml version="1.0"?>
+
+<cfsInfo status="finished" infoWriteCounter="105" infoRejectCounter="0">
+  <summary>
+    <timer wall-clock="8.988s" wall="8.988" cpu="13.9257" calls="1"/>
+    <!-- memory in MB-->
+    <memory final="272" peak="326"/>
+  </summary>
+  <header id="">
+    <environment started="2025-Sep-10 13:44:19" host="florian-VM" estimatedEnd="2025-Sep-10 13:44:28" remainingTime="0" timePerStep="0.075313"/>
+    <progOpts problem="job" parameterFile="/home/florian/Documents/ContactModel/Simulation/simulation-input.xml" schemaPath="/home/florian/CFS-2025S-Linux/share/xml" meshFile="" logConfFile="" detailed="no">
+      <cfs version="25.07" name="Just Jacobians" build="RELEASE" git_commit="702b45be4a706a649daea742e9d4749ab3f44428" git_branch="HEAD" compiled="Jul  7 2025" exe="cfs"/>
+      <openmp CFS_NUM_THREADS="6" MKL_NUM_THREADS="6" OMP_NUM_THREADS="6"/>
+    </progOpts>
+    <domain>
+      <grids>
+        <timer wall-clock="0.36s" wall="0.36" cpu="0.369079" calls="1"/>
+        <grid gridId="default" dimensions="3" elements="23709" nodes="5368"/>
+      </grids>
+      <coordinateSystems>
+        <system name="default"/>
+      </coordinateSystems>
+      <regions>
+        <region name="V_pendulum" id="0" type="volume" regular="no" hom="yes" nodes="2546" elems="10458" isQuadratic="no"/>
+        <region name="V_wall" id="1" type="volume" regular="no" hom="yes" nodes="2822" elems="10547" isQuadratic="no"/>
+        <region name="S_contact_pendulum" id="2" type="surface" regular="no" hom="yes" nodes="237" elems="432" isQuadratic="no"/>
+        <region name="S_contact_wall" id="3" type="surface" regular="no" hom="yes" nodes="949" elems="1784" isQuadratic="no"/>
+        <region name="S_wall_fix" id="4" type="surface" regular="no" hom="yes" nodes="336" elems="488" isQuadratic="no"/>
+      </regions>
+      <namedNodes>
+        <nodes name="S_rotation_axis" count="4"/>
+      </namedNodes>
+      <namedElements/>
+      <globalMathParser dt="0.01" f="0" step="100" t="1" t0="0"/>
+    </domain>
+    <results>
+      <timer wall-clock="2.056s" wall="2.056" cpu="2.93525" calls="1200"/>
+    </results>
+  </header>
+  <sequenceStep sequence="1">
+    <transient>
+      <header unit="s"/>
+      <init_transient>
+        <timer wall-clock="0.616s" wall="0.616" cpu="0.784349" calls="1"/>
+      </init_transient>
+    </transient>
+    <PDE>
+      <mechanic>
+        <header>
+          <region name="V_wall" damping="none"/>
+          <region name="V_pendulum" damping="none"/>
+          <integrators>
+            <matrixBiLinearForms>
+              <bilinearForm integrator="MassInt" type="BBInt" complex="no" region="V_wall">
+                <coef type="CoefFunctionConst" value="7850"/>
+                <row pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <column pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <destination feMatrix="mass" feMatrixMapped="mass" feSecondMatrix="no_fe_matrix" feSecondMatrixFac="0.0  "/>
+                <attributes entryType="RealPart" counterPart="no" symmetric="yes" solutionDependent="no" updatedGeo="no"/>
+              </bilinearForm>
+              <bilinearForm integrator="LinElastInt" type="BDBInt" complex="no" BOp="StrainOperator3D" coef="CoefFunctionConst" region="V_wall">
+                <row pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <column pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <destination feMatrix="stiffness" feMatrixMapped="stiffness" feSecondMatrix="no_fe_matrix" feSecondMatrixFac="0.0  "/>
+                <attributes entryType="RealPart" counterPart="no" symmetric="yes" solutionDependent="no" updatedGeo="no"/>
+              </bilinearForm>
+              <bilinearForm integrator="LinElastInt" type="BDBInt" complex="no" BOp="StrainOperator3D" coef="CoefFunctionConst" region="V_pendulum">
+                <row pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <column pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <destination feMatrix="stiffness" feMatrixMapped="stiffness" feSecondMatrix="no_fe_matrix" feSecondMatrixFac="0.0  "/>
+                <attributes entryType="RealPart" counterPart="no" symmetric="yes" solutionDependent="no" updatedGeo="no"/>
+              </bilinearForm>
+              <bilinearForm integrator="MassInt" type="BBInt" complex="no" region="V_pendulum">
+                <coef type="CoefFunctionConst" value="7850"/>
+                <row pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <column pde="mechanic" functionId="0" result="mechDisplacement"/>
+                <destination feMatrix="mass" feMatrixMapped="mass" feSecondMatrix="no_fe_matrix" feSecondMatrixFac="0.0  "/>
+                <attributes entryType="RealPart" counterPart="no" symmetric="yes" solutionDependent="no" updatedGeo="no"/>
+              </bilinearForm>
+            </matrixBiLinearForms>
+            <rhsLinearForms>
+              <linearForm integrator="VolumeAccelerationInt">
+                <entities name="V_pendulum" size="10458" region="V_pendulum"/>
+                <row pde="mechanic" result="mechDisplacement" solutionDependent="no"/>
+              </linearForm>
+            </rhsLinearForms>
+          </integrators>
+        </header>
+        <material name="steel">
+          <regionList>
+            <region name="V_pendulum"/>
+            <region name="V_wall"/>
+          </regionList>
+          <property name="Mechanic_Stiffness_Tensor">
+            <tensor dim1="6" dim2="6">
+              <real>
+                 2.826923e+10  1.211538e+10  1.211538e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 1.211538e+10  2.826923e+10  1.211538e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 1.211538e+10  1.211538e+10  2.826923e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09  0.000000e+00  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09
+              </real>
+            </tensor>
+          </property>
+          <property name="Mechanic_Elasticity_Modulus" value="(2.1e+10,0)"/>
+          <property name="Mechanic_Poisson_Ratio" value="(0.3,0)"/>
+          <property name="Density" value="(7850,0)"/>
+          <property name="Mechanic_Stiffness_Tensor">
+            <tensor dim1="6" dim2="6">
+              <real>
+                 2.826923e+10  1.211538e+10  1.211538e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 1.211538e+10  2.826923e+10  1.211538e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 1.211538e+10  1.211538e+10  2.826923e+10  0.000000e+00  0.000000e+00  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09  0.000000e+00  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09  0.000000e+00
+                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  8.076923e+09
+              </real>
+            </tensor>
+          </property>
+          <property name="Mechanic_Elasticity_Modulus" value="(2.1e+10,0)"/>
+          <property name="Mechanic_Poisson_Ratio" value="(0.3,0)"/>
+          <property name="Density" value="(7850,0)"/>
+        </material>
+        <feSpaces>
+          <mechDisplacement>
+            <h1Nodal>
+              <regionList>
+                <V_pendulum/>
+                <default order="1"/>
+                <V_wall/>
+              </regionList>
+            </h1Nodal>
+          </mechDisplacement>
+        </feSpaces>
+        <feFunctions>
+          <mechDisplacement/>
+          <homDirichletBC>
+            <surfElemList name="S_wall_fix" dofs="x y z"/>
+          </homDirichletBC>
+          <inhomDirichletBC>
+            <nodeList name="S_rotation_axis" dofs="y z" value="[0, 0, 0]"/>
+          </inhomDirichletBC>
+        </feFunctions>
+      </mechanic>
+    </PDE>
+    <OLAS>
+      <mechanic>
+        <setup idbcHandling="elimination" staticCondensation="no">
+          <feFunctions totalNumEqns="15096" totalNumFreeEqns="15088" totalNumDirichlet="8">
+            <function id="0" name="mechDisplacement" numEqns="15096" lastFreeEqn="15088" numDirichlet="8">
+              <usedInBlocks>
+                <block id="0"/>
+              </usedInBlocks>
+            </function>
+          </feFunctions>
+          <sbmBlocks>
+            <block id="0" size="15096" lastFreeIndex="15088"/>
+          </sbmBlocks>
+        </setup>
+        <solver>
+          <pardiso hermitean="no" symStruct="no" symmetric="yes" posDef="no" pardiso_matrix="-2" solver="direct">
+            <summary>
+              <setup>
+                <timer label="setup_pardiso" wall-clock="0.108s" wall="0.108" cpu="0.153898" calls="1"/>
+              </setup>
+              <solve>
+                <timer label="solve_pardiso" wall-clock="1.29s" wall="1.29" cpu="3.20066" calls="100"/>
+              </solve>
+            </summary>
+            <process>
+              <call number="0">
+                <symbfact cpu="0.093644" wall="0.077" peakMem="14119" permanentMem="13058"/>
+                <numfact cpu="0.059852" wall="0.03" peakMem="24902"/>
+              </call>
+            </process>
+            <refinement hint="PARDISO reached the maximum number of iterative refinement steps (2) probably the tolerance is too small."/>
+          </pardiso>
+        </solver>
+        <precond>
+          <idPrecond>
+            <summary>
+              <precond_Id_setup>
+                <timer wall-clock="0s" wall="0" cpu="4e-06" calls="1"/>
+              </precond_Id_setup>
+              <precond_Id_run>
+                <timer wall-clock="0s" wall="0" cpu="0" calls="0"/>
+              </precond_Id_run>
+            </summary>
+          </idPrecond>
+        </precond>
+        <process>
+          <solver solutionIsOkay="yes"/>
+        </process>
+      </mechanic>
+      <graph_setup>
+        <timer wall-clock="0.284s" wall="0.284" cpu="0.368179" calls="1" sub="true"/>
+      </graph_setup>
+    </OLAS>
+    <analysis>
+      <summary>
+        <assemble>
+          <timer wall-clock="3.35s" wall="3.35" cpu="4.29613" calls="200"/>
+        </assemble>
+      </summary>
+    </analysis>
+  </sequenceStep>
+</cfsInfo>

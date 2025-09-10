@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<cfsSimulation xmlns="http://www.cfs++.org/simulation" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.cfs++.org/simulation 
+https://opencfs.gitlab.io/cfs/xml/CFS-Simulation/CFS.xsd">
+
+  <fileFormats>
+    <input>
+      <!-- specify you mesh input file here -->
+<!--       <cdb fileName="test1.cdb"/> -->
+      <cdb fileName="PendulumWallImpact.cdb"/>
+    </input>
+    <output>
+      <hdf5/><!-- the default output, i.e. the results_hdf5/job.cfs file -->
+      <text id="txt"/><!-- you can also use text output (suitable for selected results, specify outputIds="txt" for them) -->
+    </output>
+    <materialData file="mat.xml" format="xml"/><!-- material database -->
+  </fileFormats>
+  
+  <domain geometryType="3d">
+    <regionList>
+      <!-- specify material assignment here -->
+      <region name="V_pendulum" material="steel"/>
+      <region name="V_wall" material="steel"></region>
+    </regionList> 
+  </domain>
+  
+  
+  <sequenceStep index="1">
+    <analysis>
+      <transient>
+        <numSteps>100</numSteps>
+        <deltaT>0.01</deltaT>
+        <writeRestart>yes</writeRestart>
+      </transient>
+    </analysis>
+    
+    <pdeList> 
+      <mechanic subType="3d">
+        <regionList>
+          <region name="V_pendulum" />
+          <region name="V_wall" />
+        </regionList>
+        <bcsAndLoads>
+          <!-- Define Rotation Axis-->
+          <displacement name="S_rotation_axis">
+            <comp dof="y" value="0" />
+            <comp dof="z" value="0" />
+          </displacement>
+
+          <!-- Gravity on pendulum volume-->
+          <volumeAcceleration name="V_pendulum">
+            <comp dof="x" value="0" />
+            <comp dof="y" value="-9.81" />
+            <comp dof="z" value="0" />
+          </volumeAcceleration>
+
+          <!-- Fix wall in space -->
+          <fix name="S_wall_fix">
+            <comp dof="x" />
+            <comp dof="y" />
+            <comp dof="z" />
+          </fix>
+        
+        </bcsAndLoads>
+        <storeResults>
+          <nodeResult type="mechVelocity">
+            <regionList>
+              <region name="V_pendulum" />
+            </regionList>
+          </nodeResult>
+          <nodeResult type="mechAcceleration">
+            <allRegions />
+          </nodeResult>
+          <nodeResult type="mechDisplacement">
+            <allRegions />
+          </nodeResult>
+        </storeResults>
+      </mechanic>
+    </pdeList>
+  </sequenceStep>
+</cfsSimulation>
