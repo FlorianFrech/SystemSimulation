@@ -38,7 +38,7 @@ class PendulumModel(osim.Model):
         # Define Coordinate
         coord = joint.updCoordinate()
         coord.setName('q')
-        coord.setDefaultValue(0)
+        coord.setDefaultValue(-np.pi/4)
         coord.setDefaultSpeedValue(0)
 
         # Define Coordinate Actuator

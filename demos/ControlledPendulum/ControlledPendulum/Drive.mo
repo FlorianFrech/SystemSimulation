@@ -30,10 +30,6 @@ model Drive
   Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m", start=0, fixed=true);
 
 protected
-  // Internal Constants
-  
-
-  
   // Internal Parameters
   Real I(unit="A", start=0);
   Real U(unit="V", start=0);

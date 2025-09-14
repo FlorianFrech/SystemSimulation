@@ -8,4 +8,6 @@ Drive
 Demo_Driven
 Demo_DrivenWithWall
 Demo_UndrivenWithWall
-Demo_UndrivenWallDiscrete
+PendulumWithWallDiscrete
+Demo_DrivenWithWallDiscrete
+PendulumWithWallContinuous

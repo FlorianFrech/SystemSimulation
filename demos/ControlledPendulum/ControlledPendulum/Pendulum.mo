@@ -10,16 +10,15 @@ model Pendulum
   
   // Imports
   import Modelica.Constants.pi;
-  import Modelica.Constants.g_n;
 
   // Parameters
   parameter Real m(unit="kg") = 80*0.2;
   parameter Real L(unit="m") = 0.4;
-  parameter Real q0(unit="rad") = -pi/4;
+  parameter Real q0(unit="rad") = -pi/9;
   parameter Real omega0(unit="rad/s") = 0;
 
   // Input torque at the pivot
-  Modelica.Blocks.Interfaces.RealInput torque(unit="N.m") "Control torque";
+  Modelica.Blocks.Interfaces.RealInput torque(unit="N.m");
 
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput q_state(unit="rad");

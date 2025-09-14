@@ -1,18 +1,11 @@
 within ControlledPendulum;
 
-model AngleEncoder
-  /*
-  Model represents a potentiometer-like angule encoder.
-  Analog voltage from potentiometer is quantized using an ADC with nBits and a maximum output voltage of U_ADC.
-  The mean of the reference trajectory angle is mapped to half of the available ADC voltage.
-  */
-  
+model AngleEncoder  
   // Imports
   import Modelica.Constants.pi;
   
   // Input
   Modelica.Blocks.Interfaces.RealInput q(unit="rad");
-  
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput U_q(unit="V");
   

@@ -1,27 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <OpenSimDocument Version="40600">
-	<Model name="pendulum">
-		<!--List of components that this component owns and serializes.-->
-		<components>
-			<ContactHalfSpace name="wall_contact">
-				<!--Path to a Component that satisfies the Socket 'frame' of type PhysicalFrame (description: The frame to which this geometry is attached.).-->
-				<socket_frame>/ground</socket_frame>
-				<!--Location of geometry center in the PhysicalFrame.-->
-				<location>0.02500000037252903 0 0</location>
-				<!--Default appearance for this Geometry-->
-				<Appearance>
-					<!--The opacity used to display the geometry between 0:transparent, 1:opaque.-->
-					<opacity>1</opacity>
-					<!--The color, (red, green, blue), [0, 1], used to display the geometry. -->
-					<color>0 1 0.84070777893066406</color>
-					<!--Visuals applied to surfaces associated with this Appearance.-->
-					<SurfaceProperties>
-						<!--The representation (1:Points, 2:Wire, 3:Shaded) used to display the object.-->
-						<representation>-1</representation>
-					</SurfaceProperties>
-				</Appearance>
-			</ContactHalfSpace>
-		</components>
+	<Model name="torque_example">
 		<!--The model's ground reference frame.-->
 		<Ground name="ground">
 			<!--The geometry used to display the axes of this Frame.-->
@@ -38,14 +17,27 @@
 					<socket_frame>..</socket_frame>
 					<!--Default appearance attributes for this Geometry-->
 					<Appearance>
+						<!--Flag indicating whether the associated Geometry is visible or hidden.-->
+						<visible>false</visible>
+					</Appearance>
+					<!--Half lengths in X, Y, Z respectively.-->
+					<half_lengths>0.10000000000000001 0.10000000000000001 0.10000000000000001</half_lengths>
+				</Brick>
+				<Cylinder name="ground_geom_2">
+					<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
+					<socket_frame>..</socket_frame>
+					<!--Default appearance attributes for this Geometry-->
+					<Appearance>
 						<!--The opacity used to display the geometry between 0:transparent, 1:opaque.-->
 						<opacity>1</opacity>
 						<!--The color, (red, green, blue), [0, 1], used to display the geometry. -->
-						<color>0.065157830715179443 0.80683261156082153 0.92035400867462158</color>
+						<color>0 0.89823007583618164 0.82668954133987427</color>
 					</Appearance>
-					<!--Half lengths in X, Y, Z respectively.-->
-					<half_lengths>0.10000000149011612 0.0099999997764825821 0.10000000149011612</half_lengths>
-				</Brick>
+					<!--Radius of cylinder.-->
+					<radius>0.075000002980232239</radius>
+					<!--Half-Height of cylinder.-->
+					<half_height>0.10000000000000001</half_height>
+				</Cylinder>
 			</attached_geometry>
 		</Ground>
 		<!--Acceleration due to gravity, expressed in ground.-->
@@ -54,6 +46,42 @@
 		<BodySet name="bodyset">
 			<objects>
 				<Body name="head">
+					<!--List of components that this component owns and serializes.-->
+					<components>
+						<PhysicalOffsetFrame name="head_offsetframe">
+							<!--The geometry used to display the axes of this Frame.-->
+							<FrameGeometry name="frame_geometry">
+								<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
+								<socket_frame>..</socket_frame>
+								<!--Scale factors in X, Y, Z directions respectively.-->
+								<scale_factors>0.20000000000000001 0.20000000000000001 0.20000000000000001</scale_factors>
+							</FrameGeometry>
+							<!--List of geometry attached to this Frame. Note, the geometry are treated as fixed to the frame and they share the transform of the frame when visualized-->
+							<attached_geometry>
+								<Cylinder name="head_offsetframe_geom_1">
+									<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
+									<socket_frame>..</socket_frame>
+									<!--Default appearance attributes for this Geometry-->
+									<Appearance>
+										<!--The opacity used to display the geometry between 0:transparent, 1:opaque.-->
+										<opacity>1</opacity>
+										<!--The color, (red, green, blue), [0, 1], used to display the geometry. -->
+										<color>0.76991152763366699 0.73870867490768433 0.064727082848548889</color>
+									</Appearance>
+									<!--Radius of cylinder.-->
+									<radius>0.02500000037252903</radius>
+									<!--Half-Height of cylinder.-->
+									<half_height>0.5</half_height>
+								</Cylinder>
+							</attached_geometry>
+							<!--Path to a Component that satisfies the Socket 'parent' of type C (description: The parent frame to this frame.).-->
+							<socket_parent>..</socket_parent>
+							<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
+							<translation>0.5 0 0</translation>
+							<!--Orientation offset (in radians) of this frame in its parent frame, expressed as a frame-fixed x-y-z rotation sequence.-->
+							<orientation>1.5707962512969971 0 1.5707962512969971</orientation>
+						</PhysicalOffsetFrame>
+					</components>
 					<!--The geometry used to display the axes of this Frame.-->
 					<FrameGeometry name="frame_geometry">
 						<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
@@ -71,18 +99,18 @@
 								<!--The opacity used to display the geometry between 0:transparent, 1:opaque.-->
 								<opacity>1</opacity>
 								<!--The color, (red, green, blue), [0, 1], used to display the geometry. -->
-								<color>0.70796459913253784 0.10337533801794052 0.10337533801794052</color>
+								<color>0.8805309534072876 0.074026942253112793 0.074026942253112793</color>
 							</Appearance>
 							<!--Radius of sphere, defaults to 1.0-->
-							<radius>0.02500000037252903</radius>
+							<radius>0.10000000000000001</radius>
 						</Sphere>
 					</attached_geometry>
 					<!--The mass of the body (kg)-->
-					<mass>16</mass>
+					<mass>1</mass>
 					<!--The location (Vec3) of the mass center in the body frame.-->
 					<mass_center>0 0 0</mass_center>
 					<!--The elements of the inertia tensor (Vec6) as [Ixx Iyy Izz Ixy Ixz Iyz] measured about the mass_center and not the body origin.-->
-					<inertia>0.01 0.01 0.01 0 0 0</inertia>
+					<inertia>0.10000000000000001 0.10000000000000001 0.10000000000000001 0 0 0</inertia>
 				</Body>
 			</objects>
 			<groups />
@@ -99,7 +127,7 @@
 					<coordinates>
 						<Coordinate name="q">
 							<!--The value of this coordinate before any value has been set. Rotational coordinate value is in radians and Translational in meters.-->
-							<default_value>-0.80000001192092896</default_value>
+							<default_value>0</default_value>
 							<!--The speed value of this coordinate before any value has been set. Rotational coordinate value is in rad/s and Translational in m/s.-->
 							<default_speed_value>0</default_speed_value>
 						</Coordinate>
@@ -119,43 +147,9 @@
 							<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
 							<translation>0 0 0</translation>
 							<!--Orientation offset (in radians) of this frame in its parent frame, expressed as a frame-fixed x-y-z rotation sequence.-->
-							<orientation>0 0 0</orientation>
+							<orientation>1.5707963267948966 0 0</orientation>
 						</PhysicalOffsetFrame>
 						<PhysicalOffsetFrame name="head_offset">
-							<!--List of components that this component owns and serializes.-->
-							<components>
-								<PhysicalOffsetFrame name="head_offset_offsetframe">
-									<!--The geometry used to display the axes of this Frame.-->
-									<FrameGeometry name="frame_geometry">
-										<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
-										<socket_frame>..</socket_frame>
-										<!--Scale factors in X, Y, Z directions respectively.-->
-										<scale_factors>0.20000000000000001 0.20000000000000001 0.20000000000000001</scale_factors>
-									</FrameGeometry>
-									<!--List of geometry attached to this Frame. Note, the geometry are treated as fixed to the frame and they share the transform of the frame when visualized-->
-									<attached_geometry>
-										<Cylinder name="head_offset_offsetframe_geom_1">
-											<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
-											<socket_frame>..</socket_frame>
-											<!--Default appearance attributes for this Geometry-->
-											<Appearance>
-												<!--The opacity used to display the geometry between 0:transparent, 1:opaque.-->
-												<opacity>1</opacity>
-												<!--The color, (red, green, blue), [0, 1], used to display the geometry. -->
-												<color>0.64272159337997437 0.69911503791809082 0.061868570744991302</color>
-											</Appearance>
-											<!--Radius of cylinder.-->
-											<radius>0.0099999997764825821</radius>
-											<!--Half-Height of cylinder.-->
-											<half_height>0.20000000298023224</half_height>
-										</Cylinder>
-									</attached_geometry>
-									<!--Path to a Component that satisfies the Socket 'parent' of type C (description: The parent frame to this frame.).-->
-									<socket_parent>..</socket_parent>
-									<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
-									<translation>0 -0.20000000298023224 0</translation>
-								</PhysicalOffsetFrame>
-							</components>
 							<!--The geometry used to display the axes of this Frame.-->
 							<FrameGeometry name="frame_geometry">
 								<!--Path to a Component that satisfies the Socket 'frame' of type Frame.-->
@@ -166,7 +160,7 @@
 							<!--Path to a Component that satisfies the Socket 'parent' of type C (description: The parent frame to this frame.).-->
 							<socket_parent>/bodyset/head</socket_parent>
 							<!--Translational offset (in meters) of this frame's origin from the parent frame's origin, expressed in the parent frame.-->
-							<translation>0 0.40000000596046448 0</translation>
+							<translation>1 0 0</translation>
 							<!--Orientation offset (in radians) of this frame in its parent frame, expressed as a frame-fixed x-y-z rotation sequence.-->
 							<orientation>0 0 0</orientation>
 						</PhysicalOffsetFrame>
@@ -207,38 +201,9 @@
 					<!--The maximum generalized force produced by this actuator.-->
 					<optimal_force>1</optimal_force>
 				</CoordinateActuator>
-				<HuntCrossleyForce name="HuntCrossleyForce">
-					<!--Material properties.-->
-					<HuntCrossleyForce::ContactParametersSet name="contact_parameters">
-						<objects>
-							<HuntCrossleyForce::ContactParameters>
-								<!--Names of geometry objects affected by these parameters.-->
-								<geometry>wall_contact head_contact</geometry>
-								<stiffness>100000</stiffness>
-								<dissipation>0.5</dissipation>
-								<static_friction>0.90000000000000002</static_friction>
-								<dynamic_friction>0.90000000000000002</dynamic_friction>
-								<viscous_friction>0.59999999999999998</viscous_friction>
-							</HuntCrossleyForce::ContactParameters>
-						</objects>
-						<groups />
-					</HuntCrossleyForce::ContactParametersSet>
-				</HuntCrossleyForce>
 			</objects>
 			<groups />
 		</ForceSet>
-		<!--Geometry to be used in contact forces.-->
-		<ContactGeometrySet name="contactgeometryset">
-			<objects>
-				<ContactSphere name="head_contact">
-					<!--Path to a Component that satisfies the Socket 'frame' of type PhysicalFrame (description: The frame to which this geometry is attached.).-->
-					<socket_frame>/bodyset/head</socket_frame>
-					<!--Radius of the sphere (default: 0).-->
-					<radius>0.02500000037252903</radius>
-				</ContactSphere>
-			</objects>
-			<groups />
-		</ContactGeometrySet>
 		<!--Visual preferences for this model.-->
 		<ModelVisualPreferences name="modelvisualpreferences">
 			<!--Model display preferences-->

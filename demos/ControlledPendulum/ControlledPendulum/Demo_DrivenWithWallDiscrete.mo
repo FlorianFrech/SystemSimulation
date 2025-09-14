@@ -1,6 +1,6 @@
 within ControlledPendulum;
 
-model Demo_Driven
+model Demo_DrivenWithWallDiscrete
   /* 
   A model of a controlled pendulum system consisting of:
    - Reference trajectory generator
@@ -23,7 +23,7 @@ model Demo_Driven
   
   Drive               drive;
   
-  Pendulum            pendulum;
+  PendulumWithWallDiscrete            pendulum;
 
 equation
   // Connect reference and pendulum to sensors
@@ -45,4 +45,4 @@ equation
     experiment(StartTime = 0, StopTime = 10, Interval = 0.001)
   );
 
-end Demo_Driven;
+end Demo_DrivenWithWallDiscrete;

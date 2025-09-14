@@ -68,12 +68,10 @@ model PID_Sampled
    when sample(0, dt) then
        // Current error
        e_k := ref_cont - meas_cont;
-
        // Update integral sum with anti-windup
        if not isSaturated then
            integral_sum := integral_sum + e_k * dt;
        end if;
-
        // Compute PID terms
        P_term := Kp * e_k;
        I_term := Ki * integral_sum;

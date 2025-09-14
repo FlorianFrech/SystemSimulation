@@ -2,7 +2,6 @@ from typing import Dict, List
 from fmpy import read_model_description, extract, instantiate_fmu
 from fmpy.fmi2 import FMU2Slave
 
-
 class FMUComponent():
     """
     Wrapper around an FMU to implement the CoSimComponent interface.
@@ -48,6 +47,19 @@ class FMUComponent():
         self._inst.enterInitializationMode()
         self._inst.exitInitializationMode()
 
+    def set_parameters(self, **parameters: float) -> None:
+        """
+        Set the parameters of the FMU during initialization.
+            :param parameters: Parameters as keyword arguments {name: value}.
+        """
+        if not parameters: return
+        vrs: List[int] = []
+        vals: List[float] = []
+        for k, v in parameters.items():
+            vrs.append(self._vrs_in[k])
+            vals.append(v)
+        self._inst.setReal(vrs, vals)
+
     def set_inputs(self, **signals: float) -> None:
         """
         Set the input signals for the FMU.
@@ -76,3 +88,14 @@ class FMUComponent():
         vrs = list(self._vrs_out.values())
         vals = self._inst.getReal(vrs)
         return {k: vals[i] for i, k in enumerate(self._vrs_out.keys())}
+    
+    def reset(self) -> None:
+        """
+        Reset the FMU component, releasing resources.
+        """
+        if self._inst:
+            self._inst.terminate()
+            self._inst.freeInstance()
+            self._inst = None
+            self._vrs_in = {}
+            self._vrs_out = {}

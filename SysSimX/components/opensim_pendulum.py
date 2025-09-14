@@ -9,18 +9,23 @@ class OpenSimPendulum:
     def __init__(self, name: str = 'opensim_pendulum',
                  mass: float = 80*0.2,
                  length: float = 0.4,
-                 inertia: osim.Inertia = osim.Inertia(0.1, 0.1, 0.1)):
+                 inertia: osim.Inertia = osim.Inertia(0.1, 0.1, 0.1),
+                 q0: float = -np.pi/4,
+                 omega0: float = 0.0):
         """
         Constructor for the OpenSimPendulum class.
             :param name: Name of the model instance.
             :param mass: Mass of the pendulum head (kg).
             :param length: Length of the pendulum rod (m).
             :param inertia: Inertia of the pendulum head (kg*m^2).
+            :param q0: Initial angle of the pendulum (rad).
         """
         self.name = name
         self.mass = mass
         self.length = length
         self.inertia = inertia
+        self.q0 = q0
+        self.omega0 = omega0
 
         self.model, self.state, self.coord, self.actuator, self.manager = self._build()
     
@@ -40,8 +45,8 @@ class OpenSimPendulum:
 
         coord = joint.updCoordinate()
         coord.setName('q')
-        coord.setDefaultValue(0)
-        coord.setDefaultSpeedValue(0)
+        coord.setDefaultValue(self.q0)
+        coord.setDefaultSpeedValue(self.omega0)
         coord.setRangeMin(-np.pi); coord.setRangeMax(np.pi)
 
         actuator = osim.CoordinateActuator()
@@ -77,6 +82,40 @@ class OpenSimPendulum:
     def initialize(self, t0: float) -> None:
         self.state.setTime(t0)
     
+    def set_parameters(self, **parameters: float) -> None:
+        if 'q0' in parameters:
+            self.coord.setValue(self.state, parameters['q0'])
+            self.coord.setSpeedValue(self.state, 0)
+            self.model.realizePosition(self.state)
+            self.model.realizeVelocity(self.state)
+            self.model.realizeAcceleration(self.state)
+            self.model.realizeDynamics(self.state)
+        
+        if 'mass' in parameters:
+            self.mass = parameters['mass']
+            self.model.updBodySet().get('head').setMass(self.mass)
+            self.model.realizePosition(self.state)
+            self.model.realizeVelocity(self.state)
+            self.model.realizeAcceleration(self.state)
+            self.model.realizeDynamics(self.state)
+        
+        if 'length' in parameters:
+            self.length = parameters['length']
+            joint = self.model.updJointSet().get('hinge')
+            joint.updChildFrame().setTranslation(osim.Vec3(0, self.length, 0))
+            self.model.realizePosition(self.state)
+            self.model.realizeVelocity(self.state)
+            self.model.realizeAcceleration(self.state)
+            self.model.realizeDynamics(self.state)
+        
+        if 'inertia' in parameters:
+            self.inertia = parameters['inertia']
+            self.model.updBodySet().get('head').setInertia(self.inertia)
+            self.model.realizePosition(self.state)
+            self.model.realizeVelocity(self.state)
+            self.model.realizeAcceleration(self.state)
+            self.model.realizeDynamics(self.state)
+
     def set_inputs(self, **signals: float) -> None:
         if 'torque' in signals:
             self.actuator.setOverrideActuation(self.state, signals['torque'])
