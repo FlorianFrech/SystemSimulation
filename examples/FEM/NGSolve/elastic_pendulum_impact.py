@@ -7,16 +7,6 @@ from typing import Dict, Optional, Tuple, Union
 from dataclasses import dataclass
 from enum import Enum
 
-class PendulumType(Enum):
-    """Enumeration for pendulum dimensionality"""
-    PLANAR_2D = "2D"
-    SPATIAL_3D = "3D"
-
-class MaterialModel(Enum):
-    """Enumeration for material models"""
-    NEO_HOOKE = "neo_hooke"
-    LINEAR_ELASTIC = "linear_elastic"
-
 @dataclass
 class GeometryParameters:
     """Geometry configuration parameters"""
@@ -40,7 +30,6 @@ class MaterialParameters:
     poisson_ratio: float = 0.2
     density: float = 7e3  # kg/m³
     thickness: float = 0.01  # m (for 2D problems)
-    material_model: MaterialModel = MaterialModel.NEO_HOOKE
 
 @dataclass
 class MeshParameters:
@@ -86,7 +75,6 @@ class ElasticPendulumContact:
     """
     
     def __init__(self, 
-                 pendulum_type: PendulumType = PendulumType.PLANAR_2D,
                  geometry_params: Optional[GeometryParameters] = None,
                  material_params: Optional[MaterialParameters] = None,
                  mesh_params: Optional[MeshParameters] = None):
@@ -94,12 +82,10 @@ class ElasticPendulumContact:
         Initialize the elastic pendulum contact model.
         
         Args:
-            pendulum_type: 2D or 3D pendulum simulation
             geometry_params: Geometric configuration
             material_params: Material properties
             mesh_params: Mesh generation settings
         """
-        self.pendulum_type = pendulum_type
         self.geometry_params = geometry_params or GeometryParameters()
         self.material_params = material_params or MaterialParameters()
         self.mesh_params = mesh_params or MeshParameters()
@@ -128,14 +114,11 @@ class ElasticPendulumContact:
         Returns:
             Self for method chaining
         """
-        if self.pendulum_type == PendulumType.PLANAR_2D:
-            self._create_2d_geometry()
-        else:
-            self._create_3d_geometry()
-        
+        self._create_2d_geometry()
         self._generate_mesh()
         self._setup_finite_element_spaces()
         self._setup_contact()
+        
         return self
     
     def _create_2d_geometry(self):
@@ -174,11 +157,6 @@ class ElasticPendulumContact:
         
         self._geometry = Compound([pendulum, wall])
     
-    def _create_3d_geometry(self):
-        """Create 3D pendulum geometry with wall"""
-        # Placeholder for 3D geometry creation
-        pass
-    
     def _generate_mesh(self):
         """Generate finite element mesh"""
         dim = 2 #if self.pendulum_type == PendulumType.PLANAR_2D else 3
@@ -207,7 +185,10 @@ class ElasticPendulumContact:
         
         Q = NumberSpace(self._mesh, definedon=self._mesh.Boundaries(constraint_boundary))
         self._fes = V * Q**multiplier_dim
-        
+
+        # Split trial and test functions
+        (self._u, self._q), (self._v, self._p) = self._fes.TnT()
+
         # Initialize grid functions
         self._gfu = GridFunction(self._fes)  # Current state
         self._gfv = GridFunction(self._fes)  # Velocity
@@ -229,43 +210,18 @@ class ElasticPendulumContact:
         # Lamé parameters
         self._mu = E / (2 * (1 + nu))
         self._lam = E * nu / ((1 + nu) * (1 - 2 * nu))
+
         
-        if self.material_params.material_model == MaterialModel.NEO_HOOKE:
-            if self.pendulum_type == PendulumType.PLANAR_2D:
-                self._material_law = self._neo_hooke_2d
-                self._deformation_tensor = self._right_cauchy_green_2d
-            else:
-                self._material_law = self._neo_hooke_3d
-                self._deformation_tensor = self._right_cauchy_green_3d
-        else:
-            self._material_law = self._linear_elastic
+    def _right_cauchy_green_2d(self, u):
+        """2D Right Cauchy-Green deformation tensor"""
+        F = Id(2) + Grad(u)
+        return F.trans * F
     
     def _neo_hooke_2d(self, C):
         """2D Neo-Hookean strain energy density"""
         return 0.5 * self._mu * (Trace(C - Id(2)) + 
                                 2 * self._mu / self._lam * 
                                 Det(C)**(-self._lam / 2 / self._mu) - 1)
-    
-    def _neo_hooke_3d(self, C):
-        """3D Neo-Hookean strain energy density"""
-        return 0.5 * self._mu * (Trace(C - Id(3)) + 
-                                2 * self._mu / self._lam * 
-                                Det(C)**(-self._lam / 2 / self._mu) - 1)
-    
-    def _right_cauchy_green_2d(self, u):
-        """2D Right Cauchy-Green deformation tensor"""
-        F = Id(2) + Grad(u)
-        return F.trans * F
-    
-    def _right_cauchy_green_3d(self, u):
-        """3D Right Cauchy-Green deformation tensor"""
-        F = Id(3) + Grad(u)
-        return F.trans * F
-    
-    def _linear_elastic(self, u):
-        """Linear elastic strain energy density"""
-        eps = 0.5 * (Grad(u) + Grad(u).trans)
-        return 0.5 * self._lam * Trace(eps)**2 + self._mu * InnerProduct(eps, eps)
     
     def _setup_contact(self):
         """Setup contact boundary conditions"""
@@ -276,13 +232,12 @@ class ElasticPendulumContact:
         )
         
         # Contact formulation
-        X = CoefficientFunction((x, y) if self.pendulum_type == PendulumType.PLANAR_2D else (x, y, z))
-        (u, _), (_, _) = self._fes.TnT()
+        X = CoefficientFunction((x, y)) #if self.pendulum_type == PendulumType.PLANAR_2D else (x, y, z))
         
         uold = self._gfuold.components[0]
         
         # Gap function
-        gap = ((X + u - uold) - (X.Other() + u.Other() - uold.Other())) * (-specialcf.normal(2 if self.pendulum_type == PendulumType.PLANAR_2D else 3).Other())
+        gap = ((X + self._u - uold) - (X.Other() + self._u.Other() - uold.Other())) * (-specialcf.normal(2).Other())
         
         # Penalty method for contact
         contact_stiffness = 1e9  # Could be made configurable
@@ -319,24 +274,15 @@ class ElasticPendulumContact:
         # Rotation center (could be made configurable)
         cx = cy = 0.0
         
-        if self.pendulum_type == PendulumType.PLANAR_2D:
-            # 2D rotation displacement field
-            u_rot = CF(((c - 1.0) * (x - cx) - s * (y - cy),
+        # 2D rotation displacement field
+        u_rot = CF(((c - 1.0) * (x - cx) - s * (y - cy),
                        s * (x - cx) + (c - 1.0) * (y - cy)))
             
-            # 2D angular velocity field
-            v_rot = CF((-omega * (y - cy), omega * (x - cx)))
+        # 2D angular velocity field
+        v_rot = CF((-omega * (y - cy), omega * (x - cx)))
             
-            # 2D angular acceleration field
-            a_rot = CF((-alpha * (y - cy), alpha * (x - cx)))
-        else:
-            # 3D rotation (around Z-axis)
-            u_rot = CF(((c - 1.0) * (x - cx) - s * (y - cy),
-                       s * (x - cx) + (c - 1.0) * (y - cy),
-                       0.0))
-            
-            v_rot = CF((-omega * (y - cy), omega * (x - cx), 0.0))
-            a_rot = CF((-alpha * (y - cy), alpha * (x - cx), 0.0))
+        # 2D angular acceleration field
+        a_rot = CF((-alpha * (y - cy), alpha * (x - cx)))
         
         # Set initial conditions
         self._gfu.components[0].Set(u_rot, definedon=self._mesh.Materials("pendulum"))
@@ -373,42 +319,44 @@ class ElasticPendulumContact:
         if self._sim_params is None:
             raise RuntimeError("Simulation parameters not set. Call setup_simulation() first.")
         
-        # Setup bilinear form
-        (u, q), (v, p) = self._fes.TnT()
-       
-        
-        bfa = BilinearForm(self._fes)
-        
         # Material energy
-        if self.material_params.material_model == MaterialModel.NEO_HOOKE:
-            C = self._deformation_tensor(u)
-            bfa += Variation(self._material_law(C) * dx).Compile()
-        else:
-            bfa += Variation(self._material_law(u) * dx).Compile()
+        def C(u):
+            F = Id(2) + Grad(u)
+            return F.trans * F
+        
+        E, nu = 2100, 0.2
+        mu = E / 2 / (1+nu)
+        lam = E * nu / ((1+nu)*(1-2*nu))
+
+        def NeoHooke (C):
+            return 0.5*mu*(Trace(C-Id(2)) + 2*mu/lam*Det(C)**(-lam/2/mu)-1)
+
+        u = self._u
+
+        # Setup bilinear form
+        bfa = BilinearForm(self._fes)
+        bfa += Variation(NeoHooke(C(u))*dx).Compile() 
+        #bfa += Variation(NeoHooke(C(self._u)*dx)).Compile()
         
         # Constraint terms
         rotation_facet = "rotation"
-        bfa += (InnerProduct(u, p) + InnerProduct(v, q)) * ds(rotation_facet)
-        
+        bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds(rotation_facet)
+
         # Time stepping scheme (Newmark)
         tau = self._sim_params.time_step
         rho = self.material_params.density
-        
-        vel_new = 2/tau * (u - self._gfuold.components[0]) - self._gfvold.components[0]
+
+        vel_new = 2/tau * (self._u - self._gfuold.components[0]) - self._gfvold.components[0]
         acc_new = 2/tau * (vel_new - self._gfvold.components[0]) - self._gfaold.components[0]
         
         # Inertial and gravity terms
         gravity = -1  # m/s²
-        if self.pendulum_type == PendulumType.PLANAR_2D:
-            rhoA = rho * self.material_params.thickness
-            gravity_force = CF((0, gravity))
-        else:
-            rhoA = rho
-            gravity_force = CF((0, gravity, 0))
-        
+        rhoA = rho * self.material_params.thickness
+        gravity_force = CF((0, gravity))
+
         #bfa += rhoA * InnerProduct(acc_new, v) * dx
-        bfa += acc_new * v * dx
-        bfa += - gravity_force * v * dx
+        bfa += acc_new * self._v * dx
+        bfa += - gravity_force * self._v * dx
         
         # Clear previous results
         self._simulation_results = []
