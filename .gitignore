@@ -17,4 +17,6 @@ VenvSysSimX/
 # FMU logs
 *_log.txt
 
+*.vtu
+
 examples/FMI/FMUs
