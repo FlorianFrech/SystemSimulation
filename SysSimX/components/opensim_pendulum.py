@@ -141,3 +141,8 @@ class OpenSimPendulum:
         self.actuator = None
         self.manager = None
         self.model, self.state, self.coord, self.actuator, self.manager = self._build()
+
+    def reinitialize(self, t: float, q_state: float, omega_state: float) -> None:
+        self.q0 = q_state
+        self.omega0 = omega_state
+        self.initialize(t)

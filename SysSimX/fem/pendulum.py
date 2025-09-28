@@ -178,7 +178,6 @@ class FEMPendulum:
         display(Markdown(r"### Angular Acceleration in $\frac{m}{s}$"))
         Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
         
-    
     def _initialize_contact(self):
         kn = self.contact_params.kn
         gap_type = self.contact_params.gap_type
@@ -248,36 +247,41 @@ class FEMPendulum:
         display(Markdown(r"### Pendulum Simulation: Stress and Displacement"))
         self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
                             deformation = self._gf_u.components[0])
-        # Display Mode
-        self._mode_widget = widgets.Text(value=f"Mode: FEM")
+        self._mode_widget = widgets.Text(value="Mode: ")
+        self._time_widget = widgets.Text(value="Time: ")
+        self._ref_widget = widgets.Text(value="q_ref: ")
+        self._state_widget = widgets.Text(value="q: \tomega: ")
+        self._torque_widget = widgets.Text(value="Torque: ")
         display(self._mode_widget)
+        display(self._time_widget)
+        display(self._ref_widget)
+        display(self._state_widget)
+        display(self._torque_widget)
+        self._update_widgets()
+
+    def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, torque=0.0):
+        # Display Mode
+        self._mode_widget.value = f"Mode: {mode}"
         
         # Display Current Time
-        self._time_widget = widgets.Text(value=f"Time: 0.0 / {self.sim_params.t_end}s")
-        display(self._time_widget)
+        self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end}s"
 
         # Display Current Torque
-        self._torque_widget = widgets.Text(value=f"Torque: {self._torque:.2f} Nm")
-        display(self._torque_widget)
+        self._torque_widget.value = f"Torque: {torque:.2f} Nm"
 
         # Display Reference Angle
-        self._ref_widget = widgets.Text(value=f"q_ref: {np.rad2deg(qref):.2f} deg")
-        display(self._ref_widget)
+        self._ref_widget.value = f"q_ref: {np.rad2deg(q_ref_rad):.2f} deg"
         
         # Display Angular Position and Angular Velocity
-        theta, omega = self._rigid_proxy()
-        self._state_widget = widgets.Text(value=f"q: {np.rad2deg(theta):.2f} deg\t"
-                                                f"omega: {omega:.2f} rad/s")
-        display(self._state_widget)
+        self._state_widget.value = f"q: {np.rad2deg(q_state_rad):.2f} deg\t" \
+                                    f"omega: {omega_state:.2f} rad/s"
 
-    def step(self, t, h, qref=None):
+    def step(self, t, h, qref):
         t_step_end = t + h if t + h < self.sim_params.t_end else self.sim_params.t_end
         with TaskManager():
             while t < t_step_end:
                 t += self.tau
 
-                self._mode_widget.value = f"Mode: FEM"
-                self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end}s"
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
                 self._gf_vold.vec[:] = self._gf_v.vec
@@ -308,22 +312,17 @@ class FEMPendulum:
                 self._scene.Redraw()
                 
                 # Update widget values
-                if qref is not None:
-                    self._ref_widget.value = f"Ref. Angle: {np.rad2deg(qref):.2f} deg"
-                self._torque_widget.value = f"Torque: {self._torque:.2f} Nm"
-                theta, omega = self._rigid_proxy()
-                self._state_widget.value = f"theta: {np.rad2deg(theta):.2f} deg, omega: {omega:.2f} rad/s"
+                q_state, omega_state = self._rigid_proxy()
+                self._update_widgets(t=t,
+                                     q_ref_rad=qref,
+                                     q_state_rad=q_state,
+                                     omega_state=omega_state,
+                                     torque=self._torque)
     
     def update_scene(self, state):
         t, q_ref, q_state, omega_state, torque, mode = state
-        theta_deg = np.rad2deg(q_state)
-        
-        self._mode_widget.value = f"Mode: {mode}"
-        self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end} s"
-        self._torque_widget.value = f"Torque: {torque:.2f} Nm"
-        self._ref_widget.value = f"q_ref: {np.rad2deg(q_ref):.2f} deg"
-        self._state_widget.value = f"q: {theta_deg:.2f} deg\tomega: {omega_state:.2f} rad/s"
-        
+        self._update_widgets(mode=mode, t=t, q_ref_rad=q_ref, q_state_rad=q_state, omega_state=omega_state, torque=torque)
+        theta_deg = np.rad2deg(q_state)        
         self.set_state(theta_deg=theta_deg, omega=omega_state)
         self._scene.Redraw()
         
@@ -364,4 +363,10 @@ class FEMPendulum:
     def get_outputs(self) -> Dict[str, float]:
         theta, omega = self._rigid_proxy()
         return {'q': theta, 'omega': omega}
+    
+    def reinitialize(self, t, q_state, omega_state):
+        self.sim_params.t_start = t
+        theta_deg = np.rad2deg(q_state)
+        self.set_state(theta_deg=theta_deg, omega=omega_state)
+        pass
             
