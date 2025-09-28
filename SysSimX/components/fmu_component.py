@@ -1,13 +1,13 @@
 from typing import Dict, List
 from fmpy import read_model_description, extract, instantiate_fmu
 from fmpy.fmi2 import FMU2Slave
+from tabulate import tabulate
 
 class FMUComponent():
     """
     Wrapper around an FMU to implement the CoSimComponent interface.
     """
-    def __init__(self, name: str, fmu_path: str,
-                 inputs: Dict[str, str], outputs: Dict[str, str]):
+    def __init__(self, name: str, fmu_path: str):
         """
         Constructor for the FMUComponent class.
             :param name: Name of the component instance.
@@ -16,36 +16,46 @@ class FMUComponent():
             :param outputs: Mapping of output signal names to FMU variable names.
         """
         self.name = name
-        self._path = fmu_path
-        self._inputs_map = inputs
-        self._outputs_map = outputs
-        self._inst = None
-        self._vrs_in: Dict[str, int] = {}
-        self._vrs_out: Dict[str, int] = {}
-    
+        self.path = fmu_path
+        self.inputs = None
+        self.outputs = None
+        self.parameters = None
+        self._md = read_model_description(fmu_path)
+        self._vars = self._md.modelVariables
+        self._instance = None
+        
+        # Initialize input/outputs
+        self.inputs = {var.name: var for var in self._md.modelVariables if var.causality == "input"}
+        self.outputs = {var.name: var for var in self._md.modelVariables if var.causality == "output"}
+        self.parameters = {var.name: var for var in self._md.modelVariables if var.causality == "parameter"}
+        self._instantiate()
+
+    def _instantiate(self):
+        unzipdir = extract(self.path)
+        self._instance = FMU2Slave(guid=self._md.guid,
+                                unzipDirectory=unzipdir,
+                                modelIdentifier=self._md.coSimulation.modelIdentifier,
+                                instanceName=self.name)
+        self._instance.instantiate()
+
+
     def initialize(self, t0: float) -> None:
         """
         Prepare the component for simulation starting at time t0.
             :param t0: Start time of the simulation.
         """
-        md = read_model_description(self._path)
-        unzipdir = extract(self._path)
-        self._inst = FMU2Slave(guid=md.guid,
-                                unzipDirectory=unzipdir,
-                                modelIdentifier=md.coSimulation.modelIdentifier,
-                                instanceName=self.name)
-        self._inst.instantiate()
-
-        # Map variable names to value references
-        name2var = {var.name: var.valueReference for var in md.modelVariables}
-        self._vrs_in = {k: name2var[nm] for k, nm in self._inputs_map.items()}
-        self._vrs_out = {k: name2var[nm] for k, nm in self._outputs_map.items()}
+        self._vrs_in = {name: var.valueReference for name, var in self.inputs.items()}
+        self._vrs_out = {name: var.valueReference for name, var in self.outputs.items()}
 
         # Standard Co-Sim Initialization
-        self._inst.reset()
-        self._inst.setupExperiment(startTime=t0)
-        self._inst.enterInitializationMode()
-        self._inst.exitInitializationMode()
+        self._instance.reset()
+        self._instance.setupExperiment(startTime=t0)
+        self._instance.enterInitializationMode()
+        for name, var in self.parameters.items():
+            if var.start is not None:
+                var_start = float(var.start)
+                self._instance.setReal([var.valueReference], [var_start])
+        self._instance.exitInitializationMode()
 
     def set_parameters(self, **parameters: float) -> None:
         """
@@ -58,7 +68,7 @@ class FMUComponent():
         for k, v in parameters.items():
             vrs.append(self._vrs_in[k])
             vals.append(v)
-        self._inst.setReal(vrs, vals)
+        self._instance.setReal(vrs, vals)
 
     def set_inputs(self, **signals: float) -> None:
         """
@@ -71,7 +81,7 @@ class FMUComponent():
         for k, v in signals.items():
             vrs.append(self._vrs_in[k])
             vals.append(v)
-        self._inst.setReal(vrs, vals)
+        self._instance.setReal(vrs, vals)
 
     def step(self, t: float, h: float) -> None:
         """
@@ -79,23 +89,48 @@ class FMUComponent():
             :param t: Current communication time point.
             :param h: Communication step size.
         """
-        self._inst.doStep(currentCommunicationPoint=t, communicationStepSize=h)
+        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=h)
     
     def get_outputs(self) -> Dict[str, float]:
         """
         Return the current outputs as a dictionary {name: value}.
         """
         vrs = list(self._vrs_out.values())
-        vals = self._inst.getReal(vrs)
+        vals = self._instance.getReal(vrs)
         return {k: vals[i] for i, k in enumerate(self._vrs_out.keys())}
     
     def reset(self) -> None:
         """
         Reset the FMU component, releasing resources.
         """
-        if self._inst:
-            self._inst.terminate()
-            self._inst.freeInstance()
-            self._inst = None
+        if self._instance:
+            self._instance.terminate()
+            self._instance.freeInstance()
+            self._instance = None
             self._vrs_in = {}
             self._vrs_out = {}
+
+    def _model_info(self) -> str:
+        """
+        Return a formatted string with information about the FMU model.
+        """
+        info = f"FMU Name: {self.name}\n"
+        info += f"FMU Path: {self.path}\n"
+        info += f"FMU Description: {self._md.description}\n"    
+        return info
+
+    def _variable_info(self) -> str:
+        """
+        Return a formatted string with information about the FMU variables.
+        """
+        headers = ["Name", "Type", "Start", "Unit", "Causality", "Variability"]
+        table = []
+        for var in self._md.modelVariables:
+            row = [var.name, var.type, var.start, var.unit, var.causality, var.variability]
+            if var.causality != "local":
+                table.append(row)
+        return tabulate(table, headers, tablefmt="github")
+    
+    def __str__(self) -> str:
+        return self._model_info() + "\n" + self._variable_info() + "\n"
+

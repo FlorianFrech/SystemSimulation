@@ -35,6 +35,8 @@ class FEMPendulum:
         self._mesh = PendulumMesh(self._geo, self.mesh_params)._mesh
 
         self._setup_material_law()
+        self._compute_mass()
+        self._compute_inertia()
 
     def _setup_material_law(self):
         self.E_p, self.E_w     = self.mat_params.E_pendulum, self.mat_params.E_wall
@@ -59,12 +61,35 @@ class FEMPendulum:
         else:
             raise ValueError(f"Unknown material type: {self.mat_params.material_type}")
         pass
+
+    def _compute_mass(self):
+        area = Integrate(1, self._mesh, definedon=self._mesh.Materials("pendulum"))
+        self.mass = area * self.mat_params.thickness * self.rho_p
+
+    def _compute_inertia(self):
+        cx = cy = 0
+        self._X_rel = CF((x - cx, y - cy))
+        J_area = Integrate(self.rho_p * (self._X_rel[0]*self._X_rel[0] + self._X_rel[1]*self._X_rel[1]),
+                           self._mesh, definedon=self._mesh.Materials("pendulum"))
+        self.inertia = J_area * self.mat_params.thickness
     
-    def initialize(self):
+    def initialize(self, t0: float):
+        self.sim_params.t_start = t0
+
+        self._setup_material_law()
+        
+        self._compute_mass()
+        self._compute_inertia()
+        
         self._initialize_fe_spaces()
         self._initialize_grid_functions()
-        self._set_initial_conditions()
+        
+        self.set_state(theta_deg=self.init_params.angular_position_deg,
+                       omega=self.init_params.angular_velocity,
+                       alpha=self.init_params.angular_acceleration)
+        
         self._initialize_contact()
+        
         self._setup_bilinear_form()
         pass
     
@@ -104,20 +129,9 @@ class FEMPendulum:
         self._gf_v_history = GridFunction(self._V, multidim=0)
         self._gf_stress_history = GridFunction(self._S, multidim=0)
     
-    def _set_initial_conditions(self):
-        icp = self.init_params
-        
-        theta = np.deg2rad(icp.angular_position_deg)   # initial angular position
-        omega = icp.angular_velocity                   # initial angular velocity
-        alpha = icp.angular_acceleration               # initial angular acceleration
-        
-        c, s = np.cos(theta), np.sin(theta)
-        
-        # Rotation center (could be made configurable)
-        cx = cy = 0.0
-        
-        # reference coordinates relative to rotation center
-        self._X_rel = CF((x - cx, y - cy))
+    def set_state(self, theta_deg=0, omega=0, alpha=0):        
+        theta_rad = np.deg2rad(theta_deg)
+        c, s = np.cos(theta_rad), np.sin(theta_rad)
         
         # rotated radius r0 = R(theta) * (X - P)
         r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
@@ -135,10 +149,6 @@ class FEMPendulum:
         a0 = CF(( -alpha * r0[1],
                    alpha * r0[0] ))
         
-        # Moment of inertia
-        J_area = Integrate(self.rho_p * (self._X_rel[0]*self._X_rel[0] + self._X_rel[1]*self._X_rel[1]),
-                           self._mesh, definedon=self._mesh.Materials("pendulum"))
-        self._inertia = J_area * self.mat_params.thickness
         self._torque = 0.0  # initial torque
         
         # Set initial conditions
@@ -155,7 +165,7 @@ class FEMPendulum:
         self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
         self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
         
-    def _visualize_initial_conditions(self):
+    def visualize_state(self):
         # Displacement
         display(Markdown(r"### Displacement in $m$"))
         Draw(self._gf_u.components[0], deformation=True)
@@ -233,26 +243,40 @@ class FEMPendulum:
         b_alpha = self.rho_p * CF( (-self._alpha_param * self._X_rel[1], self._alpha_param * self._X_rel[0]) )
         self._bfa += InnerProduct(b_alpha, self._v) * dx("pendulum")
     
-    def initialize_scene(self):
+    def initialize_scene(self, qref=0.0):
         # Display Title and Scene
         display(Markdown(r"### Pendulum Simulation: Stress and Displacement"))
         self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
                             deformation = self._gf_u.components[0])
+        # Display Mode
+        self._mode_widget = widgets.Text(value=f"Mode: FEM")
+        display(self._mode_widget)
         
         # Display Current Time
         self._time_widget = widgets.Text(value=f"Time: 0.0 / {self.sim_params.t_end}s")
         display(self._time_widget)
+
+        # Display Current Torque
+        self._torque_widget = widgets.Text(value=f"Torque: {self._torque:.2f} Nm")
+        display(self._torque_widget)
+
+        # Display Reference Angle
+        self._ref_widget = widgets.Text(value=f"q_ref: {np.rad2deg(qref):.2f} deg")
+        display(self._ref_widget)
         
         # Display Angular Position and Angular Velocity
         theta, omega = self._rigid_proxy()
-        self._state_widget = widgets.Text(value=f"Angle: {np.rad2deg(theta):.2f} deg, Angular Velocity: {omega:.2f} rad/s")
+        self._state_widget = widgets.Text(value=f"q: {np.rad2deg(theta):.2f} deg\t"
+                                                f"omega: {omega:.2f} rad/s")
         display(self._state_widget)
 
-    def step(self, t, h):
+    def step(self, t, h, qref=None):
         t_step_end = t + h if t + h < self.sim_params.t_end else self.sim_params.t_end
         with TaskManager():
             while t < t_step_end:
                 t += self.tau
+
+                self._mode_widget.value = f"Mode: FEM"
                 self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end}s"
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
@@ -260,7 +284,7 @@ class FEMPendulum:
                 self._gf_aold.vec[:] = self._gf_a.vec
                 
                 # Set motor torque parameter for this time step
-                self._alpha_param.Set(self._torque / self._inertia)
+                self._alpha_param.Set(-self._torque / self.inertia)
 
                 # Update contact with the current displacement
                 self._contact.Update(self._gf_u.components[0], self._bfa, 5, 0.01)
@@ -283,10 +307,27 @@ class FEMPendulum:
                 # Increment frame counter and redraw
                 self._scene.Redraw()
                 
-                # Update proxy values
+                # Update widget values
+                if qref is not None:
+                    self._ref_widget.value = f"Ref. Angle: {np.rad2deg(qref):.2f} deg"
+                self._torque_widget.value = f"Torque: {self._torque:.2f} Nm"
                 theta, omega = self._rigid_proxy()
                 self._state_widget.value = f"theta: {np.rad2deg(theta):.2f} deg, omega: {omega:.2f} rad/s"
+    
+    def update_scene(self, state):
+        t, q_ref, q_state, omega_state, torque, mode = state
+        theta_deg = np.rad2deg(q_state)
         
+        self._mode_widget.value = f"Mode: {mode}"
+        self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end} s"
+        self._torque_widget.value = f"Torque: {torque:.2f} Nm"
+        self._ref_widget.value = f"q_ref: {np.rad2deg(q_ref):.2f} deg"
+        self._state_widget.value = f"q: {theta_deg:.2f} deg\tomega: {omega_state:.2f} rad/s"
+        
+        self.set_state(theta_deg=theta_deg, omega=omega_state)
+        self._scene.Redraw()
+        
+
     def _rigid_proxy(self):
         r = self._X_rel
         rhoA = self.rho_p * self.mat_params.thickness

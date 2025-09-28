@@ -26,8 +26,6 @@ class OpenSimPendulum:
         self.inertia = inertia
         self.q0 = q0
         self.omega0 = omega0
-
-        self.model, self.state, self.coord, self.actuator, self.manager = self._build()
     
     def _build(self):
         model = osim.Model()
@@ -80,6 +78,8 @@ class OpenSimPendulum:
         return model, state, coord, actuator, manager
     
     def initialize(self, t0: float) -> None:
+        self.model, self.state, self.coord, self.actuator, self.manager = self._build()
+
         self.state.setTime(t0)
     
     def set_parameters(self, **parameters: float) -> None:
