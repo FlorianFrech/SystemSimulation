@@ -25,7 +25,8 @@ def create_modelica_system(package_file_path: Path, composed_model_name: str) ->
         ModelicaSystem: An instance of ModelicaSystem for the specified model.
     """
     modelica_system = ModelicaSystem(fileName=str(package_file_path),
-                                     modelName=composed_model_name)
+                                     modelName=composed_model_name,
+                                     commandLineOptions="--fmiFlags=s:cvode")
     return modelica_system
 
 def create_fmu(model: ModelicaSystem, fmuType="cs"):

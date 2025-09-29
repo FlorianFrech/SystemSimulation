@@ -31,6 +31,8 @@ class FEMPendulum:
         self.sim_params = sim_params
         self.anim_params = anim_params
 
+        self._with_contact = self.geom_params.use_wall
+
         self._geo = PendulumGeometry(self.geom_params)._geo
         self._mesh = PendulumMesh(self._geo, self.mesh_params)._mesh
 
@@ -45,22 +47,34 @@ class FEMPendulum:
         
         self._material_wall = LinearElasticMaterial(self.E_w, self.nu_w)
         
-        self._mat_type_pendulum = self.mat_params.material_type
-        self._mat_type_wall = "Linear Elastic"  # wall is always linear elastic
+        self._mat_type_pendulum = self.mat_params.type_pendulum
+        self._mat_type_wall = self.mat_params.type_wall
 
         if self._mat_type_pendulum == "Neo-Hookean":
             self._material_pendulum = NeoHookeanMaterial(self.E_p, self.nu_p)
-            self._deformation_gradient = self._material_pendulum.C
-            self._material_law = self._material_pendulum.energy_density
-            self._sigma_law = self._material_pendulum.sigma
+            self._deformation_gradient_p = self._material_pendulum.C
+            self._material_law_p = self._material_pendulum.energy_density
+            self._sigma_law_p = self._material_pendulum.sigma
         elif self._mat_type_pendulum == "Linear Elastic":
             self._material_pendulum = LinearElasticMaterial(self.E_p, self.nu_p)
-            self._deformation_gradient = self._material_pendulum.eps
-            self._material_law = self._material_pendulum.energy_density
-            self._sigma_law = self._material_pendulum.sigma
+            self._deformation_gradient_p = self._material_pendulum.eps
+            self._material_law_p = self._material_pendulum.energy_density
+            self._sigma_law_p = self._material_pendulum.sigma
         else:
-            raise ValueError(f"Unknown material type: {self.mat_params.material_type}")
-        pass
+            raise ValueError(f"Unknown material type: {self.mat_params.type_pendulum}")
+        
+        if self._mat_type_wall == "Neo-Hookean":
+            self._material_wall = NeoHookeanMaterial(self.E_w, self.nu_w)
+            self._deformation_gradient_w = self._material_wall.C
+            self._material_law_w = self._material_wall.energy_density
+            self._sigma_law_w = self._material_wall.sigma
+        elif self._mat_type_wall == "Linear Elastic":
+            self._material_wall = LinearElasticMaterial(self.E_w, self.nu_w)
+            self._deformation_gradient_w = self._material_wall.eps
+            self._material_law_w = self._material_wall.energy_density
+            self._sigma_law_w = self._material_wall.sigma
+        else:
+            raise ValueError(f"Unknown material type: {self.mat_params.type_wall}")
 
     def _compute_mass(self):
         area = Integrate(1, self._mesh, definedon=self._mesh.Materials("pendulum"))
@@ -88,7 +102,8 @@ class FEMPendulum:
                        omega=self.init_params.angular_velocity,
                        alpha=self.init_params.angular_acceleration)
         
-        self._initialize_contact()
+        if self._with_contact:
+            self._initialize_contact()
         
         self._setup_bilinear_form()
         pass
@@ -209,19 +224,20 @@ class FEMPendulum:
     def _setup_bilinear_form(self):
         # Bilinear form
         self._bfa = BilinearForm(self._fes)
-        
-        # Strain energy wall (always linear elastic)
-        ed_w = self._material_wall.energy_density
-        eps_w = self._material_wall.eps
-        self._bfa += Variation(ed_w(eps_w(self._u)) * dx("wall")).Compile()
-        
+
+
+        if self._with_contact:
+            self._bfa += Variation( self._material_law_w(self._deformation_gradient_w(self._u),
+                                                         self._u) * dx("wall") ).Compile()
+
         # Strain energy pendulum (material law configurable)
-        self._bfa += Variation(self._material_law(self._deformation_gradient(self._u), self._u) * dx("pendulum")).Compile()
+        self._bfa += Variation(self._material_law_p(self._deformation_gradient_p(self._u),
+                                                    self._u) * dx("pendulum")).Compile()
         
         # Rotation constraint
         self._bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds('rotation')
         
-        self.tau = self.sim_params.tau
+        self.tau = Parameter(self.sim_params.tau)
         vel_new = 2/self.tau * (self._u-self._gf_uold.components[0]) - self._gf_vold.components[0]
         acc_new = 2/self.tau * (vel_new-self._gf_vold.components[0]) - self._gf_aold.components[0]
         
@@ -229,13 +245,13 @@ class FEMPendulum:
         rhoA_w = self.rho_w * self.mat_params.thickness
         g = 9.81
         
-        # inertia (mass matrix effect)
+        # inertia (mass matrix effect) and gravity force
+        if self._with_contact:
+            self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
+            self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
+
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
-        self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
-        
-        # gravity force
         self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
-        self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
         
         # torque from motor on pendulum around rotation axis
         self._alpha_param = Parameter(0.0)
@@ -243,20 +259,23 @@ class FEMPendulum:
         self._bfa += InnerProduct(b_alpha, self._v) * dx("pendulum")
     
     def initialize_scene(self, qref=0.0):
-        # Display Title and Scene
         display(Markdown(r"### Pendulum Simulation: Stress and Displacement"))
+        
         self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
                             deformation = self._gf_u.components[0])
-        self._mode_widget = widgets.Text(value="Mode: ")
-        self._time_widget = widgets.Text(value="Time: ")
-        self._ref_widget = widgets.Text(value="q_ref: ")
-        self._state_widget = widgets.Text(value="q: \tomega: ")
+        
+        self._mode_widget   = widgets.Text(value="Mode: ")
+        self._time_widget   = widgets.Text(value="Time: ")
+        self._ref_widget    = widgets.Text(value="q_ref: ")
+        self._state_widget  = widgets.Text(value="q: \tomega: ")
         self._torque_widget = widgets.Text(value="Torque: ")
+        
         display(self._mode_widget)
         display(self._time_widget)
         display(self._ref_widget)
         display(self._state_widget)
         display(self._torque_widget)
+        
         self._update_widgets()
 
     def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, torque=0.0):
@@ -280,7 +299,13 @@ class FEMPendulum:
         t_step_end = t + h if t + h < self.sim_params.t_end else self.sim_params.t_end
         with TaskManager():
             while t < t_step_end:
-                t += self.tau
+                q_state, _ = self._rigid_proxy()
+                if q_state < np.deg2rad(2) and self._with_contact:
+                    self.tau.Set(self.sim_params.tau / 10)
+                else:
+                    self.tau.Set(self.sim_params.tau)
+                tau = self.tau.Get()
+                t += tau
 
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
@@ -291,17 +316,18 @@ class FEMPendulum:
                 self._alpha_param.Set(-self._torque / self.inertia)
 
                 # Update contact with the current displacement
-                self._contact.Update(self._gf_u.components[0], self._bfa, 5, 0.01)
+                if self._with_contact:
+                    self._contact.Update(self._gf_u.components[0], self._bfa, 5, 0.01)
                 
                 # Solve nonlinear system with Newton               
                 NewtonMinimization(a=self._bfa, u=self._gf_u, printing=False, inverse="sparsecholesky")          
 
                 # Update kinematic variables (velocity, acceleration)
-                self._gf_v.vec[:] = 2/self.tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
-                self._gf_a.vec[:] = 2/self.tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
+                self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
+                self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
                 # Compute stress
-                self._gf_sigma.Interpolate(self._sigma_law(self._deformation_gradient(self._gf_u.components[0]), self._u))
+                self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
                 
                 # Store results in time series
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)

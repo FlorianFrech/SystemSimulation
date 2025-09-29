@@ -6,6 +6,7 @@ class GeometryParameters:
     l_center: float = 0.8
     
     # Wall geometry
+    use_wall:   bool  = False
     q_wall_deg: float = 0
     wall_len_x: float = 0.05
     wall_len_y: float = 0.5
@@ -25,34 +26,41 @@ class GeometryParameters:
 
 
 class MaterialParameters:
-    material_type:      str   = "Neo-Hookean" # "Linear Elastic" or "Neo-Hookean"
-    E_pendulum:        float = 5e4    
+    type_pendulum:      str  = "Neo-Hookean" # "Linear Elastic" or "Neo-Hookean"
+    E_pendulum:        float = 5e5 
     nu_pendulum:       float = 0.45       
     rho_pendulum:      float = 1000      
+    type_wall:         str   = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
     E_wall:            float = 2.10e9     
     nu_wall:           float = 0.2       
     rho_wall:          float = 7850      
     thickness:         float = 0.1
     
     def __str__(self):
-            return (f"Material Parameters:\n"
-                    f"  Material Law: {self.material_type}\n"
-                    f"  Pendulum - E: {self.E_pendulum}, nu: {self.nu_pendulum}, rho: {self.rho_pendulum}\n"
-                    f"  Wall - E:     {self.E_wall}, nu: {self.nu_wall}, rho: {self.rho_wall}\n"
-                    f"  thickness:    {self.thickness}\n")
-              
-    
+            return (f"Material Parameters Pendulum:\n"
+                    f"  Material Type:   {self.type_pendulum}\n"
+                    f"  Young's Modulus: {self.E_pendulum}\n"
+                    f"  Poisson's Ratio: {self.nu_pendulum}\n"
+                    f"  Density:         {self.rho_pendulum}\n"
+                    f"Material Parameters Wall:\n"
+                    f"  Material Type:   {self.type_wall}\n"
+                    f"  Young's Modulus: {self.E_wall}\n"
+                    f"  Poisson's Ratio: {self.nu_wall}\n"
+                    f"  Density:         {self.rho_wall}\n"
+                    f"General Thickness: {self.thickness}\n")
+
+
 class MeshParameters:
-    max_element_size:  float = 0.035
-    mesh_order:        int   = 3
+    max_element_size:  float = 0.03
+    mesh_order:        int   = 2
     curved_elements:   bool  = True
     refinement_levels: int   = 0
     
 
 class InitialConditionParameters:
-    angular_position_deg:  float = -0.01
-    angular_velocity:      float = -0.5
-    angular_acceleration:  float = -0.1
+    angular_position_deg:  float = 10
+    angular_velocity:      float = 0
+    angular_acceleration:  float = 0
     drive_torque:          float = 0
     
     def __str__(self):
@@ -76,7 +84,7 @@ class ContactParameters:
 
 class SimulationParameters:
     t_start:  float = 0 
-    tau:      float = 2e-4  
+    tau:      float = 0.01
     t_end:    float = 0.2
     
     def __str__(self):

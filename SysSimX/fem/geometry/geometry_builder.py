@@ -29,18 +29,20 @@ class PendulumGeometry:
 
         pendulum = pendulum.Rotate(Axis((0.0, 0, 0), (0, 0, 1)), 180)
         pendulum.name = "pendulum"
+        geo = pendulum
         
-        # Wall
-        wall_pos_x = -gp.r_head - gp.wall_len_x
-        wall_pos_y = -gp.l_center - gp.wall_len_y/2
-        wall = MoveTo(wall_pos_x, wall_pos_y).Rectangle(gp.wall_len_x, gp.wall_len_y).Face()
-        wall.faces.maxh = gp.r_head/5
-        wall.edges.Max(X).name = "contact_wall"
-        wall.edges.Max(X).maxh = gp.r_head/20
-        wall.edges.Max(Y).name = "fix"
-        wall.edges.Min(Y).name = "fix"
-        wall.edges.Min(X).name = "fix"
-        wall.name = "wall"
-
-        geo = Compound([pendulum, wall])
+        if gp.use_wall:
+            # Wall
+            wall_pos_x = -gp.r_head - gp.wall_len_x
+            wall_pos_y = -gp.l_center - gp.wall_len_y/2
+            wall = MoveTo(wall_pos_x, wall_pos_y).Rectangle(gp.wall_len_x, gp.wall_len_y).Face()
+            wall.faces.maxh = gp.r_head/5
+            wall.edges.Max(X).name = "contact_wall"
+            wall.edges.Max(X).maxh = gp.r_head/20
+            wall.edges.Max(Y).name = "fix"
+            wall.edges.Min(Y).name = "fix"
+            wall.edges.Min(X).name = "fix"
+            wall.name = "wall"
+            geo = Compound([pendulum, wall])
+        
         self._geo = geo

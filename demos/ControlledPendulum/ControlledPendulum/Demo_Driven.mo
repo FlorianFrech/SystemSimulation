@@ -42,7 +42,7 @@ equation
   connect(drive.omega, pendulum.omega_state);
   
   annotation(
-    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 5, Interval = 0.1)
   );
 
 end Demo_Driven;

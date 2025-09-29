@@ -46,4 +46,8 @@ equation
   der(I) = (U - R_M * I - n/k_n) / L_M;
   torque = eta_M * i_M * k_M * I;
   
+  annotation(
+    experiment(StartTime = 0, StopTime = 5, Interval = 0.1)
+  );
+  
 end Drive;

@@ -10,7 +10,7 @@ class LinearElasticMaterial:
     def eps(self, u):
         return Sym(Grad(u))
     
-    def energy_density(self, eps):
+    def energy_density(self, eps, u):
         return 0.5*self.lmbda*Trace(eps)**2 + self.mu*InnerProduct(eps, eps)
     
     def sigma(self, eps, u):
