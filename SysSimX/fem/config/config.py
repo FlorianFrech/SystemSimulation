@@ -27,7 +27,7 @@ class GeometryParameters:
 
 class MaterialParameters:
     type_pendulum:      str  = "Neo-Hookean" # "Linear Elastic" or "Neo-Hookean"
-    E_pendulum:        float = 1e6 
+    E_pendulum:        float = 6e6 
     nu_pendulum:       float = 0.45       
     rho_pendulum:      float = 1000      
     type_wall:         str   = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
@@ -58,7 +58,7 @@ class MeshParameters:
     
 
 class InitialConditionParameters:
-    angular_position_deg:  float = 10
+    angular_position_deg:  float = 0
     angular_velocity:      float = 0
     angular_acceleration:  float = 0
     drive_torque:          float = 0
@@ -95,4 +95,4 @@ class SimulationParameters:
     
 class AnimationParameters:
     interval: int   = 10       
-    speed:    float = 3.0
+    speed:    float = 50

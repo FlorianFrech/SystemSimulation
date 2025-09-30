@@ -11,6 +11,7 @@ from netgen.occ import *
 from ngsolve.solvers import NewtonMinimization
 from IPython.display import display, Markdown
 import ipywidgets as widgets
+from ipywidgets import Layout, HBox, VBox, HTML
 
 from typing import Dict
 
@@ -220,6 +221,59 @@ class FEMPendulum:
 
         penalty_energy = kn * self._cf * self._cf
         self._contact.AddEnergy(IfPos(self._cf, penalty_energy, 0), deformed = True)
+        
+    def _initialize_torque_control(self):
+        # Set Option
+        self._torque_option = "zero_mean_weight"
+        #self._torqueoption = "two_patch_amplitude"
+        
+        # Motor torque
+        self._normal_rot = specialcf.normal(2)
+        self._tangent_rot = CF((-self._normal_rot[1], self._normal_rot[0]))
+        r = self._X_rel
+
+        # Smooth localized weight near rotation axis
+        sigma = max(1e-9, 0.5 * self.geom_params.r_rod)
+        w_core = exp( -(x*x)/(sigma*sigma))
+
+        # Smooth splitter into two patches
+        delta = 0.1 * sigma
+        H = 0.5 * (1 + x / sqrt(x*x + delta*delta)) # smooth Heaviside function
+        self._w_plus = w_core * H                   # right patch weight
+        self._w_minus = w_core * (1.0 - H)          # left patch weight
+        
+        self._cross_rn = r[0] * self._normal_rot[1] - r[1] * self._normal_rot[0]
+        
+        if self._torque_option == "zero_mean_weight":
+            wdiff = self._w_plus - self._w_minus
+            mean_w = Integrate(wdiff, self._mesh, definedon=self._mesh.Boundaries("rotation")) / Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            wdiff0 = wdiff - mean_w
+            self._q_drive = Parameter(0.0)
+            self._t_drive = self._q_drive * wdiff0 * self._normal_rot
+            self._D_pair = Integrate( wdiff0 * self._cross_rn,
+                                      self._mesh, definedon=self._mesh.Boundaries("rotation"))
+
+        if self._torque_option == "two_patch_amplitude":
+            Iplus = Integrate( self._w_plus, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            Iminus = Integrate( self._w_minus, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            
+            Jplus = Integrate( self._w_plus * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            Jminus = Integrate( self._w_minus * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            
+            self._Tmat = np.array([[Iplus, Iminus],
+                                [Jplus, Jminus]], dtype=float)
+            
+            self._q_plus = Parameter(0.0)
+            self._q_minus = Parameter(0.0)
+            self._t_drive = (self._q_plus * self._w_plus + self._q_minus * self._w_minus) * self._normal_rot            
+            
+    def _get_torque_diagnostics(self):
+        # Motor Torque chek
+        Fx = Integrate(self._t_drive[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        Fy = Integrate(self._t_drive[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        Mz = Integrate(self._q_drive * (self._w_plus - self._w_minus) * self._cross_rn,
+                          self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        return Fx, Fy, Mz
 
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -253,50 +307,56 @@ class FEMPendulum:
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
         self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
         
-        # torque from motor on pendulum around rotation axis
-        self._alpha_param = Parameter(0.0)
-        b_alpha = self.rho_p * CF( (-self._alpha_param * self._X_rel[1], self._alpha_param * self._X_rel[0]) )
-        self._bfa += InnerProduct(b_alpha, self._v) * dx("pendulum")
+        # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
+        self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
     
     def initialize_scene(self, qref=0.0):
-        display(Markdown(r"### Pendulum Simulation: Stress and Displacement"))
+        header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px;'>Simulation Diagnostics</h3>")
         
+        self._widget_time   = widgets.FloatText(value=self.sim_params.t_start, description=f'Time: t / {self.sim_params.t_end} s', step=0.001, disabled=True)
+        self._widget_mode   = widgets.Text(value="", description="Mode:")
+        self._widget_ref    = widgets.FloatText(value=0.0, description=r'Ref: $\theta_\text{ref}$ in deg', step=0.001, disabled=True)
+        self._widget_theta  = widgets.FloatText(value=0.0, description=f'Theta: θ in deg', step=0.001, disabled=True)
+        self._widget_omega  = widgets.FloatText(value=0.0, description='Omega: ω in rad/s', step=0.01, disabled=True)
+        self._widget_torque = widgets.FloatText(value=0.0, description='Torque: Mz in Nm', step=0.01, disabled=True)
+        self._widget_fx     = widgets.FloatText(value=0.0, description='Fx in N', step=0.01, disabled=True)
+        self._widget_fy     = widgets.FloatText(value=0.0, description='Fy in N', step=0.01, disabled=True)
+        
+        self._widgets = [self._widget_time, self._widget_mode, self._widget_ref, self._widget_theta, self._widget_omega,
+                         self._widget_torque, self._widget_fx, self._widget_fy]
+        
+        for w in self._widgets:
+            w.layout.width = '350px'
+            w.layout.margin = '8px 0px 8px 0px'
+            w.layout.align_self = 'center'
+            w.layout.display = 'flex'
+            w.layout.flex_direction = 'column'
+            w.style.description_width = '120px'
+            w.style.font_weight = 'bold'
+            w.style.font_size = '16px'
+            w.style.background = '#f5f7fa'
+            w.style.border = '1px solid #cfd8dc'
+            w.style.border_radius = '8px'
+            w.style.padding = '6px 12px'
+            w.style.color = '#263238'
+            w.style.text_align = 'right'
+            
+        vbox = VBox([header] + self._widgets)
+        display(vbox)        
         self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
                             deformation = self._gf_u.components[0])
-        
-        self._mode_widget   = widgets.Text(value="Mode: ")
-        self._time_widget   = widgets.Text(value="Time: ")
-        self._ref_widget    = widgets.Text(value="q_ref: ")
-        self._state_widget  = widgets.Text(value="q: \tomega: ")
-        self._torque_widget = widgets.Text(value="Torque: ")
-        
-        display(self._mode_widget)
-        display(self._time_widget)
-        display(self._ref_widget)
-        display(self._state_widget)
-        display(self._torque_widget)
-        
-        self._update_widgets()
 
     def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, torque=0.0):
-        # Display Mode
-        self._mode_widget.value = f"Mode: {mode}"
-        
-        # Display Current Time
-        self._time_widget.value = f"Time: {t:.4f} / {self.sim_params.t_end}s"
-
-        # Display Current Torque
-        self._torque_widget.value = f"Torque: {torque:.2f} Nm"
-
-        # Display Reference Angle
-        self._ref_widget.value = f"q_ref: {np.rad2deg(q_ref_rad):.2f} deg"
-        
-        # Display Angular Position and Angular Velocity
-        self._state_widget.value = f"q: {np.rad2deg(q_state_rad):.2f} deg\t" \
-                                    f"omega: {omega_state:.2f} rad/s"
+        self._widget_time.value = t  
+        self._widget_mode.value = mode
+        self._widget_ref = np.rad2deg(q_ref_rad)
+        self._widget_theta = np.rad2deg(q_state_rad)
+        self._widget_omega = omega_state
+        self._widget_torque = torque
 
     def step(self, t, h, qref):
         t_step_end = t + h if t + h < self.sim_params.t_end else self.sim_params.t_end
+        
         with TaskManager():
             while t < t_step_end:
                 q_state, _ = self._rigid_proxy()
@@ -312,8 +372,8 @@ class FEMPendulum:
                 self._gf_vold.vec[:] = self._gf_v.vec
                 self._gf_aold.vec[:] = self._gf_a.vec
                 
-                # Set motor torque parameter for this time step
-                self._alpha_param.Set(-self._torque / self.inertia)
+                # Get torque value
+                Fx, Fy, Mz = self._get_torque_diagnostics()
 
                 # Update contact with the current displacement
                 if self._with_contact:
@@ -343,7 +403,7 @@ class FEMPendulum:
                                      q_ref_rad=qref,
                                      q_state_rad=q_state,
                                      omega_state=omega_state,
-                                     torque=self._torque)
+                                     torque=Mz)
     
     def update_scene(self, state):
         t, q_ref, q_state, omega_state, torque, mode = state
@@ -382,9 +442,22 @@ class FEMPendulum:
 
         return theta, omega
     
+    def set_drive_torque(self, torque):
+        Mz_2d = float(torque) #/ self.mat_params.thickness
+        
+        if self._torque_option == "zero_mean_weight":
+            q = Mz_2d / self._D_pair
+            self._q_drive.Set(q)
+        
+        elif self._torque_option == "two_patch_amplitude":
+            rhs = np.array([0.0, Mz_2d], dtype=float)
+            q_plus, q_minus = np.linalg.solve(self._Tmat, rhs)
+            self._q_plus.Set(q_plus)
+            self._q_minus.Set(q_minus)
+    
     def set_inputs(self, **signals: float):
         if 'torque' in signals:
-            self._torque = signals['torque']
+            self.set_drive_torque(signals['torque'])
             
     def get_outputs(self) -> Dict[str, float]:
         theta, omega = self._rigid_proxy()
