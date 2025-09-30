@@ -27,7 +27,7 @@ class GeometryParameters:
 
 class MaterialParameters:
     type_pendulum:      str  = "Neo-Hookean" # "Linear Elastic" or "Neo-Hookean"
-    E_pendulum:        float = 5e5 
+    E_pendulum:        float = 1e6 
     nu_pendulum:       float = 0.45       
     rho_pendulum:      float = 1000      
     type_wall:         str   = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
