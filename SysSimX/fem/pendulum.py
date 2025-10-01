@@ -46,6 +46,12 @@ class FEMPendulum:
         self.nu_p, self.nu_w   = self.mat_params.nu_pendulum, self.mat_params.nu_wall
         self.rho_p, self.rho_w = self.mat_params.rho_pendulum, self.mat_params.rho_wall
         
+        # Check for stiff linear elastic materials and warn user
+        if (self.mat_params.type_pendulum == "Linear Elastic" and 
+            self.E_p > 1e8):  # > 100 MPa threshold
+            print(f"Warning: Very stiff linear elastic material detected (E = {self.E_p:.2e} Pa)")
+            print("Consider using Neo-Hookean material or reduce Young's modulus for better convergence")
+        
         self._material_wall = LinearElasticMaterial(self.E_w, self.nu_w)
         
         self._mat_type_pendulum = self.mat_params.type_pendulum
@@ -105,6 +111,8 @@ class FEMPendulum:
         
         if self._with_contact:
             self._initialize_contact()
+
+        self._initialize_torque_control()
         
         self._setup_bilinear_form()
         pass
@@ -187,12 +195,12 @@ class FEMPendulum:
         Draw(self._gf_u.components[0], deformation=True)
         
         # Velocity
-        display(Markdown(r"### Velocity in $\frac{m}{s}$"))
-        Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
+        #display(Markdown(r"### Velocity in $\frac{m}{s}$"))
+        #Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
         
         # Acceleration
-        display(Markdown(r"### Angular Acceleration in $\frac{m}{s}$"))
-        Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+        #display(Markdown(r"### Angular Acceleration in $\frac{m}{s}$"))
+        #Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
         
     def _initialize_contact(self):
         kn = self.contact_params.kn
@@ -314,9 +322,9 @@ class FEMPendulum:
         header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px;'>Simulation Diagnostics</h3>")
         
         self._widget_time   = widgets.FloatText(value=self.sim_params.t_start, description=f'Time: t / {self.sim_params.t_end} s', step=0.001, disabled=True)
-        self._widget_mode   = widgets.Text(value="", description="Mode:")
-        self._widget_ref    = widgets.FloatText(value=0.0, description=r'Ref: $\theta_\text{ref}$ in deg', step=0.001, disabled=True)
-        self._widget_theta  = widgets.FloatText(value=0.0, description=f'Theta: θ in deg', step=0.001, disabled=True)
+        self._widget_mode   = widgets.Text(value="", description="Mode:", disabled=True)
+        self._widget_ref    = widgets.FloatText(value=0.0, description='Ref. pos in deg', step=0.001, disabled=True)
+        self._widget_theta  = widgets.FloatText(value=0.0, description='Theta: θ in deg', step=0.001, disabled=True)
         self._widget_omega  = widgets.FloatText(value=0.0, description='Omega: ω in rad/s', step=0.01, disabled=True)
         self._widget_torque = widgets.FloatText(value=0.0, description='Torque: Mz in Nm', step=0.01, disabled=True)
         self._widget_fx     = widgets.FloatText(value=0.0, description='Fx in N', step=0.01, disabled=True)
@@ -349,19 +357,24 @@ class FEMPendulum:
     def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, torque=0.0):
         self._widget_time.value = t  
         self._widget_mode.value = mode
-        self._widget_ref = np.rad2deg(q_ref_rad)
-        self._widget_theta = np.rad2deg(q_state_rad)
-        self._widget_omega = omega_state
-        self._widget_torque = torque
+        self._widget_ref.value = np.rad2deg(q_ref_rad)
+        self._widget_theta.value = np.rad2deg(q_state_rad)
+        self._widget_omega.value = omega_state
+        self._widget_torque.value = torque
 
     def step(self, t, h, qref):
         t_step_end = t + h if t + h < self.sim_params.t_end else self.sim_params.t_end
+        self._widget_ref.value = np.rad2deg(qref)
         
         with TaskManager():
             while t < t_step_end:
-                q_state, _ = self._rigid_proxy()
-                if q_state < np.deg2rad(2) and self._with_contact:
-                    self.tau.Set(self.sim_params.tau / 10)
+                # Adaptive time stepping for stiff materials
+                if self._mat_type_pendulum == "Linear Elastic" and self.E_p > 1e8:
+                    # Reduce time step for very stiff materials
+                    base_tau = self.sim_params.tau
+                    stiffness_factor = min(10, self.E_p / 1e8)  # Scale based on stiffness
+                    adaptive_tau = base_tau / max(1, stiffness_factor**0.5)
+                    self.tau.Set(adaptive_tau)
                 else:
                     self.tau.Set(self.sim_params.tau)
                 tau = self.tau.Get()
@@ -379,23 +392,42 @@ class FEMPendulum:
                 if self._with_contact:
                     self._contact.Update(self._gf_u.components[0], self._bfa, 5, 0.01)
                 
-                # Solve nonlinear system with Newton               
-                NewtonMinimization(a=self._bfa, u=self._gf_u, printing=False, inverse="sparsecholesky")          
+                # Solve nonlinear system with enhanced Newton solver for stiff problems
+                try:
+                    if self._mat_type_pendulum == "Linear Elastic":
+                        # Enhanced solver for stiff linear elastic materials
+                        NewtonMinimization(a=self._bfa, u=self._gf_u, 
+                                         printing=False,
+                                         maxerr=1e-8,
+                                         inverse="pardiso", #if hasattr(self, '_use_pardiso') else "sparsecholesky",
+                                         dampfactor=0.5,
+                                         maxit=20)
+                    else:
+                        # Standard solver for Neo-Hookean
+                        NewtonMinimization(a=self._bfa, u=self._gf_u, printing=False, inverse="sparsecholesky")
+                except Exception as e:
+                    print(f"Newton solver failed: {e}")
+                    # Fallback with smaller damping
+                    NewtonMinimization(a=self._bfa, u=self._gf_u, 
+                                     printing=True,
+                                     maxsteps=100,
+                                     dampfactor=0.1,
+                                     inverse="sparsecholesky")          
 
                 # Update kinematic variables (velocity, acceleration)
                 self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
                 self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
                 # Compute stress
-                self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
+                #self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
                 
                 # Store results in time series
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
-                self._gf_stress_history.AddMultiDimComponent(self._gf_sigma.vec)
+                # self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
+                # self._gf_stress_history.AddMultiDimComponent(self._gf_sigma.vec)
                 
                 # Increment frame counter and redraw
-                self._scene.Redraw()
+                #self._scene.Redraw()
                 
                 # Update widget values
                 q_state, omega_state = self._rigid_proxy()
@@ -460,9 +492,9 @@ class FEMPendulum:
             self.set_drive_torque(signals['torque'])
             
     def get_outputs(self) -> Dict[str, float]:
-        theta, omega = self._rigid_proxy()
-        return {'q': theta, 'omega': omega}
-    
+        q_state, omega_state = self._rigid_proxy()
+        return {'q_state': q_state, 'omega_state': omega_state}
+
     def reinitialize(self, t, q_state, omega_state):
         self.sim_params.t_start = t
         theta_deg = np.rad2deg(q_state)

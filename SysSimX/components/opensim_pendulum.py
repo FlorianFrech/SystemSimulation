@@ -130,9 +130,9 @@ class OpenSimPendulum:
         self.model.realizeDynamics(self.state)
 
     def get_outputs(self) -> Dict[str, float]:
-        q = float(self.coord.getValue(self.state))
-        omega = float(self.coord.getSpeedValue(self.state))
-        return {'q': q, 'omega': omega}
+        q_state = float(self.coord.getValue(self.state))
+        omega_state = float(self.coord.getSpeedValue(self.state))
+        return {'q_state': q_state, 'omega_state': omega_state}
 
     def reset(self) -> None:
         self.model = None

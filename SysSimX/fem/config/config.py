@@ -26,9 +26,9 @@ class GeometryParameters:
 
 
 class MaterialParameters:
-    type_pendulum:      str  = "Neo-Hookean" # "Linear Elastic" or "Neo-Hookean"
-    E_pendulum:        float = 6e6 
-    nu_pendulum:       float = 0.45       
+    type_pendulum:      str  = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
+    E_pendulum:        float = 2.10e9 # 1.0e6 
+    nu_pendulum:       float = 0.2    # 0.45   
     rho_pendulum:      float = 1000      
     type_wall:         str   = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
     E_wall:            float = 2.10e9     
@@ -84,8 +84,8 @@ class ContactParameters:
 
 class SimulationParameters:
     t_start:  float = 0 
-    tau:      float = 0.01
-    t_end:    float = 0.2
+    tau:      float = 0.001
+    t_end:    float = 2
     
     def __str__(self):
         return (f"Simulation Parameters:\n"
