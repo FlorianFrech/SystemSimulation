@@ -83,34 +83,37 @@ class OpenSimPendulum:
         self.state.setTime(t0)
     
     def set_parameters(self, **parameters: float) -> None:
+        """
+        Set model parameters efficiently with single realization at the end.
+        """
+        params_changed = False
+        
         if 'q0' in parameters:
             self.coord.setValue(self.state, parameters['q0'])
-            self.coord.setSpeedValue(self.state, 0)
-            self.model.realizePosition(self.state)
-            self.model.realizeVelocity(self.state)
-            self.model.realizeAcceleration(self.state)
-            self.model.realizeDynamics(self.state)
+            params_changed = True
+        
+        if 'omega0' in parameters:
+            self.coord.setSpeedValue(self.state, parameters['omega0'])
+            params_changed = True
         
         if 'mass' in parameters:
             self.mass = parameters['mass']
             self.model.updBodySet().get('head').setMass(self.mass)
-            self.model.realizePosition(self.state)
-            self.model.realizeVelocity(self.state)
-            self.model.realizeAcceleration(self.state)
-            self.model.realizeDynamics(self.state)
+            params_changed = True
         
         if 'length' in parameters:
             self.length = parameters['length']
             joint = self.model.updJointSet().get('hinge')
             joint.updChildFrame().setTranslation(osim.Vec3(0, self.length, 0))
-            self.model.realizePosition(self.state)
-            self.model.realizeVelocity(self.state)
-            self.model.realizeAcceleration(self.state)
-            self.model.realizeDynamics(self.state)
+            params_changed = True
         
         if 'inertia' in parameters:
             self.inertia = parameters['inertia']
             self.model.updBodySet().get('head').setInertia(self.inertia)
+            params_changed = True
+        
+        # Only realize once after all parameters are set
+        if params_changed:
             self.model.realizePosition(self.state)
             self.model.realizeVelocity(self.state)
             self.model.realizeAcceleration(self.state)
@@ -142,7 +145,44 @@ class OpenSimPendulum:
         self.manager = None
         self.model, self.state, self.coord, self.actuator, self.manager = self._build()
 
-    def reinitialize(self, t: float, q_state: float, omega_state: float) -> None:
-        self.q0 = q_state
-        self.omega0 = omega_state
-        self.initialize(t)
+
+    def reinitialize(self, t: float, q_state: float, omega_state: float, rebuild: bool = False) -> None:
+        """
+        Reinitialize the pendulum with new state (q, omega) at simulation time t.
+
+        Notes:
+        - Uses a fresh State from initSystem() to avoid stale cache.
+        - Rebuild only if structure changed (mass props, joint frames, etc.).
+        """
+        # Store for bookkeeping (optional)
+        self.q0 = float(q_state)
+        self.omega0 = float(omega_state)
+
+        if rebuild or self.model is None:
+            # Full rebuild uses defaults we set below anyway
+            self.model, self.state, self.coord, self.actuator, self.manager = self._build()
+        else:
+            # Start from a clean topology/state
+            self.state = self.model.initSystem()
+            # Refresh handy handles (in case pointers changed)
+            joint = self.model.updJointSet().get('hinge')
+            self.coord = joint.updCoordinate()
+            #self.actuator = self.model.updForceSet().get('torque_actuator').updDowncast()
+
+        # Set time and the new generalized coordinate + speed
+        self.state.setTime(float(t))
+        self.coord.setValue(self.state, float(q_state))          # [rad]
+        self.coord.setSpeedValue(self.state, float(omega_state)) # [rad/s]
+
+        # Make sure we’re driving the torque directly (bypassing controls)
+        self.actuator.overrideActuation(self.state, True)
+
+        # Realize up to dynamics so everything is consistent for the integrator
+        self.model.realizePosition(self.state)
+        self.model.realizeVelocity(self.state)
+        self.model.realizeDynamics(self.state)
+
+        # Create a fresh Manager bound to this (model,state) and initialize it
+        self.manager = osim.Manager(self.model)
+        self.manager.setIntegratorAccuracy(1e-6)
+        self.manager.initialize(self.state)

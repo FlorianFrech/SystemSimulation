@@ -11,6 +11,7 @@ class PendulumGeometry:
 
         bar = MoveTo(-gp.r_rod,0).Rectangle(2*gp.r_rod, gp.l_center).Face()
         bar.edges.Min(Y).name="rotation"
+        bar.edges.Min(Y).maxh=gp.r_rod/10
         bar.faces.name="bar"
         bar.faces.maxh=gp.r_rod/2
 
@@ -28,6 +29,8 @@ class PendulumGeometry:
         pendulum = head + bar - hole
 
         pendulum = pendulum.Rotate(Axis((0.0, 0, 0), (0, 0, 1)), 180)
+        pendulum.vertices[0].maxh = gp.r_rod/20
+        pendulum.vertices[1].maxh = gp.r_rod/20
         pendulum.name = "pendulum"
         geo = pendulum
         

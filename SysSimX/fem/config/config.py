@@ -26,11 +26,9 @@ class GeometryParameters:
 
 
 class MaterialParameters:
-    type_pendulum:      str  = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
     E_pendulum:        float = 2.10e9 # 1.0e6 
     nu_pendulum:       float = 0.2    # 0.45   
     rho_pendulum:      float = 1000      
-    type_wall:         str   = "Linear Elastic" # "Linear Elastic" or "Neo-Hookean"
     E_wall:            float = 2.10e9     
     nu_wall:           float = 0.2       
     rho_wall:          float = 7850      
@@ -38,12 +36,10 @@ class MaterialParameters:
     
     def __str__(self):
             return (f"Material Parameters Pendulum:\n"
-                    f"  Material Type:   {self.type_pendulum}\n"
                     f"  Young's Modulus: {self.E_pendulum}\n"
                     f"  Poisson's Ratio: {self.nu_pendulum}\n"
                     f"  Density:         {self.rho_pendulum}\n"
                     f"Material Parameters Wall:\n"
-                    f"  Material Type:   {self.type_wall}\n"
                     f"  Young's Modulus: {self.E_wall}\n"
                     f"  Poisson's Ratio: {self.nu_wall}\n"
                     f"  Density:         {self.rho_wall}\n"
@@ -73,7 +69,7 @@ class InitialConditionParameters:
     
 class ContactParameters:
     gap_type: str = 'incremental' # 'incremental' or 'absolute'
-    kn:      float = 1e8         # contact stiffness
+    kn:      float = 1e7         # contact stiffness
     
     def __str__(self):
         return (f"Contact Parameters:\n"
@@ -84,8 +80,8 @@ class ContactParameters:
 
 class SimulationParameters:
     t_start:  float = 0 
-    tau:      float = 0.001
-    t_end:    float = 2
+    tau:      float = 0.01
+    t_end:    float = 5
     
     def __str__(self):
         return (f"Simulation Parameters:\n"

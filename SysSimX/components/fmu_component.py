@@ -133,4 +133,17 @@ class FMUComponent():
     
     def __str__(self) -> str:
         return self._model_info() + "\n" + self._variable_info() + "\n"
+    
+    def reinitialize(self, t: float, **signals) -> None:
+        """
+        Re-initialize the FMU component at time t0.
+            :param t0: Start time of the simulation.
+        """
+        self.reset()
+        if 'q_state' in signals:
+            self.parameters['q0'].start = signals['q_state']
+        if 'omega_state' in signals:
+            self.parameters['omega0'].start = signals['omega_state']
+        self._instantiate()
+        self.initialize(t)
 

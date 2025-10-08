@@ -34,54 +34,25 @@ class FEMPendulum:
 
         self._with_contact = self.geom_params.use_wall
 
-        self._geo = PendulumGeometry(self.geom_params)._geo
-        self._mesh = PendulumMesh(self._geo, self.mesh_params)._mesh
+        self._geo = None
+        self._mesh = None
 
         self._setup_material_law()
-        self._compute_mass()
-        self._compute_inertia()
 
     def _setup_material_law(self):
         self.E_p, self.E_w     = self.mat_params.E_pendulum, self.mat_params.E_wall
         self.nu_p, self.nu_w   = self.mat_params.nu_pendulum, self.mat_params.nu_wall
         self.rho_p, self.rho_w = self.mat_params.rho_pendulum, self.mat_params.rho_wall
+    
+        self._material_pendulum = NeoHookeanMaterial(self.E_p, self.nu_p)
+        self._deformation_gradient_p = self._material_pendulum.C
+        self._material_law_p = self._material_pendulum.energy_density
+        self._sigma_law_p = self._material_pendulum.sigma
         
-        # Check for stiff linear elastic materials and warn user
-        if (self.mat_params.type_pendulum == "Linear Elastic" and 
-            self.E_p > 1e8):  # > 100 MPa threshold
-            print(f"Warning: Very stiff linear elastic material detected (E = {self.E_p:.2e} Pa)")
-            print("Consider using Neo-Hookean material or reduce Young's modulus for better convergence")
-        
-        self._material_wall = LinearElasticMaterial(self.E_w, self.nu_w)
-        
-        self._mat_type_pendulum = self.mat_params.type_pendulum
-        self._mat_type_wall = self.mat_params.type_wall
-
-        if self._mat_type_pendulum == "Neo-Hookean":
-            self._material_pendulum = NeoHookeanMaterial(self.E_p, self.nu_p)
-            self._deformation_gradient_p = self._material_pendulum.C
-            self._material_law_p = self._material_pendulum.energy_density
-            self._sigma_law_p = self._material_pendulum.sigma
-        elif self._mat_type_pendulum == "Linear Elastic":
-            self._material_pendulum = LinearElasticMaterial(self.E_p, self.nu_p)
-            self._deformation_gradient_p = self._material_pendulum.eps
-            self._material_law_p = self._material_pendulum.energy_density
-            self._sigma_law_p = self._material_pendulum.sigma
-        else:
-            raise ValueError(f"Unknown material type: {self.mat_params.type_pendulum}")
-        
-        if self._mat_type_wall == "Neo-Hookean":
-            self._material_wall = NeoHookeanMaterial(self.E_w, self.nu_w)
-            self._deformation_gradient_w = self._material_wall.C
-            self._material_law_w = self._material_wall.energy_density
-            self._sigma_law_w = self._material_wall.sigma
-        elif self._mat_type_wall == "Linear Elastic":
-            self._material_wall = LinearElasticMaterial(self.E_w, self.nu_w)
-            self._deformation_gradient_w = self._material_wall.eps
-            self._material_law_w = self._material_wall.energy_density
-            self._sigma_law_w = self._material_wall.sigma
-        else:
-            raise ValueError(f"Unknown material type: {self.mat_params.type_wall}")
+        self._material_wall = NeoHookeanMaterial(self.E_w, self.nu_w)
+        self._deformation_gradient_w = self._material_wall.C
+        self._material_law_w = self._material_wall.energy_density
+        self._sigma_law_w = self._material_wall.sigma
 
     def _compute_mass(self):
         area = Integrate(1, self._mesh, definedon=self._mesh.Materials("pendulum"))
@@ -93,14 +64,15 @@ class FEMPendulum:
         J_area = Integrate(self.rho_p * (self._X_rel[0]*self._X_rel[0] + self._X_rel[1]*self._X_rel[1]),
                            self._mesh, definedon=self._mesh.Materials("pendulum"))
         self.inertia = J_area * self.mat_params.thickness
+
+    def _create_mesh(self):
+        self._geo = PendulumGeometry(self.geom_params)._geo
+        self._mesh = PendulumMesh(self._geo, self.mesh_params)._mesh
+        self._compute_mass()
+        self._compute_inertia()
     
     def initialize(self, t0: float):
         self.sim_params.t_start = t0
-
-        self._setup_material_law()
-        
-        self._compute_mass()
-        self._compute_inertia()
         
         self._initialize_fe_spaces()
         self._initialize_grid_functions()
@@ -230,11 +202,7 @@ class FEMPendulum:
         penalty_energy = kn * self._cf * self._cf
         self._contact.AddEnergy(IfPos(self._cf, penalty_energy, 0), deformed = True)
         
-    def _initialize_torque_control(self):
-        # Set Option
-        self._torque_option = "zero_mean_weight"
-        #self._torqueoption = "two_patch_amplitude"
-        
+    def _initialize_torque_control(self):        
         # Motor torque
         self._normal_rot = specialcf.normal(2)
         self._tangent_rot = CF((-self._normal_rot[1], self._normal_rot[0]))
@@ -250,38 +218,26 @@ class FEMPendulum:
         self._w_plus = w_core * H                   # right patch weight
         self._w_minus = w_core * (1.0 - H)          # left patch weight
         
-        self._cross_rn = r[0] * self._normal_rot[1] - r[1] * self._normal_rot[0]
+        self._cross_rn = -(r[0] * self._normal_rot[1] - r[1] * self._normal_rot[0])
         
-        if self._torque_option == "zero_mean_weight":
-            wdiff = self._w_plus - self._w_minus
-            mean_w = Integrate(wdiff, self._mesh, definedon=self._mesh.Boundaries("rotation")) / Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            wdiff0 = wdiff - mean_w
-            self._q_drive = Parameter(0.0)
-            self._t_drive = self._q_drive * wdiff0 * self._normal_rot
-            self._D_pair = Integrate( wdiff0 * self._cross_rn,
-                                      self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        wdiff = self._w_plus - self._w_minus
+        mean_w = Integrate(wdiff, self._mesh, definedon=self._mesh.Boundaries("rotation")) / Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        wdiff0 = wdiff - mean_w
+        self._q_drive = Parameter(0.0)
+        self._t_drive = self._q_drive * wdiff0 * self._normal_rot
+        self._D_pair = Integrate( wdiff0 * self._cross_rn,
+                                  self._mesh, definedon=self._mesh.Boundaries("rotation"))
 
-        if self._torque_option == "two_patch_amplitude":
-            Iplus = Integrate( self._w_plus, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            Iminus = Integrate( self._w_minus, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            
-            Jplus = Integrate( self._w_plus * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            Jminus = Integrate( self._w_minus * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            
-            self._Tmat = np.array([[Iplus, Iminus],
-                                [Jplus, Jminus]], dtype=float)
-            
-            self._q_plus = Parameter(0.0)
-            self._q_minus = Parameter(0.0)
-            self._t_drive = (self._q_plus * self._w_plus + self._q_minus * self._w_minus) * self._normal_rot            
-            
-    def _get_torque_diagnostics(self):
+    def _get_torque_diagnostics(self, return_force=False):
         # Motor Torque chek
-        Fx = Integrate(self._t_drive[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        Fy = Integrate(self._t_drive[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
         Mz = Integrate(self._q_drive * (self._w_plus - self._w_minus) * self._cross_rn,
-                          self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        return Fx, Fy, Mz
+                            self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        if return_force:
+            Fx = Integrate(self._t_drive[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            Fy = Integrate(self._t_drive[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            return Fx, Fy, Mz
+        else:
+            return Mz
 
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -292,7 +248,7 @@ class FEMPendulum:
             self._bfa += Variation( self._material_law_w(self._deformation_gradient_w(self._u),
                                                          self._u) * dx("wall") ).Compile()
 
-        # Strain energy pendulum (material law configurable)
+        # Strain energy pendulum
         self._bfa += Variation(self._material_law_p(self._deformation_gradient_p(self._u),
                                                     self._u) * dx("pendulum")).Compile()
         
@@ -319,19 +275,24 @@ class FEMPendulum:
         self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
     
     def initialize_scene(self, qref=0.0):
-        header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px;'>Simulation Diagnostics</h3>")
+        header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px; text-align:center;'>Simulation Diagnostics</h3>")
         
         self._widget_time   = widgets.FloatText(value=self.sim_params.t_start, description=f'Time: t / {self.sim_params.t_end} s', step=0.001, disabled=True)
+        self._widget_tau    = widgets.FloatText(value=self.sim_params.tau, description='Time Step: τ in s', step=0.0001, disabled=True)
         self._widget_mode   = widgets.Text(value="", description="Mode:", disabled=True)
         self._widget_ref    = widgets.FloatText(value=0.0, description='Ref. pos in deg', step=0.001, disabled=True)
         self._widget_theta  = widgets.FloatText(value=0.0, description='Theta: θ in deg', step=0.001, disabled=True)
         self._widget_omega  = widgets.FloatText(value=0.0, description='Omega: ω in rad/s', step=0.01, disabled=True)
         self._widget_torque = widgets.FloatText(value=0.0, description='Torque: Mz in Nm', step=0.01, disabled=True)
-        self._widget_fx     = widgets.FloatText(value=0.0, description='Fx in N', step=0.01, disabled=True)
-        self._widget_fy     = widgets.FloatText(value=0.0, description='Fy in N', step=0.01, disabled=True)
         
-        self._widgets = [self._widget_time, self._widget_mode, self._widget_ref, self._widget_theta, self._widget_omega,
-                         self._widget_torque, self._widget_fx, self._widget_fy]
+        if self._with_contact:
+            self._widget_gap  = widgets.FloatText(value=0.0, description='Min. Gap in m', step=0.0001, disabled=True)
+            self._widgets = [self._widget_time, self._widget_tau, self._widget_mode, self._widget_ref,
+                             self._widget_theta, self._widget_omega, self._widget_torque, self._widget_gap]
+        
+        else:   
+            self._widgets = [self._widget_time, self._widget_tau, self._widget_mode, self._widget_ref,
+                             self._widget_theta, self._widget_omega, self._widget_torque]
         
         for w in self._widgets:
             w.layout.width = '350px'
@@ -352,7 +313,7 @@ class FEMPendulum:
         vbox = VBox([header] + self._widgets)
         display(vbox)        
         self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
-                            deformation = self._gf_u.components[0])
+                           deformation = self._gf_u.components[0])
 
     def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, torque=0.0):
         self._widget_time.value = t  
@@ -368,68 +329,54 @@ class FEMPendulum:
         
         with TaskManager():
             while t < t_step_end:
-                # Adaptive time stepping for stiff materials
-                if self._mat_type_pendulum == "Linear Elastic" and self.E_p > 1e8:
-                    # Reduce time step for very stiff materials
-                    base_tau = self.sim_params.tau
-                    stiffness_factor = min(10, self.E_p / 1e8)  # Scale based on stiffness
-                    adaptive_tau = base_tau / max(1, stiffness_factor**0.5)
-                    self.tau.Set(adaptive_tau)
-                else:
-                    self.tau.Set(self.sim_params.tau)
-                tau = self.tau.Get()
-                t += tau
-
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
                 self._gf_vold.vec[:] = self._gf_v.vec
                 self._gf_aold.vec[:] = self._gf_a.vec
                 
-                # Get torque value
-                Fx, Fy, Mz = self._get_torque_diagnostics()
-
                 # Update contact with the current displacement
                 if self._with_contact:
-                    self._contact.Update(self._gf_u.components[0], self._bfa, 5, 0.01)
-                
-                # Solve nonlinear system with enhanced Newton solver for stiff problems
-                try:
-                    if self._mat_type_pendulum == "Linear Elastic":
-                        # Enhanced solver for stiff linear elastic materials
-                        NewtonMinimization(a=self._bfa, u=self._gf_u, 
-                                         printing=False,
-                                         maxerr=1e-8,
-                                         inverse="pardiso", #if hasattr(self, '_use_pardiso') else "sparsecholesky",
-                                         dampfactor=0.5,
-                                         maxit=20)
+                    self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
+                    min_gap = self._get_contact_gap_distance()
+                    self._widget_gap.value = min_gap
+                    # Reduce time step if pendulum is close to contact
+                    if min_gap < 0.0005:
+                        self.tau.Set(1e-3)
+                    elif min_gap < 0.001:
+                        self.tau.Set(1e-3)
+                    elif min_gap < 0.01:
+                        self.tau.Set(5e-3)
                     else:
-                        # Standard solver for Neo-Hookean
-                        NewtonMinimization(a=self._bfa, u=self._gf_u, printing=False, inverse="sparsecholesky")
-                except Exception as e:
-                    print(f"Newton solver failed: {e}")
-                    # Fallback with smaller damping
-                    NewtonMinimization(a=self._bfa, u=self._gf_u, 
-                                     printing=True,
-                                     maxsteps=100,
-                                     dampfactor=0.1,
-                                     inverse="sparsecholesky")          
+                        self.tau.Set(self.sim_params.tau)
+                
+                # Update time settings
+                tau = self.tau.Get()
+                t += tau
+                self._widget_time.value = t
+                self._widget_tau.value = tau
+                
+                # Solve nonlinear system with Newton               
+                NewtonMinimization(a=self._bfa,
+                                   u=self._gf_u,
+                                   printing=False,
+                                   inverse="sparsecholesky",
+                                   maxerr=1e-10, maxit=20)        
 
                 # Update kinematic variables (velocity, acceleration)
                 self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
                 self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
                 # Compute stress
-                #self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
-                
+                self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
+
                 # Store results in time series
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                # self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
-                # self._gf_stress_history.AddMultiDimComponent(self._gf_sigma.vec)
                 
                 # Increment frame counter and redraw
-                #self._scene.Redraw()
+                self._scene.Redraw()
                 
                 # Update widget values
+                Mz = self._get_torque_diagnostics()
                 q_state, omega_state = self._rigid_proxy()
                 self._update_widgets(t=t,
                                      q_ref_rad=qref,
@@ -443,7 +390,25 @@ class FEMPendulum:
         theta_deg = np.rad2deg(q_state)        
         self.set_state(theta_deg=theta_deg, omega=omega_state)
         self._scene.Redraw()
-        
+    
+    def _get_contact_gap_distance(self):
+        gap_vec_master = self._contact.gap
+        n_master = self._contact.normal
+        gap_n_master = InnerProduct(gap_vec_master, n_master)
+        gap_values = []
+        for el in self._mesh.Elements(BND):
+            if el.mat == "contact_wall":
+                trafo = self._mesh.GetTrafo(el)
+                ir = IntegrationRule(el.type, order=3*self.mesh_params.mesh_order)
+                for ip in ir:
+                    mapped_ip = trafo(ip)
+                    try:
+                        gap_val = gap_n_master(mapped_ip)
+                        gap_values.append(gap_val)
+                    except:
+                        continue
+        min_gap = min(gap_values) if gap_values else 0.0
+        return min_gap   
 
     def _rigid_proxy(self):
         r = self._X_rel
@@ -461,7 +426,7 @@ class FEMPendulum:
         c, s = np.cos(theta), np.sin(theta)
         # rotated radius r = R(theta) * (X - P)
         r = CF((c * r[0] - s * r[1],
-                 s * r[0] + c * r[1]))
+                s * r[0] + c * r[1]))
         
         v = self._gf_v.components[0]
         
@@ -476,16 +441,8 @@ class FEMPendulum:
     
     def set_drive_torque(self, torque):
         Mz_2d = float(torque) #/ self.mat_params.thickness
-        
-        if self._torque_option == "zero_mean_weight":
-            q = Mz_2d / self._D_pair
-            self._q_drive.Set(q)
-        
-        elif self._torque_option == "two_patch_amplitude":
-            rhs = np.array([0.0, Mz_2d], dtype=float)
-            q_plus, q_minus = np.linalg.solve(self._Tmat, rhs)
-            self._q_plus.Set(q_plus)
-            self._q_minus.Set(q_minus)
+        q = Mz_2d / self._D_pair
+        self._q_drive.Set(q)
     
     def set_inputs(self, **signals: float):
         if 'torque' in signals:
@@ -500,4 +457,16 @@ class FEMPendulum:
         theta_deg = np.rad2deg(q_state)
         self.set_state(theta_deg=theta_deg, omega=omega_state)
         pass
-            
+
+    def reset(self):
+        # Reset all grid functions and time series
+        self._gf_u.vec[:] = 0
+        self._gf_v.vec[:] = 0
+        self._gf_a.vec[:] = 0
+        self._gf_uold.vec[:] = 0
+        self._gf_vold.vec[:] = 0
+        self._gf_aold.vec[:] = 0
+        self._gf_sigma.vec[:] = 0
+        self._gf_u_history = GridFunction(self._V, multidim=0)
+        self._gf_v_history = GridFunction(self._V, multidim=0)
+        self._gf_stress_history = GridFunction(self._S, multidim=0)
