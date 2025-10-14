@@ -50,9 +50,9 @@
 <!-- Reference Trajectory&#45;&gt;Reference Angle Sensor -->
 <g id="edge1" class="edge">
 <title>Reference Trajectory&#45;&gt;Reference Angle Sensor</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M123.08,-139C123.08,-139 209.97,-139 209.97,-139"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="216.97,-139 209.97,-142.15 213.47,-139.1 209.97,-139.1 209.97,-139 209.97,-138.9 213.47,-138.9 209.97,-135.85 216.97,-139 216.97,-139"/>
-<text text-anchor="middle" x="170" y="-153.2" font-family="Helvetica,sans-Serif" font-size="11.00">ref θ(t)</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M123.27,-139C149.76,-139 181.59,-139 209.73,-139"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="216.8,-139 209.8,-142.15 213.3,-139.1 209.8,-139.1 209.8,-139 209.8,-138.9 213.3,-138.9 209.8,-135.85 216.8,-139 216.8,-139"/>
+<text text-anchor="middle" x="170" y="-142.2" font-family="Helvetica,sans-Serif" font-size="11.00">ref θ(t)</text>
 </g>
 <!-- PID Controller -->
 <g id="node4" class="node">
@@ -63,9 +63,9 @@
 <!-- Reference Angle Sensor&#45;&gt;PID Controller -->
 <g id="edge2" class="edge">
 <title>Reference Angle Sensor&#45;&gt;PID Controller</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M348.05,-134C348.05,-134 443.77,-134 443.77,-134"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="450.77,-134 443.77,-137.15 447.27,-134.1 443.77,-134.1 443.77,-134 443.77,-133.9 447.27,-133.9 443.77,-130.85 450.77,-134 450.77,-134"/>
-<text text-anchor="middle" x="399.5" y="-142.2" font-family="Helvetica,sans-Serif" font-size="11.00">U_ref</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M348.17,-136.07C378.4,-134.7 414.19,-133.07 443.84,-131.73"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="450.84,-131.41 443.99,-134.87 447.35,-131.67 443.85,-131.83 443.85,-131.73 443.85,-131.63 447.34,-131.47 443.71,-128.58 450.84,-131.41 450.84,-131.41"/>
+<text text-anchor="middle" x="399.5" y="-137.2" font-family="Helvetica,sans-Serif" font-size="11.00">U_ref</text>
 </g>
 <!-- State Angle Sensor -->
 <g id="node3" class="node">
@@ -76,9 +76,9 @@
 <!-- State Angle Sensor&#45;&gt;PID Controller -->
 <g id="edge4" class="edge">
 <title>State Angle Sensor&#45;&gt;PID Controller</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M336.77,-63C397.35,-63 487,-63 487,-63 487,-63 487,-96.67 487,-96.67"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="487,-103.67 483.85,-96.67 486.9,-100.17 486.9,-96.67 487,-96.67 487.1,-96.67 487.1,-100.17 490.15,-96.67 487,-103.67 487,-103.67"/>
-<text text-anchor="middle" x="399.5" y="-89.2" font-family="Helvetica,sans-Serif" font-size="11.00">U_meas</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M336.6,-62.95C369.09,-75.77 410.74,-92.2 444.37,-105.47"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="450.98,-108.08 443.32,-108.44 447.69,-106.89 444.43,-105.61 444.47,-105.51 444.51,-105.42 447.76,-106.7 445.63,-102.58 450.98,-108.08 450.98,-108.08"/>
+<text text-anchor="middle" x="399.5" y="-99.2" font-family="Helvetica,sans-Serif" font-size="11.00">U_meas</text>
 </g>
 <!-- Drive -->
 <g id="node5" class="node">
@@ -89,9 +89,9 @@
 <!-- PID Controller&#45;&gt;Drive -->
 <g id="edge5" class="edge">
 <title>PID Controller&#45;&gt;Drive</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M523,-103.89C523,-93.8 523,-84.5 523,-84.5 523,-84.5 677.77,-84.5 677.77,-84.5"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="684.77,-84.5 677.77,-87.65 681.27,-84.6 677.77,-84.6 677.77,-84.5 677.77,-84.4 681.27,-84.4 677.77,-81.35 684.77,-84.5 684.77,-84.5"/>
-<text text-anchor="middle" x="622" y="-132.2" font-family="Helvetica,sans-Serif" font-size="11.00">u (control)</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M559.23,-116.84C594.47,-108.79 640.77,-98.21 677.43,-89.84"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="684.62,-88.19 678.5,-92.82 681.23,-89.07 677.82,-89.85 677.8,-89.75 677.77,-89.66 681.19,-88.88 677.1,-86.68 684.62,-88.19 684.62,-88.19"/>
+<text text-anchor="middle" x="622" y="-113.2" font-family="Helvetica,sans-Serif" font-size="11.00">u (control)</text>
 </g>
 <!-- Pendulum -->
 <g id="node6" class="node">
@@ -102,23 +102,23 @@
 <!-- Drive&#45;&gt;Pendulum -->
 <g id="edge6" class="edge">
 <title>Drive&#45;&gt;Pendulum</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M684.73,-53.17C684.73,-53.17 566.38,-53.17 566.38,-53.17"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="559.38,-53.17 566.38,-50.02 562.88,-53.07 566.38,-53.07 566.38,-53.17 566.38,-53.27 562.88,-53.27 566.38,-56.32 559.38,-53.17 559.38,-53.17"/>
-<text text-anchor="middle" x="622" y="-79.2" font-family="Helvetica,sans-Serif" font-size="11.00">τ (torque)</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M684.62,-66.11C649.35,-59.57 603.04,-50.99 566.42,-44.2"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="559.23,-42.87 566.68,-41.04 562.69,-43.4 566.13,-44.04 566.11,-44.14 566.09,-44.24 562.65,-43.6 565.53,-47.24 559.23,-42.87 559.23,-42.87"/>
+<text text-anchor="middle" x="622" y="-64.2" font-family="Helvetica,sans-Serif" font-size="11.00">τ (torque)</text>
 </g>
 <!-- Pendulum&#45;&gt;State Angle Sensor -->
 <g id="edge3" class="edge">
 <title>Pendulum&#45;&gt;State Angle Sensor</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" d="M450.85,-37.5C450.85,-37.5 343.5,-37.5 343.5,-37.5"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="336.5,-37.5 343.5,-34.35 340,-37.4 343.5,-37.4 343.5,-37.5 343.5,-37.6 340,-37.6 343.5,-40.65 336.5,-37.5 336.5,-37.5"/>
-<text text-anchor="middle" x="399.5" y="-36.2" font-family="Helvetica,sans-Serif" font-size="11.00">θ (state)</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" d="M450.64,-31.48C441.75,-31.28 432.61,-31.11 424,-31 402.22,-30.73 396.74,-29.7 375,-31 364.88,-31.61 354.16,-32.59 343.76,-33.72"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="336.63,-34.52 343.23,-30.61 340.09,-34.03 343.57,-33.64 343.58,-33.74 343.59,-33.84 340.11,-34.23 343.93,-36.87 336.63,-34.52 336.63,-34.52"/>
+<text text-anchor="middle" x="399.5" y="-34.2" font-family="Helvetica,sans-Serif" font-size="11.00">θ (state)</text>
 </g>
 <!-- Pendulum&#45;&gt;Drive -->
 <g id="edge7" class="edge">
 <title>Pendulum&#45;&gt;Drive</title>
-<path fill="none" stroke="#111827" stroke-width="1.2" stroke-dasharray="5,2" d="M559.27,-55.83C559.27,-55.83 675.62,-55.83 675.62,-55.83"/>
-<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="684.62,-55.83 675.62,-59.88 680.12,-55.93 675.62,-55.93 675.62,-55.83 675.62,-55.73 680.12,-55.73 675.62,-51.78 684.62,-55.83 684.62,-55.83"/>
-<text text-anchor="middle" x="622" y="-26.2" font-family="Helvetica,sans-Serif" font-size="11.00">ω (feedback)</text>
+<path fill="none" stroke="#111827" stroke-width="1.2" stroke-dasharray="5,2" d="M559.33,-23.53C588.91,-20.18 626.07,-19.15 658,-28 671.7,-31.79 685.41,-38.63 697.51,-45.97"/>
+<polygon fill="#111827" stroke="#111827" stroke-width="1.2" points="705.22,-50.85 695.45,-49.46 701.36,-48.53 697.56,-46.12 697.61,-46.04 697.67,-45.95 701.47,-48.36 699.78,-42.61 705.22,-50.85 705.22,-50.85"/>
+<text text-anchor="middle" x="622" y="-31.2" font-family="Helvetica,sans-Serif" font-size="11.00">ω (feedback)</text>
 </g>
 </g>
 </svg>

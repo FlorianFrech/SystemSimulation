@@ -1,0 +1,10 @@
+{
+  "user_mode": "standard",
+  "model": {
+    "package_path": "package path",
+    "model_file": "model file",
+    "model_class": "myClass",
+    "use_mode": "modelica"
+  },
+  "fmu_options": null
+}
