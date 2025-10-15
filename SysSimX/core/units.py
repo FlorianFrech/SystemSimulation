@@ -1,45 +1,31 @@
 # units.py
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Iterable, Tuple, Union
-import numpy as np
-import pint
-
 # --------------------------------------------------------------------------
-# One global unit registry
-_ureg = pint.UnitRegistry(autoconvert_offset_to_baseunit=True)
-parse_unit = _ureg.Unit
-Q = _ureg.Quantity
+from pint import UnitRegistry
+import re
 
-# Set default printing to abbreviated units
-_ureg.formatter.default_format = "~P"
+UREG = UnitRegistry()
+UREG.formatter.default_format = "~P"  # Abbreviated units by default
 
-# --------------------------------------------------------------------------
-# Constructor for pint quantity and unit
-def qty(value: Union[float, int, np.ndarray, Iterable[float]], unit: str) -> pint.Quantity:
-    return np.asarray(value) * _ureg(unit)
-
-def parse_unit(unit_str: str) -> pint.Unit:
-    return _ureg.parse_units(unit_str)
-
-# --------------------------------------------------------------------------
-# Dimensional analysis and compatibility
-def have_same_dimensions(q1: pint.Quantity, q2: pint.Quantity) -> bool:
+def fix_exponent(unit_str: str) -> str:
     """
-    Check if two quantities have the same dimensions.
+    FMU unit strings may be in the form "s-2" and are not recognized by pint.
+    Adds "^" between any character and a number to allow parsing by pint.
     """
-    return q1.dimensionality == q2.dimensionality
+    fixed_str = re.sub(r'([a-zA-Z])(-?\d+)', r'\1^\2', unit_str)
+    return fixed_str
 
-def assert_compatible(*quantities: pint.Quantity) -> None:
+
+def to_pint_unit(unit_str: str):
     """
-    Assert that all quantities are compatible (same dimensions).
-    Raises ValueError if not compatible.
-    """
-    if not all(have_same_dimensions(q, quantities[0]) for q in quantities):
-        raise ValueError("Quantities are not compatible: " + ", ".join(str(q) for q in quantities))
+    Convert a unit string to a pint Unit object.
     
-
-
-        
+    :param unit_str: The unit string to convert.
+    :return: A pint Unit object.
+    """
+    if not unit_str:
+        return UREG.dimensionless
+    try:
+        unit_str = fix_exponent(unit_str)
+        return UREG.Unit(unit_str)
+    except Exception as e:
+        raise ValueError(f"Invalid unit string '{unit_str}': {e}")

@@ -360,7 +360,7 @@ class FEMPendulum:
                                    u=self._gf_u,
                                    printing=False,
                                    inverse="sparsecholesky",
-                                   maxerr=1e-10, maxit=20)        
+                                   maxerr=1e-6, maxit=20)        
 
                 # Update kinematic variables (velocity, acceleration)
                 self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec

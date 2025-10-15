@@ -1,6 +1,6 @@
 // Controlled Pendulum System
-digraph ControlledPendulum {
-	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label=ControlledPendulum labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
+digraph "Controlled Pendulum" {
+	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label="Controlled Pendulum" labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
 	node [color="#3b82f6" fillcolor=white fontname=Helvetica fontsize=10 height=0.7 margin="0.12,0.1" penwidth=1.5 shape=record style="rounded,filled" width=1.5]
 	edge [arrowhead=open arrowsize=0.5 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.4 penwidth=1 style=solid]
 	subgraph cluster_Input {
@@ -9,26 +9,26 @@ digraph ControlledPendulum {
 	}
 	subgraph cluster_Sensors {
 		bgcolor="#dcfce7" color="#9ca3af" fontname=Helvetica fontsize=10 label=Sensors style=rounded
-		SensorRef [label="{ { <q_ref> q_ref } | SensorRef | { <Uq_ref> Uq_ref } }" xlabel="#3"]
-		SensorState [label="{ { <q_state> q_state } | SensorState | { <Uq_state> Uq_state } }" xlabel="#2"]
+		SensorRef [label="{ { <q_ref> q_ref } | SensorRef | { <Uq_ref> Uq_ref } }" xlabel="#2"]
+		SensorState [label="{ { <q_state> q_state } | SensorState | { <Uq_state> Uq_state } }" xlabel="#1"]
 	}
 	subgraph cluster_Control {
 		bgcolor="#fee2e2" color="#9ca3af" fontname=Helvetica fontsize=10 label=Control style=rounded
-		Controller [label="{ { <Uq_ref> Uq_ref | <Uq_state> Uq_state } | Controller | { <u_control> u_control } }" xlabel="#4"]
+		Controller [label="{ { <Uq_ref> Uq_ref | <Uq_state> Uq_state } | Controller | { <u_control> u_control } }" xlabel="#3"]
 	}
 	subgraph cluster_Actuator {
 		bgcolor="#fef3c7" color="#9ca3af" fontname=Helvetica fontsize=10 label=Actuator style=rounded
-		Drive [label="{ { <u_control> u_control | <omega> omega } | Drive | { <torque> torque } }" xlabel="#5"]
+		Drive [label="{ { <u_control> u_control | <omega> omega } | Drive | { <torque> torque } }" xlabel="#4"]
 	}
 	subgraph cluster_Plant {
 		bgcolor="#e5e7eb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Plant style=rounded
-		Pendulum [label="{ { <torque> torque } | Pendulum | { <q_state> q_state | <omega> omega } }" xlabel="#6"]
+		Pendulum [label="{ { <torque> torque } | Pendulum | { <q_state> q_state | <omega> omega } }" xlabel="#5"]
 	}
-	Pendulum -> SensorState [label="[rad] z^-1" color="#6b7280" headclip=true headport="q_state:w" style=dashed tailclip=true tailport="q_state:e"]
 	SensorRef -> Controller [label="[V]" color="#111827" headclip=true headport="Uq_ref:w" style=solid tailclip=true tailport="Uq_ref:e"]
+	Pendulum -> SensorState [label="[rad] delay(1)" color="#6b7280" headclip=true headport="q_state:w" style=dashed tailclip=true tailport="q_state:e"]
 	Controller -> Drive [label="[]" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u_control:e"]
-	SensorState -> Controller [label="[V]" color="#111827" headclip=true headport="Uq_state:w" style=solid tailclip=true tailport="Uq_state:e"]
 	Drive -> Pendulum [label="[Nm]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
+	SensorState -> Controller [label="[V]" color="#111827" headclip=true headport="Uq_state:w" style=solid tailclip=true tailport="Uq_state:e"]
+	Pendulum -> Drive [label="[rad/s] delay(1)" color="#6b7280" headclip=true headport="omega:w" style=dashed tailclip=true tailport="omega:e"]
 	Reference -> SensorRef [label="[rad]" color="#111827" headclip=true headport="q_ref:w" style=solid tailclip=true tailport="q_ref:e"]
-	Pendulum -> Drive [label="[rad/s] z^-1" color="#6b7280" headclip=true headport="omega:w" style=dashed tailclip=true tailport="omega:e"]
 }

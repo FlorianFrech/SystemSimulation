@@ -6,7 +6,7 @@ class GeometryParameters:
     l_center: float = 0.8
     
     # Wall geometry
-    use_wall:   bool  = False
+    use_wall:   bool  = True
     q_wall_deg: float = 0
     wall_len_x: float = 0.05
     wall_len_y: float = 0.5

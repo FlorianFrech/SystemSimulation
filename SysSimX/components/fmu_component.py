@@ -146,4 +146,3 @@ class FMUComponent():
             self.parameters['omega0'].start = signals['omega_state']
         self._instantiate()
         self.initialize(t)
-
