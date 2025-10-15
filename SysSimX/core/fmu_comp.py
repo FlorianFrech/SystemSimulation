@@ -1,235 +1,298 @@
+from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple, List
+from pathlib import Path
+
 from fmpy import read_model_description, extract
-from fmpy.model_description import ModelVariable, ModelDescription
+from fmpy.model_description import ModelVariable, ModelDescription, InterfaceType
 from fmpy.fmi2 import FMU2Slave
 
-from .port import RealPort, IntPort, BoolPort, StringPort
 from .base import CoSimComponent
-from .units import UREG, to_pint_unit
+from .port import PortSpec, PortState, PortType
+from ..utilities.units import ureg, Quantity, to_pint_unit
 
 class FMUComponent(CoSimComponent):
     """
-    Wrapper around an FMU to implement the CoSimComponent interface.
+    FMU Co-Simulation Wrapper implementing the CoSimComponent interface.
+    Supports:
+        - FMI 2.0 CS-FMUs
+        - REAL/INT/BOOL/STRING input and output ports
+        - Units for REAL ports
     """
-    parameters: Dict[str, ModelVariable]
-    _vars: Dict[str, ModelVariable]
-    _instance: FMU2Slave
+
+    _md: ModelDescription
+    _instance: Optional[FMU2Slave]
+    _unzipdir: Optional[str]
+
+    # Cached value references per base type and causality
+    _vrs_in_real: Dict[str, int]
+    _vrs_in_int: Dict[str, int]
+    _vrs_in_bool: Dict[str, int]
+    _vrs_in_str: Dict[str, int]
+    _vrs_in_bytes: Dict[str, int]
+
+    _vrs_out_real: Dict[str, int]
+    _vrs_out_int: Dict[str, int]
+    _vrs_out_bool: Dict[str, int]
+    _vrs_out_str: Dict[str, int]
+    _vrs_out_bytes: Dict[str, int]
 
     def __init__(self, name: str, fmu_path: str, group: Optional[str] = None):
-        """
-        Constructor for the FMUComponent class.
-            :param name: Name of the component instance.
-            :param fmu_path: Path to the FMU file.
-        """
-        self.name = name
-        self.group = group
-        self.path = fmu_path
-        self.inputs = {}
-        self.outputs = {}
-        self.parameters = None
-        self._md = read_model_description(fmu_path)
-        self._vars = self._md.modelVariables
+        super().__init__(name=name, group=group)
+        self._path = str(Path(fmu_path).resolve())
+        self._md = read_model_description(self._path)
+        if not self._md.coSimulation:
+            raise RuntimeError(f"FMU '{fmu_path}' is not a Co-Simulation FMU.")
+        if self._md.fmiVersion != "2.0":
+            raise NotImplementedError(f"FMU '{fmu_path}' has unsupported FMI version '{self._md.fmiVersion}'. Only FMI 2.0 is supported.")
         self._instance = None
-        
-        # Initialize input/outputs and parameters with units
-        self._set_up_units()
-        self.parameters = {var.name: var for var in self._md.modelVariables if var.causality == "parameter"}
+        self._unzipdir = None
 
-        # Store value references for quick access
-        self._vrs_in = {var.name: var.valueReference for var in self._md.modelVariables if var.causality == "input"}
-        self._vrs_out = {var.name: var.valueReference for var in self._md.modelVariables if var.causality == "output"}
-        self._vrs_param = {var.name: var.valueReference for var in self._md.modelVariables if var.causality == "parameter"}
+        # Port specification containers
+        self.input_specs: Dict[str, PortSpec] = {}
+        self.output_specs: Dict[str, PortSpec] = {}
 
-        # Setup ports
-        self._set_up_ports()
+        # Build port specifications from model description (Real, Int, Bool, Str, Bytes)
+        self._build_port_specs()
 
-        # Set the label for visualization
-        self._set_up_label()
+        # Cache value references map
+        self._vrs_in_real = {}; self._vrs_in_int = {}; self._vrs_in_bool = {}; self._vrs_in_str = {}
+        self._vrs_out_real = {}; self._vrs_out_int = {}; self._vrs_out_bool = {}; self._vrs_out_str = {}
+        self._build_value_reference_map()
 
-        # Instantiate the FMU
-        self._instantiate()
-    
-    def _set_up_ports(self):
-        """
-        Reads the model variables with causality "input" and "output" and initializs the Ports based on the type.
-        """
-        # 1) Create Input Ports
-        inputs = [var for var in self._md.modelVariables if var.causality == "input"]
-        for var in inputs:
-            if var.type == "Real":
-                self.inputs[var.name] = RealPort(name=var.name, 
-                                                 value=var.start,
-                                                 unit=var.unit,
-                                                 description=var.description)
-            if var.type == "Integer":
-                self.inputs[var.name] = IntPort(name=var.name,
-                                                value=var.value,
-                                                description=var.description
-                                                )
-            # TODO: Add Boolean and String    
+        # Parameters dictionary
+        self.parameters: Dict[str, ModelVariable] = {
+            var.name: var for var in self._md.modelVariables if var.causality == "parameter"
+        }
 
-        # 2) Create Output Ports
-        outputs = [var for var in self._md.modelVariables if var.causality == "output"]
-        for var in outputs:
-            if var.type == "Real":
-                self.outputs[var.name] = RealPort(name=var.name, 
-                                                 value=var.start,
-                                                 unit=var.unit,
-                                                 description=var.description)
-            if var.type == "Integer":
-                self.outputs[var.name] = IntPort(name=var.name,
-                                                value=var.value,
-                                                description=var.description
-                                                )
-            # TODO: Add Boolean and String
-    
-    def _set_up_label(self) -> None:
-        """
-        Create a label for visualization in the system graph.
-        """
-        in_str = "{ " + " | ".join(f"<{name}> {name}" for name in self.inputs.keys()) + " }"
-        out_str = "{ " + " | ".join(f"<{name}> {name}" for name in self.outputs.keys()) + " }"
-        if in_str == "{  }":
-            in_str = ""
-        if out_str == "{  }":
-            out_str = ""
-        if in_str and out_str:
-            self.label = f"{{ {in_str} | {self.name} | {out_str} }}"
-        elif in_str:
-            self.label = f"{{ {in_str} | {self.name} }}"
-        elif out_str:
-            self.label = f"{{ {self.name} | {out_str} }}"
-        else:
-            self.label = f"{self.name}"
-    
-    def _set_up_units(self) -> None:
-        """
-        Convert unit strings to pint units using the global Unit Registry.
-        """
-        for var in self._vars:
-            if hasattr(var, "unit") and var.unit:
-                var.unit = to_pint_unit(var.unit)
+    # -------------------------------------------------------------------------------
+    # Build Port Specifications
+    def _build_port_specs(self) -> None:
+        for var in self._md.modelVariables:
+            if var.causality not in ("input", "output"):
+                continue
+            direction = "in" if var.causality == "input" else "out"           
+            port_type = _port_type_from_var(var)
+            if port_type is None:
+                continue
+            unit = None
+            if port_type == PortType.REAL and var.unit:
+                unit = str(to_pint_unit(var.unit)) if var.unit else None
 
-    def _instantiate(self):
-        """
-        Instantiate the FMU as FMU2Slave using fmpy.
-        """
-        unzipdir = extract(self.path)
-        self._instance = FMU2Slave(guid=self._md.guid,
-                                unzipDirectory=unzipdir,
-                                modelIdentifier=self._md.coSimulation.modelIdentifier,
-                                instanceName=self.name)
-        self._instance.instantiate()
-    
-    def input_ports(self) -> Dict[str, str]:
-        """Return {port_name: unit_str} for inputs."""
-        return {name: str(var.unit) if var.unit else "" for name, var in self.inputs.items()}
-
-    def output_ports(self) -> Dict[str, str]:
-        """Return {port_name: unit_str} for outputs."""
-        return {name: str(var.unit) if var.unit else "" for name, var in self.outputs.items()}
-    
-    def set_parameters(self, **parameters: float) -> None:
-        """
-        Set the parameters of the FMU during initialization.
-            :param parameters: Parameter values as keyword arguments {param_name: value}.
-        """
-        for name, value in parameters.items():
-            if name in self.parameters:
-                self.parameters[name].start = value
+            spec = PortSpec(
+                name=var.name,
+                type=port_type,
+                direction=direction,
+                unit= unit,
+                description=var.description
+            )
+            if direction == "in":
+                self.input_specs[var.name] = spec
             else:
-                raise KeyError(f"Parameter '{name}' not found in FMU '{self.name}'.")
+                self.output_specs[var.name] = spec
+    
+    def _build_value_reference_map(self) -> None:
+        for var in self._md.modelVariables:
+            causality = var.causality
+            if causality not in ("input", "output"):
+                continue
+            port_type = _port_type_from_var(var)
+            value_reference = var.valueReference
+            if causality == "input":
+                if   port_type == PortType.REAL:   self._vrs_in_real[var.name] = value_reference
+                elif port_type == PortType.INT:    self._vrs_in_int[var.name]  = value_reference
+                elif port_type == PortType.BOOL:   self._vrs_in_bool[var.name] = value_reference
+                elif port_type == PortType.STRING: self._vrs_in_str[var.name]  = value_reference
 
+            elif causality == "output":
+                if   port_type == PortType.REAL:   self._vrs_out_real[var.name] = value_reference
+                elif port_type == PortType.INT:    self._vrs_out_int[var.name]  = value_reference
+                elif port_type == PortType.BOOL:   self._vrs_out_bool[var.name] = value_reference
+                elif port_type == PortType.STRING: self._vrs_out_str[var.name]  = value_reference
+
+    # -------------------------------------------------------------------------------
+    # Lifecycle
     def initialize(self, t0: float) -> None:
-        """
-        Prepare the component for simulation starting at time t0.
+        # Create Port States
+        self.inputs = {name: PortState(spec=spec) for name, spec in self.input_specs.items()}
+        self.outputs = {name: PortState(spec=spec) for name, spec in self.output_specs.items()}
 
-            :param t0: Start time of the simulation.
-        """
-        # Standard Co-Sim Initialization
-        self._instance.reset()
+        # Unzip and instantiate FMU
+        self._unzipdir = extract(self._path)
+        self._instance = FMU2Slave(instanceName=self.name,
+                                   guid=self._md.guid,
+                                   unzipDirectory=self._unzipdir,
+                                   modelIdentifier=self._md.coSimulation.modelIdentifier)
+        self._instance.instantiate()
         self._instance.setupExperiment(startTime=t0)
         self._instance.enterInitializationMode()
-        # Set start values for parameters
-        for name, var in self.parameters.items():
-            if var.start is not None:
-                var_start = float(var.start)
-                self._instance.setReal([var.valueReference], [var_start])
+
+        # Apply parameters
+        self._apply_parameters_starts()
+
+        # Apply initial input starts if present in specs/PortStates
+        self._apply_input_starts()
+
         self._instance.exitInitializationMode()
-    
-    def set_inputs(self, **signals: float) -> None:
-        """
-        Set the input signals for the FMU.
-            :param signals: Input signals as keyword arguments {input_name: value}.
-        """
-        # Return early if no signals to set
+
+        # Initialize output PortStates with current FMU values (t0)
+        self._update_output_states(t0)
+
+    def set_parameters(self, **parameters) -> None:
+        for name, val in parameters.items():
+            var = self.parameters.get(name)
+            if not var:
+                raise KeyError(f"{self.name}: Unknown parameter '{name}'")
+            var.start = val
+
+    def set_inputs(self, signals: Dict[str, Any], t:Optional[float]) -> None:
         if not signals: return
-        
-        # Get value references and values and set them in the FMU
-        vrs: List[int] = []
-        vals: List[float] = []
-        for k, v in signals.items():
-            if k in self._vrs_in:
-                vrs.append(self._vrs_in[k])
-                vals.append(v)
-            else:
-                raise KeyError(f"Input '{k}' not found in FMU '{self.name}'.")
-        self._instance.setReal(vrs, vals)
+        assert self._instance is not None
 
-    def do_step(self, t, h) -> None:
-        """
-        Perform a simulation step for the FMU.
-            :param t: Current communication time point.
-            :param h: Communication step size.
-        """
-        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=h)
-    
-    def get_outputs(self) -> Dict[str, float]:
-        """
-        Return the current outputs as a dictionary {name: value}.
-        """
-        vrs = list(self._vrs_out.values())
-        values = self._instance.getReal(vrs)
-        return {name: values[i] for i, name in enumerate(self._vrs_out.keys())}
-    
-    def reset(self) -> None:
-        """
-        Reset the component to a clean state before (before initialization).
-        """
-        self._instance.reset()
-        self._instance.terminate()
-        self._instance.freeInstance()
-        self._instance = None
-        self._instantiate()
+        # Set inputs by batch per type
+        real_vrs: List[int] = []; real_vals: List[float] = []
+        int_vrs: List[int] = []; int_vals: List[int] = []
+        bool_vrs: List[int] = []; bool_vals: List[bool] = []
+        str_vrs: List[int] = []; str_vals: List[str] = []
 
-    def reinitialize(self, t: float, state: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Reinitialize the component, optionally restoring a previous state.
-            :param t: Time to reinitialize to.
-            :param state: Optional state dictionary to restore.
-        """
-        self.reset()
-        for name, value in (state or {}).items():
-            self.parameters[name].start = value
-        self.initialize(t)
+        for name, val in signals.items():
+            if name not in self.inputs:
+                raise KeyError(f"{self.name}: Unknown input '{name}")
+            port_state = self.inputs[name]
+            port_state.set(value=val, t=t)
+            spec = port_state.spec
+            vr_map = _in_vr_map_for_type(self, spec.type)
+            if name not in vr_map:
+                raise KeyError(f"{self.name}: '{name}' is not an FMU input")
+            vr = vr_map[name]
+            
+            # Convert to raw value
+            if spec.type == PortType.REAL:
+                q = port_state.get()
+                mag = float(q.magnitude) if isinstance(q, Quantity) else float(q)
+                real_vrs.append(vr); real_vals.append(mag)
+            elif spec.type == PortType.INT:
+                if type(port_state.value) is not int:
+                    raise TypeError(f"{self.name}: INT input '{name}' must be int")
+                int_vrs.append(vr); int_vals.append(port_state.value)
+            elif spec.type == PortType.BOOL:
+                if not isinstance(port_state.value, bool):
+                    raise TypeError(f"{self.name}: BOOL input '{name}' must be bool")
+                bool_vrs.append(vr); bool_vals.append(1 if port_state.value else 0)
+            elif spec.type == PortType.STRING:
+                if not isinstance(port_state.value, str):
+                    raise TypeError(f"{self.name}: STRING input '{name}' must be str")
+                str_vrs.append(vr); str_vals.append(port_state.value)
+
+        # Set the values by batch    
+        if real_vrs:  self._instance.setReal(real_vrs, real_vals)
+        if int_vrs:   self._instance.setInteger(int_vrs, int_vals)
+        if bool_vrs:  self._instance.setBoolean(bool_vrs, bool_vals)
+        if str_vrs:   self._instance.setString(str_vrs, str_vals)
+
+    def do_step(self, t: float, dt: float) -> Dict[str, Any]:
+        assert self._instance is not None
+        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=dt)
+        self._update_output_states(t+dt)
+        return self.get_outputs()
+
+    def get_outputs(self) -> Dict[str, Any]:
+        return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
     
     def set_state(self, state):
-        # TODO: Implement state setting if supported by the FMU
+        # TODO: Implement method
         pass
 
     def get_state(self):
-        # TODO: Implement state retrieval if supported by the FMU
+        # TODO: Implement method
         pass
 
-    def free(self) -> None:
-        """
-        Free resources associated with the FMU component.
-        """
-        if self._instance:
-            self._instance.terminate()
-            self._instance.freeInstance()
-            self._instance = None
-            self._vrs_in = {}
-            self._vrs_out = {}
-        
-        
+    def reset(self):
+        if self._instance is not None:
+            try:
+                self._instance.reset()
+                self._instance.terminate()
+                self._instance.freeInstance()
+                self._instance.freeLibrary()
+            finally:
+                self._instance = None
+
+    # --------------------------------------------------------------
+    # Helpers
+    def _apply_parameters_starts(self) -> None:
+        assert self._instance is not None
+        # batch parameters by base type
+        real_vrs: List[int] = []; real_vals: List[float] = []
+        int_vrs: List[int] = []; int_vals: List[int] = []
+        bool_vrs: List[int] = []; bool_vals: List[int] = []
+        str_vrs: List[int] = []; str_vals: List[str] = []
+
+        for name, param in self.parameters.items():
+            if param.start is None:
+                continue
+            if param._python_type == float:
+                real_vrs.append(param.valueReference); real_vals.append(float(param.start))
+            elif param._python_type == int:
+                int_vrs.append(param.valueReference); int_vals.append(int(param.start))
+            elif param._python_type == bool:
+                bool_vrs.append(param.valueReference); bool_vals.append(1 if bool(param.start) else 0)
+            elif param._python_type == str:
+                str_vrs.append(param.valueReference); str_vals.append(str(param.start))
+
+        if real_vrs: self._instance.setReal(real_vrs, real_vals)
+        if int_vrs: self._instance.setInteger(int_vrs, int_vals)
+        if bool_vrs: self._instance.setBoolean(bool_vrs, bool_vals)
+        if str_vrs: self._instance.setString(str_vrs, str_vals)
+    
+    def _apply_input_starts(self) -> None:
+        # If PortStates contain initial values (via specs or pre-set), push them into the FMU
+        init_vals = {name: in_port.get() for name, in_port in self.inputs.items() if in_port.get() is not None}
+        if init_vals:
+            self.set_inputs(init_vals, t=None)
+    
+    def _update_output_states(self, t: float) -> None:
+            assert self._instance is not None
+
+            # For each base type, batch get and set into PortStates as Quantities (REAL) or raw types
+            if self._vrs_out_real:
+                vrs = list(self._vrs_out_real.values())
+                vals = self._instance.getReal(vrs)
+                for name, val in zip(self._vrs_out_real.keys(), vals):
+                    spec = self.output_specs[name]
+                    q = (val * ureg(spec.unit)) if spec.unit else val
+                    self.outputs[name].set(q, t=t)
+
+            if self._vrs_out_int:
+                vrs = list(self._vrs_out_int.values())
+                vals = self._instance.getInteger(vrs)
+                for name, val in zip(self._vrs_out_int.keys(), vals):
+                    self.outputs[name].set(int(val), t=t)
+
+            if self._vrs_out_bool:
+                vrs = list(self._vrs_out_bool.values())
+                vals = self._instance.getBoolean(vrs)
+                for name, val in zip(self._vrs_out_bool.keys(), vals):
+                    self.outputs[name].set(bool(val), t=t)
+
+            if self._vrs_out_str:
+                vrs = list(self._vrs_out_str.values())
+                vals = self._instance.getString(vrs)
+                for name, val in zip(self._vrs_out_str.keys(), vals):
+                    self.outputs[name].set(str(val), t=t)
+
+# --------------------------------------------------------------
+# Helpers
+def _port_type_from_var(var: ModelVariable) -> PortType:
+    if   var._python_type == float: return PortType.REAL
+    elif var._python_type == int:   return PortType.INT
+    elif var._python_type == bool:  return PortType.BOOL
+    elif var._python_type == str:   return PortType.STRING
+    else:
+        raise NotImplementedError(f"Unsupported variable type '{var._python_type}' for variable '{var.name}'.")
+    
+def _in_vr_map_for_type(comp: FMUComponent, pt: PortType) -> Dict[str, int]:
+    return (
+        comp._vrs_in_real if pt == PortType.REAL   else
+        comp._vrs_in_int  if pt == PortType.INT    else
+        comp._vrs_in_bool if pt == PortType.BOOL   else
+        comp._vrs_in_str  
+    )

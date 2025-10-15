@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 import opensim as osim
 
 from .base import CoSimComponent
-from .units import UREG, to_pint_unit
+from ..utilities.units import UREG, to_pint_unit
 
 class OpenSimComponent(CoSimComponent):
     """

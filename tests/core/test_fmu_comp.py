@@ -1,21 +1,37 @@
-import pytest
-
 from SysSimX.core.fmu_comp import FMUComponent
 
-#-----------------------------------------------------------------------------
-# Test FMUComponent class
-class TestFMUComponent:
-    """Test suite for the FMUComponent class."""
-    
-    def test_construction(self):
-        """Test basic construction of FMUComponent."""
-        fmu_path = "tests/test_data/FMU/Pendulum.fmu"
-        comp = FMUComponent(name="pendulum", fmu_path=fmu_path)
-        assert comp.name == "pendulum"
-        assert comp.path == fmu_path
-        assert comp.inputs is not None
-        assert comp.outputs is not None
-        assert comp.parameters is not None
-        assert comp._md is not None
-        assert comp._vars is not None
-        assert comp._instance is not None
+fmu_path = "tests/test_data/FMU/Pendulum.fmu"
+
+def test_init():
+    comp = FMUComponent("Pendulum", fmu_path=fmu_path)
+    assert comp.input_specs['torque'].name == "torque"
+
+def test_build_port_specs():
+    pass
+
+def test_buil_value_reference_map():
+    pass
+
+def test_initialize():
+    pass
+
+def test_set_parameters():
+    pass
+
+def test_set_inputs():
+    pass
+
+def test_do_step():
+    pass
+
+def test_get_outputs():
+    pass
+
+def test_set_state():
+    pass
+
+def test_get_state():
+    pass
+
+def test_reset():
+    pass

@@ -1,73 +1,79 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple
-from .port import Port
+from typing import Dict, Any, Optional, Tuple, Union
+from .port import PortSpec, PortState
+from ..utilities.units import ureg, Quantity
 
 class CoSimComponent(ABC):
     """
-    Abstract base class for a co-simulation component (FMU, OpenSim model, etc.).
-    Implementations must inherit from this class and implement the methods defined here.
-        
-        :param name: Name of the component instance.
-        :param label: Label for visualization in the system graph.
-        :param group: Optional group name for organizing components in the system graph clusters.
-        :param inputs: Optional dictionary of input ports {port_name: Port}.
-        :param outputs: Optional dictionary of output ports {port_name: Port}.
+    Unified co-simulation component interface.
     """
+    # Metadata
     name: str
     label: str
     group: Optional[str] = None
-    inputs: Optional[Dict[str, Port]]
-    outputs: Optional[Dict[str, Port]]
+    
+    # Port specifications (immutable) and states (mutable)
+    input_specs = Dict[str, PortSpec]
+    output_specs = Dict[str, PortSpec]
+    inputs: Dict[str, PortState]
+    outputs: Dict[str, PortState]
 
-    # ---- Port Introspection ----
-    @abstractmethod
-    def input_ports(self) -> Dict[str, Port]:
-        """Return {port_name: unit_str} for inputs."""
-
-    @abstractmethod
-    def output_ports(self) -> Dict[str, Port]:
-        """Return {port_name: unit_str} for outputs."""
+    def __init__(self, name: str, label: Optional[str] = None, group: Optional[str] = None):
+        self.name = name
+        self.label = label if label is not None else name
+        self.group = group
+        self.input_specs = {}
+        self.output_specs = {}
+        self.inputs = {}
+        self.outputs = {}
 
     # ---- Configuration ----
-    @abstractmethod
     def set_parameters(self, **parameters: Any) -> None:
         """Set the parameters of the component during initialization."""
+        pass
 
     # ---- Lifecycle ----
     @abstractmethod
     def initialize(self, t0: float) -> None:
         """Initialize the component at the start time t0."""
+        ...
+    
+    def set_inputs(self, signals: Dict[str, Any], t: Optional[float] = None) -> None:
+        """
+        Default method for inputs. Subclasses can override for custom behavior.
+        """
+        for k, v in signals.items():
+            if k not in self.inputs:
+                raise KeyError(f"Input port '{k}' not found in component '{self.name}'.")
+            self.inputs[k].set(v, t=t)
     
     @abstractmethod
-    def set_inputs(self, **signals: float) -> None:
-        """Set the input signals for the next step."""
+    def do_step(self, t: float, dt: float) -> None:
+        """Advance the component's state from time t to t+dt."""
+        ...
     
-    @abstractmethod
-    def do_step(self, t: float, h: float) -> None:
-        """Advance the component's state from time t to t+h."""
-    
-    @abstractmethod
-    def get_outputs(self) -> Dict[str, float]:
+    def get_outputs(self) -> Dict[str, Any]:
         """Return the current outputs as a dictionary {name: value}."""
-    
-    @abstractmethod
-    def get_state(self) -> Dict[str, Any] | None:
-        """Return the current state of the component, or None if not supported."""
+        if self.outputs is None:
+            return {}
+        return {k: v.get() for k, v in self.outputs.items() if v.get() is not None}
     
     @abstractmethod
     def set_state(self, state: Dict[str, Any]) -> None:
         """Overwrite the current state of the component."""
+        ...
 
+    @abstractmethod
+    def get_state(self) -> Dict[str, Any] | None:
+        """Return the current state of the component, or None if not supported."""
+        ...
+    
     @abstractmethod
     def reset(self) -> None:
         """Reset the component to a clean state before (before initialization)."""
+        ...
 
     def free(self) -> None:
         """Optional: Free resources associated with the component."""
         pass
-
-    def reinitialize(self, t: float, state: Optional[Dict[str, Any]] = None) -> None:
-        """Optional: Reinitialize the component, optionally restoring a previous state."""
-        pass
-    

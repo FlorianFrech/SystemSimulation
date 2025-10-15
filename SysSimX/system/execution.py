@@ -22,26 +22,22 @@ class ExecutionEngine:
         for comp_name in gen:
             inputs: Dict[str, Any] = {}
             for con in sys.connections:
-                if con.dst_comp != comp_name: continue
+                if con.dst_comp.name != comp_name: continue
                 # choose source value: current outputs for delay=0, previous outputs for delay>0
                 src_vals = outputs.get(con.src_comp, {})
-                if con.delay > 0:
-                    # NOTE: you can retain historical buffers here; start simple:
-                    pass
                 val = src_vals.get(con.src_port, None)
                 if val is not None:
                     inputs[con.dst_port] = val
-            sys.components[comp_name].set_inputs(inputs)
+            sys.components[comp_name].set_inputs(**inputs)
 
     def step(self, sys: System, t: float, dt: float) -> None:
-        gens = sys.execution_order()
+        execution_order = sys.execution_order
         outputs = self._collect_outputs(sys)
-        for gen in gens:
+        for gen in execution_order:
             self._set_inputs_for_generation(sys, gen, outputs)
             # compute all in gen (sequential for now; swap to ThreadPoolExecutor later)
             for comp_name in gen:
-                out = sys.components[comp_name].do_step(t, dt)
-                outputs[comp_name] = out
+                sys.components[comp_name].do_step(t, dt)
 
     def run(self, sys: System, t0: float, t_end: float, dt: float) -> None:
         self.initialize(sys, t0)

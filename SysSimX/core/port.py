@@ -1,59 +1,118 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple
-from .units import UREG, to_pint_unit
-from pint import Quantity as Q
-from pint import Unit
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Generic, Optional, TypeVar, Literal, Union
+from ..utilities.units import ureg, Quantity
 
-class Port(ABC):
+
+class PortType(str, Enum):
+    REAL = "real"
+    INT = "int"
+    BOOL = "bool"
+    STRING = "string"
+    BYTES = "bytes"
+
+Direction = Literal['in', 'out']
+T = TypeVar('T', float, int, bool, str) # types from fmpy.model_description.read_model_description
+
+@dataclass(frozen=True)
+class PortSpec(Generic[T]):
     """
-    Abstract base class for a port (input or output) of a co-simulation component.
+    Specification of a port in a CoSimComponent (unmutable).
+    Defines the name, type, direction, optional unit, and description of the port.
     """
     name: str
-    type: Any
-    value: Any
-    unit: Optional[Unit]
-    quantity: Optional[Q]
-    description: Optional[str]
+    type: PortType
+    direction: Direction
+    unit: Optional[str] = None
+    description: Optional[str] = None
 
-class RealPort(Port):
-    """
-    A port representing a real-valued signal.
-    """
-    def __init__(self, name: str, value: float, unit: Optional[str] = None, description: Optional[str] = None):
-        self.name = name
-        self.type = float
-        self.value = value
-        self.unit = unit
-        self.description = description
-        self.quantity = Q(0, self.unit) if self.unit else Q(0)
+    def validate_value(self, value: Any) -> None:
+        """
+        Validate that the given value matches the port's type and unit (if applicable).
+        """
+        # Unit presence only allowed for REAL ports
+        if self.type != PortType.REAL and self.unit is not None:
+            raise ValueError(f"{self.name}: Only REAL ports can have units, got {self.type} with unit {self.unit}")
+        
+        # Data Type Checks
+        if self.type == PortType.REAL:
+            if not isinstance(value, (float, int, Quantity)):
+                 raise TypeError(f"{self.name}: REAL expects float/int/Quantity, got {type(value)}")
+        elif self.type == PortType.BOOL:
+            if not isinstance(value, bool):
+                raise TypeError(f"{self.name}: BOOL expects bool, got {type(value)}")
+        elif self.type == PortType.INT:
+            if type(value) is not int:
+                raise TypeError(f"{self.name}: INT expects int, got {type(value)}")
+        elif self.type == PortType.STRING:
+            if not isinstance(value, str):
+                raise TypeError(f"{self.name}: STRING expects str, got {type(value)}")
+        
+        # Unit Checks for REAL ports
+        if self.type == PortType.REAL and self.unit and isinstance(value, Quantity):
+            _ = value.to(self.unit) # Raises if incompatible
+    
+    @staticmethod
+    def compatible(spec1: PortSpec, spec2: PortSpec) -> bool:
+        """
+        Check if two PortSpecs are compatible (same type and compatible units if REAL).
+        """
+        if spec1.type != spec2.type:
+            return False
+        if spec1.type == PortType.REAL and spec1.unit and spec2.unit:
+            try:
+               (1 * ureg(spec1.unit)).to(spec2.unit)
+            except Exception:
+                return False
+        return True
 
-class IntPort(Port):
+@dataclass
+class PortState(Generic[T]):
     """
-    A port representing an integer-valued signal.
+    State of a port in a CoSimComponent (mutable).
+    Holds the specification, current value, last update time, and history of values.
     """
-    def __init__(self, name: str, value: int, description: Optional[str] = None):
-        self.name = name
-        self.type = int
-        self.value = 0
-        self.description = description
+    spec: PortSpec[T]
+    value: Optional[Union[T, Quantity]] = None
+    t_last: Optional[float] = None
+    history: list[tuple[float, Union[T, Quantity]]] = field(default_factory=list) # (time, value)
 
-class BoolPort(Port):
-    """
-    A port representing a boolean-valued signal.
-    """
-    def __init__(self, name: str, description: Optional[str] = None):
-        self.name = name
-        self.type = bool
-        self.value = False
-        self.description = description
+    # TODO:
+    # Add sample time and variablility (continuous / discrete / parameter) to support event handling
 
-class StringPort(Port):
-    """
-    A port representing a string-valued signal.
-    """
-    def __init__(self, name: str, description: Optional[str] = None):
-        self.name = name
-        self.type = str
-        self.value = ""
-        self.description = description
+    def set(self, value: Union[T, Quantity], t: Optional[float] = None) -> None:
+        """
+        Set the port's value, validating against its specification.
+        """
+        self.spec.validate_value(value)
+        if self.spec.type == PortType.REAL:
+            if isinstance(value, Quantity):
+                vq = value if self.spec.unit is None else value.to(self.spec.unit)
+            else:
+                vq = value if self.spec.unit is None else (value * ureg(self.spec.unit))
+            self.value = vq
+        else:
+            self.value = value # INT, BOOL, STRING
+        if t is not None:
+            self.t_last = t
+            self.history.append((t, self.value))
+
+    def get(self) -> Union[T, Quantity, None]:
+        """
+        Get the current value of the port.
+        """
+        return self.value
+    
+    def compatible_with(self, other: PortSpec) -> bool:
+        """
+        Check if this port's specification is compatible with another port's (other) specification.
+        """
+        if self.spec.type != other.type:
+            return False
+        if self.spec.type == PortType.REAL and self.spec.unit and other.unit:
+            try:
+               (1 * ureg(self.spec.unit)).to(other.unit)
+            except Exception:
+                return False
+        return True

@@ -2,6 +2,26 @@ from graphviz import Digraph
 from IPython.display import display
 from ..system.system import System, Connection
 
+
+# def _set_up_label(self) -> None:
+#         """
+#         Create a label for visualization in the system graph.
+#         """
+#         in_str = "{ " + " | ".join(f"<{name}> {name}" for name in self.inputs.keys()) + " }"
+#         out_str = "{ " + " | ".join(f"<{name}> {name}" for name in self.outputs.keys()) + " }"
+#         if in_str == "{  }":
+#             in_str = ""
+#         if out_str == "{  }":
+#             out_str = ""
+#         if in_str and out_str:
+#             self.label = f"{{ {in_str} | {self.name} | {out_str} }}"
+#         elif in_str:
+#             self.label = f"{{ {in_str} | {self.name} }}"
+#         elif out_str:
+#             self.label = f"{{ {self.name} | {out_str} }}"
+#         else:
+#             self.label = f"{self.name}"
+
 class SystemGraphVisualizer:
     def __init__(self, system: System):
         self.system = system

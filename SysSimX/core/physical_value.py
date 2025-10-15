@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Union, Iterable
 import numpy as np
-from .units import Q, qty, parse_unit
+from ..utilities.units import Q, qty, parse_unit
 
 # --------------------------------------------------------------------------
 # Physical value class for name and quantity

@@ -3,8 +3,10 @@
 from pint import UnitRegistry
 import re
 
-UREG = UnitRegistry()
-UREG.formatter.default_format = "~P"  # Abbreviated units by default
+ureg = UnitRegistry()
+ureg.formatter.default_format = "~P"
+ureg.autoconvert_offset_to_baseunit = True
+Quantity = ureg.Quantity
 
 def fix_exponent(unit_str: str) -> str:
     """
@@ -23,9 +25,9 @@ def to_pint_unit(unit_str: str):
     :return: A pint Unit object.
     """
     if not unit_str:
-        return UREG.dimensionless
+        return ureg.dimensionless
     try:
         unit_str = fix_exponent(unit_str)
-        return UREG.Unit(unit_str)
+        return ureg.Unit(unit_str)
     except Exception as e:
         raise ValueError(f"Invalid unit string '{unit_str}': {e}")
