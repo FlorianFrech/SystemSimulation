@@ -10,7 +10,6 @@ class PortType(str, Enum):
     INT = "int"
     BOOL = "bool"
     STRING = "string"
-    BYTES = "bytes"
 
 Direction = Literal['in', 'out']
 T = TypeVar('T', float, int, bool, str) # types from fmpy.model_description.read_model_description
@@ -60,7 +59,7 @@ class PortSpec(Generic[T]):
         """
         if spec1.type != spec2.type:
             return False
-        if spec1.type == PortType.REAL and spec1.unit and spec2.unit:
+        if spec1.type == PortType.REAL and (spec1.unit or spec2.unit):
             try:
                (1 * ureg(spec1.unit)).to(spec2.unit)
             except Exception:
@@ -98,10 +97,16 @@ class PortState(Generic[T]):
             self.t_last = t
             self.history.append((t, self.value))
 
-    def get(self) -> Union[T, Quantity, None]:
+    def get(self, as_unit: Optional[str] = None) -> Union[T, Quantity, None]:
         """
         Get the current value of the port.
         """
+        if self.value is None:
+            return None
+        if self.spec.type == PortType.REAL and as_unit:
+            if isinstance(self.value, Quantity):
+                return self.value.to(as_unit)
+            return (self.value * ureg(self.spec.unit)).to(as_unit) if self.spec.unit else self.value
         return self.value
     
     def compatible_with(self, other: PortSpec) -> bool:

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Tuple, List
 from pathlib import Path
 
 from fmpy import read_model_description, extract
-from fmpy.model_description import ModelVariable, ModelDescription, InterfaceType
+from fmpy.model_description import ModelVariable, ModelDescription
 from fmpy.fmi2 import FMU2Slave
 
 from .base import CoSimComponent
@@ -151,7 +151,7 @@ class FMUComponent(CoSimComponent):
         # Set inputs by batch per type
         real_vrs: List[int] = []; real_vals: List[float] = []
         int_vrs: List[int] = []; int_vals: List[int] = []
-        bool_vrs: List[int] = []; bool_vals: List[bool] = []
+        bool_vrs: List[int] = []; bool_vals: List[int] = []
         str_vrs: List[int] = []; str_vals: List[str] = []
 
         for name, val in signals.items():
@@ -167,7 +167,7 @@ class FMUComponent(CoSimComponent):
             
             # Convert to raw value
             if spec.type == PortType.REAL:
-                q = port_state.get()
+                q = port_state.get(as_unit=spec.unit)
                 mag = float(q.magnitude) if isinstance(q, Quantity) else float(q)
                 real_vrs.append(vr); real_vals.append(mag)
             elif spec.type == PortType.INT:
@@ -210,9 +210,6 @@ class FMUComponent(CoSimComponent):
         if self._instance is not None:
             try:
                 self._instance.reset()
-                self._instance.terminate()
-                self._instance.freeInstance()
-                self._instance.freeLibrary()
             finally:
                 self._instance = None
 

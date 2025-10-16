@@ -19,8 +19,8 @@ model PID_Continuous
   parameter Real uMin=-1, uMax=1;
   
   // Inputs
-  Modelica.Blocks.Interfaces.RealInput  ref;
-  Modelica.Blocks.Interfaces.RealInput  y;
+  Modelica.Blocks.Interfaces.RealInput  ref(unit="V");
+  Modelica.Blocks.Interfaces.RealInput  y(unit="V");
   
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput u;

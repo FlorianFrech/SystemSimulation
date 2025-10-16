@@ -7,6 +7,9 @@ from ..utilities.units import ureg, Quantity
 class CoSimComponent(ABC):
     """
     Unified co-simulation component interface.
+     - Defines metadata, port specifications, and state handling
+     - Abstract methods for lifecycle management (initialize, set_inputs, do_step, get_outputs, set_state, get_state, reset)
+     - Default implementations for common behaviors (set_inputs, get_outputs)
     """
     # Metadata
     name: str
