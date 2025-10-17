@@ -205,7 +205,6 @@ class FEMPendulum:
     def _initialize_torque_control(self):        
         # Motor torque
         self._normal_rot = specialcf.normal(2)
-        self._tangent_rot = CF((-self._normal_rot[1], self._normal_rot[0]))
         r = self._X_rel
 
         # Smooth localized weight near rotation axis
