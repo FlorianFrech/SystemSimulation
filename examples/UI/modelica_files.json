@@ -1,0 +1,107 @@
+{
+  "scan_info": {
+    "directory": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum",
+    "total_files": 14,
+    "scan_date": "notebook"
+  },
+  "files": [
+    {
+      "name": "AngleEncoder.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/AngleEncoder.mo",
+      "relative_path": "AngleEncoder.mo",
+      "size_bytes": 1096,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Demo_Driven.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Demo_Driven.mo",
+      "relative_path": "Demo_Driven.mo",
+      "size_bytes": 1253,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Demo_DrivenWithWall.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Demo_DrivenWithWall.mo",
+      "relative_path": "Demo_DrivenWithWall.mo",
+      "size_bytes": 1848,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Demo_DrivenWithWallDiscrete.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Demo_DrivenWithWallDiscrete.mo",
+      "relative_path": "Demo_DrivenWithWallDiscrete.mo",
+      "size_bytes": 1304,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Demo_UndrivenWithWall.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Demo_UndrivenWithWall.mo",
+      "relative_path": "Demo_UndrivenWithWall.mo",
+      "size_bytes": 559,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Drive.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Drive.mo",
+      "relative_path": "Drive.mo",
+      "size_bytes": 1370,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "ImpactWall.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/ImpactWall.mo",
+      "relative_path": "ImpactWall.mo",
+      "size_bytes": 2489,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "PID_Continuous.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/PID_Continuous.mo",
+      "relative_path": "PID_Continuous.mo",
+      "size_bytes": 2120,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "PID_Sampled.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/PID_Sampled.mo",
+      "relative_path": "PID_Sampled.mo",
+      "size_bytes": 3013,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Pendulum.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Pendulum.mo",
+      "relative_path": "Pendulum.mo",
+      "size_bytes": 1061,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "PendulumWithWallContinuous.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/PendulumWithWallContinuous.mo",
+      "relative_path": "PendulumWithWallContinuous.mo",
+      "size_bytes": 556,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "PendulumWithWallDiscrete.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/PendulumWithWallDiscrete.mo",
+      "relative_path": "PendulumWithWallDiscrete.mo",
+      "size_bytes": 606,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "Reference.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Reference.mo",
+      "relative_path": "Reference.mo",
+      "size_bytes": 656,
+      "directory": "ControlledPendulum"
+    },
+    {
+      "name": "package.mo",
+      "full_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/package.mo",
+      "relative_path": "package.mo",
+      "size_bytes": 50,
+      "directory": "ControlledPendulum"
+    }
+  ]
+}

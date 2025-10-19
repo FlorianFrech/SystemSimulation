@@ -1,10 +1,12 @@
 {
-  "user_mode": "standard",
-  "model": {
-    "package_path": "package path",
-    "model_file": "model file",
-    "model_class": "myClass",
-    "use_mode": "modelica"
+  "mode": "expert",
+  "package_path": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum",
+  "selected_models": {
+    "Demo_Driven": "/home/flo/repos/SystemSimulation/demos/ControlledPendulum/ControlledPendulum/Demo_Driven.mo"
   },
-  "fmu_options": null
+  "sim_params": {
+    "time": 10.0,
+    "step": 0.01,
+    "solver": "euler"
+  }
 }
