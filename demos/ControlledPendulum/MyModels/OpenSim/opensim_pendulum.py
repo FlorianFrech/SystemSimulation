@@ -129,7 +129,6 @@ class OpenSimPendulum(OpenSimComponent):
         manager = osim.Manager(model)
         manager.setIntegratorMethod(osim.Manager.IntegratorMethod_RungeKuttaMerson) # Adaptive Time Step
         manager.setIntegratorAccuracy(1e-6)
-        manager.set
         manager.initialize(state)
 
         return model, state, coord, actuator, manager

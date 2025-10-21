@@ -192,4 +192,14 @@ class SystemGraphVisualizer:
         self.dot.render(view=False)        
         display(self.dot)
 
+    def save(self, filepath: str) -> None:
+        """
+        Save the current graph to a file.
+        Supported formats depend on Graphviz installation (e.g., png, svg, pdf).
+        """
+        if not hasattr(self, 'dot'):
+            raise RuntimeError("Graph has not been visualized yet. Call visualize() before saving.")
+        self.dot.format = filepath.split('.')[-1]
+        filepath = filepath.rsplit('.', 1)[0]
+        self.dot.render(filename=filepath, view=False)
         

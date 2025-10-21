@@ -5,9 +5,9 @@ from SysSimX.core.base import CoSimComponent
 from SysSimX.core.fem_comp import FEMComponent
 from SysSimX.utilities.units import ureg
 
-from pendulum_mesh import build_mesh
-from material_laws import NeoHookeanMaterial
-from pendulum_config import *
+from MyModels.FEM.pendulum_mesh import build_mesh
+from MyModels.FEM.material_laws import NeoHookeanMaterial
+from MyModels.FEM.pendulum_config import *
 
 import numpy as np
 from ngsolve import *
@@ -220,7 +220,7 @@ class FEMPendulum(FEMComponent):
         
         rhoA_p = self.rho_p * self.mat_params.thickness
         rhoA_w = self.rho_w * self.mat_params.thickness
-        g = 0#9.81
+        g = 9.81
         
         # inertia (mass matrix effect) and gravity force
         if self._with_contact:

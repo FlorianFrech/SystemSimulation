@@ -48,7 +48,6 @@ class FMUComponent():
         self._vrs_out = {name: var.valueReference for name, var in self.outputs.items()}
 
         # Standard Co-Sim Initialization
-        self._instance.reset()
         self._instance.setupExperiment(startTime=t0)
         self._instance.enterInitializationMode()
         for name, var in self.parameters.items():
@@ -139,7 +138,6 @@ class FMUComponent():
         Re-initialize the FMU component at time t0.
             :param t0: Start time of the simulation.
         """
-        self.reset()
         if 'q_state' in signals:
             self.parameters['q0'].start = signals['q_state']
         if 'omega_state' in signals:

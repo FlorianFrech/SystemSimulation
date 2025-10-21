@@ -1,4 +1,4 @@
-from path import Path
+from pathlib import Path
 from OMPython import ModelicaSystem
 from shutil import move
 from typing import Dict
@@ -12,7 +12,7 @@ def get_models_within_package(package_path: Path) -> list[str]:
     Returns:
         list[str]: List of model names within the package.
     """
-    model_files = package_path.files("*.mo")
+    model_files = package_path.glob("*.mo")
     model_names = [file.stem for file in model_files if file.stem != "package"]
     return model_names
 
@@ -66,8 +66,8 @@ def get_fmu_paths(package_path: Path, fmu_output_dir: Path, force_rebuild=False)
     found_model_names.sort()
 
     if not force_rebuild:
-        existing_fmus = fmu_output_dir.files("*.fmu")
-        existing_fmus.sort()
+        existing_fmus = fmu_output_dir.glob("*.fmu")
+        existing_fmus = sorted(existing_fmus)
         existing_model_names = {fmu.stem for fmu in existing_fmus}
         found_model_names = [name for name in found_model_names if name not in existing_model_names]
         found_model_names.sort()

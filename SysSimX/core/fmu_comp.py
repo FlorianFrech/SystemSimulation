@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Tuple, List
 from pathlib import Path
 
 from fmpy import read_model_description, extract
-from fmpy.model_description import ModelVariable, ModelDescription
+from fmpy.model_description import ScalarVariable, ModelDescription # ScalarVariable is ModelVariable in newer fmpy versions
 from fmpy.fmi2 import FMU2Slave
 
 from .base import CoSimComponent
@@ -60,7 +60,7 @@ class FMUComponent(CoSimComponent):
         self._build_value_reference_map()
 
         # Parameters dictionary
-        self.parameters: Dict[str, ModelVariable] = {
+        self.parameters: Dict[str, ScalarVariable] = {
             var.name: var for var in self._md.modelVariables if var.causality == "parameter"
         }
 
