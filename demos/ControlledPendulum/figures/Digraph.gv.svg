@@ -16,9 +16,9 @@
 <text text-anchor="middle" x="69" y="-249.72" font-family="Helvetica,sans-Serif" font-size="10.00">Input</text>
 </g>
 <g id="clust2" class="cluster">
-<title>cluster_Sensing</title>
-<path fill="#ebe6df" stroke="#9ca3af" d="M213,-68.72C213,-68.72 332,-68.72 332,-68.72 338,-68.72 344,-74.72 344,-80.72 344,-80.72 344,-249.72 344,-249.72 344,-255.72 338,-261.72 332,-261.72 332,-261.72 213,-261.72 213,-261.72 207,-261.72 201,-255.72 201,-249.72 201,-249.72 201,-80.72 201,-80.72 201,-74.72 207,-68.72 213,-68.72"/>
-<text text-anchor="middle" x="272.5" y="-249.72" font-family="Helvetica,sans-Serif" font-size="10.00">Sensing</text>
+<title>cluster_Sensors</title>
+<path fill="#dcfce7" stroke="#9ca3af" d="M213,-68.72C213,-68.72 332,-68.72 332,-68.72 338,-68.72 344,-74.72 344,-80.72 344,-80.72 344,-249.72 344,-249.72 344,-255.72 338,-261.72 332,-261.72 332,-261.72 213,-261.72 213,-261.72 207,-261.72 201,-255.72 201,-249.72 201,-249.72 201,-80.72 201,-80.72 201,-74.72 207,-68.72 213,-68.72"/>
+<text text-anchor="middle" x="272.5" y="-249.72" font-family="Helvetica,sans-Serif" font-size="10.00">Sensors</text>
 </g>
 <g id="clust3" class="cluster">
 <title>cluster_Control</title>

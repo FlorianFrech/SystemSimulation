@@ -117,7 +117,7 @@ class PortState(Generic[T]):
             return False
         if self.spec.type == PortType.REAL and self.spec.unit and other.unit:
             try:
-               (1 * ureg(self.spec.unit)).to(other.unit)
+               (0 * ureg(self.spec.unit)).to(other.unit)
             except Exception:
                 return False
         return True

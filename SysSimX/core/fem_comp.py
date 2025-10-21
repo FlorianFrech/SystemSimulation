@@ -1,49 +1,58 @@
+from __future__ import annotations
+from abc import abstractmethod
+from typing import Dict, Any, Optional, Tuple, List, Union
+from dataclasses import dataclass, field
+from pathlib import Path
+import numpy as np
+
+from ngsolve import *
+from ngsolve.webgui import Draw, WebGLScene
+from netgen.occ import *
+from ngsolve.solvers import NewtonMinimization
+
+import ipywidgets as widgets
+from ipywidgets import Layout, HBox, VBox, HTML
+from IPython.display import display, Markdown
+
 from .base import CoSimComponent
+from .port import PortSpec, PortType
 
 class FEMComponent(CoSimComponent):
     """
-    Placeholder for a Finite Element Method (FEM) component.
+    Base class for Finite Element Method (FEM) co-simulation components.
     """
-    def __init__(self, name: str):
-        self.name = name
-        # Initialize other necessary attributes here
+    config: Optional[Any] = None  # Placeholder for FEM configuration dataclass
 
-    def input_ports(self) -> dict:
-        # Return {port_name: unit_str} for inputs
-        return {}
+    def __init__(self, 
+                 name: str, 
+                 label: Optional[str] = None, 
+                 group: Optional[str] = None):
+        super().__init__(name, label, group)
+        
+        self.geometry: Optional[netgen.occ.Geometry] = None
+        self.mesh: Optional[Mesh] = None
 
-    def output_ports(self) -> dict:
-        # Return {port_name: unit_str} for outputs
-        return {}
+        self.spaces: Optional[Dict[str, Any]] = {}
+        self.gfs: Optional[Dict[str, Any]] = {}
+        self.gfs_history: Optional[Dict[str, Any]] = {}
 
-    def initialize(self, t0: float) -> None:
-        # Prepare the component for simulation starting at time t0
+        self.bfa: Optional[BilinearForm] = None
+        self.lf: Optional[LinearForm] = None
+        self.solver: Optional[Any] = None
+
+        self.scene: Optional[WebGLScene] = None
+    
+    def initialize(self):
         pass
 
-    def set_parameters(self, **parameters) -> None:
-        # Set the parameters of the component during initialization
+    def do_step(self, t, dt):
         pass
 
-    def set_inputs(self, **signals) -> None:
-        # Set the input signals for the next step
+    def set_state(self, state):
+        pass
+    
+    def get_state(self):
         pass
 
-    def do_step(self, t: float, h: float) -> None:
-        # Advance the component's state from time t to t+h
+    def reset(self):
         pass
-
-    def get_outputs(self) -> dict:
-        # Return the current outputs as a dictionary {name: value}
-        return {}
-
-    def reset(self) -> None:
-        # Reset the component to a clean state before initialization
-        pass
-
-    def free(self) -> None:
-        # Optional: Free resources associated with the component
-        pass
-
-    def reinitialize(self, t: float, state=None) -> None:
-        # Optional: Reinitialize the component, optionally restoring a previous state
-        self.reset()

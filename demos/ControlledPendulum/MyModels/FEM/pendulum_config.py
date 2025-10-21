@@ -6,7 +6,7 @@ class GeometryParameters:
     l_center: float = 0.8
     
     # Wall geometry
-    use_wall:   bool  = False
+    with_contact:   bool  = False
     q_wall_deg: float = 0
     wall_len_x: float = 0.05
     wall_len_y: float = 0.5
@@ -26,10 +26,10 @@ class GeometryParameters:
 
 
 class MaterialParameters:
-    E_pendulum:        float = 2.10e9 # 1.0e6 
-    nu_pendulum:       float = 0.2    # 0.45   
-    rho_pendulum:      float = 1000      
-    E_wall:            float = 2.10e9     
+    E_pendulum:        float = 210e9 
+    nu_pendulum:       float = 0.2      
+    rho_pendulum:      float = 7850      
+    E_wall:            float = 210e9     
     nu_wall:           float = 0.2       
     rho_wall:          float = 7850      
     thickness:         float = 0.1
@@ -68,20 +68,18 @@ class InitialConditionParameters:
     
     
 class ContactParameters:
-    gap_type: str = 'incremental' # 'incremental' or 'absolute'
-    kn:      float = 1e7         # contact stiffness
-    
+    kn:      float = 1e8         # contact stiffness
+
     def __str__(self):
         return (f"Contact Parameters:\n"
-                f"   Gap Type:          {self.gap_type}\n"
                 f"   Contact Stiffness: {self.kn:.2e} N/m")
-        pass
-    
+
 
 class SimulationParameters:
     t_start:  float = 0 
     tau:      float = 0.01
     t_end:    float = 5
+    use_gravity: bool  = True
     
     def __str__(self):
         return (f"Simulation Parameters:\n"
