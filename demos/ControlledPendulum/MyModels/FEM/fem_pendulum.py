@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
@@ -22,13 +22,13 @@ from ipywidgets import Layout, HBox, VBox, HTML
 # Port specifications
 #----------------------------------------------------------------------------   
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N*m"))
+    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N*m")
 }
 
 OUTPUT_SPECS = {
-    "q": PortSpec("q", PortType.REAL, direction="out", unit=ureg("rad")),
-    "omega": PortSpec("omega", PortType.REAL, direction="out", unit=ureg("rad/s")),
-    "alpha": PortSpec("alpha", PortType.REAL, direction="out", unit=ureg("rad/s^2"))
+    "q": PortSpec("q", PortType.REAL, direction="out", unit="rad"),
+    "omega": PortSpec("omega", PortType.REAL, direction="out", unit="rad/s"),
+    "alpha": PortSpec("alpha", PortType.REAL, direction="out", unit="rad/s^2")
 }
 
 #----------------------------------------------------------------------------
@@ -57,6 +57,16 @@ class FEMPendulum(FEMComponent):
         self.sim_params     = SimulationParameters()
         self.anim_params    = AnimationParameters()
 
+        self.parameters = {
+            "Geometry": self.geom_params,
+            "Material": self.mat_params,
+            "Mesh": self.mesh_params,
+            "Initial Conditions": self.init_params,
+            "Contact": self.contact_params,
+            "Simulation": self.sim_params,
+            "Animation": self.anim_params
+        }
+
         self._with_contact = self.geom_params.with_contact
         self._use_gravity = self.sim_params.use_gravity
     
@@ -75,16 +85,18 @@ class FEMPendulum(FEMComponent):
         self._initialize_fe_spaces()
         self._initialize_grid_functions()
         
-        self.set_state(theta_deg=self.init_params.angular_position_deg,
-                       omega=self.init_params.angular_velocity,
-                       alpha=self.init_params.angular_acceleration)
-        
         if self._with_contact:
             self._initialize_contact()
 
         self._initialize_torque_control()
         
         self._setup_bilinear_form()
+
+        state = {'q': {'value': np.deg2rad(self.init_params.angular_position_deg)},
+                 'omega': {'value': self.init_params.angular_velocity},
+                 'torque':{'value': self.init_params.drive_torque}}
+
+        self.set_state(state=state, t=t0)
 
         self._update_output_states(t=t0)
     
@@ -225,10 +237,11 @@ class FEMPendulum(FEMComponent):
         # inertia (mass matrix effect) and gravity force
         if self._with_contact:
             self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
-            self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
-
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
-        self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
+        
+        if self._use_gravity:
+            self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
+            self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
         
         # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
         self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
@@ -236,9 +249,12 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
-    def set_state(self, theta_deg=0, omega=0, alpha=0):        
-        theta_rad = np.deg2rad(theta_deg)
-        c, s = np.cos(theta_rad), np.sin(theta_rad)
+    def set_state(self, state: Dict[str, Any], t: float):
+        theta = state['q']['value']
+        omega = state['omega']['value']
+        torque = -1 * state['torque']['value']       
+         
+        c, s = np.cos(theta), np.sin(theta)
         
         # rotated radius r0 = R(theta) * (X - P)
         r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
@@ -252,16 +268,19 @@ class FEMPendulum(FEMComponent):
         v0 = CF((-omega * r0[1],
                   omega * r0[0]))
         
-        # Initial acceleration: a0 = alpha x r0
-        a0 = CF(( -alpha * r0[1],
-                   alpha * r0[0] ))
+        # Apply the torque
+        self.set_drive_torque(torque)
         
-        self._torque = 0.0  # initial torque
+        # Initial acceleration: a0 = alpha x r0
+        # a0 = CF(( -alpha * r0[1],
+        #            alpha * r0[0] ))
+        
+        # self._torque = 0.0  # initial torque
         
         # Set initial conditions
         self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
         self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
-        self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
+        #self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
 
         # Copy to "old" variables
         self._gf_uold.vec[:] = self._gf_u.vec
@@ -273,12 +292,13 @@ class FEMPendulum(FEMComponent):
         self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
 
     def get_state(self):
-        q_state, omega_state, alpha_state = self._rigid_proxy()
-        return {
-            "q": q_state,
-            "omega": omega_state,
-            "alpha": alpha_state
-        }
+        state = {}
+        q_state, omega_state, _ = self._rigid_proxy()
+        torque_state = -self._get_torque_diagnostics()
+        state["q"] = {'value': q_state, 'unit': 'rad'}
+        state["omega"] = {'value': omega_state, 'unit': 'rad/s'}
+        state["torque"] = {'value': torque_state, 'unit': 'rad/s^2'}
+        return  state
 
     #----------------------------------------------------------------------------
     # Time stepping method
@@ -309,6 +329,7 @@ class FEMPendulum(FEMComponent):
                     else:
                         self.tau.Set(self.sim_params.tau)
                 
+                self.tau.Set(0.01)
                 # Adapt time step if exceeding end time
                 if t + self.tau.Get() > t_step_end:
                     self.tau.Set(t_step_end - t)
@@ -336,8 +357,8 @@ class FEMPendulum(FEMComponent):
                 # Store results in time series
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
                 
-                # Increment frame counter and redraw
-                self._scene.Redraw()
+                if self.anim_params.animate:
+                    self._scene.Redraw()
                 
                 # Update widget values
                 Mz = self._get_torque_diagnostics()
@@ -353,10 +374,10 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     # Input/output methods
     #----------------------------------------------------------------------------
-    def set_inputs(self, **signals: float):
+    def set_inputs(self, signals: Dict[str, Any], t: Optional[float]) -> None:
         for name, value in signals.items():
             if name in self.inputs:
-                self.inputs[name].value = value
+                self.inputs[name].set(value, t=t)
                 if name == 'torque':
                     self.set_drive_torque(value)
     
@@ -377,7 +398,9 @@ class FEMPendulum(FEMComponent):
         self.outputs['omega'].set(omega_state, t=t)
         self.outputs['alpha'].set(alpha_state, t=t)
 
-
+    #----------------------------------------------------------------------------
+    # Reset method
+    #----------------------------------------------------------------------------
     def reset(self):
         # Reset all grid functions and time series
         self._gf_u.vec[:] = 0

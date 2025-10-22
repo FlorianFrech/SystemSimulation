@@ -3,13 +3,17 @@ from typing import Any, Dict, Optional, Tuple, List
 from pathlib import Path
 
 from fmpy import read_model_description, extract
-from fmpy.model_description import ScalarVariable, ModelDescription # ScalarVariable is ModelVariable in newer fmpy versions
+from fmpy.model_description import ModelVariable, ModelDescription # ScalarVariable is ModelVariable in newer fmpy versions
 from fmpy.fmi2 import FMU2Slave
 
 from .base import CoSimComponent
 from .port import PortSpec, PortState, PortType
 from ..utilities.units import ureg, Quantity, to_pint_unit
 
+
+#----------------------------------------------------------------------------
+# FMU Component Class
+#----------------------------------------------------------------------------  
 class FMUComponent(CoSimComponent):
     """
     FMU Co-Simulation Wrapper implementing the CoSimComponent interface.
@@ -18,8 +22,11 @@ class FMUComponent(CoSimComponent):
         - REAL/INT/BOOL/STRING input and output ports
         - Units for REAL ports
     """
+    # State of all FMU variables
+    state: Dict[str, Any]
 
     _md: ModelDescription
+    _md_vars : Dict[str, ModelVariable]
     _instance: Optional[FMU2Slave]
     _unzipdir: Optional[str]
 
@@ -40,6 +47,7 @@ class FMUComponent(CoSimComponent):
         super().__init__(name=name, group=group)
         self._path = str(Path(fmu_path).resolve())
         self._md = read_model_description(self._path)
+        self._md_vars = {var.name: var for var in self._md.modelVariables}
         if not self._md.coSimulation:
             raise RuntimeError(f"FMU '{fmu_path}' is not a Co-Simulation FMU.")
         if self._md.fmiVersion != "2.0":
@@ -60,12 +68,13 @@ class FMUComponent(CoSimComponent):
         self._build_value_reference_map()
 
         # Parameters dictionary
-        self.parameters: Dict[str, ScalarVariable] = {
+        self.parameters: Dict[str, ModelVariable] = {
             var.name: var for var in self._md.modelVariables if var.causality == "parameter"
         }
 
-    # -------------------------------------------------------------------------------
-    # Build Port Specifications
+    #----------------------------------------------------------------------------
+    # Build helper for port specifications and value reference maps
+    #----------------------------------------------------------------------------  
     def _build_port_specs(self) -> None:
         for var in self._md.modelVariables:
             if var.causality not in ("input", "output"):
@@ -109,8 +118,9 @@ class FMUComponent(CoSimComponent):
                 elif port_type == PortType.BOOL:   self._vrs_out_bool[var.name] = value_reference
                 elif port_type == PortType.STRING: self._vrs_out_str[var.name]  = value_reference
 
-    # -------------------------------------------------------------------------------
-    # Lifecycle
+    #----------------------------------------------------------------------------
+    # Initialization
+    #----------------------------------------------------------------------------  
     def initialize(self, t0: float) -> None:
         # Create Port States
         self.inputs = {name: PortState(spec=spec) for name, spec in self.input_specs.items()}
@@ -137,6 +147,43 @@ class FMUComponent(CoSimComponent):
         # Initialize output PortStates with current FMU values (t0)
         self._update_output_states(t0)
 
+    #----------------------------------------------------------------------------
+    # Initialization helpers
+    #---------------------------------------------------------------------------- 
+    def _apply_parameters_starts(self) -> None:
+        assert self._instance is not None
+        # batch parameters by base type
+        real_vrs: List[int] = []; real_vals: List[float] = []
+        int_vrs: List[int] = []; int_vals: List[int] = []
+        bool_vrs: List[int] = []; bool_vals: List[int] = []
+        str_vrs: List[int] = []; str_vals: List[str] = []
+
+        for name, param in self.parameters.items():
+            if param.start is None:
+                continue
+            if param._python_type == float:
+                real_vrs.append(param.valueReference); real_vals.append(float(param.start))
+            elif param._python_type == int:
+                int_vrs.append(param.valueReference); int_vals.append(int(param.start))
+            elif param._python_type == bool:
+                bool_vrs.append(param.valueReference); bool_vals.append(1 if bool(param.start) else 0)
+            elif param._python_type == str:
+                str_vrs.append(param.valueReference); str_vals.append(str(param.start))
+
+        if real_vrs: self._instance.setReal(real_vrs, real_vals)
+        if int_vrs: self._instance.setInteger(int_vrs, int_vals)
+        if bool_vrs: self._instance.setBoolean(bool_vrs, bool_vals)
+        if str_vrs: self._instance.setString(str_vrs, str_vals)
+
+    def _apply_input_starts(self) -> None:
+        # If PortStates contain initial values (via specs or pre-set), push them into the FMU
+        init_vals = {name: in_port.get() for name, in_port in self.inputs.items() if in_port.get() is not None}
+        if init_vals:
+            self.set_inputs(init_vals, t=None)
+
+    #----------------------------------------------------------------------------
+    # Parameter and Initial Condition Handling
+    #----------------------------------------------------------------------------  
     def set_parameters(self, **parameters) -> None:
         for name, val in parameters.items():
             var = self.parameters.get(name)
@@ -144,7 +191,10 @@ class FMUComponent(CoSimComponent):
                 raise KeyError(f"{self.name}: Unknown parameter '{name}'")
             var.start = val
 
-    def set_inputs(self, signals: Dict[str, Any], t:Optional[float]) -> None:
+    #----------------------------------------------------------------------------
+    # Input/output methods
+    #----------------------------------------------------------------------------
+    def set_inputs(self, signals: Dict[str, Any], t: Optional[float]) -> None:
         if not signals: return
         assert self._instance is not None
 
@@ -189,63 +239,9 @@ class FMUComponent(CoSimComponent):
         if bool_vrs:  self._instance.setBoolean(bool_vrs, bool_vals)
         if str_vrs:   self._instance.setString(str_vrs, str_vals)
 
-    def do_step(self, t: float, dt: float) -> Dict[str, Any]:
-        assert self._instance is not None
-        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=dt)
-        self._update_output_states(t+dt)
-        return self.get_outputs()
-
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
-    
-    def set_state(self, state):
-        # TODO: Implement method
-        pass
 
-    def get_state(self):
-        # TODO: Implement method
-        pass
-
-    def reset(self):
-        if self._instance is not None:
-            try:
-                self._instance.reset()
-            finally:
-                self._instance = None
-
-    # --------------------------------------------------------------
-    # Helpers
-    def _apply_parameters_starts(self) -> None:
-        assert self._instance is not None
-        # batch parameters by base type
-        real_vrs: List[int] = []; real_vals: List[float] = []
-        int_vrs: List[int] = []; int_vals: List[int] = []
-        bool_vrs: List[int] = []; bool_vals: List[int] = []
-        str_vrs: List[int] = []; str_vals: List[str] = []
-
-        for name, param in self.parameters.items():
-            if param.start is None:
-                continue
-            if param._python_type == float:
-                real_vrs.append(param.valueReference); real_vals.append(float(param.start))
-            elif param._python_type == int:
-                int_vrs.append(param.valueReference); int_vals.append(int(param.start))
-            elif param._python_type == bool:
-                bool_vrs.append(param.valueReference); bool_vals.append(1 if bool(param.start) else 0)
-            elif param._python_type == str:
-                str_vrs.append(param.valueReference); str_vals.append(str(param.start))
-
-        if real_vrs: self._instance.setReal(real_vrs, real_vals)
-        if int_vrs: self._instance.setInteger(int_vrs, int_vals)
-        if bool_vrs: self._instance.setBoolean(bool_vrs, bool_vals)
-        if str_vrs: self._instance.setString(str_vrs, str_vals)
-    
-    def _apply_input_starts(self) -> None:
-        # If PortStates contain initial values (via specs or pre-set), push them into the FMU
-        init_vals = {name: in_port.get() for name, in_port in self.inputs.items() if in_port.get() is not None}
-        if init_vals:
-            self.set_inputs(init_vals, t=None)
-    
     def _update_output_states(self, t: float) -> None:
             assert self._instance is not None
 
@@ -276,8 +272,91 @@ class FMUComponent(CoSimComponent):
                 for name, val in zip(self._vrs_out_str.keys(), vals):
                     self.outputs[name].set(str(val), t=t)
 
-# --------------------------------------------------------------
-# Helpers
+    #----------------------------------------------------------------------------
+    # Time stepping method
+    #----------------------------------------------------------------------------
+    def do_step(self, t: float, dt: float) -> Dict[str, Any]:
+        assert self._instance is not None
+        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=dt)
+        self._update_output_states(t+dt)
+        return self.get_outputs()
+
+    #----------------------------------------------------------------------------
+    # State methods for setting and getting simulation state
+    #----------------------------------------------------------------------------
+    def set_state(self, state: Dict[str, Any], t: float) -> None:
+        self._instance.reset()
+        self._instance.instantiate()
+        self._instance.setupExperiment(startTime=t)
+        self._instance.enterInitializationMode()
+
+        params = {}
+        inputs = {}
+        for var_name, attr in state.items():
+            if var_name in self.parameters:
+                params[var_name] = attr['value']
+            if var_name in self.inputs:
+                inputs[var_name] = attr['value']
+        
+        self.set_parameters(**params)
+        self._apply_parameters_starts()
+        self.set_inputs(inputs, t=t)
+
+        self._instance.exitInitializationMode()
+
+        self._update_output_states(t)
+
+    def get_state(self):
+        """
+        Return all FMU variables as a dictionary.
+        1. Get all model variable names with variability not 'fixed'.
+        2. For each variable, determine its type (REAL, INT, BOOL, STRING), causality, variability and unit.
+        3. Use the appropriate get method from the FMU instance to retrieve the value based on its type.
+        4. Store the variable name and its attributes and retrieved value in a dictionary.
+        5. Return the dictionary containing all variable names and their attributes with values.
+        """
+        assert self._instance is not None
+        state = {}
+        for var in self._md.modelVariables:
+            if var.variability == "fixed": continue
+            name = var.name
+            state[name] = {}
+            state[name]['type'] = var.type
+            state[name]['causality'] = var.causality
+            state[name]['variability'] = var.variability
+            state[name]['unit'] = var.unit
+            vr = var.valueReference
+            unit = var.unit
+            if var.type == "Real":
+                val = self._instance.getReal([vr])[0]
+                # if unit:
+                #     val = val * ureg(unit)
+                state[name]['value'] = val
+            elif var.type == "Integer":
+                val = self._instance.getInteger([vr])[0]
+                state[name]['value'] = val
+            elif var.type == "Boolean":
+                val = self._instance.getBoolean([vr])[0]
+                state[name]['value'] = bool(val)
+            elif var.type == "String":
+                val = self._instance.getString([vr])[0]
+                state[name]['value'] = val
+        self.state = state
+        return self.state
+
+    #----------------------------------------------------------------------------
+    # Reset method
+    #----------------------------------------------------------------------------
+    def reset(self):
+        if self._instance is not None:
+            try:
+                self._instance.reset()
+            finally:
+                self._instance = None
+
+#----------------------------------------------------------------------------
+# Helper functions
+#----------------------------------------------------------------------------
 def _port_type_from_var(var: ModelVariable) -> PortType:
     if   var._python_type == float: return PortType.REAL
     elif var._python_type == int:   return PortType.INT

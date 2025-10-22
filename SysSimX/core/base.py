@@ -15,6 +15,17 @@ class CoSimComponent(ABC):
     name: str
     label: str
     group: Optional[str] = None
+
+    # Time Management
+    t_step_ext: int
+    """External Simulation Time Step"""
+    t_scale_ext: int
+    """External Simulation Time Scale (e.g., 0 = 1 s, 1 = 10s, -1 = 0.1 s, -2 = 0.01 s)"""
+    t_step_int: int
+    """Internal Simulation Time Step"""
+    t_scale_int: int
+    """Internal Simulation Time Scale (e.g., 0 = 1 s, 1 = 10s, -1 = 0.1 s, -2 = 0.01 s)"""
+
     
     # Port specifications (immutable) and states (mutable)
     input_specs = Dict[str, PortSpec]

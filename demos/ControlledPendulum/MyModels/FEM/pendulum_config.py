@@ -22,7 +22,7 @@ class GeometryParameters:
                 f"  Wall Angle:    {self.q_wall_deg}\n"
                 f"  Wall Length X: {self.wall_len_x}\n"
                 f"  Wall Length Y: {self.wall_len_y}\n"
-                f"  Wall Length Z: {self.wall_len_z}\n")
+                f"  Wall Length Z: {self.wall_len_z}")
 
 
 class MaterialParameters:
@@ -43,7 +43,7 @@ class MaterialParameters:
                     f"  Young's Modulus: {self.E_wall}\n"
                     f"  Poisson's Ratio: {self.nu_wall}\n"
                     f"  Density:         {self.rho_wall}\n"
-                    f"General Thickness: {self.thickness}\n")
+                    f"General Thickness: {self.thickness}")
 
 
 class MeshParameters:
@@ -51,12 +51,18 @@ class MeshParameters:
     mesh_order:        int   = 2
     curved_elements:   bool  = True
     refinement_levels: int   = 0
+
+    def __str__(self):
+        return (f"Mesh Parameters:\n"
+                f"  Max Element Size: {self.max_element_size}\n"
+                f"  Mesh Order:       {self.mesh_order}\n"
+                f"  Curved Elements:  {self.curved_elements}\n"
+                f"  Refinement Levels:{self.refinement_levels}")
     
 
 class InitialConditionParameters:
     angular_position_deg:  float = 0
     angular_velocity:      float = 0
-    angular_acceleration:  float = 0
     drive_torque:          float = 0
     
     def __str__(self):
@@ -77,7 +83,7 @@ class ContactParameters:
 class SimulationParameters:
     t_start:  float = 0 
     tau:      float = 0.01
-    t_end:    float = 5
+    t_end:    float = 1
     use_gravity: bool  = True
     
     def __str__(self):
@@ -87,5 +93,11 @@ class SimulationParameters:
                 f"  Simulation End Time:   {self.t_end} s")       
     
 class AnimationParameters:
+    animate: bool  = False
     interval: int   = 10       
     speed:    float = 50
+
+    def __str__(self):
+        return (f"Animation Parameters:\n"
+                f"  Interval:        {self.interval}\n"
+                f"  Speed:           {self.speed}x")

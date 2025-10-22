@@ -25,9 +25,9 @@ OUTPUT_SPECS = {
 PARAMETERS = {
     "mass": 80*0.2,                # Mass of the pendulum head (kg)
     "length": 0.4,                 # Length of the pendulum rod (m)
-    "inertia": osim.Inertia(0.1, 0.1, 0.1),  # Inertia of the pendulum head (kg*m^2)
-    "q0": 0,                       # Initial angle of the pendulum (rad)
-    "omega0": 0.0                  # Initial angular velocity (rad/s)
+    "q0": 0,                        # Initial angle of the pendulum (rad)
+    "omega0": 0.0,                  # Initial angular velocity (rad/s)
+    "internal_dt": 1e-4             # Internal time step for OpenSim integrator (s)
 }
 
 #----------------------------------------------------------------------------
@@ -53,6 +53,8 @@ class OpenSimPendulum(OpenSimComponent):
         # Model parameters
         self.parameters = PARAMETERS
 
+        self._int_dt = self.parameters['internal_dt']
+
         self._with_contact = False
         self._use_gravity = False    
     #----------------------------------------------------------------------------
@@ -69,7 +71,7 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Gravity setting
         if self._use_gravity:
-            model.setGravity(osim.Vec3(0, 0, 0))
+            model.setGravity(osim.Vec3(0, -9.81, 0))
         else:
             model.setGravity(osim.Vec3(0, 0, 0))
 
@@ -78,7 +80,7 @@ class OpenSimPendulum(OpenSimComponent):
         ground.attachGeometry(osim.Brick(osim.Vec3(0.1, 0.025, 0.1)))
         
         # Pendulum Head Body
-        head = osim.Body('head', self.parameters['mass'], osim.Vec3(0), self.parameters['inertia'])
+        head = osim.Body('head', self.parameters['mass'], osim.Vec3(0), osim.Inertia(0, 0, 0))
         head.attachGeometry(osim.Sphere(0.05))
         model.addBody(head)
 
@@ -176,18 +178,14 @@ class OpenSimPendulum(OpenSimComponent):
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
-    def set_state(self, t: float, q_state: float, omega_state: float, alpha_state: float, rebuild: bool = False) -> None:
+    def set_state(self, state: Dict[str, Any], t: float) -> None:
         """
-        Reinitialize the pendulum with new state (q, omega) at simulation time t.
-
-        Notes:
-        - Uses a fresh State from initSystem() to avoid stale cache.
-        - Rebuild only if structure changed (mass props, joint frames, etc.).
+        Sets the new angular position and angular velocity of the pendulum.
+        Acceleration is updated by updating the input toreque.
         """
-        # Store for bookkeeping (optional)
-        self.q0 = float(q_state)
-        self.omega0 = float(omega_state)
-
+        q_state = state['q']['value']
+        omega_state = state['omega']['value']
+        torque_state = state['torque']['value']
 
         # Start from a clean topology/state
         self.state = self.model.initSystem()
@@ -202,10 +200,12 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Make sure we’re driving the torque directly (bypassing controls)
         self.actuator.overrideActuation(self.state, True)
-
+        self.actuator.setOverrideActuation(self.state, torque_state)
+        
         # Realize up to dynamics so everything is consistent for the integrator
         self.model.realizePosition(self.state)
         self.model.realizeVelocity(self.state)
+        self.model.realizeAcceleration(self.state)
         self.model.realizeDynamics(self.state)
 
         # Create a fresh Manager bound to this (model,state) and initialize it
@@ -216,19 +216,35 @@ class OpenSimPendulum(OpenSimComponent):
     def get_state(self):
         q_state = float(self.coord.getValue(self.state))
         omega_state = float(self.coord.getSpeedValue(self.state))
-        alpha_state = float(self.coord.getAccelerationValue(self.state))
-        return {'q_state': q_state, 'omega_state': omega_state, 'alpha_state': alpha_state}
-   
+        torque_state = self.actuator.getActuation(self.state)
+
+        state = {}
+        state['q'] = {'value': q_state, 'unit': 'rad'}
+        state['omega'] = {'value': omega_state, 'unit': 'rad/s'}
+        state['torque'] = {'value': torque_state, 'unit': 'N*m'}
+
+        return state
+
     #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
     def do_step(self, t: float, h: float) -> None:
-        self.state = self.manager.integrate(t + h)
-        self.model.realizePosition(self.state)
-        self.model.realizeVelocity(self.state)
-        self.model.realizeAcceleration(self.state)
-        self.model.realizeDynamics(self.state)
-        self._update_output_states(t + h)
+        t_end = t + h
+        i = 0
+        while t < t_end:
+            current_torque = self.inputs['torque'].get().magnitude
+            self.actuator.setOverrideActuation(self.state, current_torque)
+            self.model.realizeDynamics(self.state)
+            self.model.realizeAcceleration(self.state)
+
+            self.state = self.manager.integrate(t + self._int_dt)
+            self.model.realizePosition(self.state)
+            self.model.realizeVelocity(self.state)
+            self.model.realizeAcceleration(self.state)
+            self.model.realizeDynamics(self.state)
+            self._update_output_states(t)
+            t += self._int_dt
+            i = i + 1
 
     #----------------------------------------------------------------------------
     # Input/output methods
