@@ -225,6 +225,9 @@ class FEMPendulum(FEMComponent):
         
         # Rotation constraint
         self._bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds('rotation')
+
+        # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
+        self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
         
         self.tau = Parameter(self.sim_params.tau)
         vel_new = 2/self.tau * (self._u-self._gf_uold.components[0]) - self._gf_vold.components[0]
@@ -243,9 +246,6 @@ class FEMPendulum(FEMComponent):
             self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
             self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
         
-        # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
-        self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
-
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
@@ -305,7 +305,6 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     def do_step(self, t, dt):
         t_step_end = t + dt if t + dt < self.sim_params.t_end else self.sim_params.t_end
-        #self._widget_ref.value = np.rad2deg(qref)
         
         with TaskManager():
             while t < t_step_end:
@@ -329,7 +328,6 @@ class FEMPendulum(FEMComponent):
                     else:
                         self.tau.Set(self.sim_params.tau)
                 
-                self.tau.Set(0.01)
                 # Adapt time step if exceeding end time
                 if t + self.tau.Get() > t_step_end:
                     self.tau.Set(t_step_end - t)
@@ -345,7 +343,9 @@ class FEMPendulum(FEMComponent):
                                    u=self._gf_u,
                                    printing=False,
                                    inverse="sparsecholesky",
-                                   maxerr=1e-6, maxit=20)        
+                                   maxerr=self.sim_params.max_err,
+                                   maxit=self.sim_params.max_it
+                                   )        
 
                 # Update kinematic variables (velocity, acceleration)
                 self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec

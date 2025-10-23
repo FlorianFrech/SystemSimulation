@@ -85,6 +85,8 @@ class SimulationParameters:
     tau:      float = 0.01
     t_end:    float = 1
     use_gravity: bool  = True
+    max_err:   float = 1e-6
+    max_it:    int   = 20
     
     def __str__(self):
         return (f"Simulation Parameters:\n"

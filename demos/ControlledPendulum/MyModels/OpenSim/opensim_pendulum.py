@@ -1,3 +1,4 @@
+from pyexpat import model
 import opensim as osim
 import numpy as np
 from typing import Dict, Any, Optional
@@ -22,13 +23,37 @@ OUTPUT_SPECS = {
 #----------------------------------------------------------------------------
 # Parameters
 #----------------------------------------------------------------------------
-PARAMETERS = {
-    "mass": 80*0.2,                # Mass of the pendulum head (kg)
-    "length": 0.4,                 # Length of the pendulum rod (m)
-    "q0": 0,                        # Initial angle of the pendulum (rad)
-    "omega0": 0.0,                  # Initial angular velocity (rad/s)
-    "internal_dt": 1e-4             # Internal time step for OpenSim integrator (s)
+MODEL_PARAMETERS = {
+    "mass": 1.0,                # Mass of the pendulum head (kg)
+    "r_head": 0.025,            # Radius of the pendulum head (m)
+    "length": 0.4,              # Length of the pendulum rod (m)
+    "use_gravity": False,       # Enable/disable gravity
 }
+
+CONTACT_PARAMETERS = {
+    "with_contact": False,      # Enable/disable contact forces
+    "stiffness": 1e6,           # Contact stiffness (N/m)
+    "dissipation": 0.5,         # Contact dissipation
+    "static_friction": 0.9,     # Static friction coefficient
+    "dynamic_friction": 0.9,    # Dynamic friction coefficient
+    "viscous_friction": 0.6     # Viscous friction coefficient
+}
+
+INITIAL_CONDITIONS = {
+    "q0": 0.0,                  # Initial angle of the pendulum (rad)
+    "omega0": 0.0,              # Initial angular velocity (rad/s)
+}
+
+SOLVER_PARAMETERS = {
+    "internal_dt": 1e-4,         # Internal time step for OpenSim integrator (s)
+    "IntegratorMethod": osim.Manager.IntegratorMethod_RungeKuttaMerson, # Integrator method
+    "accuracy": 1e-6            # Integrator accuracy
+}
+
+PARAMETERS = {'Model': MODEL_PARAMETERS,
+              'Contact': CONTACT_PARAMETERS,
+              'InitialConditions': INITIAL_CONDITIONS,
+              'Solver': SOLVER_PARAMETERS}
 
 #----------------------------------------------------------------------------
 # Pendulum OpenSim component
@@ -53,88 +78,164 @@ class OpenSimPendulum(OpenSimComponent):
         # Model parameters
         self.parameters = PARAMETERS
 
-        self._int_dt = self.parameters['internal_dt']
+        self._int_dt = self.parameters['Solver']['internal_dt']
 
-        self._with_contact = False
-        self._use_gravity = False    
+        self._with_contact = self.parameters['Contact']['with_contact']
+        self._use_gravity  = self.parameters['Model']['use_gravity']
+
     #----------------------------------------------------------------------------
     # Initialization method
     #----------------------------------------------------------------------------  
     def initialize(self, t0: float) -> None:
-        self.model, self.state, self.coord, self.actuator, self.manager = self._build()
+        # Build the OpenSim model
+        self._build()
+
+        # Get the state
+        self.state = self.model.initSystem()
+
+        # Allow direct actuation override
+        self.actuator.overrideActuation(self.state, True)
+
+        # Realize model to dynamics
+        self.model.realizePosition(self.state)
+        self.model.realizeVelocity(self.state)
+        self.model.realizeAcceleration(self.state)
+        self.model.realizeDynamics(self.state)
+
+        # Manager for time integration
+        self.manager = osim.Manager(self.model)
+        self.manager.setIntegratorMethod(self.parameters['Solver']['IntegratorMethod'])
+        self.manager.setIntegratorAccuracy(self.parameters['Solver']['accuracy'])
+        self.manager.initialize(self.state)
         self.state.setTime(t0)
     
     def _build(self):
-        # Model construction
+        # Get parameters
+        mp = self.parameters['Model']
+        cp = self.parameters['Contact']
+        ic = self.parameters['InitialConditions']
+
+        # Create model
         model = osim.Model()
         model.setName(self.name)
-
-        # Gravity setting
         if self._use_gravity:
             model.setGravity(osim.Vec3(0, -9.81, 0))
         else:
             model.setGravity(osim.Vec3(0, 0, 0))
 
-        # Ground Body
+        # Get the ground - fixed reference frame
         ground = model.getGround()
-        ground.attachGeometry(osim.Brick(osim.Vec3(0.1, 0.025, 0.1)))
-        
-        # Pendulum Head Body
-        head = osim.Body('head', self.parameters['mass'], osim.Vec3(0), osim.Inertia(0, 0, 0))
-        head.attachGeometry(osim.Sphere(0.05))
+
+        # Create pendulum base and attach geometry
+        base_name = 'pendulum_base'
+        base_mass = 1 
+        base_com = osim.Vec3(0, 0, 0)
+        base_inertia = osim.Inertia(0, 0, 0)
+        base = osim.Body(base_name, base_mass, base_com, base_inertia)
+        base_geom = osim.Brick(osim.Vec3(0.1, 0.01, 0.1))
+        base_geom.setColor(osim.Vec3(0.8, 0.2, 0.2))
+        base.attachGeometry(base_geom)
+        model.addBody(base)
+
+        # Create weld joint to fix base to ground
+        ground_translation = osim.Vec3(0, 1.2 * mp['length'], 0)
+        ground_orientation = osim.Vec3(0, 0, 0)
+        base_translation = osim.Vec3(0, 0, 0)
+        base_orientation = osim.Vec3(0, 0, 0)
+        base_to_ground = osim.WeldJoint('base_to_ground',
+                                        ground, ground_translation, ground_orientation,
+                                        base, base_translation, base_orientation)
+        model.addJoint(base_to_ground)
+
+        # Add pendulum head body and attach sphere geometry
+        head_name = 'pendulum_head'
+        head_mass = mp['mass']
+        head_com = osim.Vec3(0, 0, 0)
+        head_inertia = osim.Inertia(0.0, 0.0, 0.0)
+        head = osim.Body(head_name, head_mass, head_com, head_inertia)
+        head_geom = osim.Sphere(0.025)
+        head_geom.setColor(osim.Vec3(0.2, 0.2, 0.8))
+        head.attachGeometry(head_geom)
         model.addBody(head)
 
-        # Pin Joint between Ground and Head
-        joint = osim.PinJoint('hinge',
-                               ground, osim.Vec3(0, 0, 0), osim.Vec3(0, 0, 0),
-                               head, osim.Vec3(0, self.parameters['length'], 0), osim.Vec3(0, 0, 0))
-        model.addJoint(joint)
+        # Create pin joint to connect head to base
+        l = mp['length']
+        base_translation = osim.Vec3(0, 0, 0)
+        base_orientation = osim.Vec3(0, 0, 0)
+        head_translation = osim.Vec3(0, l, 0)
+        head_orientation = osim.Vec3(0, 0, 0)
+        head_to_base = osim.PinJoint('head_to_base',
+                                    base, base_translation, base_orientation,
+                                    head, head_translation, head_orientation)
+        model.addJoint(head_to_base)
 
-        # Joint Coordinate setup
-        coord = joint.updCoordinate()
+        # Get the coordinate and set initial conditions
+        self.q0 = ic['q0']
+        self.omega0 = ic['omega0']
+        coord = head_to_base.getCoordinate()
         coord.setName('q')
-        coord.setDefaultValue(self.parameters['q0'])
-        coord.setDefaultSpeedValue(self.parameters['omega0'])
-        coord.setRangeMin(-np.pi); coord.setRangeMax(np.pi)
+        coord.setDefaultValue(self.q0)
+        coord.setDefaultSpeedValue(self.omega0)
+        self.coord = coord
 
-        # Torque Actuator Setup
+        # Add coordinate actuator to apply torque
         actuator = osim.CoordinateActuator()
-        actuator.setName('torque_actuator')
+        actuator.setName('torque')
         actuator.setCoordinate(coord)
         actuator.setOptimalForce(1)
         actuator.setMinControl(-1e6)
         actuator.setMaxControl(1e6)
+        self.actuator = actuator
         model.addForce(actuator)
 
-        # Controller Setup - Direct Torque Control
-        controller_function = osim.Constant(0)
-        controller = osim.PrescribedController()
-        controller.setName('controller')
-        controller.addActuator(actuator)
-        controller.prescribeControlForActuator('torque_actuator', controller_function)
-        model.addController(controller)
+        # Add contact if desired
+        if self._with_contact:
+            # Contact spehere for head
+            cs = osim.ContactSphere()
+            cs.setName('head_contact')
+            cs.setRadius(mp['r_head'])
+            cs.connectSocket_frame(head)
+            model.addContactGeometry(cs)
+
+            # Contact half-space for wall
+            wall = osim.ContactHalfSpace()
+            wall.setName('wall_contact')
+            wall.connectSocket_frame(base)
+            wall.setOrientation(osim.Vec3(0, np.pi, 0))
+            wall.setLocation(osim.Vec3(-mp['r_head'], 0, 0)) # impact for q=0 and omega < 0
+            model.addContactGeometry(wall)
+
+            # Set up contact geometry names
+            geom_names = osim.StdVectorString()
+            geom_names.append('wall_contact')
+            geom_names.append('head_contact')
+
+            # Create Hunt-Crossley contact force
+            hcf = osim.HuntCrossleyForce()
+            hcf.addGeometry('wall_contact')
+            hcf.addGeometry('head_contact')
+            hcf.setName('contact_force')
+            hcf.setStiffness(cp['stiffness'])
+            hcf.setDissipation(cp['dissipation'])
+            hcf.setStaticFriction(cp['static_friction'])
+            hcf.setDynamicFriction(cp['dynamic_friction'])
+            hcf.setViscousFriction(cp['viscous_friction'])
+            model.addForce(hcf)
+
+        # Create rod geometry
+        head_of = osim.PhysicalOffsetFrame()
+        head_of.setName('head_of')
+        head_of.setParentFrame(head)
+        head_of.set_translation(osim.Vec3(0, 0.2, 0))
+        head_of_geom = osim.Cylinder(0.01, 0.2)
+        head_of_geom.setColor(osim.Vec3(0.2, 0.8, 0.2))
+        head_of.attachGeometry(head_of_geom)
+        head.addComponent(head_of)         
 
         # Finalize model connections
         model.finalizeConnections()
-        state = model.initSystem()
-
-        # Allow direct actuation override
-        actuator.overrideActuation(state, True)
-
-        # Realize model to dynamics
-        model.realizePosition(state)
-        model.realizeVelocity(state)
-        model.realizeAcceleration(state)
-        model.realizeDynamics(state)
-
-        # Manager for time integration
-        manager = osim.Manager(model)
-        manager.setIntegratorMethod(osim.Manager.IntegratorMethod_RungeKuttaMerson) # Adaptive Time Step
-        manager.setIntegratorAccuracy(1e-6)
-        manager.initialize(state)
-
-        return model, state, coord, actuator, manager
-    
+        self.model = model
+        
     #----------------------------------------------------------------------------
     # Parameter setting method
     #----------------------------------------------------------------------------  
@@ -145,27 +246,24 @@ class OpenSimPendulum(OpenSimComponent):
         params_changed = False
         
         if 'q0' in parameters:
-            self.coord.setValue(self.state, parameters['q0'])
+            self.q0 = parameters['q0']
+            self.coord.setValue(self.state, self.q0)
             params_changed = True
         
         if 'omega0' in parameters:
-            self.coord.setSpeedValue(self.state, parameters['omega0'])
+            self.omega0 = parameters['omega0']
+            self.coord.setSpeedValue(self.state, self.omega0)
             params_changed = True
         
         if 'mass' in parameters:
-            self.mass = parameters['mass']
+            self.mass = parameters['model']['mass']
             self.model.updBodySet().get('head').setMass(self.mass)
             params_changed = True
         
         if 'length' in parameters:
-            self.length = parameters['length']
-            joint = self.model.updJointSet().get('hinge')
+            self.length = parameters['model']['length']
+            joint = self.model.updJointSet().get('base_to_ground')
             joint.updChildFrame().setTranslation(osim.Vec3(0, self.length, 0))
-            params_changed = True
-        
-        if 'inertia' in parameters:
-            self.inertia = parameters['inertia']
-            self.model.updBodySet().get('head').setInertia(self.inertia)
             params_changed = True
         
         # Only realize once after all parameters are set
@@ -190,7 +288,7 @@ class OpenSimPendulum(OpenSimComponent):
         # Start from a clean topology/state
         self.state = self.model.initSystem()
         # Refresh handy handles (in case pointers changed)
-        joint = self.model.updJointSet().get('hinge')
+        joint = self.model.updJointSet().get('head_to_base')
         self.coord = joint.updCoordinate()
 
         # Set time and the new generalized coordinate + speed
@@ -288,6 +386,15 @@ class OpenSimPendulum(OpenSimComponent):
         self.actuator = None
         self.manager = None
         self.model, self.state, self.coord, self.actuator, self.manager = self._build()
-
-
-
+    
+    #----------------------------------------------------------------------------
+    # Save XML file
+    #----------------------------------------------------------------------------
+    def save_model(self, file_path: str="MyOpenSimPendulum.osim") -> None:
+        """
+        Save the OpenSim model to an XML file.
+        """
+        if self.model is not None:
+            self.model.printToXML(file_path)
+        else:
+            raise RuntimeError("Model is not built yet. Cannot save XML.")
