@@ -207,8 +207,7 @@ class FEMPendulum(FEMComponent):
         wdiff0 = wdiff - mean_w
         self._q_drive = Parameter(0.0)
         self._t_drive = self._q_drive * wdiff0 * self._normal_rot
-        self._D_pair  = Integrate( wdiff0 * self._cross_rn,
-                                  self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        self._effective_lever_arm = Integrate( wdiff0 * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
         
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -229,19 +228,19 @@ class FEMPendulum(FEMComponent):
         # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
         self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
         
+        # inertia
         self.tau = Parameter(self.sim_params.tau)
         vel_new = 2/self.tau * (self._u-self._gf_uold.components[0]) - self._gf_vold.components[0]
         acc_new = 2/self.tau * (vel_new-self._gf_vold.components[0]) - self._gf_aold.components[0]
-        
-        rhoA_p = self.rho_p * self.mat_params.thickness
-        rhoA_w = self.rho_w * self.mat_params.thickness
-        g = 9.81
-        
-        # inertia (mass matrix effect) and gravity force
+                
         if self._with_contact:
             self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
         
+        #  gravity force
+        rhoA_p = self.rho_p * self.mat_params.thickness
+        rhoA_w = self.rho_w * self.mat_params.thickness
+        g = 9.81
         if self._use_gravity:
             self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
             self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
@@ -383,7 +382,7 @@ class FEMPendulum(FEMComponent):
     
     def set_drive_torque(self, torque):
         Mz_2d = float(torque) #/ self.mat_params.thickness
-        q = Mz_2d / self._D_pair
+        q = Mz_2d / self._effective_lever_arm
         self._q_drive.Set(q)
             
     def get_outputs(self) -> Dict[str, Any]:
