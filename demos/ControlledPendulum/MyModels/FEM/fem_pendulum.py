@@ -232,14 +232,15 @@ class FEMPendulum(FEMComponent):
         self.tau = Parameter(self.sim_params.tau)
         vel_new = 2/self.tau * (self._u-self._gf_uold.components[0]) - self._gf_vold.components[0]
         acc_new = 2/self.tau * (vel_new-self._gf_vold.components[0]) - self._gf_aold.components[0]
-                
-        if self._with_contact:
-            self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
-        self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
         
         #  gravity force
         rhoA_p = self.rho_p * self.mat_params.thickness
         rhoA_w = self.rho_w * self.mat_params.thickness
+        
+        if self._with_contact:
+            self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
+        self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
+
         g = 9.81
         if self._use_gravity:
             self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
@@ -512,12 +513,12 @@ class FEMPendulum(FEMComponent):
         torque = self._get_torque_diagnostics()
 
         self._widget_time   = widgets.FloatText(value=self.sim_params.t_start, description=f'Time: t / {self.sim_params.t_end} s', step=0.001, disabled=True)
-        self._widget_tau    = widgets.FloatText(value=self.sim_params.tau, description='Time Step: τ in s', step=0.0001, disabled=True)
+        self._widget_tau    = widgets.FloatText(value=self.sim_params.tau, description='Time Step: dt in s', step=0.0001, disabled=True)
         self._widget_mode   = widgets.Text(value="", description="Mode:", disabled=True)
         self._widget_ref    = widgets.FloatText(value=0.0, description='Ref. pos in deg', step=0.001, disabled=True)
-        self._widget_theta  = widgets.FloatText(value=np.rad2deg(theta), description='Theta: θ in deg', step=0.001, disabled=True)
-        self._widget_omega  = widgets.FloatText(value=omega, description='Omega: ω in rad/s', step=0.01, disabled=True)
-        self._widget_alpha  = widgets.FloatText(value=alpha, description='Alpha: α in rad/s²', step=0.01, disabled=True)
+        self._widget_theta  = widgets.FloatText(value=np.rad2deg(theta), description='Ang. Pos: θ in deg', step=0.001, disabled=True)
+        self._widget_omega  = widgets.FloatText(value=omega, description='Ang. Vel: ω in rad/s', step=0.01, disabled=True)
+        self._widget_alpha  = widgets.FloatText(value=alpha, description='Ang. Acc: α in rad/s²', step=0.01, disabled=True)
         self._widget_torque = widgets.FloatText(value=torque, description='Torque: Mz in Nm', step=0.01, disabled=True)
         self._widget_gap    = widgets.FloatText(value=0.0, description='Min. Gap in m', step=0.0001, disabled=True)
 

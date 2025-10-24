@@ -22,13 +22,13 @@ digraph {
 	}
 	subgraph cluster_Plant {
 		bgcolor="#e5e7eb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Plant style=rounded
-		pendulum [label="{ { <torque> torque } | pendulum | { <omega_state> omega_state | <q_state> q_state } }" xlabel="#4"]
+		pendulum [label="{ { <torque> torque } | pendulum | { <alpha> alpha | <omega> omega | <q> q } }" xlabel="#4"]
 	}
 	ref -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
-	pendulum -> sensor_state [label="[rad] delay(1)" color="#6b7280" headclip=true headport="q:w" style=dashed tailclip=true tailport="q_state:e"]
+	pendulum -> sensor_state [label="[rad] delay(1)" color="#6b7280" headclip=true headport="q:w" style=dashed tailclip=true tailport="q:e"]
 	sensor_ref -> pid [label="[V]" color="#111827" headclip=true headport="ref:w" style=solid tailclip=true tailport="U_q:e"]
 	sensor_state -> pid [label="[V]" color="#111827" headclip=true headport="y:w" style=solid tailclip=true tailport="U_q:e"]
 	pid -> drive [label="" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u:e"]
 	drive -> pendulum [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
-	pendulum -> drive [label="[rad/s] delay(1)" color="#6b7280" headclip=true headport="omega:w" style=dashed tailclip=true tailport="omega_state:e"]
+	pendulum -> drive [label="[rad/s] delay(1)" color="#6b7280" headclip=true headport="omega:w" style=dashed tailclip=true tailport="omega:e"]
 }
