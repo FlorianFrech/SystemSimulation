@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
-from SysSimX.core.opensim_comp import OpenSimComponent
+from SysSimX.components.opensim_comp import OpenSimComponent
 from SysSimX.utilities.units import ureg
 
 #----------------------------------------------------------------------------
@@ -62,8 +62,8 @@ class OpenSimPendulum(OpenSimComponent):
     """
     Simple 1-DOF OpenSim pendulum model.
     """
-    def __init__(self, name: str = 'opensim_pendulum'):
-        super().__init__(name=name, osim_model_path="", group="")
+    def __init__(self, name: str = 'opensim_pendulum', group: Optional[str] = None):
+        super().__init__(name=name, osim_model_path="", group=group)
 
         # Define input and output specifications
         self.input_specs = INPUT_SPECS

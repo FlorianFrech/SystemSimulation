@@ -14,8 +14,8 @@ import ipywidgets as widgets
 from ipywidgets import Layout, HBox, VBox, HTML
 from IPython.display import display, Markdown
 
-from .base import CoSimComponent
-from .port import PortSpec, PortType
+from ..core.base import CoSimComponent
+from ..core.port import PortSpec, PortType
 
 class FEMComponent(CoSimComponent):
     """

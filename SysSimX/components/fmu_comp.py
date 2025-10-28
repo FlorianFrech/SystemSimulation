@@ -6,8 +6,8 @@ from fmpy import read_model_description, extract
 from fmpy.model_description import ModelVariable, ModelDescription # ScalarVariable is ModelVariable in newer fmpy versions
 from fmpy.fmi2 import FMU2Slave
 
-from .base import CoSimComponent
-from .port import PortSpec, PortState, PortType
+from ..core.base import CoSimComponent
+from ..core.port import PortSpec, PortState, PortType
 from ..utilities.units import ureg, Quantity, to_pint_unit
 
 

@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional
 
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
-from SysSimX.core.fem_comp import FEMComponent
+from SysSimX.components.fem_comp import FEMComponent
 from SysSimX.utilities.units import ureg
 
 from MyModels.FEM.pendulum_mesh import build_mesh

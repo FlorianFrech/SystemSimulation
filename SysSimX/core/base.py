@@ -26,21 +26,16 @@ class CoSimComponent(ABC):
     t_scale_int: int
     """Internal Simulation Time Scale (e.g., 0 = 1 s, 1 = 10s, -1 = 0.1 s, -2 = 0.01 s)"""
 
-    
-    # Port specifications (immutable) and states (mutable)
-    input_specs = Dict[str, PortSpec]
-    output_specs = Dict[str, PortSpec]
-    inputs: Dict[str, PortState]
-    outputs: Dict[str, PortState]
-
     def __init__(self, name: str, label: Optional[str] = None, group: Optional[str] = None):
         self.name = name
         self.label = label if label is not None else name
         self.group = group
-        self.input_specs = {}
-        self.output_specs = {}
-        self.inputs = {}
-        self.outputs = {}
+        
+        # Port specifications (immutable) and states (mutable)
+        self.input_specs: Dict[str, PortSpec] = {}
+        self.output_specs: Dict[str, PortSpec] = {}
+        self.inputs: Dict[str, PortState] = {}
+        self.outputs: Dict[str, PortState] = {}
 
     # ---- Configuration ----
     def set_parameters(self, **parameters: Any) -> None:

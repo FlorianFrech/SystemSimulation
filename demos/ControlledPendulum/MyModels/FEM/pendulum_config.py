@@ -83,7 +83,7 @@ class ContactParameters:
 class SimulationParameters:
     t_start:  float = 0 
     tau:      float = 0.01
-    t_end:    float = 1
+    t_end:    float = 2
     use_gravity: bool  = True
     max_err:   float = 1e-6
     max_it:    int   = 20
