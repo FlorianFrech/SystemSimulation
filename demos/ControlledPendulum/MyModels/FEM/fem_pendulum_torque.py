@@ -186,24 +186,37 @@ class FEMPendulum(FEMComponent):
 
         penalty_energy = kn * self._cf * self._cf
         self._contact.AddEnergy(IfPos(self._cf, penalty_energy, 0), deformed = True)
-
-    def _initialize_torque_control(self):
-        r = self._X_rel
-        r_perp = CF((-r[1], r[0]))
-        self._phi0 = r_perp
-
-        Lr = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        C_int = Integrate(InnerProduct(self._phi0, r_perp),
-                        self._mesh, definedon=self._mesh.Boundaries("rotation"))
         
-        # average-based normalization:
-        C_avg = C_int / Lr
-        if abs(C_avg) < 1e-12:
-            raise RuntimeError("Normalization constant ~ 0. Check rotation boundary and pivot.")
-        self._phi_rot = self._phi0 / C_avg
+    def _initialize_torque_control(self):
+        # reference radius
+        r = self._X_rel                          # 2-vector CF
 
+        # surface deformation gradient on the boundary (IMPORTANT: .Trace())
+        F_s = Id(2) + Grad(self._u).Trace()      # 2x2
+
+        # map r to current tangent frame
+        v = F_s * r                              # 2-vector
+
+        # 90° rotation without a matrix multiply (avoid dims issues)
+        def rot90(vec):                          # returns J*vec = (-vec_y, vec_x)
+            return CF((-vec[1], vec[0]))
+
+        phi_foll = rot90(v)                      # follower measurement vector (2-vector)
+
+        # --- normalization MUST NOT depend on the trial function ---
+        # use a purely reference quantity for the scale:
+        # since J is orthonormal, <J r, J r> = <r, r>
+        Lr   = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        Cint = Integrate(InnerProduct(r, r),      # <-- reference-only
+                        self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        Cavg = Cint / Lr
+        if abs(Cavg) < 1e-12:
+            raise RuntimeError("Hinge normalization ~ 0. Check rotation boundary and pivot.")
+
+        self._phi_rot = phi_foll / Cavg          # follower + properly scaled
+
+        # generalized torque parameter (unchanged)
         self._Mz = Parameter(0.0)
-
         
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -223,14 +236,21 @@ class FEMPendulum(FEMComponent):
         q_vec = CF((self._q1, self._q2))
         self._bfa += (InnerProduct(self._u, p_vec) + InnerProduct(self._v, q_vec)) * ds('rotation')
 
-        # Hinge rotation via Lagrange pair (lambda, m) as a single energy
-        # E_hinge = ∫ [ m ( <phi_rot, u> - lambda ) - Mz * lambda ] ds
-        #Lr = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        E_hinge = ( self._m * (InnerProduct(self._phi_rot, self._u) - self._lambda) - self._Mz * self._lambda ) #/ Lr
+        # Compute the tangent in the current (deformed) configuration
+        # The deformation gradient for the boundary
+        F = Id(2) + Grad(self._u).Trace()
+        cofF = Cof(F)
+        N = specialcf.normal(2)
+        
+        # Surface Jacobian (stretch of the boundary element)
+        J_s = Norm(cofF * N)
+        
+        # Hinge rotation constraint with torque applied in current configuration
+        # The virtual work of the torque is: δW = Mz * δλ
+        # The constraint is: ∫ φ · u ds = λ (scaled appropriately)
+        E_hinge = (self._m * (InnerProduct(self._phi_rot, self._u) * J_s - self._lambda) 
+                - self._Mz * self._lambda)
         self._bfa += Variation(E_hinge * ds("rotation"))
-
-        # E_hinge = self._m * (InnerProduct(self._phi_rot, self._u) - self._lambda) - self._Mz * self._lambda
-        # self._bfa += Variation(E_hinge * ds("rotation"))
 
         eps = 1e-12
         self._bfa += Variation(0.5 * eps * self._lambda * self._lambda * ds("rotation"))

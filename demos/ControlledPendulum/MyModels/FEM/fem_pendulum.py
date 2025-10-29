@@ -1,3 +1,4 @@
+from ast import If
 from typing import Dict, Any, Optional
 
 from SysSimX.core.port import PortSpec, PortType, PortState
@@ -187,8 +188,18 @@ class FEMPendulum(FEMComponent):
 
     def _initialize_torque_control(self):        
         # Motor torque
-        self._normal_rot = specialcf.normal(2)
+        N = specialcf.normal(2)
+        F = Id(2) + Grad(self._u).Trace()
+        cofF = Cof(F)
+        
+        n_def_unnorm = cofF * N
+        J_s = Norm(n_def_unnorm)
+        n_cur = n_def_unnorm / IfPos(J_s, J_s, 1)
         r = self._X_rel
+        
+        N_ref = N
+        r = self._X_rel
+        cross_rn_ref = -(r[0]*N_ref[1] - r[1]*N_ref[0])      
 
         # Smooth localized weight near rotation axis
         sigma = max(1e-9, 0.5 * self.geom_params.r_rod)
@@ -199,16 +210,21 @@ class FEMPendulum(FEMComponent):
         H = 0.5 * (1 + x / sqrt(x*x + delta*delta)) # smooth Heaviside function
         self._w_plus = w_core * H                   # right patch weight
         self._w_minus = w_core * (1.0 - H)          # left patch weight
-        
+        self._normal_rot = N
         self._cross_rn = -(r[0] * self._normal_rot[1] - r[1] * self._normal_rot[0])
-        
+                    
         wdiff = self._w_plus - self._w_minus
         mean_w = Integrate(wdiff, self._mesh, definedon=self._mesh.Boundaries("rotation")) / Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
         wdiff0 = wdiff - mean_w
         self._q_drive = Parameter(0.0)
-        self._t_drive = self._q_drive * wdiff0 * self._normal_rot
-        self._effective_lever_arm = Integrate( wdiff0 * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        amp = self._q_drive * wdiff0
         
+        #self._t_ref = amp * n_cur
+        self._t_ref = amp * n_cur * J_s
+        
+        self._cross_rn = cross_rn_ref
+        self._effective_lever_arm = Integrate(wdiff0 * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+
     def _setup_bilinear_form(self):
         # Bilinear form
         self._bfa = BilinearForm(self._fes)
@@ -225,8 +241,8 @@ class FEMPendulum(FEMComponent):
         # Rotation constraint
         self._bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds('rotation')
 
-        # Add traction (torque generating) to bfa as Neumann term on the rotation boundary
-        self._bfa += InnerProduct(self._t_drive, self._v) * ds("rotation")
+        # (Lagrangian form of t⋅v dA_cur = t⋅v * J_s dA_ref):
+        self._bfa += InnerProduct(self._t_ref, self._v) * ds("rotation")
         
         # inertia
         self.tau = Parameter(self.sim_params.tau)
@@ -271,16 +287,9 @@ class FEMPendulum(FEMComponent):
         # Apply the torque
         self.set_drive_torque(torque)
         
-        # Initial acceleration: a0 = alpha x r0
-        # a0 = CF(( -alpha * r0[1],
-        #            alpha * r0[0] ))
-        
-        # self._torque = 0.0  # initial torque
-        
         # Set initial conditions
         self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
         self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
-        #self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
 
         # Copy to "old" variables
         self._gf_uold.vec[:] = self._gf_u.vec
@@ -436,17 +445,72 @@ class FEMPendulum(FEMComponent):
         min_gap = min(gap_values) if gap_values else 0.0
         return min_gap   
 
-    def _rigid_proxy(self):
-        r = self._X_rel
-        rhoA = self.rho_p * self.mat_params.thickness
+    # def _rigid_proxy(self):
+    #     r = self._X_rel
+    #     rhoA = self.rho_p * self.mat_params.thickness
         
-        # Angular position
-        u = self._gf_u.components[0]
-        num_u = Integrate( rhoA * (r[0] * u[1] - r[1] * u[0]),
-                           self._mesh, definedon=self._mesh.Materials("pendulum") )
-        denom = Integrate( rhoA * InnerProduct(r, r),
-                           self._mesh, definedon=self._mesh.Materials("pendulum") )
-        theta = np.arcsin(np.clip(num_u / denom, -1, 1))
+    #     # Angular position using both x and y components
+    #     u = self._gf_u.components[0]
+        
+    #     # Compute the average deformed position
+    #     x_avg = Integrate(rhoA * (self._X_rel[0] + u[0]),
+    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     y_avg = Integrate(rhoA * (self._X_rel[1] + u[1]),
+    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     mass = Integrate(rhoA, self._mesh, definedon=self._mesh.Materials("pendulum"))
+        
+    #     # Center of mass in deformed configuration
+    #     x_cm = x_avg / mass
+    #     y_cm = y_avg / mass
+        
+    #     # Angle using arctan2 (full range -π to π)
+    #     theta = np.arctan2(x_cm, y_cm)
+        
+    #     # Angular velocity
+    #     c, s = np.cos(theta), np.sin(theta)
+    #     # rotated radius r_rot = R(theta) * (X - P)
+    #     r_rot = CF((c * r[0] - s * r[1],
+    #                 s * r[0] + c * r[1]))
+        
+    #     v = self._gf_v.components[0]
+        
+    #     num_omega_x = Integrate(rhoA * v[0] * (-r_rot[1]),
+    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     num_omega_y = Integrate(rhoA * v[1] * (r_rot[0]),
+    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     num_v = num_omega_x + num_omega_y
+    #     denom = Integrate(rhoA * InnerProduct(r_rot, r_rot),
+    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     omega = num_v / denom
+
+    #     # Angular acceleration
+    #     a = self._gf_a.components[0]
+    #     num_alpha_x = Integrate(rhoA * a[0] * (-r_rot[1]),
+    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     num_alpha_y = Integrate(rhoA * a[1] * (r_rot[0]),
+    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
+    #     num_a = num_alpha_x + num_alpha_y
+    #     alpha = num_a / denom
+
+    #     return theta, omega, alpha
+
+    def _rigid_proxy(self):
+        r   = self._X_rel
+        rhoA = self.rho_p * self.mat_params.thickness
+        u   = self._gf_u.components[0]
+
+        denom = Integrate(rhoA * InnerProduct(r, r),
+                        self._mesh, definedon=self._mesh.Materials("pendulum"))
+
+        s_num = Integrate(rhoA * (r[0]*u[1] - r[1]*u[0]),
+                        self._mesh, definedon=self._mesh.Materials("pendulum"))
+        c_num = Integrate(rhoA * InnerProduct(r, r + u),
+                        self._mesh, definedon=self._mesh.Materials("pendulum"))
+
+        s = s_num / denom   # ~ sin(theta)
+        c = c_num / denom   # ~ cos(theta)
+
+        theta = np.arctan2(s, c)
         
         # Angular velocity
         c, s = np.cos(theta), np.sin(theta)

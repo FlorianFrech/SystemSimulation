@@ -95,7 +95,7 @@ class SimulationParameters:
                 f"  Simulation End Time:   {self.t_end} s")       
     
 class AnimationParameters:
-    animate: bool  = False
+    animate: bool  = True
     interval: int   = 10       
     speed:    float = 50
 
