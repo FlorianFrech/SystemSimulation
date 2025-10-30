@@ -225,7 +225,7 @@ class System:
         """
         Run the simulation from t0 to tf with step size dt.
         """
-        self.initialize(t0)
+        #self.initialize(t0)
         t = t0
         while t < tf - 1e-12:
             self.step(t, dt)

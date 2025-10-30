@@ -299,7 +299,8 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Make sure we’re driving the torque directly (bypassing controls)
         self.actuator.overrideActuation(self.state, True)
-        self.actuator.setOverrideActuation(self.state, -torque_state)
+        self.actuator.setOverrideActuation(self.state, float(torque_state))
+        self.set_inputs({'torque': float(torque_state)}, t)
         
         # Realize up to dynamics so everything is consistent for the integrator
         self.model.realizeDynamics(self.state)
@@ -334,7 +335,7 @@ class OpenSimPendulum(OpenSimComponent):
         t_end = t + h
         i = 0
         while t < t_end:
-            current_torque = self.inputs['torque'].get().magnitude
+            current_torque = float(self.inputs['torque'].get().magnitude)
             self.actuator.setOverrideActuation(self.state, current_torque)
             self.model.realizeDynamics(self.state)
             self.model.realizeAcceleration(self.state)

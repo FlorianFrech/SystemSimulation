@@ -141,13 +141,12 @@ class PendulumMultiComp(CoSimComponent):
     # Core: Switching of the active component and synchronizing from active to new
     # ---------------------------------------------------------------------------
     def do_step(self, t, dt):        
+        #self.active_comp.do_step(t, dt)
+        #Check for mode switch
+        self.new_key = self._time_dependent_model_selection(t)
+        if self.new_key != self.active_key:
+            self.synch_model(t)
         self.active_comp.do_step(t, dt)
-        # Check for mode switch
-        # self.new_key = self._time_dependent_model_selection(t+dt)
-        # if self.new_key != self.active_key:
-        #     self.synch_model(t)
-        #     # Repeat step for new mode
-        #     self.active_comp.do_step(t, dt)
         self._update_output_states(t+dt)
     
     def check_and_switch(self, t:float) -> None:
