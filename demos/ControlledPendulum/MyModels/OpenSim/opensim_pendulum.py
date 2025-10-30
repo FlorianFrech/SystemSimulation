@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
 from SysSimX.components.opensim_comp import OpenSimComponent
-from SysSimX.utilities.units import ureg
+from SysSimX.utilities.units import ureg, Quantity
 
 #----------------------------------------------------------------------------
 # Port specifications
@@ -95,6 +95,7 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Allow direct actuation override
         self.actuator.overrideActuation(self.state, True)
+        self.actuator.setOverrideActuation(self.state, 0.0)
 
         # Realize model to dynamics
         self.model.realizePosition(self.state)
@@ -298,28 +299,31 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Make sure we’re driving the torque directly (bypassing controls)
         self.actuator.overrideActuation(self.state, True)
-        self.actuator.setOverrideActuation(self.state, torque_state)
+        self.actuator.setOverrideActuation(self.state, -torque_state)
         
         # Realize up to dynamics so everything is consistent for the integrator
-        self.model.realizePosition(self.state)
-        self.model.realizeVelocity(self.state)
-        self.model.realizeAcceleration(self.state)
         self.model.realizeDynamics(self.state)
-
+        self.model.realizeAcceleration(self.state)
+        self.model.realizeVelocity(self.state)
+        self.model.realizePosition(self.state)
+        
         # Create a fresh Manager bound to this (model,state) and initialize it
         self.manager = osim.Manager(self.model)
         self.manager.setIntegratorAccuracy(1e-6)
         self.manager.initialize(self.state)
 
     def get_state(self):
+        self.model.realizeDynamics(self.state)
         q_state = float(self.coord.getValue(self.state))
         omega_state = float(self.coord.getSpeedValue(self.state))
-        torque_state = self.actuator.getActuation(self.state)
+        alpha_state = float(self.coord.getAccelerationValue(self.state))
+        torque_state = float(self.actuator.getActuation(self.state))
 
         state = {}
         state['q'] = {'value': q_state, 'unit': 'rad'}
         state['omega'] = {'value': omega_state, 'unit': 'rad/s'}
-        state['torque'] = {'value': torque_state, 'unit': 'N*m'}
+        state['alpha'] = {'value': alpha_state, 'unit': 'rad/s^2'}
+        state['torque'] = {'value': torque_state, 'unit': 'N.m'}
 
         return state
 
@@ -355,8 +359,10 @@ class OpenSimPendulum(OpenSimComponent):
                 raise KeyError(f"Input '{name}' not found in inputs.")
             port_state = self.inputs[name]
             unit = self.input_specs[name].unit
-            port_state.set(value * unit, t=t)
+            port_state.set(value, t=t)
             if name == 'torque':
+                if isinstance(value, Quantity):
+                    value = value.magnitude
                 self.actuator.setOverrideActuation(self.state, value)
                 self.model.realizeDynamics(self.state)
                 self.model.realizeAcceleration(self.state)

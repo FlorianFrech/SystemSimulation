@@ -61,7 +61,7 @@ class PortSpec(Generic[T]):
             return False
         if spec1.type == PortType.REAL and (spec1.unit or spec2.unit):
             try:
-               (1 * ureg(spec1.unit)).to(spec2.unit)
+               (1 * ureg(str(spec1.unit))).to(str(spec2.unit))
             except Exception:
                 return False
         return True
@@ -89,7 +89,7 @@ class PortState(Generic[T]):
             if isinstance(value, Quantity):
                 vq = value if self.spec.unit is None else value.to(self.spec.unit)
             else:
-                vq = value if self.spec.unit is None else (value * ureg(self.spec.unit))
+                vq = value if self.spec.unit is None else (value * ureg(str(self.spec.unit)))
             self.value = vq
         else:
             self.value = value # INT, BOOL, STRING

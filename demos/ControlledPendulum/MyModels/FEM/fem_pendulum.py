@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
 from SysSimX.components.fem_comp import FEMComponent
-from SysSimX.utilities.units import ureg
+from SysSimX.utilities.units import ureg, Quantity
 
 from MyModels.FEM.pendulum_mesh import build_mesh
 from MyModels.FEM.material_laws import NeoHookeanMaterial
@@ -23,7 +23,7 @@ from ipywidgets import Layout, HBox, VBox, HTML
 # Port specifications
 #----------------------------------------------------------------------------   
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N*m")
+    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N.m")
 }
 
 OUTPUT_SPECS = {
@@ -186,44 +186,72 @@ class FEMPendulum(FEMComponent):
         penalty_energy = kn * self._cf * self._cf
         self._contact.AddEnergy(IfPos(self._cf, penalty_energy, 0), deformed = True)
 
-    def _initialize_torque_control(self):        
-        # Motor torque
-        N = specialcf.normal(2)
-        F = Id(2) + Grad(self._u).Trace()
-        cofF = Cof(F)
+    def _initialize_torque_control(self):
+        """
+        Initialize torque control system using distributed traction on rotation boundary.
         
-        n_def_unnorm = cofF * N
-        J_s = Norm(n_def_unnorm)
-        n_cur = n_def_unnorm / IfPos(J_s, J_s, 1)
-        r = self._X_rel
+        This method creates a smooth, bipolar weight distribution that generates a
+        pure torque around the hinge axis when multiplied by the drive parameter.
+        """
         
-        N_ref = N
-        r = self._X_rel
-        cross_rn_ref = -(r[0]*N_ref[1] - r[1]*N_ref[0])      
-
-        # Smooth localized weight near rotation axis
-        sigma = max(1e-9, 0.5 * self.geom_params.r_rod)
-        w_core = exp( -(x*x)/(sigma*sigma))
-
-        # Smooth splitter into two patches
-        delta = 0.1 * sigma
-        H = 0.5 * (1 + x / sqrt(x*x + delta*delta)) # smooth Heaviside function
-        self._w_plus = w_core * H                   # right patch weight
-        self._w_minus = w_core * (1.0 - H)          # left patch weight
-        self._normal_rot = N
-        self._cross_rn = -(r[0] * self._normal_rot[1] - r[1] * self._normal_rot[0])
-                    
-        wdiff = self._w_plus - self._w_minus
-        mean_w = Integrate(wdiff, self._mesh, definedon=self._mesh.Boundaries("rotation")) / Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        wdiff0 = wdiff - mean_w
-        self._q_drive = Parameter(0.0)
-        amp = self._q_drive * wdiff0
+        # --- Geometric quantities ---
+        reference_normal = specialcf.normal(2)  # Normal vector in reference configuration
+        radius_vector = self._X_rel             # Position vector from pivot to boundary points
         
-        #self._t_ref = amp * n_cur
-        self._t_ref = amp * n_cur * J_s
+        # Deformation gradient and surface jacobian for current configuration
+        deformation_gradient = Id(2) + Grad(self._u).Trace()
+        cofactor_matrix = Cof(deformation_gradient)
         
-        self._cross_rn = cross_rn_ref
-        self._effective_lever_arm = Integrate(wdiff0 * self._cross_rn, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        # Current surface normal (unnormalized)
+        current_normal_unnorm = cofactor_matrix * reference_normal
+        surface_jacobian = Norm(current_normal_unnorm)
+        current_normal_unit = current_normal_unnorm / IfPos(surface_jacobian, surface_jacobian, 1)
+        
+        # Cross product for torque calculation: r × n (2D cross product gives scalar)
+        torque_moment_arm = -(radius_vector[0] * reference_normal[1] - radius_vector[1] * reference_normal[0])
+        
+        # --- Smooth bipolar weight distribution ---
+        # Create localized weight function near the rotation axis
+        hinge_radius = self.geom_params.r_rod
+        smoothing_width = max(1e-9, 0.5 * hinge_radius)
+        core_weight = exp(-(x*x) / (smoothing_width*smoothing_width))
+        
+        # Split the weight into positive and negative regions using smooth Heaviside
+        heaviside_smoothing = 0.1 * smoothing_width  
+        smooth_heaviside = 0.5 * (1 + x / sqrt(x*x + heaviside_smoothing*heaviside_smoothing))
+        
+        weight_positive_side = core_weight * smooth_heaviside           # Right side weight
+        weight_negative_side = core_weight * (1.0 - smooth_heaviside)   # Left side weight
+        
+        # --- Zero-mean bipolar distribution ---
+        # Ensure the weight distribution has zero net force (pure torque)
+        weight_difference = weight_positive_side - weight_negative_side
+        
+        # Remove mean to ensure ∫ w dA = 0 (no net force)
+        rotation_boundary_area = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        weight_mean = Integrate(weight_difference, self._mesh, definedon=self._mesh.Boundaries("rotation")) / rotation_boundary_area
+        zero_mean_weight = weight_difference - weight_mean
+        
+        # --- Torque application system ---
+        # Drive parameter controls torque magnitude
+        self._torque_drive_parameter = Parameter(0.0)
+        
+        # Traction amplitude scaled by zero-mean weight distribution
+        traction_amplitude = self._torque_drive_parameter * zero_mean_weight
+        
+        # Applied traction in current configuration (includes surface jacobian)
+        self._applied_traction = traction_amplitude * current_normal_unit * surface_jacobian
+        
+        # --- Effective moment arm calculation ---
+        # Compute the effective lever arm for torque-to-parameter conversion
+        self._effective_moment_arm = Integrate(zero_mean_weight * torque_moment_arm, 
+                                             self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        
+        # Store components for diagnostics
+        self._weight_positive = weight_positive_side
+        self._weight_negative = weight_negative_side
+        self._rotation_normal = reference_normal
+        self._torque_moment_arm = torque_moment_arm
 
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -241,8 +269,9 @@ class FEMPendulum(FEMComponent):
         # Rotation constraint
         self._bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds('rotation')
 
-        # (Lagrangian form of t⋅v dA_cur = t⋅v * J_s dA_ref):
-        self._bfa += InnerProduct(self._t_ref, self._v) * ds("rotation")
+        # Apply distributed traction for torque generation
+        # (Lagrangian form: traction·velocity in current configuration)
+        self._bfa += InnerProduct(self._applied_traction, self._v) * ds("rotation")
         
         # inertia
         self.tau = Parameter(self.sim_params.tau)
@@ -268,7 +297,7 @@ class FEMPendulum(FEMComponent):
     def set_state(self, state: Dict[str, Any], t: float):
         theta = state['q']['value']
         omega = state['omega']['value']
-        torque = -1 * state['torque']['value']       
+        torque = state['torque']['value']       
          
         c, s = np.cos(theta), np.sin(theta)
         
@@ -294,7 +323,6 @@ class FEMPendulum(FEMComponent):
         # Copy to "old" variables
         self._gf_uold.vec[:] = self._gf_u.vec
         self._gf_vold.vec[:] = self._gf_v.vec
-        self._gf_aold.vec[:] = self._gf_a.vec
         
         # Add to history
         self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
@@ -302,11 +330,12 @@ class FEMPendulum(FEMComponent):
 
     def get_state(self):
         state = {}
-        q_state, omega_state, _ = self._rigid_proxy()
-        torque_state = -self._get_torque_diagnostics()
+        q_state, omega_state, alpha_state = self._rigid_proxy()
+        torque_state = self._get_torque_diagnostics()  # Remove sign flip
         state["q"] = {'value': q_state, 'unit': 'rad'}
         state["omega"] = {'value': omega_state, 'unit': 'rad/s'}
-        state["torque"] = {'value': torque_state, 'unit': 'rad/s^2'}
+        state["alpha"] = {'value': alpha_state, 'unit': 'rad/s**2'}
+        state["torque"] = {'value': torque_state, 'unit': 'N*m'}  # Correct unit
         return  state
 
     #----------------------------------------------------------------------------
@@ -391,9 +420,18 @@ class FEMPendulum(FEMComponent):
                     self.set_drive_torque(value)
     
     def set_drive_torque(self, torque):
-        Mz_2d = float(torque) #/ self.mat_params.thickness
-        q = Mz_2d / self._effective_lever_arm
-        self._q_drive.Set(q)
+        """
+        Set the drive torque by converting to the appropriate parameter value.
+        
+        Args:
+            torque (float): Applied torque in N·m
+        """
+        if isinstance(torque, Quantity):
+            torque_2d = torque.magnitude  # 2D torque per unit thickness
+        else:
+            torque_2d = float(torque)
+        drive_parameter = torque_2d / self._effective_moment_arm
+        self._torque_drive_parameter.Set(drive_parameter)
             
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
@@ -445,55 +483,6 @@ class FEMPendulum(FEMComponent):
         min_gap = min(gap_values) if gap_values else 0.0
         return min_gap   
 
-    # def _rigid_proxy(self):
-    #     r = self._X_rel
-    #     rhoA = self.rho_p * self.mat_params.thickness
-        
-    #     # Angular position using both x and y components
-    #     u = self._gf_u.components[0]
-        
-    #     # Compute the average deformed position
-    #     x_avg = Integrate(rhoA * (self._X_rel[0] + u[0]),
-    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     y_avg = Integrate(rhoA * (self._X_rel[1] + u[1]),
-    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     mass = Integrate(rhoA, self._mesh, definedon=self._mesh.Materials("pendulum"))
-        
-    #     # Center of mass in deformed configuration
-    #     x_cm = x_avg / mass
-    #     y_cm = y_avg / mass
-        
-    #     # Angle using arctan2 (full range -π to π)
-    #     theta = np.arctan2(x_cm, y_cm)
-        
-    #     # Angular velocity
-    #     c, s = np.cos(theta), np.sin(theta)
-    #     # rotated radius r_rot = R(theta) * (X - P)
-    #     r_rot = CF((c * r[0] - s * r[1],
-    #                 s * r[0] + c * r[1]))
-        
-    #     v = self._gf_v.components[0]
-        
-    #     num_omega_x = Integrate(rhoA * v[0] * (-r_rot[1]),
-    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     num_omega_y = Integrate(rhoA * v[1] * (r_rot[0]),
-    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     num_v = num_omega_x + num_omega_y
-    #     denom = Integrate(rhoA * InnerProduct(r_rot, r_rot),
-    #                     self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     omega = num_v / denom
-
-    #     # Angular acceleration
-    #     a = self._gf_a.components[0]
-    #     num_alpha_x = Integrate(rhoA * a[0] * (-r_rot[1]),
-    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     num_alpha_y = Integrate(rhoA * a[1] * (r_rot[0]),
-    #                         self._mesh, definedon=self._mesh.Materials("pendulum"))
-    #     num_a = num_alpha_x + num_alpha_y
-    #     alpha = num_a / denom
-
-    #     return theta, omega, alpha
-
     def _rigid_proxy(self):
         r   = self._X_rel
         rhoA = self.rho_p * self.mat_params.thickness
@@ -539,15 +528,27 @@ class FEMPendulum(FEMComponent):
         return theta, omega, alpha
 
     def _get_torque_diagnostics(self, return_force=False):
-        # Motor Torque check
-        Mz = Integrate(self._q_drive * (self._w_plus - self._w_minus) * self._cross_rn,
-                            self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        """
+        Compute the actual applied torque from the distributed traction.
+        
+        Args:
+            return_force (bool): If True, also return force components
+            
+        Returns:
+            float or tuple: Applied torque in N·m, optionally with (Fx, Fy, Mz)
+        """
+        # Calculate actual applied torque by integrating moment contributions
+        weight_distribution = self._weight_positive - self._weight_negative
+        applied_torque = Integrate(self._torque_drive_parameter * weight_distribution * self._torque_moment_arm,
+                                 self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        
         if return_force:
-            Fx = Integrate(self._t_drive[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            Fy = Integrate(self._t_drive[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            return Fx, Fy, Mz
+            # Calculate net force components (should be near zero for pure torque)
+            force_x = Integrate(self._applied_traction[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            force_y = Integrate(self._applied_traction[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            return force_x, force_y, applied_torque
         else:
-            return Mz
+            return applied_torque
     
     def calculate_energy(self):
         # Kinetic energy

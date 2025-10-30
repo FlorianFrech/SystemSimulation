@@ -10,8 +10,8 @@ model PendulumWithWallContinuous
   
 equation
   // Wall connections (reads state, returns contact torque)
-  connect(pendulum.q_state,   wall.q);
-  connect(pendulum.omega_state, wall.omega);
+  connect(pendulum.q,   wall.q);
+  connect(pendulum.omega, wall.omega);
 
   // Torque summation: drive torque + wall torque -> pendulum
   connect(wall.torque,        pendulum.torque);

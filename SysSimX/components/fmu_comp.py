@@ -318,12 +318,9 @@ class FMUComponent(CoSimComponent):
         assert self._instance is not None
         state = {}
         for var in self._md.modelVariables:
-            if var.variability == "fixed": continue
+            if var.variability == "fixed" or var.causality == "local": continue
             name = var.name
             state[name] = {}
-            state[name]['type'] = var.type
-            state[name]['causality'] = var.causality
-            state[name]['variability'] = var.variability
             state[name]['unit'] = var.unit
             vr = var.valueReference
             unit = var.unit

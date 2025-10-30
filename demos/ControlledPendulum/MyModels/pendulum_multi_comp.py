@@ -13,10 +13,21 @@ from SysSimX.core.port import PortSpec, PortState, PortType
 from SysSimX.utilities.units import ureg, Quantity
 
 class PendulumMultiComp(CoSimComponent):
-    models: Dict[str, CoSimComponent] = {}
+    """
+    Implements a multi component for the pendulum model consisting of
+     - equation-based Modelica Pendulum as FMUComponents
+     - rigid-multi-body OpenSim model as OpenSimComponent
+     - netgen/NGSolve 2D FEM pendulum model as FEMComponent
+    This is examplary for a user defined class that defines the switching rule
+    and state synchronization for interchangable components
+    """
+    models: Dict[str, Optional[CoSimComponent]]
     active_mode: str = ""
     active_comp: CoSimComponent = None
 
+    #----------------------------------------------------------------------------
+    # Construction and Initialization
+    #----------------------------------------------------------------------------
     def __init__(self, 
                  fem_comp: FEMPendulum = None,
                  opensim_comp: OpenSimPendulum = None,
@@ -26,7 +37,7 @@ class PendulumMultiComp(CoSimComponent):
         self.models = {
             "FEM": fem_comp,
             "OpenSim": opensim_comp,
-            "FMU": fmu_comp
+            "EQB": fmu_comp
         }
 
         self.active_key = "OpenSim"
@@ -34,6 +45,9 @@ class PendulumMultiComp(CoSimComponent):
 
         self._check_port_specs()
 
+    #----------------------------------------------------------------------------
+    # Construction and Initialization
+    #----------------------------------------------------------------------------
     def _check_port_specs(self):
         """
         Ensure all models have consistent port specifications.
@@ -74,75 +88,117 @@ class PendulumMultiComp(CoSimComponent):
         self.models['OpenSim'].initialize(t0)
 
         # Set parameters for FMU model
-        self.models['FMU'].parameters['q0'].start = q0
-        self.models['FMU'].parameters['omega0'].start = omega0
-        self.models['FMU'].parameters['m'].start = mass
-        self.models['FMU'].parameters['L'].start = length
-        self.models['FMU'].parameters['g'].start = 9.81 if use_gravity else 0.0
-        self.models['FMU'].initialize(t0)
+        self.models["EQB"].parameters['q0'].start = q0
+        self.models["EQB"].parameters['omega0'].start = omega0
+        self.models["EQB"].parameters['m'].start = mass
+        self.models["EQB"].parameters['L'].start = length
+        self.models["EQB"].parameters['g'].start = 9.81 if use_gravity else 0.0
+        self.models["EQB"].initialize(t0)
 
         self._t_end = self.models['FEM'].sim_params.t_end
-    
+
+        self._update_output_states(t0)
+
+    #----------------------------------------------------------------------------
+    # Inputs / Outputs Handling
+    #----------------------------------------------------------------------------
     def set_inputs(self, signals, t = None):
-        self.active_comp.set_inputs(signals, t)
+        for comp in self.models.values():
+            comp.set_inputs(signals, t)
+        #self.active_comp.set_inputs(signals, t)
+    
+    def get_outputs(self):
+        return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None }
+    
+    def _update_output_states(self, t: float):
+        state = self.get_state()
+        q = state['q']['value'] * ureg(state['q']['unit'])
+        omega = state['omega']['value'] * ureg(state['omega']['unit'])
+        alpha = state['alpha']['value'] * ureg('rad/s**2')
+        self.outputs['q'].set(q, t=t)
+        self.outputs['omega'].set(omega, t)
+        self.outputs['alpha'].set(alpha, t)
 
-    def get_state(self):
-        self.active_comp.get_state()
-
+    #----------------------------------------------------------------------------
+    # State Handling
+    #----------------------------------------------------------------------------
     def set_state(self, state: Dict[str, Any], t: float):
         self.active_comp.set_state(state, t)
 
+    def get_state(self):
+        if self.active_comp is not None:
+            return self.active_comp.get_state()
+        return None
+    
+    #----------------------------------------------------------------------------
+    # Lifecycle
+    # ---------------------------------------------------------------------------
     def reset(self):
         for model in self.models.values():
             model.reset()
 
-    def do_step(self, t, dt):
+    #----------------------------------------------------------------------------
+    # Core: Switching of the active component and synchronizing from active to new
+    # ---------------------------------------------------------------------------
+    def do_step(self, t, dt):        
+        self.active_comp.do_step(t, dt)
         # Check for mode switch
-        self.new_key = time_dependent_model_selection(t, self._t_end)
+        # self.new_key = self._time_dependent_model_selection(t+dt)
+        # if self.new_key != self.active_key:
+        #     self.synch_model(t)
+        #     # Repeat step for new mode
+        #     self.active_comp.do_step(t, dt)
+        self._update_output_states(t+dt)
+    
+    def check_and_switch(self, t:float) -> None:
+        self.new_key = self._time_dependent_model_selection(t)
         if self.new_key != self.active_key:
             self.synch_model(t)
-            self.active_key = self.new_key
-            self.active_comp = self.models[self.active_key]
-        
-        self.active_comp.do_step(t, dt)
-
 
     def synch_model(self, t):
+        print(60 * "-")
         print(f"Switch from {self.active_key} to {self.new_key} at time {t:.3f}s")
         state = self.active_comp.get_state()
-        if self.new_key == "FMU":
+            
+        # Print state for debugging
+        print(f"  1) State: q={state['q']['value']:.4f} rad, w={state['omega']['value']:.4f} rad/s, a={state['torque']['value']:.4f} rad/s²")
+        
+        if self.new_key == "EQB":
+            # FMU expects initial condition format with specific parameter names
             fmu_state = {
-                'q0': state['q'],
-                'omega0': state['omega'],
-                'torque': state['torque']
+                'q0': state['q'],          # Pass the full dict with value and unit
+                'omega0': state['omega'],  # Pass the full dict with value and unit  
+                'torque': state['torque']  # Current torque
             }
-            self.models['FMU'].set_state(fmu_state, t)
+            self.models["EQB"].set_state(fmu_state, t)
         elif self.new_key == "OpenSim":
+            # OpenSim may need consistent sign convention
             opensim_state = {
                 'q': state['q'],
                 'omega': state['omega'],
-                'torque': {'value': state['torque']['value'] * -1}
+                'torque': state['torque']  # Keep same sign for now
             }
             self.models['OpenSim'].set_state(opensim_state, t)
         else:
+            # FEM and other models use standard format
             self.models[self.new_key].set_state(state, t)
+        self.active_key = self.new_key
+        self.active_comp = self.models[self.active_key]
+        state = self.active_comp.get_state()
+        print(f"  2) State: q={state['q']['value']:.4f} rad, w={state['omega']['value']:.4f} rad/s, a={state['torque']['value']:.4f} rad/s²")
 
-    def get_outputs(self):
-        return self.active_comp.get_outputs()
-        
-def time_dependent_model_selection(t: float, t_end: float) -> str:
-    # split simulation into 6 equal intervals so each mode appears twice
-    interval = t_end / 6
-    if t < interval:
-        return "FMU"
-    elif t < 2 * interval:
-        return "OpenSim"
-    elif t < 3 * interval:
-        return "FEM"
-    elif t < 4 * interval:
-        return "OpenSim"
-    elif t < 5 * interval:
-        return "FMU"
-    else:
-        return "OpenSim"
-    
+    def _time_dependent_model_selection(self, t: float) -> str:
+        # split simulation into 6 equal intervals so each mode appears twice
+        interval = self._t_end / 6
+        if t < interval:
+            return "FEM"
+        elif t < 2 * interval:
+            return "EQB"
+        elif t < 3 * interval:
+            return "OpenSim"
+        elif t < 4 * interval:
+            return "EQB"
+        elif t < 5 * interval:
+            return "OpenSim"
+        else:
+            return "FEM"
