@@ -83,7 +83,7 @@ class MultiComponent(CoSimComponent):
     # MultiComp Interface
     # -------------------------------------------------------------------
 
-    def initialize(self, t0: float) -> None:
+    def _initialize_component(self, t0: float) -> None:
         """
         Initialize the multi-component and all sub-components.
         """

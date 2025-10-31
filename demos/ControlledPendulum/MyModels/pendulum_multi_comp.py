@@ -45,6 +45,8 @@ class PendulumMultiComp(CoSimComponent):
 
         self._check_port_specs()
 
+        self._t_end = 1
+
     #----------------------------------------------------------------------------
     # Construction and Initialization
     #----------------------------------------------------------------------------
@@ -60,6 +62,9 @@ class PendulumMultiComp(CoSimComponent):
         self.outputs = {name: PortState(spec) for name, spec in self.output_specs.items()}
         
         # TODO: Implement thorough checks across all models
+
+    def _initialize_component(self, t0):
+        pass
 
     def initialize(self, t0):
         # Initialize FEM model
@@ -140,14 +145,14 @@ class PendulumMultiComp(CoSimComponent):
     #----------------------------------------------------------------------------
     # Core: Switching of the active component and synchronizing from active to new
     # ---------------------------------------------------------------------------
-    def do_step(self, t, dt):        
+    def _do_step_internal(self, t, dt):        
         #self.active_comp.do_step(t, dt)
         #Check for mode switch
         self.new_key = self._time_dependent_model_selection(t)
         if self.new_key != self.active_key:
             self.synch_model(t)
         self.active_comp.do_step(t, dt)
-        self._update_output_states(t+dt)
+        #self._update_output_states(t+dt)
     
     def check_and_switch(self, t:float) -> None:
         self.new_key = self._time_dependent_model_selection(t)
@@ -201,3 +206,10 @@ class PendulumMultiComp(CoSimComponent):
             return "OpenSim"
         else:
             return "FEM"
+    
+    #----------------------------------------------------------------------------
+    # Update Simulation Diagnostics of FEM Pendulum
+    # ---------------------------------------------------------------------------
+    def _update_scene(self):
+        t = self.t
+        q_ref = 0

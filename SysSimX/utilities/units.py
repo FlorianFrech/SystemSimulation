@@ -10,7 +10,7 @@ Quantity = ureg.Quantity
 
 def fix_exponent(unit_str: str) -> str:
     """
-    FMU unit strings may be in the form "s-2" and are not recognized by pint.
+    FMU unit strings may be in the form "s-2" or "s2" and are not recognized by pint.
     Adds "^" between any character and a number to allow parsing by pint.
     """
     fixed_str = re.sub(r'([a-zA-Z])(-?\d+)', r'\1^\2', unit_str)

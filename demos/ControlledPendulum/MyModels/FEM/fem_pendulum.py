@@ -42,12 +42,7 @@ class FEMPendulum(FEMComponent):
         # Define input and output specifications
         self.input_specs = INPUT_SPECS
         self.output_specs = OUTPUT_SPECS
-        
-        # Initialize port states based on specifications
-        for spec in self.input_specs.values():
-            self.inputs[spec.name] = PortState(spec)
-        for spec in self.output_specs.values():
-            self.outputs[spec.name] = PortState(spec)
+        self._initialize_ports_from_specs()
 
         # Pendulum configuration parameters
         self.geom_params    = GeometryParameters()
@@ -74,7 +69,10 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     # Initialization method
     #----------------------------------------------------------------------------   
-    def initialize(self, t0:float):
+    def _initialize_component(self, t0:float):
+        """
+        Netgen/NGSolve pendulum specific initialization (called by base-class).
+        """
         self.sim_params.t_start = t0
 
         self._setup_material_law()
@@ -99,8 +97,6 @@ class FEMPendulum(FEMComponent):
 
         self.set_state(state=state, t=t0)
 
-        self._update_output_states(t=t0)
-    
     #----------------------------------------------------------------------------
     # Initialization helper methods
     #----------------------------------------------------------------------------
@@ -341,7 +337,10 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
-    def do_step(self, t, dt):
+    def _do_step_internal(self, t, dt):
+        """
+        Advance FEM pendulum simulation from t to t+dt (called by base-class).
+        """
         t_step_end = t + dt if t + dt < self.sim_params.t_end else self.sim_params.t_end
         
         with TaskManager():
@@ -407,8 +406,7 @@ class FEMPendulum(FEMComponent):
                                      omega_state=omega_state,
                                      alpha_state=alpha_state,
                                      torque=Mz)
-                self._update_output_states(t=t)
-
+                
     #----------------------------------------------------------------------------
     # Input/output methods
     #----------------------------------------------------------------------------
@@ -437,6 +435,9 @@ class FEMPendulum(FEMComponent):
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 
     def _update_output_states(self, t: float):
+        """
+        Convert rigid-body proxy to output ports (called by base-class).
+        """
         q_state, omega_state, alpha_state = self._rigid_proxy()
         q_state = q_state * ureg('rad')
         omega_state = omega_state * ureg('rad/s')

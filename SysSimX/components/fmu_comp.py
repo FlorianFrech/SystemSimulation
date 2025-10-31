@@ -121,12 +121,11 @@ class FMUComponent(CoSimComponent):
     #----------------------------------------------------------------------------
     # Initialization
     #----------------------------------------------------------------------------  
-    def initialize(self, t0: float) -> None:
-        # Create Port States
-        self.inputs = {name: PortState(spec=spec) for name, spec in self.input_specs.items()}
-        self.outputs = {name: PortState(spec=spec) for name, spec in self.output_specs.items()}
-
-        # Unzip and instantiate FMU
+    def _initialize_component(self, t0: float) -> None:
+        """
+        FMU-specific initialization (called by base-class).
+        """
+        self._initialize_ports_from_specs()
         self._unzipdir = extract(self._path)
         self._instance = FMU2Slave(instanceName=self.name,
                                    guid=self._md.guid,
@@ -135,17 +134,9 @@ class FMUComponent(CoSimComponent):
         self._instance.instantiate()
         self._instance.setupExperiment(startTime=t0)
         self._instance.enterInitializationMode()
-
-        # Apply parameters
         self._apply_parameters_starts()
-
-        # Apply initial input starts if present in specs/PortStates
         self._apply_input_starts()
-
         self._instance.exitInitializationMode()
-
-        # Initialize output PortStates with current FMU values (t0)
-        self._update_output_states(t0)
 
     #----------------------------------------------------------------------------
     # Initialization helpers
@@ -275,11 +266,12 @@ class FMUComponent(CoSimComponent):
     #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
-    def do_step(self, t: float, dt: float) -> Dict[str, Any]:
-        assert self._instance is not None
-        self._instance.doStep(currentCommunicationPoint=t, communicationStepSize=dt)
-        self._update_output_states(t+dt)
-        return self.get_outputs()
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        """
+        Perform a single time step in the FMU.
+        """
+        self._instance.doStep(currentCommunicationPoint=t,
+                              communicationStepSize=dt)
 
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state

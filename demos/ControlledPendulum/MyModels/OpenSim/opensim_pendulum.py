@@ -68,24 +68,30 @@ class OpenSimPendulum(OpenSimComponent):
         # Define input and output specifications
         self.input_specs = INPUT_SPECS
         self.output_specs = OUTPUT_SPECS
-        
-        # Initialize port states based on specifications
-        for spec in self.input_specs.values():
-            self.inputs[spec.name] = PortState(spec)
-        for spec in self.output_specs.values():
-            self.outputs[spec.name] = PortState(spec)
+        self._initialize_ports_from_specs()
 
         # Model parameters
         self.parameters = PARAMETERS
 
-        self._int_dt = self.parameters['Solver']['internal_dt']
-
+        # Configure base class integrator settings
+        self.internal_dt = self.parameters['Solver']['internal_dt']
+        self.integrator_method = self.parameters['Solver']['IntegratorMethod']
+        self.integrator_accuracy = self.parameters['Solver']['accuracy']
+        
+        # Pendulum-specific flags
         self._with_contact = self.parameters['Contact']['with_contact']
-        self._use_gravity  = self.parameters['Model']['use_gravity']
+        self._use_gravity = self.parameters['Model']['use_gravity']
+
+        # Will be set during build
+        self.coord: Optional[osim.Coordinate] = None
+        self.actuator: Optional[osim.CoordinateActuator] = None
 
     #----------------------------------------------------------------------------
     # Initialization method
-    #----------------------------------------------------------------------------  
+    #----------------------------------------------------------------------------
+    def _initialize_component(self, t0):
+        pass
+
     def initialize(self, t0: float) -> None:
         # Build the OpenSim model
         self._build()
@@ -98,10 +104,7 @@ class OpenSimPendulum(OpenSimComponent):
         self.actuator.setOverrideActuation(self.state, 0.0)
 
         # Realize model to dynamics
-        self.model.realizePosition(self.state)
-        self.model.realizeVelocity(self.state)
-        self.model.realizeAcceleration(self.state)
-        self.model.realizeDynamics(self.state)
+        self.realize()
 
         # Manager for time integration
         self.manager = osim.Manager(self.model)
@@ -269,10 +272,7 @@ class OpenSimPendulum(OpenSimComponent):
         
         # Only realize once after all parameters are set
         if params_changed:
-            self.model.realizePosition(self.state)
-            self.model.realizeVelocity(self.state)
-            self.model.realizeAcceleration(self.state)
-            self.model.realizeDynamics(self.state)
+            self.realize()
     
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
@@ -282,6 +282,7 @@ class OpenSimPendulum(OpenSimComponent):
         Sets the new angular position and angular velocity of the pendulum.
         Acceleration is updated by updating the input toreque.
         """
+        #------------------------------------
         q_state = state['q']['value']
         omega_state = state['omega']['value']
         torque_state = state['torque']['value']
@@ -303,21 +304,22 @@ class OpenSimPendulum(OpenSimComponent):
         self.set_inputs({'torque': float(torque_state)}, t)
         
         # Realize up to dynamics so everything is consistent for the integrator
-        self.model.realizeDynamics(self.state)
-        self.model.realizeAcceleration(self.state)
-        self.model.realizeVelocity(self.state)
-        self.model.realizePosition(self.state)
+        self.realize()
         
         # Create a fresh Manager bound to this (model,state) and initialize it
         self.manager = osim.Manager(self.model)
         self.manager.setIntegratorAccuracy(1e-6)
         self.manager.initialize(self.state)
 
-    def get_state(self):
-        self.model.realizeDynamics(self.state)
-        q_state = float(self.coord.getValue(self.state))
-        omega_state = float(self.coord.getSpeedValue(self.state))
-        alpha_state = float(self.coord.getAccelerationValue(self.state))
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns the current state of the pendulum: angle, angular velocity,
+        angular acceleration, and applied torque.
+        """
+        self.realize()
+        q_state = self.get_coordinate_value('q')
+        omega_state = self.get_coordinate_speed('q')
+        alpha_state = self.get_coordinate_acceleration('q')
         torque_state = float(self.actuator.getActuation(self.state))
 
         state = {}
@@ -331,42 +333,36 @@ class OpenSimPendulum(OpenSimComponent):
     #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
-    def do_step(self, t: float, h: float) -> None:
-        t_end = t + h
-        i = 0
-        while t < t_end:
-            current_torque = float(self.inputs['torque'].get().magnitude)
-            self.actuator.setOverrideActuation(self.state, current_torque)
-            self.model.realizeDynamics(self.state)
-            self.model.realizeAcceleration(self.state)
+    def _do_step_internal(self, t: float, dt: float):
+        t_end = t + dt
+        t_current = t
 
-            self.state = self.manager.integrate(t + self._int_dt)
-            self.model.realizePosition(self.state)
-            self.model.realizeVelocity(self.state)
-            self.model.realizeAcceleration(self.state)
-            self.model.realizeDynamics(self.state)
-            self._update_output_states(t)
-            t += self._int_dt
-            i = i + 1
+        while t_current < t_end:
+            # Apply current input
+            torque = float(self.inputs['torque'].get().magnitude)
+            self.actuator.setOverrideActuation(self.state, torque)
+            self.realize()
+
+            # Integrate
+            next_t = min(t_current + self.internal_dt, t_end)
+            self.state = self.manager.integrate(next_t)
+
+            # Realize after integration
+            self.realize()
+            t_current = next_t
 
     #----------------------------------------------------------------------------
     # Input/output methods
     #----------------------------------------------------------------------------
     def set_inputs(self, signals: Dict[str, Any], t: Optional[float]) -> None:
-        if not signals:
-            return
-        for name, value in signals.items():
-            if name not in self.inputs:
-                raise KeyError(f"Input '{name}' not found in inputs.")
-            port_state = self.inputs[name]
-            unit = self.input_specs[name].unit
-            port_state.set(value, t=t)
-            if name == 'torque':
-                if isinstance(value, Quantity):
-                    value = value.magnitude
-                self.actuator.setOverrideActuation(self.state, value)
-                self.model.realizeDynamics(self.state)
-                self.model.realizeAcceleration(self.state)
+        super().set_inputs(signals, t) # Update port states
+
+        if 'torque' in signals:
+            value = signals['torque']
+            if isinstance(value, Quantity):
+                value = value.magnitude
+            self.actuator.setOverrideActuation(self.state, value)
+            self.realize()
 
     def get_outputs(self) -> Dict[str, float]:
         return {name: out_port.get() for name, out_port in self.outputs.items()}
@@ -375,12 +371,15 @@ class OpenSimPendulum(OpenSimComponent):
         for name, out_port in self.outputs.items():
             if name == 'q':
                 value = float(self.coord.getValue(self.state))
+                value = self.get_coordinate_value('q')
                 out_port.set(value * ureg("rad"), t=t)
             elif name == 'omega':
                 value = float(self.coord.getSpeedValue(self.state))
+                value = self.get_coordinate_speed('q')
                 out_port.set(value * ureg("rad/s"), t=t)
             elif name == 'alpha':
                 value = float(self.coord.getAccelerationValue(self.state))
+                value = self.get_coordinate_acceleration('q')
                 out_port.set(value * ureg("rad/s^2"), t=t)
 
     #----------------------------------------------------------------------------

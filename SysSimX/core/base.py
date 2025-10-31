@@ -6,25 +6,12 @@ from ..utilities.units import ureg, Quantity
 
 class CoSimComponent(ABC):
     """
-    Unified co-simulation component interface.
-     - Defines metadata, port specifications, and state handling
-     - Abstract methods for lifecycle management (initialize, set_inputs, do_step, get_outputs, set_state, get_state, reset)
-     - Default implementations for common behaviors (set_inputs, get_outputs)
+    Unified co-simulation component interface with common functionality.
     """
-    # Metadata
     name: str
     label: str
     group: Optional[str] = None
-
-    # Time Management
-    t_step_ext: int
-    """External Simulation Time Step"""
-    t_scale_ext: int
-    """External Simulation Time Scale (e.g., 0 = 1 s, 1 = 10s, -1 = 0.1 s, -2 = 0.01 s)"""
-    t_step_int: int
-    """Internal Simulation Time Step"""
-    t_scale_int: int
-    """Internal Simulation Time Scale (e.g., 0 = 1 s, 1 = 10s, -1 = 0.1 s, -2 = 0.01 s)"""
+    t: float = 0.0  # Current simulation time
 
     def __init__(self, name: str, label: Optional[str] = None, group: Optional[str] = None):
         self.name = name
@@ -37,52 +24,97 @@ class CoSimComponent(ABC):
         self.inputs: Dict[str, PortState] = {}
         self.outputs: Dict[str, PortState] = {}
 
+        # Parameter container (populated by subclasses)
+        self.parameters: Dict[str, Any] = {}
+
+    # ---- Port Management Helper ----
+    def _initialize_ports_from_specs(self) -> None:
+        """
+        Create PortState instances from input_specs and output_specs.
+        Call this in subclass __init__ after defining specs.
+        """
+        for spec in self.input_specs.values():
+            self.inputs[spec.name] = PortState(spec)
+        for spec in self.output_specs.values():
+            self.outputs[spec.name] = PortState(spec)
+
     # ---- Configuration ----
     def set_parameters(self, **parameters: Any) -> None:
-        """Set the parameters of the component during initialization."""
-        pass
+        """
+        Set component parameters BEFORE initialize().
+        Default: store in self.parameters dict. Override for validation.
+        """
+        for name, value in parameters.items():
+            if name not in self.parameters:
+                raise KeyError(f"Unknown parameter '{name}' in component '{self.name}'")
+            self.parameters[name] = value
 
     # ---- Lifecycle ----
-    @abstractmethod
     def initialize(self, t0: float) -> None:
-        """Initialize the component at the start time t0."""
+        """
+        Initialize the component at start time t0.
+        Base class sets time and calls abstract hook.
+        """
+        self.t = t0
+        self._initialize_component(t0)
+        self._update_output_states(t0)  # Ensure outputs ready after init
+
+    @abstractmethod
+    def _initialize_component(self, t0: float) -> None:
+        """Subclass hook: setup solver, mesh, FMU instance, etc."""
         ...
     
     def set_inputs(self, signals: Dict[str, Any], t: Optional[float] = None) -> None:
         """
-        Default method for inputs. Subclasses can override for custom behavior.
+        Default input setter. Override for type conversions or special handling.
         """
         for k, v in signals.items():
             if k not in self.inputs:
                 raise KeyError(f"Input port '{k}' not found in component '{self.name}'.")
             self.inputs[k].set(v, t=t)
+
+    def do_step(self, t: float, dt: float) -> None:
+        """
+        Advance simulation from t to t+dt.
+        Base class updates time and outputs; subclass does computation.
+        """
+        self._do_step_internal(t, dt)
+        self.t = t + dt
+        self._update_output_states(self.t)
     
     @abstractmethod
-    def do_step(self, t: float, dt: float) -> None:
-        """Advance the component's state from time t to t+dt."""
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        """Subclass hook: perform actual time step computation."""
+        ...
+
+    def get_outputs(self) -> Dict[str, Any]:
+        """Return current outputs as {name: value} dict."""
+        return {k: v.get() for k, v in self.outputs.items() if v.get() is not None}
+
+    # ---- Abstract Output Update Hook ----
+    @abstractmethod
+    def _update_output_states(self, t: float) -> None:
+        """
+        Subclass hook: read internal state and update self.outputs[...].set(value, t).
+        Called automatically after initialize() and do_step().
+        """
         ...
     
-    def get_outputs(self) -> Dict[str, Any]:
-        """Return the current outputs as a dictionary {name: value}."""
-        if self.outputs is None:
-            return {}
-        return {k: v.get() for k, v in self.outputs.items() if v.get() is not None}
-    
     @abstractmethod
-    def set_state(self, state: Dict[str, Any]) -> None:
-        """Overwrite the current state of the component."""
+    def set_state(self, state: Dict[str, Any], t: float) -> None:
+        """Overwrite component state (for switching or checkpointing)."""
         ...
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any] | None:
-        """Return the current state of the component, or None if not supported."""
+    def get_state(self) -> Dict[str, Any]:
+        """Return current state as dict {var_name: {'value': ..., 'unit': ...}}."""
         ...
-    
+
     @abstractmethod
     def reset(self) -> None:
-        """Reset the component to a clean state before (before initialization)."""
+        """Reset to clean state before re-initialization."""
         ...
 
     def free(self) -> None:
-        """Optional: Free resources associated with the component."""
+        """Optional: release resources (FMU instances, OpenSim memory, etc.)."""
         pass

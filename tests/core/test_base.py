@@ -22,6 +22,9 @@ class Gain(CoSimComponent):
         self.k = gain * ureg(self.k_unit_str)
         self._t0 = None
 
+    def _initialize_component(self, t0):
+        pass
+
     def initialize(self, t0: float) -> None:
         self._t0 = t0
         
@@ -37,6 +40,9 @@ class Gain(CoSimComponent):
 
         # Initialize output to zero
         self.outputs["y"].set(value=Quantity(0.0, "rad/s"), t=t0)
+
+    def _do_step_internal(self, t, dt):
+        pass
     
     def do_step(self, t, dt):
         u_val = self.inputs["u"].get()
@@ -56,6 +62,9 @@ class Gain(CoSimComponent):
     def get_state(self) -> Dict[str, Any]:
         state_keys = self.outputs.keys()
         return {key: self.outputs[key].get() for key in state_keys if self.outputs[key].get() is not None}
+    
+    def _update_output_states(self, t):
+        pass
     
     def reset(self) -> None:
         self._t0 = None
