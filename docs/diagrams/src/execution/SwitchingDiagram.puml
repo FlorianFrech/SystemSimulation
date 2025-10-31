@@ -1,0 +1,55 @@
+@startuml MultiComponent_Switching
+
+participant System
+participant PendulumMultiComp as Multi
+participant "FEM Model" as FEM
+participant "OpenSim Model" as OpenSim
+participant Hysteresis
+
+System -> Multi: do_step(t, dt)
+activate Multi
+
+Multi -> Multi: mode_selector(t, state)
+note right: Returns "OpenSim"
+
+Multi -> Hysteresis: can_switch(t, "OpenSim")
+activate Hysteresis
+Hysteresis -> Hysteresis: check dwell_time
+Hysteresis --> Multi: True
+deactivate Hysteresis
+
+Multi -> FEM: get_state()
+activate FEM
+FEM --> Multi: {'q': 0.5, 'omega': 2.1, ...}
+deactivate FEM
+
+Multi -> Multi: _adapt_state(state, "OpenSim")
+note right: Translate state format\nif needed
+
+Multi -> OpenSim: set_state(adapted_state, t)
+activate OpenSim
+OpenSim -> OpenSim: set_coordinate_value('q', 0.5)
+OpenSim -> OpenSim: set_coordinate_speed('q', 2.1)
+OpenSim -> OpenSim: realize()
+deactivate OpenSim
+
+Multi -> Multi: active_comp = OpenSim
+Multi -> Multi: active_mode = "OpenSim"
+
+Multi -> Hysteresis: record_switch(t, "OpenSim")
+
+Multi -> OpenSim: do_step(t, dt)
+activate OpenSim
+OpenSim -> OpenSim: _do_step_internal(t, dt)
+OpenSim --> Multi: step complete
+deactivate OpenSim
+
+Multi -> OpenSim: get_outputs()
+activate OpenSim
+OpenSim --> Multi: {'q': 0.52, 'omega': 2.3, ...}
+deactivate OpenSim
+
+Multi --> System: step complete
+deactivate Multi
+
+@enduml

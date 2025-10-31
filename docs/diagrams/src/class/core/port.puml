@@ -1,0 +1,80 @@
+@startuml Port
+
+skinparam classAttributeIconSize 0
+
+' ============================================================================
+' PORT CLASSES AND ENUMS
+' ============================================================================
+
+enum PortType <<str, Enum>> {
+    REAL = "real"
+    INT = "int"
+    BOOL = "bool"
+    STRING = "string"
+}
+
+enum Direction <<Literal>> {
+    "in"
+    "out"
+}
+
+class PortSpec<T> <<dataclass, frozen>> {
+    + name: str
+    + type: PortType
+    + direction: Direction
+    + unit: Optional[str] = None
+    + description: Optional[str] = None
+    --
+    + validate_value(value: Any): None
+    + {static} compatible(spec1: PortSpec, spec2: PortSpec): bool
+}
+
+class PortState<T> <<dataclass>> {
+    + spec: PortSpec[T]
+    + value: Optional[Union[T, Quantity]] = None
+    + t_last: Optional[float] = None
+    + history: list[tuple[float, Union[T, Quantity]]]
+    --
+    + set(value: Union[T, Quantity], t: Optional[float]): None
+    + get(as_unit: Optional[str]): Union[T, Quantity, None]
+}
+
+class Quantity <<from pint>> {
+    Physical quantity with units
+}
+
+' Relationships
+PortSpec --> PortType : uses
+PortSpec --> Direction : uses
+PortState *-- PortSpec : contains
+PortState --> Quantity : may contain
+PortSpec ..> Quantity : validates
+
+note right of PortSpec
+    Generic type T can be:
+    - float
+    - int
+    - bool
+    - str
+    
+    Immutable specification
+    of a component port
+end note
+
+note right of PortState
+    Mutable state holding:
+    - Current value
+    - Last update time
+    - Historical values
+    
+    TODO: Add sample time
+    and variability support
+end note
+
+note top of Quantity
+    From pint library (ureg)
+    Handles unit conversions
+    for REAL ports
+end note
+
+@enduml

@@ -1,0 +1,65 @@
+@startuml SysSimX_Execution
+
+actor User
+participant System
+participant "Component A" as CompA
+participant "Component B" as CompB
+participant Connection
+
+User -> System: initialize(t0)
+activate System
+
+System -> CompA: initialize(t0)
+activate CompA
+CompA -> CompA: _initialize_component(t0)
+CompA -> CompA: _update_output_states(t0)
+CompA --> System: outputs ready
+deactivate CompA
+
+System -> CompB: initialize(t0)
+activate CompB
+CompB -> CompB: _initialize_component(t0)
+CompB -> CompB: _update_output_states(t0)
+CompB --> System: outputs ready
+deactivate CompB
+
+System --> User: system initialized
+deactivate System
+
+User -> System: run(t0, tf, dt)
+activate System
+
+loop for each time step
+
+    System -> System: compute_execution_order()
+    
+    loop for each component in execution_order
+        
+        System -> Connection: get signals for CompB
+        activate Connection
+        Connection -> CompA: outputs['y'].get()
+        CompA --> Connection: value
+        Connection --> System: signals
+        deactivate Connection
+        
+        System -> CompB: set_inputs(signals, t)
+        activate CompB
+        CompB -> CompB: inputs['u'].set(value, t)
+        deactivate CompB
+        
+        System -> CompB: do_step(t, dt)
+        activate CompB
+        CompB -> CompB: _do_step_internal(t, dt)
+        note right: Execute simulation\n(FMU doStep, FEM solver, etc.)
+        CompB -> CompB: _update_output_states(t+dt)
+        CompB --> System: step complete
+        deactivate CompB
+        
+    end
+    
+end
+
+System --> User: simulation complete
+deactivate System
+
+@enduml

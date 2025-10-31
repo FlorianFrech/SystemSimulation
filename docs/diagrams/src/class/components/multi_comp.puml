@@ -1,0 +1,69 @@
+@startuml MultiComponent
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+' ============================================================================
+' MULTI-COMPONENT CLASS
+' ============================================================================
+
+abstract class MultiComponent <<CoSimComponent>> {
+    + models: Dict[ModeKey, CoSimComponent]
+    + active_mode: ModeKey
+    + active_comp: Optional[CoSimComponent]
+    + mode_selector: Optional[Callable]
+    + hysteresis: Optional[Hysteresis]
+    + state_adapters: Dict[ModeKey, StateAdapter]
+    ==
+    + __init__(name, initial_mode, group)
+    .. Abstract Methods ..
+    {abstract} # _register_models(): None
+    {abstract} # _adapt_state(state, target_mode): Dict[str, Any]
+    .. Initialization ..
+    # _initialize_component(t0)
+    - _unify_ports()
+    .. Mode Switching ..
+    # _do_step_internal(t, dt)
+    - _switch_mode(new_mode, t)
+    .. I/O Delegation ..
+    + set_inputs(signals, t)
+    # _update_output_states(t)
+    .. State Management ..
+    + set_state(state, t)
+    + get_state(): Dict[str, Any]
+    + reset()
+}
+
+class Hysteresis {
+    + dwell_time: float
+    + last_switch_time: float
+    + last_mode: ModeKey
+    ==
+    + __init__(dwell_time)
+    + can_switch(t, proposed_mode): bool
+    + record_switch(t, new_mode)
+}
+
+interface StateAdapter <<Protocol>> {
+    {abstract} + adapt_state(source_state, target_component): Dict[str, Any]
+}
+
+' Type Alias
+class ModeKey <<str>> {
+    Mode identifier
+    e.g., "FEM", "OpenSim", "EQB"
+}
+
+' Layout: MultiComponent on left, related classes to the right
+CoSimComponent <|-down- MultiComponent
+MultiComponent o-up-> "many" CoSimComponent : contains models
+MultiComponent -right-> Hysteresis : uses
+MultiComponent  -down-> StateAdapter : may use
+MultiComponent -> ModeKey : uses
+
+' Vertical arrangement
+MultiComponent -[hidden]up- ModeKey
+
+@enduml

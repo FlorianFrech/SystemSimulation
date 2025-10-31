@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="614px" preserveAspectRatio="none" style="width:729px;height:614px;" version="1.1" viewBox="0 0 729 614" width="729px" zoomAndPan="magnify"><defs><filter height="300%" id="f9g8f40c45o96" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[c742986ece3991bb7536b69291a1394d]
+class CoSimComponent--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="229.1818" id="CoSimComponent" style="stroke: #A80036; stroke-width: 1.5;" width="177" x="6" y="162"/><ellipse cx="45.75" cy="185.3009" fill="#A9DCDF" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M45.2656,182.5822 L44.5781,185.5666 L45.9375,185.5666 L45.2656,182.5822 Z M44.375,181.2541 L46.1406,181.2541 L48.1094,188.5509 L46.6719,188.5509 L46.2188,186.7541 L44.2969,186.7541 L43.8594,188.5509 L42.4063,188.5509 L44.375,181.2541 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="28" x="94.25" y="179.69">«ABC»</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="86" x="65.25" y="198.3789">CoSimComponent</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="182" y1="208.6019" y2="208.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="14" y="225.2919">+name: str</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="182" y1="234.2219" y2="234.2219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="154" x="14" y="250.9119">+input_specs: Dict[str, PortSpec]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="161" x="14" y="268.5318">+output_specs: Dict[str, PortSpec]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="131" x="14" y="286.1518">+inputs: Dict[str, PortState]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="138" x="14" y="303.7718">+outputs: Dict[str, PortState]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="182" y1="312.7018" y2="312.7018"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="182" y1="314.7018" y2="314.7018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="144" x="14" y="329.3918">#_initialize_ports_from_specs()</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="14" y="347.0118">+set_inputs(signals, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="14" y="364.6318">+get_outputs(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="124" x="14" y="382.2518">#_update_output_states(t)</text><!--MD5=[cf30c9d02ccfd96cbc8c73524e56fec4]
+class PortType--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="133.0818" id="PortType" style="stroke: #A80036; stroke-width: 1.5;" width="99" x="619" y="470"/><ellipse cx="640.55" cy="493.3009" fill="#EB937F" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M642.4094,496.8009 L637.8781,496.8009 L637.8781,489.5041 L642.4094,489.5041 L642.4094,490.7853 L639.3156,490.7853 L639.3156,492.3478 L642.1125,492.3478 L642.1125,493.6291 L639.3156,493.6291 L639.3156,495.5353 L642.4094,495.5353 L642.4094,496.8009 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="36" x="662.45" y="487.69">«Enum»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="48" x="656.45" y="506.3789">PortType</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="620" x2="717" y1="516.6019" y2="516.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="62" x="627" y="533.2919">REAL = "real"</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="50" x="627" y="550.9119">INT = "int"</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="627" y="568.5318">BOOL = "bool"</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="83" x="627" y="586.1518">STRING = "string"</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="620" x2="717" y1="595.0818" y2="595.0818"/><!--MD5=[02f7077ed79257124e28b791f351f1d7]
+class Direction--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="97.8419" id="Direction" style="stroke: #A80036; stroke-width: 1.5;" width="80" x="503.5" y="487.5"/><ellipse cx="516.5" cy="510.8009" fill="#EB937F" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M518.3594,514.3009 L513.8281,514.3009 L513.8281,507.0041 L518.3594,507.0041 L518.3594,508.2853 L515.2656,508.2853 L515.2656,509.8478 L518.0625,509.8478 L518.0625,511.1291 L515.2656,511.1291 L515.2656,513.0353 L518.3594,513.0353 L518.3594,514.3009 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="39" x="535" y="505.19">«Literal»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="48" x="530.5" y="523.8789">Direction</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="504.5" x2="582.5" y1="534.1019" y2="534.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="17" x="511.5" y="550.7919">"in"</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="24" x="511.5" y="568.4119">"out"</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="504.5" x2="582.5" y1="577.3419" y2="577.3419"/><!--MD5=[bde67ad3a16d529e8c616652d38ae1b4]
+class PortSpec--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="185.9418" id="PortSpec" style="stroke: #A80036; stroke-width: 1.5;" width="143" x="533" y="183.5"/><ellipse cx="568.95" cy="206.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M570.2313,210.0978 Q569.8875,210.2697 569.5125,210.3478 Q569.1375,210.4416 568.7156,210.4416 Q567.2469,210.4416 566.4656,209.4728 Q565.7,208.5041 565.7,206.6603 Q565.7,204.8166 566.4656,203.8478 Q567.2469,202.8791 568.7156,202.8791 Q569.1375,202.8791 569.5125,202.9728 Q569.9031,203.0509 570.2313,203.2228 L570.2313,204.8322 Q569.8563,204.4884 569.4969,204.3322 Q569.1531,204.1759 568.7938,204.1759 Q567.9969,204.1759 567.5906,204.8009 Q567.1844,205.4259 567.1844,206.6603 Q567.1844,207.8947 567.5906,208.5197 Q567.9969,209.1447 568.7938,209.1447 Q569.1531,209.1447 569.4969,208.9884 Q569.8563,208.8322 570.2313,208.4884 L570.2313,210.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="38" x="592.55" y="201.19">«frozen»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="47" x="588.05" y="219.8789">PortSpec</text><rect fill="#FFFFFF" height="19.62" style="stroke: #000000; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" width="11" x="668" y="180.5"/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="5" x="671" y="194.19">T</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="534" x2="675" y1="230.1019" y2="230.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="541" y="246.7919">+name: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="76" x="541" y="264.4119">+type: PortType</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="99" x="541" y="282.0318">+direction: Direction</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="541" y="299.6518">+unit: Optional[str]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="127" x="541" y="317.2718">+description: Optional[str]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="534" x2="675" y1="326.2018" y2="326.2018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="107" x="541" y="342.8918">+validate_value(value)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" text-decoration="underline" textLength="121" x="541" y="360.5118">+compatible(s1, s2): bool</text><!--MD5=[06a64c40febe839d2159c166b7b8bc53]
+class PortState--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="150.7018" id="PortState" style="stroke: #A80036; stroke-width: 1.5;" width="190" x="273.5" y="201"/><ellipse cx="331.75" cy="215.4909" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M333.0313,218.7878 Q332.6875,218.9597 332.3125,219.0378 Q331.9375,219.1316 331.5156,219.1316 Q330.0469,219.1316 329.2656,218.1628 Q328.5,217.1941 328.5,215.3503 Q328.5,213.5066 329.2656,212.5378 Q330.0469,211.5691 331.5156,211.5691 Q331.9375,211.5691 332.3125,211.6628 Q332.7031,211.7409 333.0313,211.9128 L333.0313,213.5222 Q332.6563,213.1784 332.2969,213.0222 Q331.9531,212.8659 331.5938,212.8659 Q330.7969,212.8659 330.3906,213.4909 Q329.9844,214.1159 329.9844,215.3503 Q329.9844,216.5847 330.3906,217.2097 Q330.7969,217.8347 331.5938,217.8347 Q331.9531,217.8347 332.2969,217.6784 Q332.6563,217.5222 333.0313,217.1784 L333.0313,218.7878 Z "/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="49" x="351.25" y="219.7589">PortState</text><rect fill="#FFFFFF" height="19.62" style="stroke: #000000; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" width="11" x="455.5" y="198"/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="5" x="458.5" y="211.69">T</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="274.5" x2="462.5" y1="229.9819" y2="229.9819"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="281.5" y="246.6719">+spec: PortSpec[T]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="174" x="281.5" y="264.2919">+value: Optional[Union[T, Quantity]]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="108" x="281.5" y="281.9119">+t_last: Optional[float]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="151" x="281.5" y="299.5318">+history: list[tuple[float, value]]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="274.5" x2="462.5" y1="308.4618" y2="308.4618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="63" x="281.5" y="325.1518">+set(value, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="281.5" y="342.7718">+get(as_unit): value</text><!--MD5=[c10c36ce2c02dedc3d02a76c5154070d]
+class Quantity--><rect fill="#FEFECE" filter="url(#f9g8f40c45o96)" height="97.8419" id="Quantity" style="stroke: #A80036; stroke-width: 1.5;" width="78" x="329.5" y="487.5"/><ellipse cx="342.5" cy="510.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M343.7813,514.0978 Q343.4375,514.2697 343.0625,514.3478 Q342.6875,514.4416 342.2656,514.4416 Q340.7969,514.4416 340.0156,513.4728 Q339.25,512.5041 339.25,510.6603 Q339.25,508.8166 340.0156,507.8478 Q340.7969,506.8791 342.2656,506.8791 Q342.6875,506.8791 343.0625,506.9728 Q343.4531,507.0509 343.7813,507.2228 L343.7813,508.8322 Q343.4063,508.4884 343.0469,508.3322 Q342.7031,508.1759 342.3438,508.1759 Q341.5469,508.1759 341.1406,508.8009 Q340.7344,509.4259 340.7344,510.6603 Q340.7344,511.8947 341.1406,512.5197 Q341.5469,513.1447 342.3438,513.1447 Q342.7031,513.1447 343.0469,512.9884 Q343.4063,512.8322 343.7813,512.4884 L343.7813,514.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="28" x="365.5" y="505.19">«pint»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="46" x="356.5" y="523.8789">Quantity</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="330.5" x2="406.5" y1="534.1019" y2="534.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="337.5" y="550.7919">magnitude</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="24" x="337.5" y="568.4119">units</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="330.5" x2="406.5" y1="577.3419" y2="577.3419"/><!--MD5=[3fe1652ef2da94d5ede3232f6b1ca5c1]
+link CoSimComponent to PortSpec--><path d="M193.1224,196.5553 C193.1224,196.5553 282.22,145.57 331,138 C397.93,127.62 421.91,129.79 481.5,162 C495.78,169.72 509.66,179.49 522.64,190.05 " fill="none" id="CoSimComponent-PortSpec" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="532.85,198.67,528.5553,189.8069,529.0302,195.4437,523.3933,195.9186,532.85,198.67" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="529.0302" x2="522.915" y1="195.4437" y2="190.285"/><polygon fill="#FFFFFF" points="183.15,203.23,190.3611,203.2168,193.1224,196.5553,185.9113,196.5685,183.15,203.23" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="47" x="334" y="126.69">has specs</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="497.1327" y="186.7014">many</text><!--MD5=[4fc01ae467636106491438600c3c7b63]
+link CoSimComponent to PortState--><path d="M195.08,276.5 C195.08,276.5 239.02,276.5 260.13,276.5 " fill="none" id="CoSimComponent-PortState" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="273.13,276.5,264.13,272.5,268.13,276.5,264.13,280.5,273.13,276.5" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="268.13" x2="260.13" y1="276.5" y2="276.5"/><polygon fill="#FFFFFF" points="183.08,276.5,189.08,280.5,195.08,276.5,189.08,272.5,183.08,276.5" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="50" x="203.25" y="268.19">has states</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="237.3696" y="289.8199">many</text><!--MD5=[0f10530b61a58c45873fb095faac24f9]
+link PortState to PortSpec--><path d="M475.81,276.5 C475.81,276.5 505.81,276.5 519.7,276.5 " fill="none" id="PortState-PortSpec" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="532.8,276.5,523.8,272.5,527.8,276.5,523.8,280.5,532.8,276.5" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="527.8" x2="519.8" y1="276.5" y2="276.5"/><polygon fill="#A80036" points="463.81,276.5,469.81,280.5,475.81,276.5,469.81,272.5,463.81,276.5" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="29" x="483.75" y="268.19">wraps</text><!--MD5=[2cc80a2cf8cd284f6390500ada3f5124]
+link PortSpec to PortType--><path d="M627.33,369.55 C635.11,400.88 643.66,435.38 650.96,464.77 " fill="none" id="PortSpec-&gt;PortType" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="652.21,469.82,653.928,460.1221,651.0074,464.9668,646.1628,462.0462,652.21,469.82" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="41" x="646.5" y="434.69">typed by</text><!--MD5=[a71aba1491e226ddb9e8840e26736490]
+link PortSpec to Direction--><path d="M582.74,369.55 C573.8,407.33 563.78,449.72 556.1,482.2 " fill="none" id="PortSpec-&gt;Direction" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="554.89,487.33,560.845,479.4854,556.0352,482.4629,553.0577,477.6531,554.89,487.33" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="43" x="572.5" y="434.69">direction</text><!--MD5=[83fb68f8d46a5cfab446b8007d19d842]
+link PortState to Quantity--><path d="M368.5,352.12 C368.5,393.69 368.5,444.46 368.5,482.04 " fill="none" id="PortState-&gt;Quantity" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="368.5,487.48,372.5,478.48,368.5,482.48,364.5,478.48,368.5,487.48" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="40" x="371.5" y="434.69">may use</text><!--MD5=[67b3478f0c3abdbc7303a2aac87fb64f]
+@startuml PortSystem
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+
+abstract class CoSimComponent <<ABC>> {
+    + name: str
+    - -
+    + input_specs: Dict[str, PortSpec]
+    + output_specs: Dict[str, PortSpec]
+    + inputs: Dict[str, PortState]
+    + outputs: Dict[str, PortState]
+    ==
+    # _initialize_ports_from_specs()
+    + set_inputs(signals, t)
+    + get_outputs(): Dict
+    # _update_output_states(t)
+}
+
+enum PortType <<Enum>> {
+    REAL = "real"
+    INT = "int"
+    BOOL = "bool"
+    STRING = "string"
+}
+
+enum Direction <<Literal>> {
+    "in"
+    "out"
+}
+
+class PortSpec<T> <<frozen>> {
+    + name: str
+    + type: PortType
+    + direction: Direction
+    + unit: Optional[str]
+    + description: Optional[str]
+    - -
+    + validate_value(value)
+    + {static} compatible(s1, s2): bool
+}
+
+class PortState<T> {
+    + spec: PortSpec[T]
+    + value: Optional[Union[T, Quantity]]
+    + t_last: Optional[float]
+    + history: list[tuple[float, value]]
+    - -
+    + set(value, t)
+    + get(as_unit): value
+}
+
+class Quantity <<pint>> {
+    magnitude
+    units
+}
+
+CoSimComponent o-right-> "many" PortSpec : has specs
+CoSimComponent o-right-> "many" PortState : has states
+PortState *-right-> PortSpec : wraps
+PortSpec -down-> PortType : typed by
+PortSpec -down-> Direction : direction
+PortState ..> Quantity : may use
+
+
+    
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+
+    
+    
+
+    
+    
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

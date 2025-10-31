@@ -1,0 +1,103 @@
+@startuml SysSimX_Simplified
+
+!define ABSTRACT_CLASS abstract class
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+' ============================================================================
+' SIMPLIFIED VIEW - CORE CONCEPTS
+' ============================================================================
+
+package "Core Abstractions" {
+    ABSTRACT_CLASS CoSimComponent <<abstract>> {
+        + name: str
+        + inputs: Dict[str, PortState]
+        + outputs: Dict[str, PortState]
+        + parameters: Dict[str, Any]
+        --
+        + initialize(t0: float)
+        + do_step(t: float, dt: float)
+        + set_inputs(signals: Dict)
+        + get_outputs(): Dict
+        + set_state(state: Dict, t: float)
+        + get_state(): Dict
+    }
+    
+    ABSTRACT_CLASS MultiComponent <<abstract>> {
+        + models: Dict[str, CoSimComponent]
+        + active_mode: str
+        + mode_selector: Callable
+        --
+        + _register_models()
+        + _adapt_state(state: Dict, target: str): Dict
+    }
+    
+    MultiComponent --|> CoSimComponent
+}
+
+package "Component Types" {
+    class FMUComponent {
+        FMI 2.0 CS wrapper
+    }
+    
+    class FEMComponent {
+        Finite Element base
+    }
+    
+    class OpenSimComponent {
+        Multi-body dynamics base
+    }
+    
+    FMUComponent --|> CoSimComponent
+    FEMComponent --|> CoSimComponent
+    OpenSimComponent --|> CoSimComponent
+}
+
+package "Concrete Models" {
+    class FEMPendulum {
+        netgen - NGSolve implementation
+    }
+    
+    class OpenSimPendulum {
+        OpenSim implementation
+    }
+    
+    class PendulumMultiComp {
+        Hybrid pendulum\nFMU + OpenSim + FEM
+    }
+
+
+    FEMPendulum --|> FEMComponent
+    OpenSimPendulum --|> OpenSimComponent
+    PendulumMultiComp --|> MultiComponent
+    PendulumMultiComp o-- FEMPendulum
+    PendulumMultiComp o-- OpenSimPendulum
+    PendulumMultiComp o-- FMUComponent
+}
+
+package "System Integration" {
+    class Connection <<dataclass>> {
+        + src_comp: str
+        + src_port: str
+        + dst_comp: str
+        + dst_port: str
+        + delay: int
+    }
+    
+    class System {
+        + components: Dict[str, CoSimComponent]
+        + connections: List[Connection]
+        + execution_order: List[str]
+        --
+        + add_component(comp: CoSimComponent)
+        + add_connection(conn: Connection)
+        + compute_execution_order()
+        + run(t0: float, tf: float, dt: float)
+    }
+    
+    System o-- "many" CoSimComponent
+    System o-- "many" Connection
+}
+
+@enduml

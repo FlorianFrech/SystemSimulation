@@ -1,0 +1,153 @@
+@startuml SystemGraphVisualizer
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+' ============================================================================
+' SYSTEM GRAPH VISUALIZER CLASS
+' ============================================================================
+
+class SystemGraphVisualizer {
+    + system: System
+    + dot: Optional[Digraph]
+    ==
+    + __init__(system)
+    + visualize(filename, format)
+    + save(filepath)
+}
+
+class System {
+    + name: str
+    + components: Dict[str, CoSimComponent]
+    + connections: List[Connection]
+    + groups: Dict[str, List[CoSimComponent]]
+    + execution_idx: Dict[str, int]
+}
+
+class CoSimComponent <<ABC>> {
+    + name: str
+    + group: Optional[str]
+    + input_specs: Dict[str, PortSpec]
+    + output_specs: Dict[str, PortSpec]
+}
+
+class Connection <<dataclass>> {
+    + src_comp: str
+    + src_port: str
+    + dst_comp: str
+    + dst_port: str
+    + delay: int
+    + unit: Optional[str]
+}
+
+class PortSpec <<port.py>> {
+    + name: str
+    + type: PortType
+    + unit: Optional[str]
+}
+
+class Digraph <<graphviz>> {
+    + comment: str
+    + format: str
+    + engine: str
+    + graph_attr: dict
+    + node_attr: dict
+    + edge_attr: dict
+    --
+    + subgraph(name): context
+    + node(name, label, **attrs)
+    + edge(tail_name, head_name, **attrs)
+    + render(filename, view)
+}
+
+class "Helper Functions" as Helpers <<module>> {
+    + _auto_color_for_group(group_name, sat, light): str
+    + _build_palette(system): Dict[str, str]
+    + _record_label_for_component(comp): str
+    + _edge_unit_label(sys, conn): Optional[str]
+}
+
+' Relationships
+SystemGraphVisualizer -right-> System : visualizes
+SystemGraphVisualizer -down-> Digraph : creates
+SystemGraphVisualizer ..> Helpers : uses
+
+System o-right-> "many" CoSimComponent : contains
+System o-right-> "many" Connection : contains
+CoSimComponent o-right-> "many" PortSpec
+Connection ..> CoSimComponent : references
+Connection ..> PortSpec : references
+
+' Vertical arrangement
+System -[hidden]down- Helpers
+Digraph -[hidden]down- Helpers
+
+' note right of SystemGraphVisualizer
+'     **Graphviz-based System Visualizer**
+    
+'     Renders co-simulation system as:
+'     - Record-shaped nodes (components)
+'     - Port anchors for connections
+'     - Grouped by component.group
+'     - Execution order badges
+'     - Unit labels on edges
+'     - Delayed connections (dashed)
+    
+'     **Graph Attributes:**
+'     - Layout: Left-to-Right (LR)
+'     - Clusters for component groups
+'     - Color-coded by group
+' end note
+
+' note bottom of SystemGraphVisualizer
+'     **Visualization Features:**
+    
+'     1. **Node Structure:**
+'        - Record shape with ports
+'        - { inputs | name | outputs }
+'        - Port anchors: <port_name>
+'        - Execution gen badge (#n)
+    
+'     2. **Edge Rendering:**
+'        - Solid: Zero delay
+'        - Dashed: Delayed connections
+'        - Labels: Units + delay info
+'        - Port-to-port routing
+    
+'     3. **Grouping:**
+'        - Subgraphs for each group
+'        - Auto-generated pastel colors
+'        - Predefined engineering palette
+    
+'     **Formats:** SVG, PNG, PDF
+' end note
+
+' note top of Helpers
+'     **Color Generation:**
+'     - MD5 hash of group name
+'     - HSL -> RGB conversion
+'     - Deterministic pastels
+    
+'     **Base Palette:**
+'     - Reference: light blue
+'     - Sensors: light green
+'     - Control: light red
+'     - Actuator: light yellow
+'     - Plant: light gray
+' end note
+
+' note top of Digraph
+'     **GraphViz Python API**
+    
+'     Declarative graph description
+'     with attributes for:
+'     - Graph layout (rankdir, splines)
+'     - Node styling (shape, colors)
+'     - Edge styling (arrows, labels)
+    
+'     Rendered via dot engine
+' end note
+
+@enduml

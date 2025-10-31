@@ -1,0 +1,471 @@
+@startuml SysSimX_Framework
+
+!define ABSTRACT_CLASS abstract class
+!define INTERFACE interface
+
+' ============================================================================
+' LAYER 1: CORE ABSTRACTIONS (SysSimX/core)
+' ============================================================================
+
+package "SysSimX.core" <<Rectangle>> {
+    
+    ' ---- Port System ----
+    
+    enum PortType {
+        REAL
+        INT
+        BOOL
+        STRING
+        BYTES
+    }
+    
+    class PortSpec <<immutable>> {
+        + name: str
+        + type: PortType
+        + direction: str
+        + unit: Optional[pint.Unit]
+        + description: Optional[str]
+        + causality: str
+        + variability: str
+        --
+        + __hash__()
+        + __eq__()
+    }
+    
+    class PortState {
+        - spec: PortSpec
+        - value: Optional[Any]
+        - timestamp: Optional[float]
+        --
+        + set(value: Any, t: float)
+        + get(): Any
+        + is_valid(): bool
+    }
+    
+    PortState *-- PortSpec : contains
+    
+    ' ---- Component Base Class ----
+    
+    ABSTRACT_CLASS CoSimComponent {
+        # {abstract} Base class for all simulation components
+        --
+        + name: str
+        + label: str
+        + group: Optional[str]
+        + t: float
+        --
+        + input_specs: Dict[str, PortSpec]
+        + output_specs: Dict[str, PortSpec]
+        + inputs: Dict[str, PortState]
+        + outputs: Dict[str, PortState]
+        + parameters: Dict[str, Any]
+        --
+        .. Lifecycle Methods ..
+        + initialize(t0: float): void
+        + do_step(t: float, dt: float): void
+        + reset(): void
+        + free(): void
+        --
+        .. I/O Methods ..
+        + set_inputs(signals: Dict, t: float): void
+        + get_outputs(): Dict[str, Any]
+        + set_state(state: Dict, t: float): void
+        + get_state(): Dict[str, Any]
+        + set_parameters(**params): void
+        --
+        .. Template Methods (Hooks) ..
+        # {abstract} _initialize_component(t0: float): void
+        # {abstract} _do_step_internal(t: float, dt: float): void
+        # {abstract} _update_output_states(t: float): void
+        --
+        .. Helper Methods ..
+        # _initialize_ports_from_specs(): void
+    }
+    
+    CoSimComponent o-- "many" PortSpec : defines
+    CoSimComponent *-- "many" PortState : contains
+    
+    ' ---- Multi-Component ----
+    
+    ABSTRACT_CLASS MultiComponent {
+        # {abstract} Composite component with mode switching
+        --
+        + models: Dict[ModeKey, CoSimComponent]
+        + active_mode: ModeKey
+        + active_comp: CoSimComponent
+        + mode_selector: Callable[[float, Dict], ModeKey]
+        + hysteresis: Optional[Hysteresis]
+        + state_adapters: Dict[ModeKey, StateAdapter]
+        --
+        .. Abstract Methods ..
+        # {abstract} _register_models(): void
+        # {abstract} _adapt_state(state: Dict, target: ModeKey): Dict
+        --
+        .. Mode Switching ..
+        - _switch_mode(new_mode: ModeKey, t: float): void
+        - _unify_ports(): void
+    }
+    
+    MultiComponent --|> CoSimComponent
+    MultiComponent o-- "many" CoSimComponent : contains
+    
+    ' ---- Hysteresis Helper ----
+    
+    class Hysteresis {
+        + dwell_time: float
+        - last_switch_time: float
+        - last_mode: ModeKey
+        --
+        + can_switch(t: float, mode: ModeKey): bool
+        + record_switch(t: float, mode: ModeKey): void
+    }
+    
+    MultiComponent o-- Hysteresis : uses
+    
+    ' ---- State Adapter Protocol ----
+    
+    INTERFACE StateAdapter <<protocol>> {
+        + {abstract} adapt_state(source: Dict, target: CoSimComponent): Dict
+    }
+    
+    MultiComponent ..> StateAdapter : uses
+}
+
+' ============================================================================
+' LAYER 2: COMPONENT IMPLEMENTATIONS (SysSimX/components)
+' ============================================================================
+
+package "SysSimX.components" <<Rectangle>> {
+    
+    ' ---- FMU Component ----
+    
+    class FMUComponent {
+        - _path: Path
+        - _md: ModelDescription
+        - _instance: FMU2Slave
+        - _unzipdir: Path
+        --
+        - _vrs_in_real: Dict[str, int]
+        - _vrs_out_real: Dict[str, int]
+        - _vrs_in_int: Dict[str, int]
+        - _vrs_out_int: Dict[str, int]
+        - _vrs_in_bool: Dict[str, int]
+        - _vrs_out_bool: Dict[str, int]
+        --
+        .. FMI-Specific Methods ..
+        - _build_port_specs(): void
+        - _build_value_reference_map(): void
+        - _apply_parameters_starts(): void
+        - _extract_metadata(): void
+        --
+        .. Overrides ..
+        # _initialize_component(t0: float): void
+        # _do_step_internal(t: float, dt: float): void
+        # _update_output_states(t: float): void
+        + set_state(state: Dict, t: float): void
+        + get_state(): Dict
+    }
+    
+    FMUComponent --|> CoSimComponent
+    
+    ' ---- FEM Component ----
+    
+    ABSTRACT_CLASS FEMComponent {
+        # {abstract} Library-agnostic FEM base
+        --
+        + spaces: Dict[str, Any]
+        + gfs: Dict[str, Any]
+        + gfs_history: Dict[str, Any]
+        --
+        + mass: Optional[float]
+        + inertia: Optional[float]
+        + num_dofs: Optional[int]
+        --
+        .. Optional I/O ..
+        + load_mesh_from_file(path: Path): void
+        + export_results(path: Path, format: str): void
+        + visualize_state(): void
+    }
+    
+    FEMComponent --|> CoSimComponent
+    
+    ' ---- OpenSim Component ----
+    
+    ABSTRACT_CLASS OpenSimComponent {
+        # {abstract} Multi-body dynamics base
+        --
+        + model: osim.Model
+        + state: osim.State
+        + manager: osim.Manager
+        --
+        + integrator_method: osim.Manager.IntegratorMethod
+        + integrator_accuracy: float
+        + internal_dt: float
+        + coord_output_map: Dict[str, str]
+        --
+        .. Lifecycle Helper ..
+        # _finalize_model(t0: float): void
+        + realize(): void
+        --
+        .. Coordinate Helpers ..
+        + get_coordinate_value(name: str): float
+        + get_coordinate_speed(name: str): float
+        + get_coordinate_acceleration(name: str): float
+        + set_coordinate_value(name: str, value: float): void
+        + set_coordinate_speed(name: str, value: float): void
+        # _find_coordinate(name: str): osim.Coordinate
+        --
+        .. Default Implementation ..
+        # _do_step_internal(t: float, dt: float): void
+        # _update_output_states(t: float): void
+    }
+    
+    OpenSimComponent --|> CoSimComponent
+}
+
+' ============================================================================
+' LAYER 3: CONCRETE IMPLEMENTATIONS (demos/ControlledPendulum)
+' ============================================================================
+
+package "demos.ControlledPendulum" <<Rectangle>> {
+    
+    ' ---- FEM Pendulum ----
+    
+    class FEMPendulum {
+        - mesh: ngsolve.Mesh
+        - fes: ngsolve.H1
+        - u: ngsolve.GridFunction
+        --
+        + mass: float
+        + inertia: float
+        + _use_gravity: bool
+        + _with_contact: bool
+        --
+        + init_params: InitialConditions
+        + mat_params: MaterialParameters
+        + mesh_params: MeshParameters
+        + contact_params: ContactParameters
+        + sim_params: SimulationParameters
+        --
+        .. NGSolve-Specific ..
+        - _build_mesh(): void
+        - _setup_fem_space(): void
+        - _assemble_system(): void
+        - _create_time_stepper(): void
+        + setup_simulation_diagnostics(): void
+        --
+        .. Overrides ..
+        # _initialize_component(t0: float): void
+        # _do_step_internal(t: float, dt: float): void
+        # _update_output_states(t: float): void
+        + set_state(state: Dict, t: float): void
+        + get_state(): Dict
+    }
+    
+    FEMPendulum --|> FEMComponent
+    
+    ' ---- OpenSim Pendulum ----
+    
+    class OpenSimPendulum {
+        - coord: osim.Coordinate
+        - actuator: osim.CoordinateActuator
+        --
+        + _use_gravity: bool
+        + _with_contact: bool
+        --
+        .. OpenSim Model Building ..
+        - _build_model(): void
+        --
+        .. Overrides ..
+        # _initialize_component(t0: float): void
+        # _do_step_internal(t: float, dt: float): void
+        + set_inputs(signals: Dict, t: float): void
+        + set_state(state: Dict, t: float): void
+        + get_state(): Dict
+        + reset(): void
+        + save_model(path: str): void
+    }
+    
+    OpenSimPendulum --|> OpenSimComponent
+    
+    ' ---- Multi-Component Pendulum ----
+    
+    class PendulumMultiComp {
+        - _fem_comp: FEMPendulum
+        - _opensim_comp: OpenSimPendulum
+        - _fmu_comp: FMUComponent
+        - _t_end: float
+        --
+        .. Overrides ..
+        # _register_models(): void
+        # _adapt_state(state: Dict, target: str): Dict
+        --
+        .. Custom Logic ..
+        - _time_based_mode_selector(t: float, state: Dict): str
+        + initialize(t0: float): void
+    }
+    
+    PendulumMultiComp --|> MultiComponent
+    PendulumMultiComp o-- FEMPendulum : contains
+    PendulumMultiComp o-- OpenSimPendulum : contains
+    PendulumMultiComp o-- FMUComponent : contains
+}
+
+' ============================================================================
+' LAYER 4: SYSTEM ORCHESTRATION (SysSimX/system)
+' ============================================================================
+
+package "SysSimX.system" <<Rectangle>> {
+    
+    ' ---- Connection ----
+    
+    class Connection <<dataclass>> {
+        + src_comp: str
+        + src_port: str
+        + dst_comp: str
+        + dst_port: str
+        + delay: int = 0
+        --
+        + __hash__()
+        + __eq__()
+    }
+    
+    ' ---- System ----
+    
+    class System {
+        + name: str
+        + components: Dict[str, CoSimComponent]
+        + connections: List[Connection]
+        + execution_order: List[str]
+        --
+        - _connection_graph: Dict[str, List[Connection]]
+        - _connection_set: Set[Connection]
+        - _delay_buffers: Dict[Connection, Deque]
+        --
+        .. Component Management ..
+        + add_component(comp: CoSimComponent): void
+        + remove_component(name: str): void
+        + get_component(name: str): CoSimComponent
+        --
+        .. Connection Management ..
+        + add_connection(conn: Connection): void
+        + add_connections(conns: List[Connection]): void
+        + remove_connection(conn: Connection): void
+        --
+        .. Execution Order ..
+        + compute_execution_order(): void
+        - _topological_sort(): List[str]
+        - _detect_algebraic_loops(): void
+        --
+        .. Simulation ..
+        + initialize(t0: float): void
+        + run(t0: float, tf: float, dt: float): void
+        + step(t: float, dt: float): void
+        - _transfer_inputs(comp_name: str, t: float): void
+        - _get_delayed_value(conn: Connection, t: float): Any
+    }
+    
+    System o-- "many" CoSimComponent : orchestrates
+    System o-- "many" Connection : manages
+}
+
+' ============================================================================
+' LAYER 5: UTILITIES (SysSimX/utilities)
+' ============================================================================
+
+package "SysSimX.utilities" <<Rectangle>> {
+    
+    ' ---- Units ----
+    
+    class units <<module>> {
+        + ureg: UnitRegistry
+        --
+        + to_pint_unit(unit_str: str): pint.Unit
+        + Quantity(value: float, unit: str): pint.Quantity
+    }
+    
+    ' ---- FMU Generation ----
+    
+    class update_fmus <<module>> {
+        + get_fmu_paths(package: Path, output: Path, force: bool): Dict[str, Path]
+        + compile_modelica_to_fmu(model: str, output: Path): Path
+    }
+    
+    ' ---- Result Export ----
+    
+    class results_opensim <<module>> {
+        + export_to_mot(results: Dict, path: Path, coords: List[str]): void
+        + create_motion_table(data: np.ndarray, labels: List[str]): osim.TimeSeriesTable
+    }
+}
+
+' ============================================================================
+' LAYER 6: VISUALIZATION (SysSimX/viz)
+' ============================================================================
+
+package "SysSimX.viz" <<Rectangle>> {
+    
+    class SystemGraphVisualizer {
+        - system: System
+        - graph: Digraph
+        --
+        + visualize(): Digraph
+        + render(output: Path, format: str): void
+        --
+        - _add_component_node(comp: CoSimComponent): void
+        - _add_connection_edge(conn: Connection): void
+        - _format_ports(specs: Dict[str, PortSpec]): str
+    }
+    
+    SystemGraphVisualizer o-- System : visualizes
+}
+
+' ============================================================================
+' RELATIONSHIPS ACROSS LAYERS
+' ============================================================================
+
+CoSimComponent ..> PortSpec : uses
+CoSimComponent ..> PortState : uses
+System ..> Connection : uses
+FMUComponent ..> units : uses
+FEMComponent ..> units : uses
+OpenSimComponent ..> units : uses
+MultiComponent ..> units : uses
+
+' ============================================================================
+' EXTERNAL DEPENDENCIES
+' ============================================================================
+
+package "External Libraries" <<Cloud>> {
+    class fmpy <<external>> {
+        + FMU2Slave
+        + ModelDescription
+        + extract()
+    }
+    
+    class pint <<external>> {
+        + UnitRegistry
+        + Quantity
+        + Unit
+    }
+    
+    class opensim <<external>> {
+        + Model
+        + State
+        + Manager
+        + Coordinate
+    }
+    
+    class ngsolve <<external>> {
+        + Mesh
+        + H1
+        + GridFunction
+    }
+}
+
+FMUComponent ..> fmpy : uses
+OpenSimComponent ..> opensim : uses
+FEMPendulum ..> ngsolve : uses
+units ..> pint : uses
+
+@enduml

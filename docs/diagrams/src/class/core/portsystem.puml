@@ -1,0 +1,151 @@
+@startuml PortSystem
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+' ============================================================================
+' PORT SYSTEM ARCHITECTURE
+' ============================================================================
+
+abstract class CoSimComponent <<ABC>> {
+    + name: str
+    --
+    + input_specs: Dict[str, PortSpec]
+    + output_specs: Dict[str, PortSpec]
+    + inputs: Dict[str, PortState]
+    + outputs: Dict[str, PortState]
+    ==
+    # _initialize_ports_from_specs()
+    + set_inputs(signals, t)
+    + get_outputs(): Dict
+    # _update_output_states(t)
+}
+
+enum PortType <<Enum>> {
+    REAL = "real"
+    INT = "int"
+    BOOL = "bool"
+    STRING = "string"
+}
+
+enum Direction <<Literal>> {
+    "in"
+    "out"
+}
+
+class PortSpec<T> <<frozen>> {
+    + name: str
+    + type: PortType
+    + direction: Direction
+    + unit: Optional[str]
+    + description: Optional[str]
+    --
+    + validate_value(value)
+    + {static} compatible(s1, s2): bool
+}
+
+class PortState<T> {
+    + spec: PortSpec[T]
+    + value: Optional[Union[T, Quantity]]
+    + t_last: Optional[float]
+    + history: list[tuple[float, value]]
+    --
+    + set(value, t)
+    + get(as_unit): value
+}
+
+class Quantity <<pint>> {
+    magnitude
+    units
+}
+
+' Relationships
+CoSimComponent o-right-> "many" PortSpec : has specs
+CoSimComponent o-right-> "many" PortState : has states
+PortState *-right-> PortSpec : wraps
+PortSpec -down-> PortType : typed by
+PortSpec -down-> Direction : direction
+PortState ..> Quantity : may use
+
+' Layout hints
+' PortType -[hidden]down- Direction
+' PortSpec -[hidden]down- PortState
+
+' note top of CoSimComponent
+'     **Port System Design Pattern**
+    
+'     Components maintain two registries:
+'     1. **Specs** (immutable interface contract)
+'     2. **States** (mutable runtime values)
+    
+'     Each PortState wraps a PortSpec
+' end note
+
+' note right of PortSpec
+'     **Immutable Contract**
+    
+'     Defines port interface:
+'     - Name and type
+'     - Direction (in/out)
+'     - Optional unit
+'     - Validation rules
+    
+'     Created once during
+'     component construction
+' end note
+
+' note right of PortState
+'     **Mutable Runtime**
+    
+'     Tracks dynamic data:
+'     - Current value
+'     - Last update time
+'     - Value history
+    
+'     Updated during
+'     simulation steps
+' end note
+
+' note bottom of CoSimComponent
+'     **Initialization Flow:**
+    
+'     1. Subclass populates input_specs/output_specs
+'     2. _initialize_ports_from_specs() called
+'     3. Creates PortState for each PortSpec
+'     4. States added to inputs/outputs dicts
+    
+'     **Runtime Flow:**
+    
+'     set_inputs() → inputs[name].set(value, t)
+'     do_step() → _do_step_internal()
+'     _update_output_states() → outputs[name].set(value, t)
+'     get_outputs() → {name: outputs[name].get()}
+' end note
+
+' note bottom of PortType
+'     **Type System:**
+    
+'     Maps to Python types:
+'     - REAL → float
+'     - INT → int
+'     - BOOL → bool
+'     - STRING → str
+    
+'     Used for validation
+'     and type checking
+' end note
+
+' note bottom of Quantity
+'     **Unit Handling:**
+    
+'     Only for REAL ports:
+'     - Automatic conversion
+'     - Dimensional analysis
+'     - Unit validation
+    
+'     From pint library
+' end note
+
+@enduml

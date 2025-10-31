@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="945px" preserveAspectRatio="none" style="width:998px;height:945px;" version="1.1" viewBox="0 0 998 945" width="998px" zoomAndPan="magnify"><defs><filter height="300%" id="f1jmnv2hpe49lz" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[f8e092794d52bf9a252466252ae7bd1c]
+class System--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="495.8616" id="System" style="stroke: #A80036; stroke-width: 1.5;" width="311" x="6" y="33"/><ellipse cx="137.25" cy="47.4909" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M138.5313,50.7878 Q138.1875,50.9597 137.8125,51.0378 Q137.4375,51.1316 137.0156,51.1316 Q135.5469,51.1316 134.7656,50.1628 Q134,49.1941 134,47.3503 Q134,45.5066 134.7656,44.5378 Q135.5469,43.5691 137.0156,43.5691 Q137.4375,43.5691 137.8125,43.6628 Q138.2031,43.7409 138.5313,43.9128 L138.5313,45.5222 Q138.1563,45.1784 137.7969,45.0222 Q137.4531,44.8659 137.0938,44.8659 Q136.2969,44.8659 135.8906,45.4909 Q135.4844,46.1159 135.4844,47.3503 Q135.4844,48.5847 135.8906,49.2097 Q136.2969,49.8347 137.0938,49.8347 Q137.4531,49.8347 137.7969,49.6784 Q138.1563,49.5222 138.5313,49.1784 L138.5313,50.7878 Z "/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="37" x="156.75" y="51.7589">System</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="316" y1="61.9819" y2="61.9819"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="14" y="78.6719">+name: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="199" x="14" y="96.2919">+components: Dict[str, CoSimComponent]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="147" x="14" y="113.9119">+connections: List[Connection]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="118" x="14" y="131.5318">+graph: nx.MultiDiGraph</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="84" x="14" y="149.1518">-_dag: nx.DiGraph</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="316" y1="158.0818" y2="158.0818"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="196" x="14" y="174.7718">+groups: Dict[str, List[CoSimComponent]]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="148" x="14" y="192.3918">+execution_order: List[List[str]]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="134" x="14" y="210.0118">+execution_idx: Dict[str, int]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="316" y1="218.9418" y2="218.9418"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="316" y1="220.9418" y2="220.9418"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="71" x="14" y="235.6318">+__init__(name)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="142" x="14" y="274.8718">+add_component(component)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="98.5" y1="253.3718" y2="253.3718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="122" x="100.5" y="256.7518">Component Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="224.5" x2="316" y1="253.3718" y2="253.3718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="140" x="14" y="314.1117">+add_connection(connection)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="14" y="331.7317">-_validate_connection(c)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="99" y1="292.6117" y2="292.6117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="121" x="101" y="295.9917">Connection Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="224" x2="316" y1="292.6117" y2="292.6117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="73" x="14" y="370.9717">+build_graphs()</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="135" x="14" y="388.5917">+compute_execution_order()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="123.5" y1="349.4717" y2="349.4717"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="72" x="125.5" y="352.8517">Graph Building</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="199.5" x2="316" y1="349.4717" y2="349.4717"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="14" y="427.8317">+initialize(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="53" x="14" y="445.4516">+step(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="67" x="14" y="463.0716">+run(t0, tf, dt)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="112" y1="406.3317" y2="406.3317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="114" y="409.7117">Simulation Lifecycle</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="211" x2="316" y1="406.3317" y2="406.3317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="295" x="14" y="502.3116">-_get_latest_values(comp_name, port_name, delay_steps): Any</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="164" x="14" y="519.9316">-_set_inputs_for_generation(gen, t)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="120.5" y1="480.8116" y2="480.8116"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="78" x="122.5" y="484.1916">Internal Helpers</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="202.5" x2="316" y1="480.8116" y2="480.8116"/><!--MD5=[ad510ca42d1a057b37ac2813b8ee5b40]
+class Connection--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="168.3218" id="Connection" style="stroke: #A80036; stroke-width: 1.5;" width="146" x="417.5" y="608"/><ellipse cx="454.8" cy="631.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M456.0813,634.5978 Q455.7375,634.7697 455.3625,634.8478 Q454.9875,634.9416 454.5656,634.9416 Q453.0969,634.9416 452.3156,633.9728 Q451.55,633.0041 451.55,631.1603 Q451.55,629.3166 452.3156,628.3478 Q453.0969,627.3791 454.5656,627.3791 Q454.9875,627.3791 455.3625,627.4728 Q455.7531,627.5509 456.0813,627.7228 L456.0813,629.3322 Q455.7063,628.9884 455.3469,628.8322 Q455.0031,628.6759 454.6438,628.6759 Q453.8469,628.6759 453.4406,629.3009 Q453.0344,629.9259 453.0344,631.1603 Q453.0344,632.3947 453.4406,633.0197 Q453.8469,633.6447 454.6438,633.6447 Q455.0031,633.6447 455.3469,633.4884 Q455.7063,633.3322 456.0813,632.9884 L456.0813,634.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="53" x="477.7" y="625.69">«dataclass»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="60" x="474.2" y="644.3789">Connection</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="418.5" x2="562.5" y1="654.6019" y2="654.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="425.5" y="671.2919">+src_comp: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="63" x="425.5" y="688.9119">+src_port: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="70" x="425.5" y="706.5318">+dst_comp: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="425.5" y="724.1518">+dst_port: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="425.5" y="741.7718">+delay: int = 0</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="130" x="425.5" y="759.3918">+unit: Optional[str] = None</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="418.5" x2="562.5" y1="768.3218" y2="768.3218"/><!--MD5=[c742986ece3991bb7536b69291a1394d]
+class CoSimComponent--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="274.0417" id="CoSimComponent" style="stroke: #A80036; stroke-width: 1.5;" width="177" x="402" y="144"/><ellipse cx="437.5" cy="167.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M438.7813,170.5978 Q438.4375,170.7697 438.0625,170.8478 Q437.6875,170.9416 437.2656,170.9416 Q435.7969,170.9416 435.0156,169.9728 Q434.25,169.0041 434.25,167.1603 Q434.25,165.3166 435.0156,164.3478 Q435.7969,163.3791 437.2656,163.3791 Q437.6875,163.3791 438.0625,163.4728 Q438.4531,163.5509 438.7813,163.7228 L438.7813,165.3322 Q438.4063,164.9884 438.0469,164.8322 Q437.7031,164.6759 437.3438,164.6759 Q436.5469,164.6759 436.1406,165.3009 Q435.7344,165.9259 435.7344,167.1603 Q435.7344,168.3947 436.1406,169.0197 Q436.5469,169.6447 437.3438,169.6447 Q437.7031,169.6447 438.0469,169.4884 Q438.4063,169.3322 438.7813,168.9884 L438.7813,170.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="28" x="490" y="161.69">«ABC»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="95" x="456.5" y="180.3789">CoSimComponent</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="403" x2="578" y1="190.6019" y2="190.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="410" y="207.2919">+name: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="49" x="410" y="224.9119">+label: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="101" x="410" y="242.5318">+group: Optional[str]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="38" x="410" y="260.1518">+t: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="154" x="410" y="277.7718">+input_specs: Dict[str, PortSpec]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="161" x="410" y="295.3918">+output_specs: Dict[str, PortSpec]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="131" x="410" y="313.0118">+inputs: Dict[str, PortState]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="138" x="410" y="330.6318">+outputs: Dict[str, PortState]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="403" x2="578" y1="339.5618" y2="339.5618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="410" y="356.2518">+initialize(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="410" y="373.8718">+do_step(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="410" y="391.4917">+set_inputs(signals, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="410" y="409.1117">+get_outputs()</text><!--MD5=[bde67ad3a16d529e8c616652d38ae1b4]
+class PortSpec--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="150.7018" id="PortSpec" style="stroke: #A80036; stroke-width: 1.5;" width="171" x="614" y="205.5"/><ellipse cx="670.25" cy="228.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M671.5313,232.0978 Q671.1875,232.2697 670.8125,232.3478 Q670.4375,232.4416 670.0156,232.4416 Q668.5469,232.4416 667.7656,231.4728 Q667,230.5041 667,228.6603 Q667,226.8166 667.7656,225.8478 Q668.5469,224.8791 670.0156,224.8791 Q670.4375,224.8791 670.8125,224.9728 Q671.2031,225.0509 671.5313,225.2228 L671.5313,226.8322 Q671.1563,226.4884 670.7969,226.3322 Q670.4531,226.1759 670.0938,226.1759 Q669.2969,226.1759 668.8906,226.8009 Q668.4844,227.4259 668.4844,228.6603 Q668.4844,229.8947 668.8906,230.5197 Q669.2969,231.1447 670.0938,231.1447 Q670.4531,231.1447 670.7969,230.9884 Q671.1563,230.8322 671.5313,230.4884 L671.5313,232.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="43" x="691.75" y="223.19">«port.py»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="47" x="689.75" y="241.8789">PortSpec</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="615" x2="784" y1="252.1019" y2="252.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="622" y="268.7919">+name: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="76" x="622" y="286.4119">+type: PortType</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="99" x="622" y="304.0318">+direction: Direction</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="622" y="321.6518">+unit: Optional[str]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="615" x2="784" y1="330.5818" y2="330.5818"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" text-decoration="underline" textLength="155" x="622" y="347.2718">+compatible(spec1, spec2): bool</text><!--MD5=[06a64c40febe839d2159c166b7b8bc53]
+class PortState--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="168.3218" id="PortState" style="stroke: #A80036; stroke-width: 1.5;" width="167" x="820" y="197"/><ellipse cx="873.25" cy="220.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M874.5313,223.5978 Q874.1875,223.7697 873.8125,223.8478 Q873.4375,223.9416 873.0156,223.9416 Q871.5469,223.9416 870.7656,222.9728 Q870,222.0041 870,220.1603 Q870,218.3166 870.7656,217.3478 Q871.5469,216.3791 873.0156,216.3791 Q873.4375,216.3791 873.8125,216.4728 Q874.2031,216.5509 874.5313,216.7228 L874.5313,218.3322 Q874.1563,217.9884 873.7969,217.8322 Q873.4531,217.6759 873.0938,217.6759 Q872.2969,217.6759 871.8906,218.3009 Q871.4844,218.9259 871.4844,220.1603 Q871.4844,221.3947 871.8906,222.0197 Q872.2969,222.6447 873.0938,222.6447 Q873.4531,222.6447 873.7969,222.4884 Q874.1563,222.3322 874.5313,221.9884 L874.5313,223.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="43" x="895.75" y="214.69">«port.py»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="49" x="892.75" y="233.3789">PortState</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="821" x2="986" y1="243.6019" y2="243.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="76" x="828" y="260.2919">+spec: PortSpec</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="103" x="828" y="277.9119">+value: Optional[Any]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="108" x="828" y="295.5318">+t_last: Optional[float]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="151" x="828" y="313.1518">+history: list[tuple[float, value]]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="821" x2="986" y1="322.0818" y2="322.0818"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="63" x="828" y="338.7718">+set(value, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="828" y="356.3918">+get(as_unit): value</text><!--MD5=[6ddb31aa2b12e6e51143d910d93632d0]
+class MultiDiGraph--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="97.8419" id="MultiDiGraph" style="stroke: #A80036; stroke-width: 1.5;" width="136" x="9.5" y="643"/><ellipse cx="37.35" cy="666.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M38.6313,669.5978 Q38.2875,669.7697 37.9125,669.8478 Q37.5375,669.9416 37.1156,669.9416 Q35.6469,669.9416 34.8656,668.9728 Q34.1,668.0041 34.1,666.1603 Q34.1,664.3166 34.8656,663.3478 Q35.6469,662.3791 37.1156,662.3791 Q37.5375,662.3791 37.9125,662.4728 Q38.3031,662.5509 38.6313,662.7228 L38.6313,664.3322 Q38.2563,663.9884 37.8969,663.8322 Q37.5531,663.6759 37.1938,663.6759 Q36.3969,663.6759 35.9906,664.3009 Q35.5844,664.9259 35.5844,666.1603 Q35.5844,667.3947 35.9906,668.0197 Q36.3969,668.6447 37.1938,668.6447 Q37.5531,668.6447 37.8969,668.4884 Q38.2563,668.3322 38.6313,667.9884 L38.6313,669.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="51" x="64.65" y="660.69">«networkx»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="71" x="54.65" y="679.3789">MultiDiGraph</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="10.5" x2="144.5" y1="689.6019" y2="689.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="120" x="17.5" y="706.2919">All connections including</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="108" x="17.5" y="723.9119">delayed dependencies</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="10.5" x2="144.5" y1="732.8419" y2="732.8419"/><!--MD5=[feb13b35f1cc3e7a285a349d37e5d52a]
+class DiGraph--><rect fill="#FEFECE" filter="url(#f1jmnv2hpe49lz)" height="97.8419" id="DiGraph" style="stroke: #A80036; stroke-width: 1.5;" width="128" x="82.5" y="837"/><ellipse cx="117.55" cy="860.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M118.8313,863.5978 Q118.4875,863.7697 118.1125,863.8478 Q117.7375,863.9416 117.3156,863.9416 Q115.8469,863.9416 115.0656,862.9728 Q114.3,862.0041 114.3,860.1603 Q114.3,858.3166 115.0656,857.3478 Q115.8469,856.3791 117.3156,856.3791 Q117.7375,856.3791 118.1125,856.4728 Q118.5031,856.5509 118.8313,856.7228 L118.8313,858.3322 Q118.4563,857.9884 118.0969,857.8322 Q117.7531,857.6759 117.3938,857.6759 Q116.5969,857.6759 116.1906,858.3009 Q115.7844,858.9259 115.7844,860.1603 Q115.7844,861.3947 116.1906,862.0197 Q116.5969,862.6447 117.3938,862.6447 Q117.7531,862.6447 118.0969,862.4884 Q118.4563,862.3322 118.8313,861.9884 L118.8313,863.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="51" x="134.45" y="854.69">«networkx»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="44" x="137.95" y="873.3789">DiGraph</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="83.5" x2="209.5" y1="883.6019" y2="883.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="112" x="90.5" y="900.2919">Zero-delay connections</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="83.5" x2="209.5" y1="909.2219" y2="909.2219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="49" x="90.5" y="925.9119">only (DAG)</text><!--MD5=[bb96d29dead52850fb9d96b52c73ddbb]
+link System to CoSimComponent--><path d="M329.33,281 C329.33,281 370.22,281 388.73,281 " fill="none" id="System-CoSimComponent" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="401.97,281,392.97,277,396.97,281,392.97,285,401.97,281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="396.97" x2="388.97" y1="281" y2="281"/><polygon fill="#FFFFFF" points="317.33,281,323.33,285,329.33,281,323.33,277,317.33,281" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="44" x="337.5" y="272.69">manages</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="366.0435" y="294.3629">many</text><!--MD5=[bd8425d17305367033875ac9cedb2532]
+link System to Connection--><path d="M324.6088,484.7724 C324.6088,484.7724 388.45,564.14 415.38,597.61 " fill="none" id="System-Connection" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="423.58,607.81,421.0502,598.2916,420.4438,603.9159,414.8196,603.3095,423.58,607.81" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="420.4438" x2="415.435" y1="603.9159" y2="597.685"/><polygon fill="#FFFFFF" points="317.09,475.42,317.732,482.6025,324.6088,484.7724,323.9669,477.5899,317.09,475.42" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="41" x="395.5" y="572.69">contains</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="388.028" y="594.9689">many</text><!--MD5=[e6ce8bb6221e9c048a324b2443cb0704]
+link System to MultiDiGraph--><path d="M110.76,529.06 C102.35,569.99 94.44,608.54 88.44,637.75 " fill="none" id="System-&gt;MultiDiGraph" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="87.42,642.72,93.1613,634.7176,88.4335,637.8238,85.3273,633.096,87.42,642.72" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="46" x="105.5" y="572.69">full graph</text><!--MD5=[b5630201a0f9974fe3dfa798c2adf1d2]
+link System to DiGraph--><path d="M169.25,529.14 C169.79,608.1 168.35,695.81 162.5,776 C161.17,794.15 158.62,813.87 155.94,831.48 " fill="none" id="System-&gt;DiGraph" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="155.11,836.87,160.4266,828.5794,155.8671,831.9276,152.5188,827.3681,155.11,836.87" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="73" x="172.5" y="696.19">zero-delay DAG</text><!--MD5=[3fe1652ef2da94d5ede3232f6b1ca5c1]
+link CoSimComponent to PortSpec--><path d="M591.08,281 C591.08,281 597.8,281 600.63,281 " fill="none" id="CoSimComponent-PortSpec" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="613.89,281,604.89,277,608.89,281,604.89,285,613.89,281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="608.89" x2="600.89" y1="281" y2="281"/><polygon fill="#FFFFFF" points="579.08,281,585.08,285,591.08,281,585.08,277,579.08,281" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="577.8469" y="275.4883">many</text><!--MD5=[4fc01ae467636106491438600c3c7b63]
+link CoSimComponent to PortState--><path d="M540.802,132.6753 C540.802,132.6753 574.69,62.72 596.5,33 C602.56,24.74 604.39,21.55 614,18 C649.64,4.82 749.36,4.82 785,18 C851.02,42.42 880.27,119.32 893.22,183.7 " fill="none" id="CoSimComponent-PortState" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="895.67,196.81,897.9494,187.2285,894.7519,191.895,890.0854,188.6975,895.67,196.81" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="894.7519" x2="893.28" y1="191.895" y2="184.025"/><polygon fill="#FFFFFF" points="536.04,143.69,542.0926,139.77,540.802,132.6753,534.7495,136.5953,536.04,143.69" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="26" x="865.5654" y="183.9689">many</text><!--MD5=[0f10530b61a58c45873fb095faac24f9]
+link PortState to PortSpec--><path d="M807.9261,337.316 C807.9261,337.316 800.99,337.67 798.16,337.56 " fill="none" id="PortState-PortSpec" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="785.16,336.17,793.6878,341.0971,790.1321,336.6974,794.5317,333.1417,785.16,336.17" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="790.1321" x2="798.09" y1="336.6974" y2="337.555"/><polygon fill="#A80036" points="819.83,335.8,813.3727,332.59,807.9261,337.316,814.3834,340.5259,819.83,335.8" style="stroke: #A80036; stroke-width: 1.0;"/><!--MD5=[079d4932babeb82d71aa94c51cbcebce]
+link PortSpec to PortState--><!--MD5=[784de3633765344b8c7f6fdf7c39de9d]
+reverse link CoSimComponent to Connection--><path d="M490.5,423.36 C490.5,484.88 490.5,554.86 490.5,607.82 " fill="none" id="CoSimComponent&lt;-Connection" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="490.5,418.19,486.5,427.19,490.5,423.19,494.5,427.19,490.5,418.19" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="51" x="493.5" y="572.69">references</text><!--MD5=[45029ef8ef5b2af9cca012e7bd33c281]
+reverse link PortSpec to Connection--><path d="M670.72,361.31 C651.79,410.61 625.26,474.71 596.5,529 C582.49,555.43 565.42,583.07 549.09,607.87 " fill="none" id="PortSpec&lt;-Connection" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="672.53,356.58,665.5801,363.5585,670.7447,361.2504,673.0527,366.415,672.53,356.58" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="44" x="580.5" y="572.69">validates</text><!--MD5=[470facabe9d4b02dffbb0d84cd7c9324]
+link MultiDiGraph to DiGraph--><!--MD5=[43a589eb99093ff49336dffecb22dfb3]
+@startuml System
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+
+class System {
+    + name: str
+    + components: Dict[str, CoSimComponent]
+    + connections: List[Connection]
+    + graph: nx.MultiDiGraph
+    - _dag: nx.DiGraph
+    - -
+    + groups: Dict[str, List[CoSimComponent]]
+    + execution_order: List[List[str]]
+    + execution_idx: Dict[str, int]
+    ==
+    + __init__(name)
+    .. Component Management ..
+    + add_component(component)
+    .. Connection Management ..
+    + add_connection(connection)
+    - _validate_connection(c)
+    .. Graph Building ..
+    + build_graphs()
+    + compute_execution_order()
+    .. Simulation Lifecycle ..
+    + initialize(t0)
+    + step(t, dt)
+    + run(t0, tf, dt)
+    .. Internal Helpers ..
+    - _get_latest_values(comp_name, port_name, delay_steps): Any
+    - _set_inputs_for_generation(gen, t)
+}
+
+class Connection <<dataclass>> {
+    + src_comp: str
+    + src_port: str
+    + dst_comp: str
+    + dst_port: str
+    + delay: int = 0
+    + unit: Optional[str] = None
+}
+
+class CoSimComponent <<ABC>> {
+    + name: str
+    + label: str
+    + group: Optional[str]
+    + t: float
+    + input_specs: Dict[str, PortSpec]
+    + output_specs: Dict[str, PortSpec]
+    + inputs: Dict[str, PortState]
+    + outputs: Dict[str, PortState]
+    - -
+    + initialize(t0)
+    + do_step(t, dt)
+    + set_inputs(signals, t)
+    + get_outputs()
+}
+
+class PortSpec <<port.py>> {
+    + name: str
+    + type: PortType
+    + direction: Direction
+    + unit: Optional[str]
+    - -
+    + {static} compatible(spec1, spec2): bool
+}
+
+class PortState <<port.py>> {
+    + spec: PortSpec
+    + value: Optional[Any]
+    + t_last: Optional[float]
+    + history: list[tuple[float, value]]
+    - -
+    + set(value, t)
+    + get(as_unit): value
+}
+
+class MultiDiGraph <<networkx>> {
+    All connections including
+    delayed dependencies
+}
+
+class DiGraph <<networkx>> {
+    Zero-delay connections
+    only (DAG)
+}
+
+System o-right-> "many" CoSimComponent : manages
+System o-right-> "many" Connection : contains
+System -down-> MultiDiGraph : full graph
+System -down-> DiGraph : zero-delay DAG
+
+CoSimComponent o-right-> "many" PortSpec
+CoSimComponent o-right-> "many" PortState
+PortState *-right-> PortSpec
+
+Connection .up.> CoSimComponent : references
+Connection .up.> PortSpec : validates
+
+MultiDiGraph -[hidden]down- DiGraph
+PortSpec -[hidden]down- PortState
+
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+
+    
+
+    
+    
+
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

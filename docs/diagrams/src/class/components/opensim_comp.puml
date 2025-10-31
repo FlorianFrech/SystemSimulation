@@ -1,0 +1,86 @@
+@startuml OpenSimComponent
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+' ============================================================================
+' OPENSIM COMPONENT CLASS
+' ============================================================================
+
+class OpenSimComponent <<CoSimComponent>> {
+    + model: osim.Model
+    + manager: osim.Manager
+    + state: osim.State
+    + parameters: Dict[str, Any]
+    - path: str
+    --
+    + integrator_method: IntegratorMethod
+    + integrator_accuracy: float = 1e-6
+    + internal_dt: float = 1e-4
+    ==
+    + __init__(name, osim_model_path, group)
+    .. Init ..
+    # _finalize_model(t0)
+    + realize()
+    .. Reset ..
+    + reset()
+    .. Coordinate Helpers ..
+    + get_coordinate_value(coord_name): float
+    + get_coordinate_speed(coord_name): float
+    + get_coordinate_acceleration(coord_name): float
+    + set_coordinate_value(coord_name, value)
+    + set_coordinate_speed(coord_name, value)
+    - _find_coordinate(name): osim.Coordinate
+}
+
+class Model <<opensim>> {
+    + initSystem(): State
+    + getCoordinateSet(): CoordinateSet
+    + realizeDynamics(state)
+    + realizeAcceleration(state)
+    + realizeVelocity(state)
+    + realizePosition(state)
+}
+
+class Manager <<opensim>> {
+    + setIntegratorMethod(method)
+    + setIntegratorAccuracy(accuracy)
+    + initialize(state)
+    + integrate(time)
+}
+
+class State <<opensim>> {
+    + setTime(t)
+    + getTime(): float
+}
+
+class Coordinate <<opensim>> {
+    + getName(): str
+    + getValue(state): float
+    + getSpeedValue(state): float
+    + getAccelerationValue(state): float
+    + setValue(state, value)
+    + setSpeedValue(state, value)
+}
+
+class CoordinateSet <<opensim>> {
+    + getSize(): int
+    + get(index): Coordinate
+}
+
+
+' Layout: OpenSimComponent on left, OpenSim classes to the right
+OpenSimComponent -right-> Model
+OpenSimComponent -right-> Manager
+OpenSimComponent -right-> State
+
+Model -down-> CoordinateSet
+CoordinateSet -down-> Coordinate
+Manager -down-> State
+
+' Force vertical arrangement
+Model -[hidden]down- Manager
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml SysSimX_Layers
+
+!define LAYER rectangle
+
+skinparam rectangle {
+    BackgroundColor<<layer1>> LightBlue
+    BackgroundColor<<layer2>> LightGreen
+    BackgroundColor<<layer3>> LightYellow
+    BackgroundColor<<layer4>> LightCoral
+    BackgroundColor<<layer5>> LightGray
+}
+
+LAYER "Layer 1: Core Abstractions\n(SysSimX/core)" as L1 <<layer1>> {
+    [CoSimComponent\n(Abstract Base)]
+    [MultiComponent\n(Composite)]
+    [PortSpec & PortState\n(Interface)]
+}
+
+LAYER "Layer 2: Component Types\n(SysSimX/components)" as L2 <<layer2>> {
+    [FMUComponent\n(FMI Wrapper)]
+    [FEMComponent\n(FEM Base)]
+    [OpenSimComponent\n(MBD Base)]
+}
+
+LAYER "Layer 3: Concrete Models\n(demos/*)" as L3 <<layer3>> {
+    [FEMPendulum\n(NGSolve)]
+    [OpenSimPendulum\n(Simbody)]
+    [PendulumMultiComp\n(Hybrid)]
+}
+
+LAYER "Layer 4: System Integration\n(SysSimX/system)" as L4 <<layer4>> {
+    [System\n(Orchestrator)]
+    [Connection\n(Signal Routing)]
+}
+
+LAYER "Layer 5: Utilities & Viz\n(SysSimX/utilities, SysSimX/viz)" as L5 <<layer5>> {
+    [Units\n(Pint Wrapper)]
+    [FMU Generation\n(OMPython)]
+    [Result Export\n(OpenSim .mot)]
+    [Visualization\n(Graphviz)]
+}
+
+L2 -down-> L1 : inherits from
+L3 -down-> L2 : implements
+L4 -down-> L1 : orchestrates
+L5 -down-> L1 : supports
+L5 -down-> L4 : supports
+
+@enduml
