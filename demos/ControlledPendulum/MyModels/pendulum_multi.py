@@ -85,7 +85,7 @@ class PendulumMultiComp(MultiComponent):
         elif t < 2 * interval:
             return "EQB"
         elif t < 3 * interval:
-            return "OpenSim"
+            return "FEM"
         elif t < 4 * interval:
             return "EQB"
         elif t < 5 * interval:

@@ -1,9 +1,23 @@
 @startuml FMUComponent
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
-skinparam padding 1
+skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
+skinparam nodesep 40
+skinparam ranksep 40
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+left to right direction
 
 ' ============================================================================
 ' FMU COMPONENT CLASS
@@ -69,11 +83,8 @@ class FMU2Slave <<fmpy>> {
 }
 
 ' Layout: FMUComponent on left, everything else to the right
-FMUComponent -right-> ModelDescription
-FMUComponent -right-> FMU2Slave
-ModelDescription -right-> ModelVariable
-
-' Force vertical stacking on right side
-' ModelDescription -[hidden]down- FMU2Slave
+FMUComponent -down-> ModelDescription: has
+FMUComponent -down-> FMU2Slave: has
+ModelDescription -down-> ModelVariable: has
 
 @enduml

@@ -1,9 +1,21 @@
 @startuml SystemGraphVisualizer
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
 skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
+skinparam nodesep 30
+skinparam ranksep 20
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
 
 ' ============================================================================
 ' SYSTEM GRAPH VISUALIZER CLASS

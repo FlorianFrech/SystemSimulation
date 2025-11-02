@@ -1,9 +1,23 @@
 @startuml PortSystem
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
 skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
+skinparam nodesep 20
+skinparam ranksep 20
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+left to right direction
 
 ' ============================================================================
 ' PORT SYSTEM ARCHITECTURE
@@ -11,16 +25,38 @@ skinparam classFontSize 11
 
 abstract class CoSimComponent <<ABC>> {
     + name: str
+    + label: str
+    + group: Optional[str] = None
+    + t: float = 0.0
     --
     + input_specs: Dict[str, PortSpec]
     + output_specs: Dict[str, PortSpec]
     + inputs: Dict[str, PortState]
     + outputs: Dict[str, PortState]
+    + parameters: Dict[str, Any]
     ==
-    # _initialize_ports_from_specs()
-    + set_inputs(signals, t)
-    + get_outputs(): Dict
-    # _update_output_states(t)
+    + __init__(name: str, label: Optional[str], group: Optional[str])
+    --
+    .. Port Management ..
+    # _initialize_ports_from_specs(): None
+    --
+    .. Configuration ..
+    + set_parameters(**parameters: Any): None
+    --
+    .. Lifecycle ..
+    + initialize(t0: float): None
+    + do_step(t: float, dt: float): None
+    + set_inputs(signals: Dict[str, Any], t: Optional[float]): None
+    + get_outputs(): Dict[str, Any]
+    + reset(): None
+    + free(): None
+    --
+    .. Abstract Hooks ..
+    {abstract} # _initialize_component(t0: float): None
+    {abstract} # _do_step_internal(t: float, dt: float): None
+    {abstract} # _update_output_states(t: float): None
+    {abstract} + set_state(state: Dict[str, Any], t: float): None
+    {abstract} + get_state(): Dict[str, Any]
 }
 
 enum PortType <<Enum>> {
@@ -62,15 +98,15 @@ class Quantity <<pint>> {
 }
 
 ' Relationships
-CoSimComponent o-right-> "many" PortSpec : has specs
-CoSimComponent o-right-> "many" PortState : has states
 PortState *-right-> PortSpec : wraps
 PortSpec -down-> PortType : typed by
 PortSpec -down-> Direction : direction
-PortState ..> Quantity : may use
+PortState .-left-.> Quantity : may use
+CoSimComponent o-down-> "many" PortSpec : has specs
+CoSimComponent o-down-> "many" PortState : has states
 
 ' Layout hints
-' PortType -[hidden]down- Direction
+' PortSpec -[hidden]up- Direction
 ' PortSpec -[hidden]down- PortState
 
 ' note top of CoSimComponent

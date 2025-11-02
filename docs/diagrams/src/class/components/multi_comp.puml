@@ -1,9 +1,23 @@
 @startuml MultiComponent
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
 skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
+skinparam nodesep 30
+skinparam ranksep 50
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+left to right direction
 
 ' ============================================================================
 ' MULTI-COMPONENT CLASS
@@ -57,13 +71,8 @@ class ModeKey <<str>> {
 }
 
 ' Layout: MultiComponent on left, related classes to the right
-CoSimComponent <|-down- MultiComponent
-MultiComponent o-up-> "many" CoSimComponent : contains models
-MultiComponent -right-> Hysteresis : uses
-MultiComponent  -down-> StateAdapter : may use
-MultiComponent -> ModeKey : uses
-
-' Vertical arrangement
-MultiComponent -[hidden]up- ModeKey
+MultiComponent -down-> Hysteresis : uses
+MultiComponent -down-> ModeKey : uses
+MultiComponent -down-> StateAdapter : may use
 
 @enduml

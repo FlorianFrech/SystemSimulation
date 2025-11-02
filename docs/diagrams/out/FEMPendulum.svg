@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="932px" preserveAspectRatio="none" style="width:540px;height:932px;" version="1.1" viewBox="0 0 540 932" width="540px" zoomAndPan="magnify"><defs/><g><!--MD5=[482471e633b077974bccc635852d5180]
+class FEMPendulum--><rect fill="#FEFECE" height="865.0214" id="FEMPendulum" style="stroke: #A80036; stroke-width: 1.5;" width="278" x="6" y="56"/><ellipse cx="100.75" cy="79.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M102.0313,82.5978 Q101.6875,82.7697 101.3125,82.8478 Q100.9375,82.9416 100.5156,82.9416 Q99.0469,82.9416 98.2656,81.9728 Q97.5,81.0041 97.5,79.1603 Q97.5,77.3166 98.2656,76.3478 Q99.0469,75.3791 100.5156,75.3791 Q100.9375,75.3791 101.3125,75.4728 Q101.7031,75.5509 102.0313,75.7228 L102.0313,77.3322 Q101.6563,76.9884 101.2969,76.8322 Q100.9531,76.6759 100.5938,76.6759 Q99.7969,76.6759 99.3906,77.3009 Q98.9844,77.9259 98.9844,79.1603 Q98.9844,80.3947 99.3906,81.0197 Q99.7969,81.6447 100.5938,81.6447 Q100.9531,81.6447 101.2969,81.4884 Q101.6563,81.3322 102.0313,80.9884 L102.0313,82.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="81" x="118.25" y="73.69">«FEMComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="76" x="120.75" y="92.3789">FEMPendulum</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="283" y1="102.6019" y2="102.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="262" x="14" y="119.2919">+parameters: Geo, Mat, Mesh, Init, Contact, Sim, Anim</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="128.2219" y2="128.2219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="59" x="14" y="144.9119">+mass: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="66" x="14" y="162.5318">+inertia: float</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="171.4618" y2="171.4618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="65" x="14" y="188.1518">-_mesh: Mesh</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="63" x="14" y="205.7718">-_V: VectorH1</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="14" y="223.3918">-_Q: NumberSpace</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="66" x="14" y="241.0118">-_fes: FESpace</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="14" y="258.6318">-_S: MatrixValued</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="267.5618" y2="267.5618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="136" x="14" y="284.2518">-_gf_[x]: GridFunction (u, v, a)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="151" x="14" y="301.8718">-_gf_[x]old: GridFunction (u, v, a)</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="310.8018" y2="310.8018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="173" x="14" y="327.4917">-_gf_[x]_history: GridFunction (u, v, a)</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="336.4217" y2="336.4217"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="157" x="14" y="353.1117">-_material: NeoHookeanMaterial</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="132" x="14" y="370.7317">-_contact: ContactBoundary</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="379.6617" y2="379.6617"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="161" x="14" y="396.3517">-_torque_parameters: Parameters</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="405.2817" y2="405.2817"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="14" y="421.9717">-_with_contact: bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="14" y="439.5917">-_use_gravity: bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="66" x="14" y="457.2117">-_scene: Draw</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="66" x="14" y="474.8317">-_widgets: list</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="483.7617" y2="483.7617"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="283" y1="485.7617" y2="485.7617"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="14" y="500.4516">+__init__(name, group)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="126" x="14" y="539.6916">#_initialize_component(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="221" x="14" y="557.3116">material law, mesh, FE spaces, grid functions,</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="179" x="14" y="574.9316">contact, torque control, bilinear form</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="112.5" y1="518.1916" y2="518.1916"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="114.5" y="521.5716">Initialization</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="177.5" x2="283" y1="518.1916" y2="518.1916"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="115" x="14" y="614.1716">#_do_step_internal(t, dt)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="108.5" y1="592.6716" y2="592.6716"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="110.5" y="596.0516">Time Stepping</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="181.5" x2="283" y1="592.6716" y2="592.6716"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="14" y="653.4115">+set_inputs(signals, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="14" y="671.0315">+get_outputs(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="124" x="14" y="688.6515">#_update_output_states(t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="123" x="14" y="706.2715">+set_drive_torque(torque)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="135.5" y1="631.9116" y2="631.9116"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="15" x="137.5" y="635.2916">I/O</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="154.5" x2="283" y1="631.9116" y2="631.9116"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="14" y="745.5115">+set_state(state, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="14" y="763.1315">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="37" x="14" y="780.7515">+reset()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="97" y1="724.0115" y2="724.0115"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="99" y="727.3915">State Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="193" x2="283" y1="724.0115" y2="724.0115"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="175" x="14" y="819.9914">-_rigid_proxy(): (theta, omega, alpha)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="210" x="14" y="837.6114">-_get_torque_diagnostics(return_force): float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="164" x="14" y="855.2314">-_get_contact_gap_distance(): float</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="115" y1="798.4914" y2="798.4914"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="56" x="117" y="801.8714">Diagnostics</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="175" x2="283" y1="798.4914" y2="798.4914"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="172" x="14" y="894.4714">+setup_simulation_diagnostics(qref)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="83" x="14" y="912.0914">+visualize_state()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="112" y1="872.9714" y2="872.9714"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="62" x="114" y="876.3514">Visualization</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="178" x2="283" y1="872.9714" y2="872.9714"/><!--MD5=[d2555996c8d5d9213586f41c81adf138]
+class NGS--><rect fill="#FEFECE" height="374.1417" id="NGS" style="stroke: #A80036; stroke-width: 1.5;" width="179" x="350" y="8.5"/><ellipse cx="391.25" cy="31.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M392.5313,35.0978 Q392.1875,35.2697 391.8125,35.3478 Q391.4375,35.4416 391.0156,35.4416 Q389.5469,35.4416 388.7656,34.4728 Q388,33.5041 388,31.6603 Q388,29.8166 388.7656,28.8478 Q389.5469,27.8791 391.0156,27.8791 Q391.4375,27.8791 391.8125,27.9728 Q392.2031,28.0509 392.5313,28.2228 L392.5313,29.8322 Q392.1563,29.4884 391.7969,29.3322 Q391.4531,29.1759 391.0938,29.1759 Q390.2969,29.1759 389.8906,29.8009 Q389.4844,30.4259 389.4844,31.6603 Q389.4844,32.8947 389.8906,33.5197 Q390.2969,34.1447 391.0938,34.1447 Q391.4531,34.1447 391.7969,33.9884 Q392.1563,33.8322 392.5313,33.4884 L392.5313,35.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="49" x="428.75" y="26.19">«package»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="85" x="410.75" y="44.8789">NGSolve Library</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="351" x2="528" y1="55.1019" y2="55.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="87" x="358" y="93.4119">+vec, components</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="135" x="358" y="111.0318">+Set(expr), Interpolate(expr)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="358" y="128.6518">+AddMultiDimComponent(vec)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="351" x2="407" y1="71.9119" y2="71.9119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="409" y="75.2919">GridFunction</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="472" x2="528" y1="71.9119" y2="71.9119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="358" y="167.8918">+gap, normal</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="163" x="358" y="185.5118">+Update(u, bfa, intorder, maxdist)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="136" x="358" y="203.1318">+AddEnergy(expr, deformed)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="351" x2="396" y1="146.3918" y2="146.3918"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="83" x="398" y="149.7718">ContactBoundary</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="483" x2="528" y1="146.3918" y2="146.3918"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="77" x="358" y="242.3718">+Variation(expr)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="51" x="358" y="259.9917">+Compile()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="351" x2="406.5" y1="220.8718" y2="220.8718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="62" x="408.5" y="224.2518">BilinearForm</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="472.5" x2="528" y1="220.8718" y2="220.8718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="110" x="358" y="299.2317">+Set(value), Get(): float</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="351" x2="412" y1="277.7317" y2="277.7317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="51" x="414" y="281.1117">Parameter</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="467" x2="528" y1="277.7317" y2="277.7317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="127" x="358" y="338.4717">+Mesh, FESpace, VectorH1</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="143" x="358" y="356.0917">+NumberSpace, MatrixValued</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="31" x="358" y="373.7117">+Draw</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="351" x2="423.5" y1="316.9717" y2="316.9717"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="28" x="425.5" y="320.3517">Other</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="455.5" x2="528" y1="316.9717" y2="316.9717"/><!--MD5=[33aa6ee6af45ab907ff977cb2cc5901b]
+class NeoHookeanMaterial--><rect fill="#FEFECE" height="150.7018" id="NeoHookeanMaterial" style="stroke: #A80036; stroke-width: 1.5;" width="143" x="368" y="413"/><ellipse cx="381" cy="427.4909" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M382.2813,430.7878 Q381.9375,430.9597 381.5625,431.0378 Q381.1875,431.1316 380.7656,431.1316 Q379.2969,431.1316 378.5156,430.1628 Q377.75,429.1941 377.75,427.3503 Q377.75,425.5066 378.5156,424.5378 Q379.2969,423.5691 380.7656,423.5691 Q381.1875,423.5691 381.5625,423.6628 Q381.9531,423.7409 382.2813,423.9128 L382.2813,425.5222 Q381.9063,425.1784 381.5469,425.0222 Q381.2031,424.8659 380.8438,424.8659 Q380.0469,424.8659 379.6406,425.4909 Q379.2344,426.1159 379.2344,427.3503 Q379.2344,428.5847 379.6406,429.2097 Q380.0469,429.8347 380.8438,429.8347 Q381.2031,429.8347 381.5469,429.6784 Q381.9063,429.5222 382.2813,429.1784 L382.2813,430.7878 Z "/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="111" x="395" y="431.7589">NeoHookeanMaterial</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="369" x2="510" y1="441.9819" y2="441.9819"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="40" x="376" y="458.6719">+E: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="46" x="376" y="476.2919">+nu: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="29" x="376" y="493.9119">+C: CF</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="376" y="511.5318">+energy_density: CF</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="52" x="376" y="529.1518">+sigma: CF</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="369" x2="510" y1="538.0818" y2="538.0818"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="68" x="376" y="554.7718">+__init__(E, nu)</text><!--MD5=[4bf8aff396996fef456cd268939daa24]
+class Config--><rect fill="#FEFECE" height="185.9418" id="Config" style="stroke: #A80036; stroke-width: 1.5;" width="146" x="366.5" y="594.5"/><ellipse cx="386.7" cy="617.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M387.9813,621.0978 Q387.6375,621.2697 387.2625,621.3478 Q386.8875,621.4416 386.4656,621.4416 Q384.9969,621.4416 384.2156,620.4728 Q383.45,619.5041 383.45,617.6603 Q383.45,615.8166 384.2156,614.8478 Q384.9969,613.8791 386.4656,613.8791 Q386.8875,613.8791 387.2625,613.9728 Q387.6531,614.0509 387.9813,614.2228 L387.9813,615.8322 Q387.6063,615.4884 387.2469,615.3322 Q386.9031,615.1759 386.5438,615.1759 Q385.7469,615.1759 385.3406,615.8009 Q384.9344,616.4259 384.9344,617.6603 Q384.9344,618.8947 385.3406,619.5197 Q385.7469,620.1447 386.5438,620.1447 Q386.9031,620.1447 387.2469,619.9884 Q387.6063,619.8322 387.9813,619.4884 L387.9813,621.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="71" x="415.8" y="612.19">«7 dataclasses»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="98" x="402.3" y="630.8789">Config Parameters</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="367.5" x2="511.5" y1="641.1019" y2="641.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="103" x="374.5" y="657.7919">GeometryParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="374.5" y="675.4119">MaterialParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="374.5" y="693.0318">MeshParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="130" x="374.5" y="710.6518">InitialConditionParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="93" x="374.5" y="728.2718">ContactParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="107" x="374.5" y="745.8918">SimulationParameters</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="374.5" y="763.5118">AnimationParameters</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="367.5" x2="511.5" y1="772.4418" y2="772.4418"/><!--MD5=[e4fe01dd81c95566faec636435182cd7]
+link FEMPendulum to NeoHookeanMaterial--><path d="M284.11,488.5 C311.18,488.5 338.62,488.5 362.71,488.5 " fill="none" id="FEMPendulum-&gt;NeoHookeanMaterial" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="367.8,488.5,358.8,484.5,362.8,488.5,358.8,492.5,367.8,488.5" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="36" x="299" y="483.19">creates</text><!--MD5=[5dd39cc11b8a561fa1c3d954769ce370]
+link FEMPendulum to NGS--><path d="M284.11,350.15 C305.05,329.18 326.22,307.98 345.88,288.28 " fill="none" id="FEMPendulum-&gt;NGS" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="349.79,284.36,340.5905,287.877,346.2473,287.8884,346.2359,293.5452,349.79,284.36" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="44" x="295" y="289.19">manages</text><!--MD5=[76db42416bb52f3c3a2b567cb513acfd]
+link FEMPendulum to Config--><path d="M284.11,582.46 C310.85,600.65 337.95,619.09 361.82,635.33 " fill="none" id="FEMPendulum-&gt;Config" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="366.24,638.34,361.0232,629.9863,362.0974,635.5402,356.5435,636.6144,366.24,638.34" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="306" y="583.19">uses</text><!--MD5=[0e1f46d9a947ddb25447da9eb33aec47]
+@startuml FEMPendulum
+
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+skinparam nodesep 30
+skinparam ranksep 10
+
+skinparam backgroundColor white
+
+skinparam shadowing false
+
+left to right direction
+
+
+class FEMPendulum <<FEMComponent>> {
+    + parameters: Geo, Mat, Mesh, Init, Contact, Sim, Anim
+    - -
+    + mass: float
+    + inertia: float
+    - -
+    - _mesh: Mesh
+    - _V: VectorH1
+    - _Q: NumberSpace
+    - _fes: FESpace
+    - _S: MatrixValued
+    - -
+    - _gf_[x]: GridFunction (u, v, a)
+    - _gf_[x]old: GridFunction (u, v, a)
+    - -
+    - _gf_[x]_history: GridFunction (u, v, a)
+    - -
+    - _material: NeoHookeanMaterial
+    - _contact: ContactBoundary
+    - -
+    - _torque_parameters: Parameters
+    - -
+    - _with_contact: bool
+    - _use_gravity: bool
+    - _scene: Draw
+    - _widgets: list
+    ==
+    + __init__(name, group)
+    .. Initialization ..
+    # _initialize_component(t0)
+    material law, mesh, FE spaces, grid functions,
+    contact, torque control, bilinear form
+    .. Time Stepping ..
+    # _do_step_internal(t, dt)
+    .. I/O ..
+    + set_inputs(signals, t)
+    + get_outputs(): Dict
+    # _update_output_states(t)
+    + set_drive_torque(torque)
+    .. State Management ..
+    + set_state(state, t)
+    + get_state(): Dict
+    + reset()
+    .. Diagnostics ..
+    - _rigid_proxy(): (theta, omega, alpha)
+    - _get_torque_diagnostics(return_force): float
+    - _get_contact_gap_distance(): float
+    .. Visualization ..
+    + setup_simulation_diagnostics(qref)
+    + visualize_state()
+}
+
+class "NGSolve Library" as NGS <<package>> {
+    .. GridFunction ..
+    + vec, components
+    + Set(expr), Interpolate(expr)
+    + AddMultiDimComponent(vec)
+    .. ContactBoundary ..
+    + gap, normal
+    + Update(u, bfa, intorder, maxdist)
+    + AddEnergy(expr, deformed)
+    .. BilinearForm ..
+    + Variation(expr)
+    + Compile()
+    .. Parameter ..
+    + Set(value), Get(): float
+    .. Other ..
+    + Mesh, FESpace, VectorH1
+    + NumberSpace, MatrixValued
+    + Draw
+}
+
+class NeoHookeanMaterial {
+    + E: float
+    + nu: float
+    + C: CF
+    + energy_density: CF
+    + sigma: CF
+    - -
+    + __init__(E, nu)
+}
+
+class "Config Parameters" as Config <<7 dataclasses>> {
+    GeometryParameters
+    MaterialParameters 
+    MeshParameters
+    InitialConditionParameters
+    ContactParameters
+    SimulationParameters
+    AnimationParameters
+}
+
+FEMPendulum -down-> NeoHookeanMaterial: creates
+FEMPendulum -down-> NGS: manages
+FEMPendulum -down-> Config: uses
+
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

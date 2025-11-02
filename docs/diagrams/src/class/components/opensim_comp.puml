@@ -1,9 +1,23 @@
 @startuml OpenSimComponent
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
 skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
+skinparam nodesep 40
+skinparam ranksep 40
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+left to right direction
 
 ' ============================================================================
 ' OPENSIM COMPONENT CLASS
@@ -65,22 +79,16 @@ class Coordinate <<opensim>> {
     + setSpeedValue(state, value)
 }
 
-class CoordinateSet <<opensim>> {
-    + getSize(): int
-    + get(index): Coordinate
-}
-
 
 ' Layout: OpenSimComponent on left, OpenSim classes to the right
-OpenSimComponent -right-> Model
-OpenSimComponent -right-> Manager
-OpenSimComponent -right-> State
+OpenSimComponent -down-> Model
+OpenSimComponent -down-> Manager
+OpenSimComponent -left-> State
 
-Model -down-> CoordinateSet
-CoordinateSet -down-> Coordinate
-Manager -down-> State
+Model -left-> Coordinate
+Manager -left-> State
 
 ' Force vertical arrangement
-Model -[hidden]down- Manager
+Manager -[hidden]down- State
 
 @enduml

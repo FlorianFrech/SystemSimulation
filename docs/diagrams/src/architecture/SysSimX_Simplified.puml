@@ -2,14 +2,48 @@
 
 !define ABSTRACT_CLASS abstract class
 
-skinparam packageStyle rectangle
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 9
+skinparam classFontSize 10
+skinparam nodesep 30
+skinparam ranksep 30
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+' Hide empty members
+hide empty members
+
+' Package colors - pastel/decent backgrounds
+skinparam package {
+    BackgroundColor<<core>> #E6F3FF
+    BorderColor<<core>> #4A90E2
+    
+    BackgroundColor<<components>> #E8F5E9
+    BorderColor<<components>> #66BB6A
+    
+    BackgroundColor<<models>> #FFF3E0
+    BorderColor<<models>> #FFA726
+    
+    BackgroundColor<<system>> #F3E5F5
+    BorderColor<<system>> #AB47BC
+}
+
+left to right direction
 
 ' ============================================================================
 ' SIMPLIFIED VIEW - CORE CONCEPTS
 ' ============================================================================
 
-package "Core Abstractions" {
+package "Core Abstractions" <<core>> {
     ABSTRACT_CLASS CoSimComponent <<abstract>> {
         + name: str
         + inputs: Dict[str, PortState]
@@ -30,74 +64,153 @@ package "Core Abstractions" {
         + mode_selector: Callable
         --
         + _register_models()
-        + _adapt_state(state: Dict, target: str): Dict
+        + _adapt_state(state, target): Dict
     }
     
-    MultiComponent --|> CoSimComponent
+    MultiComponent -down-|> CoSimComponent
 }
 
-package "Component Types" {
+package "Component Types" <<components>> {
     class FMUComponent {
-        FMI 2.0 CS wrapper
+        + _path: str
+        + _md: ModelDescription
+        + _instance: FMU2Slave
+        + _vrs_in/out: Dict[str, int]
+        --
+        + __init__(name, fmu_path, group)
+        .. FMI 2.0 CS ..
+        - _build_port_specs()
+        + set_parameters(**params)
+        + _do_step_internal(t, dt)
+        .. Batch I/O ..
+        + setReal/Integer/Boolean/String()
+        + getReal/Integer/Boolean/String()
     }
     
     class FEMComponent {
-        Finite Element base
+        + geometry, mesh: Optional[Any]
+        + spaces: Dict[str, Any]
+        + gfs: Dict[str, Any]
+        + bfa, lf: Optional[Any]
+        + solver: Optional[Any]
+        --
+        + __init__(name, label, group)
+        .. FEM Backend ..
+        {abstract} + _initialize_component(t0)
+        {abstract} + _do_step_internal(t, dt)
+        .. Optional ..
+        + load_mesh_from_file(path)
+        + export_results(path, format)
+        + visualize_state()
     }
     
     class OpenSimComponent {
-        Multi-body dynamics base
+        + model: osim.Model
+        + manager: osim.Manager
+        + state: osim.State
+        --
+        + integrator_method: IntegratorMethod
+        + integrator_accuracy: float
+        + internal_dt: float
+        --
+        + __init__(name, osim_model_path, group)
+        .. Initialization ..
+        + _finalize_model(t0)
+        + realize()
+        .. Coordinate Helpers ..
+        + get/set_coordinate_value(name)
+        + get/set_coordinate_speed(name)
+        + get_coordinate_acceleration(name)
     }
-    
-    FMUComponent --|> CoSimComponent
-    FEMComponent --|> CoSimComponent
-    OpenSimComponent --|> CoSimComponent
+
+    FMUComponent -down-|> CoSimComponent
+    FEMComponent -down-|> CoSimComponent
+    OpenSimComponent -down-|> CoSimComponent
 }
 
-package "Concrete Models" {
+package "Concrete Models" <<models>> {
     class FEMPendulum {
-        netgen - NGSolve implementation
+        + config: 7 dataclasses
+        + mass, inertia: float
+        --
+        - _mesh, _fes: NGSolve
+        - _gf_u/v/a: GridFunction
+        - _material: NeoHookean
+        - _contact: ContactBoundary
+        - _torque_drive: Parameter
+        --
+        .. NGSolve Implementation ..
+        - _build()
+        - _initialize_torque_control()
+        + set_drive_torque(torque)
     }
     
     class OpenSimPendulum {
-        OpenSim implementation
+        + parameters: Dict[str, Any]
+        --
+        + coord: osim.Coordinate
+        + actuator: osim.CoordinateActuator
+        --
+        - _with_contact: bool
+        - _use_gravity: bool
+        --
+        .. Model Building ..
+        - _build()
+        + save_model(file_path)
     }
     
     class PendulumMultiComp {
-        Hybrid pendulum\nFMU + OpenSim + FEM
+        + models: {"FEM", "OpenSim", "FMU"}
+        + active_mode: ModeKey
+        + mode_selector: Callable
+        + hysteresis: Hysteresis
+        --
+        .. Mode Switching ..
+        + _register_models()
+        + _adapt_state(state, target): Dict
+        - _switch_mode(new_mode, t)
     }
 
-
-    FEMPendulum --|> FEMComponent
-    OpenSimPendulum --|> OpenSimComponent
-    PendulumMultiComp --|> MultiComponent
-    PendulumMultiComp o-- FEMPendulum
-    PendulumMultiComp o-- OpenSimPendulum
-    PendulumMultiComp o-- FMUComponent
+    FEMPendulum -down-|> FEMComponent
+    OpenSimPendulum -down-|> OpenSimComponent
+    PendulumMultiComp -down-|> MultiComponent
+    PendulumMultiComp o- FEMPendulum
+    PendulumMultiComp o- OpenSimPendulum
+    PendulumMultiComp o- FMUComponent
 }
 
-package "System Integration" {
+package "System Integration" <<system>> {
     class Connection <<dataclass>> {
         + src_comp: str
         + src_port: str
         + dst_comp: str
         + dst_port: str
-        + delay: int
+        + delay: int = 0
+        + unit: Optional[str]
     }
     
     class System {
         + components: Dict[str, CoSimComponent]
         + connections: List[Connection]
-        + execution_order: List[str]
+        + graph: nx.MultiDiGraph
+        + execution_order: List[List[str]]
         --
-        + add_component(comp: CoSimComponent)
-        + add_connection(conn: Connection)
+        + add_component(comp)
+        + add_connection(conn)
+        + build_graphs()
         + compute_execution_order()
-        + run(t0: float, tf: float, dt: float)
+        + initialize(t0)
+        + step(t, dt)
+        + run(t0, tf, dt)
     }
     
-    System o-- "many" CoSimComponent
-    System o-- "many" Connection
+    System o-right- "many" CoSimComponent
+    System o- "many" Connection
 }
+
+' Force left-to-right layout
+"Concrete Models" -[hidden]down- "Component Types"
+"Component Types" -[hidden]down- "Core Abstractions"
+"Core Abstractions" -[hidden]right- "System Integration"
 
 @enduml

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1511px" preserveAspectRatio="none" style="width:625px;height:1511px;" version="1.1" viewBox="0 0 625 1511" width="625px" zoomAndPan="magnify"><defs><filter height="300%" id="f1cnuchiplr8ux" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="247" x="192.5" y="12.69">Software Framework - Vertical Layered Architecture</text><!--MD5=[4499c58aefeb8777a4ef8729a6b9746a]
+cluster L1--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="22,198.62,151,198.62,158,222.24,220,222.24,220,340.62,22,340.62,22,198.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="22" x2="158" y1="222.24" y2="222.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="119" x="28" y="213.31">Presentation / UI Layer</text><!--MD5=[30107c386ad61863a1077fa9b8608265]
+cluster L2--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="101,391.62,280,391.62,287,415.24,290,415.24,290,533.62,101,533.62,101,391.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="101" x2="287" y1="415.24" y2="415.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="169" x="107" y="406.31">Application / Orchestration Layer</text><!--MD5=[34c507e18fc183d68ebbdf9f74fe0bb7]
+cluster L3--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="107,584.62,244,584.62,251,608.24,363,608.24,363,726.62,107,726.62,107,584.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="107" x2="251" y1="608.24" y2="608.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="127" x="113" y="599.31">Domain / Modeling Layer</text><!--MD5=[faba4da492b916cef897e57c3e88ce83]
+cluster L4--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="146,777.62,267,777.62,274,801.24,434,801.24,434,902.62,146,902.62,146,777.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="146" x2="274" y1="801.24" y2="801.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="111" x="152" y="792.31">Plugin / Module Layer</text><!--MD5=[a0db8f97357b434a43a32cbc167ab7a2]
+cluster L5--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="250,953.62,405,953.62,412,977.24,504,977.24,504,1113.62,250,1113.62,250,953.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="250" x2="412" y1="977.24" y2="977.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="145" x="256" y="968.31">Integration / Adapters Layer</text><!--MD5=[c9a659dff80987d3ae46bd84f7fc68e0]
+cluster L6--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="354,1164.62,503,1164.62,510,1188.24,576,1188.24,576,1306.62,354,1306.62,354,1164.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="354" x2="510" y1="1188.24" y2="1188.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="139" x="360" y="1179.31">Infrastructure / Data Layer</text><!--MD5=[5bd7e858e2362e40da9c538722333190]
+cluster L7--><polygon fill="#F7F7F7" filter="url(#f1cnuchiplr8ux)" points="428,1357.62,514,1357.62,521,1381.24,598,1381.24,598,1499.62,428,1499.62,428,1357.62" style="stroke: #888888; stroke-width: 1.5;"/><line style="stroke: #888888; stroke-width: 1.5;" x1="428" x2="521" y1="1381.24" y2="1381.24"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="76" x="434" y="1372.31">Platform Layer</text><!--MD5=[228f3137ee1ed40e7458dea6d7b8b74c]
+entity L1A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="90.4799" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="167" x="37.5" y="234.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="47" x="49.5" y="257.31">• CLI / TUI</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="77" x="49.5" y="274.93">• Web UI (React)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="143" x="49.5" y="292.55">• API Docs (OpenAPI/Swagger)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="49.5" y="310.1699">• Dashboards</text><!--MD5=[bcb185e6287556694ca0c715699b7325]
+entity L2A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="90.4799" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="140" x="129" y="427.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="141" y="450.31">• Use Cases / Services</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="116" x="141" y="467.93">• Workflow Orchestrator</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="112" x="141" y="485.55">• Session &amp; State Mgmt</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="56" x="141" y="503.1699">• Validation</text><!--MD5=[a54e51cb7901f2d6606dfaa6b3d2154b]
+entity L3A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="90.4799" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="224" x="123" y="620.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="141" x="135" y="643.31">• Domain Models &amp; Contracts</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="200" x="135" y="660.93">• Simulation Graph (Systems, Subsystems)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="125" x="135" y="678.55">• Solvers (explicit/implicit)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="80" x="135" y="696.1699">• Rules / Policies</text><!--MD5=[eb420794627e5fa49d96322210bea94d]
+entity L4A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="72.86" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="256" x="162" y="813.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="117" x="174" y="836.31">• Module SPI (Plugin API)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="232" x="174" y="853.93">• Built-in Modules (Kinematics, Control, Sensors)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="93" x="174" y="871.55">• Sandbox/Isolation</text><!--MD5=[42276335675e6d16c14b54915d3087b2]
+entity L5A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="108.0999" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="223" x="265.5" y="989.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="90" x="277.5" y="1012.31">• FMI/FMU Adapter</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="277.5" y="1029.93">• OpenSim Adapter</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="90" x="277.5" y="1047.55">• FEM/CFD Adapter</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="199" x="277.5" y="1065.1699">• External Services (Licenses, HPC Queue)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="161" x="277.5" y="1082.7899">• Messaging (e.g., gRPC, ZeroMQ)</text><!--MD5=[b8a1fb31d5618d9d40e628e80ddab746]
+entity L6A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="90.4799" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="189" x="370.5" y="1200.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="382.5" y="1223.31">• Persistence (DB, Files)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="45" x="382.5" y="1240.93">• Caching</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="165" x="382.5" y="1258.55">• Artifact Store (results, metadata)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="382.5" y="1276.1699">• Search/Index</text><!--MD5=[87c3f9dce820419ca44c661ca616c6cc]
+entity L7A--><rect fill="#FFFFFF" filter="url(#f1cnuchiplr8ux)" height="90.4799" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="137" x="444.5" y="1393.62"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="85" x="456.5" y="1416.31">• OS &amp; Containers</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="113" x="456.5" y="1433.93">• GPU/CPU Acceleration</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="103" x="456.5" y="1451.55">• Filesystem/Network</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="75" x="456.5" y="1469.1699">• Secrets &amp; KMS</text><!--MD5=[590107e1e98f4d4acf72bacea32f2196]
+entity CROSSCUTTING--><rect fill="#DDDDDD" filter="url(#f1cnuchiplr8ux)" height="125.7199" rx="6" ry="6" style="stroke: #555555; stroke-width: 1.5;" width="206" x="297" y="25.62"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="67" x="309" y="48.31">Cross-Cutting</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="86" x="309" y="65.93">• Security &amp; AuthZ</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="182" x="309" y="83.55">• Observability (Logs, Metrics, Traces)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="150" x="309" y="101.1699">• Configuration &amp; Feature Flags</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="77" x="309" y="118.7899">• Error Handling</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="55" x="309" y="136.4099">• I18n/L10n</text><!--MD5=[d800b71763b4c344e597db2e2f39644b]
+link L1A to L2A--><path d="M139.09,324.92 C151.05,354.21 166.74,392.62 179.06,422.79 " fill="none" id="L1A-&gt;L2A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="181.01,427.56,181.3187,417.716,179.1235,422.9295,173.91,420.7343,181.01,427.56" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="161" y="370.31">calls</text><!--MD5=[a51a1555f62e5b39f33038adc6bf0a74]
+link L2A to L3A--><path d="M193.52,517.94 C192.6,534.03 192.8,552.26 196,568.62 C199.07,584.32 204.71,600.7 210.77,615.4 " fill="none" id="L2A-&gt;L3A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="212.84,620.31,213.0231,610.4628,210.8946,615.704,205.6535,613.5755,212.84,620.31" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="101" x="199" y="563.31">invokes domain logic</text><!--MD5=[0468ead75f2c0e3709f7d36eef5e7146]
+link L3A to L4A--><path d="M248.31,710.8 C257.3,740.62 269.07,779.67 277.81,808.67 " fill="none" id="L3A-&gt;L4A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="279.29,813.6,280.5218,803.8285,277.8467,808.8128,272.8623,806.1377,279.29,813.6" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="266" y="756.31">loads plugins</text><!--MD5=[663289445e3610c6de5a80be78b3c2ce]
+link L4A to L5A--><path d="M306.16,886.69 C318.67,914.22 336.24,952.9 350.76,984.85 " fill="none" id="L4A-&gt;L5A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="352.87,989.52,352.7872,979.6715,350.801,984.9682,345.5043,982.9819,352.87,989.52" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="68" x="332" y="932.31">uses adapters</text><!--MD5=[aa99e62ac9e0488a5e60e8003d539500]
+link L5A to L6A--><path d="M400.35,1097.69 C413.74,1128.12 430.43,1166.04 443.49,1195.74 " fill="none" id="L5A-&gt;L6A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="445.56,1200.43,445.6028,1190.5812,443.5492,1195.8522,438.2782,1193.7985,445.56,1200.43" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="86" x="424" y="1143.31">stores/reads data</text><!--MD5=[bd2de1dc2950c806484a2faef0f39a52]
+link L6A to L7A--><path d="M476.13,1290.92 C483.46,1320.09 493.07,1358.31 500.64,1388.42 " fill="none" id="L6A-&gt;L7A" style="stroke: #666666; stroke-width: 1.0;"/><polygon fill="#666666" points="501.93,1393.56,503.6277,1383.8586,500.7173,1388.7093,495.8666,1385.7988,501.93,1393.56" style="stroke: #666666; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="36" x="490" y="1336.31">runs on</text><!--MD5=[a8220746ab37d08248ec46a3ba701c35]
+link CROSSCUTTING to L1A--><path d="M296.59,141.64 C274.72,153.9 252.18,167.53 232,181.62 C211.03,196.26 189.52,214.26 171.08,230.75 " fill="none" id="CROSSCUTTING-&gt;L1A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="166.95,234.47,176.3213,231.4404,170.6728,231.1323,170.9809,225.4838,166.95,234.47" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[dfb66fbc1a786fc44626664c15054a07]
+link CROSSCUTTING to L2A--><path d="M326.68,151.72 C317.97,161.15 309.79,171.22 303,181.62 C252.97,258.3 223.34,362.11 209.21,422.47 " fill="none" id="CROSSCUTTING-&gt;L2A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="208.05,427.46,213.9831,419.5988,209.1816,422.5897,206.1907,417.7882,208.05,427.46" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[919fd0a9a2de0145317a257aae82adb9]
+link CROSSCUTTING to L3A--><path d="M381.5,151.75 C378.81,161.7 376.21,171.91 374,181.62 C335.32,351.84 376.17,408.35 307,568.62 C299.76,585.4 289.02,601.96 278.03,616.48 " fill="none" id="CROSSCUTTING-&gt;L3A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="274.93,620.51,283.5871,615.8137,277.9779,616.5463,277.2452,610.9371,274.93,620.51" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[c007ec4ab89c8d01699b7b328719d5e0]
+link CROSSCUTTING to L4A--><path d="M400,151.76 C400,188.63 400,236.29 400,278.62 C400,278.62 400,278.62 400,666.62 C400,722.12 362.22,775.25 330.94,809.73 " fill="none" id="CROSSCUTTING-&gt;L4A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="327.55,813.42,336.576,809.479,330.9247,809.7307,330.6731,804.0794,327.55,813.42" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[f5d0f6a4027b59803b776dcb3d25175c]
+link CROSSCUTTING to L5A--><path d="M436.12,151.74 C453.66,187.61 471,234.28 471,278.62 C471,278.62 471,278.62 471,851.12 C471,899.7 446.32,948.77 422.26,985.08 " fill="none" id="CROSSCUTTING-&gt;L5A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="419.33,989.44,427.6754,984.2099,422.1232,985.2929,421.0401,979.7407,419.33,989.44" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[72da78caf75c0b8cb4dd3d1a4b912412]
+link CROSSCUTTING to L6A--><path d="M478.06,151.69 C511.06,185.14 542,229.58 542,278.62 C542,278.62 542,278.62 542,1044.62 C542,1091.87 536.84,1104.48 520,1148.62 C513.92,1164.56 505.44,1180.99 496.96,1195.66 " fill="none" id="CROSSCUTTING-&gt;L6A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="494.33,1200.15,502.3318,1194.4079,496.8582,1195.8363,495.4299,1190.3627,494.33,1200.15" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[9aafe316d407c4f5c5cb1173b40e667c]
+link CROSSCUTTING to L7A--><path d="M503.07,134.66 C557.44,166.07 613,213.98 613,278.62 C613,278.62 613,278.62 613,1246.62 C613,1299.67 582.35,1352.53 554.98,1389.14 " fill="none" id="CROSSCUTTING-&gt;L7A" style="stroke: #666666; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#666666" points="551.66,1393.53,560.29,1388.7841,554.6851,1389.5489,553.9202,1383.944,551.66,1393.53" style="stroke: #666666; stroke-width: 1.0;"/><!--MD5=[caa75a577d45ac6bd46daafeeb7f66f1]
+@startuml LayerDiagram
+
+
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+top to bottom direction
+skinparam rectangle {
+  BackgroundColor White
+  BorderColor #555555
+  RoundCorner 12
+}
+skinparam package {
+  BackgroundColor #f7f7f7
+  BorderColor #888888
+}
+skinparam Arrow {
+  Color #666666
+}
+
+title Software Framework - Vertical Layered Architecture
+
+rectangle "<b>Cross-Cutting</b>\n• Security & AuthZ\n• Observability (Logs, Metrics, Traces)\n• Configuration & Feature Flags\n• Error Handling\n• I18n/L10n" as CROSSCUTTING #DDDDDD
+
+
+package "Presentation / UI Layer" as L1 {
+  rectangle "• CLI / TUI\n• Web UI (React)\n• API Docs (OpenAPI/Swagger)\n• Dashboards" as L1A
+}
+
+package "Application / Orchestration Layer" as L2 {
+  rectangle "• Use Cases / Services\n• Workflow Orchestrator\n• Session & State Mgmt\n• Validation" as L2A
+}
+
+package "Domain / Modeling Layer" as L3 {
+  rectangle "• Domain Models & Contracts\n• Simulation Graph (Systems, Subsystems)\n• Solvers (explicit/implicit)\n• Rules / Policies" as L3A
+}
+
+package "Plugin / Module Layer" as L4 {
+  rectangle "• Module SPI (Plugin API)\n• Built-in Modules (Kinematics, Control, Sensors)\n• Sandbox/Isolation" as L4A
+}
+
+package "Integration / Adapters Layer" as L5 {
+  rectangle "• FMI/FMU Adapter\n• OpenSim Adapter\n• FEM/CFD Adapter\n• External Services (Licenses, HPC Queue)\n• Messaging (e.g., gRPC, ZeroMQ)" as L5A
+}
+
+package "Infrastructure / Data Layer" as L6 {
+  rectangle "• Persistence (DB, Files)\n• Caching\n• Artifact Store (results, metadata)\n• Search/Index" as L6A
+}
+
+package "Platform Layer" as L7 {
+  rectangle "• OS & Containers\n• GPU/CPU Acceleration\n• Filesystem/Network\n• Secrets & KMS" as L7A
+}
+
+L1A -down-> L2A : calls
+L2A -down-> L3A : invokes domain logic
+L3A -down-> L4A : loads plugins
+L4A -down-> L5A : uses adapters
+L5A -down-> L6A : stores/reads data
+L6A -down-> L7A : runs on
+
+CROSSCUTTING .down.> L1A
+CROSSCUTTING .down.> L2A
+CROSSCUTTING .down.> L3A
+CROSSCUTTING .down.> L4A
+CROSSCUTTING .down.> L5A
+CROSSCUTTING .down.> L6A
+CROSSCUTTING .down.> L7A
+
+skinparam ArrowMessageAlign center
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

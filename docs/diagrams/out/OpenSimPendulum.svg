@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="593px" preserveAspectRatio="none" style="width:694px;height:593px;" version="1.1" viewBox="0 0 694 593" width="694px" zoomAndPan="magnify"><defs><filter height="300%" id="ftmnoqcxla9js" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[69e00329ecbaf1bd988a736d68dd57f3]
+class OpenSimPendulum--><rect fill="#FEFECE" filter="url(#ftmnoqcxla9js)" height="572.7215" id="OpenSimPendulum" style="stroke: #A80036; stroke-width: 1.5;" width="237" x="203" y="10"/><ellipse cx="264.75" cy="33.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M266.0313,36.5978 Q265.6875,36.7697 265.3125,36.8478 Q264.9375,36.9416 264.5156,36.9416 Q263.0469,36.9416 262.2656,35.9728 Q261.5,35.0041 261.5,33.1603 Q261.5,31.3166 262.2656,30.3478 Q263.0469,29.3791 264.5156,29.3791 Q264.9375,29.3791 265.3125,29.4728 Q265.7031,29.5509 266.0313,29.7228 L266.0313,31.3322 Q265.6563,30.9884 265.2969,30.8322 Q264.9531,30.6759 264.5938,30.6759 Q263.7969,30.6759 263.3906,31.3009 Q262.9844,31.9259 262.9844,33.1603 Q262.9844,34.3947 263.3906,35.0197 Q263.7969,35.6447 264.5938,35.6447 Q264.9531,35.6447 265.2969,35.4884 Q265.6563,35.3322 266.0313,34.9884 L266.0313,36.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="104" x="283.25" y="27.69">«OpenSimComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="102" x="284.25" y="46.3789">OpenSimPendulum</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="204" x2="439" y1="56.6019" y2="56.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="129" x="211" y="73.2919">+parameters: Dict[str, Any]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="204" x2="439" y1="82.2219" y2="82.2219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="166" x="211" y="98.9119">+coord: Optional[osim.Coordinate]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="221" x="211" y="116.5318">+actuator: Optional[osim.CoordinateActuator]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="204" x2="439" y1="125.4618" y2="125.4618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="211" y="142.1518">-_with_contact: bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="211" y="159.7718">-_use_gravity: bool</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="204" x2="439" y1="168.7018" y2="168.7018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="46" x="211" y="185.3918">+q0: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="73" x="211" y="203.0118">+omega0: float</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="204" x2="439" y1="211.9418" y2="211.9418"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="204" x2="439" y1="213.9418" y2="213.9418"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="211" y="228.6318">+__init__(name, group)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="37" x="211" y="267.8718">-_build()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="283" y1="246.3718" y2="246.3718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="73" x="285" y="249.7518">Model Building</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="360" x2="439" y1="246.3718" y2="246.3718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="211" y="307.1117">+initialize(t0)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="289" y1="285.6117" y2="285.6117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="291" y="288.9917">Initialization</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="354" x2="439" y1="285.6117" y2="285.6117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="115" x="211" y="346.3517">#_do_step_internal(t, dt)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="285" y1="324.8517" y2="324.8517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="287" y="328.2317">Time Stepping</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="358" x2="439" y1="324.8517" y2="324.8517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="211" y="385.5917">+set_inputs(signals, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="211" y="403.2117">+get_outputs(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="124" x="211" y="420.8317">#_update_output_states(t)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="312" y1="364.0917" y2="364.0917"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="15" x="314" y="367.4717">I/O</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="331" x2="439" y1="364.0917" y2="364.0917"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="211" y="460.0716">+set_state(state, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="211" y="477.6916">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="37" x="211" y="495.3116">+reset()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="273.5" y1="438.5716" y2="438.5716"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="275.5" y="441.9516">State Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="369.5" x2="439" y1="438.5716" y2="438.5716"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="155" x="211" y="534.5516">+set_parameters(**parameters)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="287" y1="513.0516" y2="513.0516"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="65" x="289" y="516.4316">Configuration</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="356" x2="439" y1="513.0516" y2="513.0516"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="109" x="211" y="573.7916">+save_model(file_path)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="204" x2="304" y1="552.2916" y2="552.2916"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="31" x="306" y="555.6716">Export</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="339" x2="439" y1="552.2916" y2="552.2916"/><!--MD5=[03b9f77d4324894200cec3e82e7fec54]
+class Params--><rect fill="#FEFECE" filter="url(#ftmnoqcxla9js)" height="309.2817" id="Params" style="stroke: #A80036; stroke-width: 1.5;" width="167" x="516" y="8"/><ellipse cx="554.25" cy="31.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M555.5313,34.5978 Q555.1875,34.7697 554.8125,34.8478 Q554.4375,34.9416 554.0156,34.9416 Q552.5469,34.9416 551.7656,33.9728 Q551,33.0041 551,31.1603 Q551,29.3166 551.7656,28.3478 Q552.5469,27.3791 554.0156,27.3791 Q554.4375,27.3791 554.8125,27.4728 Q555.2031,27.5509 555.5313,27.7228 L555.5313,29.3322 Q555.1563,28.9884 554.7969,28.8322 Q554.4531,28.6759 554.0938,28.6759 Q553.2969,28.6759 552.8906,29.3009 Q552.4844,29.9259 552.4844,31.1603 Q552.4844,32.3947 552.8906,33.0197 Q553.2969,33.6447 554.0938,33.6447 Q554.4531,33.6447 554.7969,33.4884 Q555.1563,33.3322 555.5313,32.9884 L555.5313,34.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="40" x="593.25" y="25.69">«4 dicts»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="79" x="573.75" y="44.3789">Parameter Sets</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="517" x2="682" y1="54.6019" y2="54.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="101" x="524" y="71.2919">MODEL_PARAMETERS</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="107" x="524" y="88.9119">• mass, r_head, length</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="524" y="106.5318">• use_gravity</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="527" y="124.1518"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="112" x="524" y="141.7718">CONTACT_PARAMETERS</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="524" y="159.3918">• with_contact, stiffness</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="131" x="524" y="177.0118">• dissipation, friction coeffs</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="527" y="194.6318"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="100" x="524" y="212.2518">INITIAL_CONDITIONS</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="524" y="229.8718">• q0, omega0</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="527" y="247.4917"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="102" x="524" y="265.1117">SOLVER_PARAMETERS</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="151" x="524" y="282.7317">• internal_dt, IntegratorMethod</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="49" x="524" y="300.3517">• accuracy</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="517" x2="682" y1="309.2817" y2="309.2817"/><!--MD5=[54689393263598f76708a097b2ccadf4]
+class OSim--><rect fill="#FEFECE" filter="url(#ftmnoqcxla9js)" height="374.1417" id="OSim" style="stroke: #A80036; stroke-width: 1.5;" width="149" x="6" y="109.5"/><ellipse cx="31.6" cy="132.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M32.8813,136.0978 Q32.5375,136.2697 32.1625,136.3478 Q31.7875,136.4416 31.3656,136.4416 Q29.8969,136.4416 29.1156,135.4728 Q28.35,134.5041 28.35,132.6603 Q28.35,130.8166 29.1156,129.8478 Q29.8969,128.8791 31.3656,128.8791 Q31.7875,128.8791 32.1625,128.9728 Q32.5531,129.0509 32.8813,129.2228 L32.8813,130.8322 Q32.5063,130.4884 32.1469,130.3322 Q31.8031,130.1759 31.4438,130.1759 Q30.6469,130.1759 30.2406,130.8009 Q29.8344,131.4259 29.8344,132.6603 Q29.8344,133.8947 30.2406,134.5197 Q30.6469,135.1447 31.4438,135.1447 Q31.8031,135.1447 32.1469,134.9884 Q32.5063,134.8322 32.8813,134.4884 L32.8813,136.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="49" x="68.4" y="127.19">«package»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="89" x="48.4" y="145.8789">OpenSim Library</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="154" y1="156.1019" y2="156.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="107" x="14" y="194.4119">+Model, Body, Ground</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="14" y="212.0318">+PinJoint, WeldJoint</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="133" x="14" y="229.6518">+Coordinate, CoordinateSet</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="100" x="14" y="247.2718">+CoordinateActuator</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="32" y1="172.9119" y2="172.9119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="93" x="34" y="176.2919">Model Components</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="129" x2="154" y1="172.9119" y2="172.9119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="14" y="286.5118">+Sphere, Brick, Cylinder</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="104" x="14" y="304.1318">+PhysicalOffsetFrame</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="55" y1="265.0118" y2="265.0118"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="47" x="57" y="268.3918">Geometry</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="106" x2="154" y1="265.0118" y2="265.0118"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="76" x="14" y="343.3718">+ContactSphere</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="90" x="14" y="360.9917">+ContactHalfSpace</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="14" y="378.6117">+HuntCrossleyForce</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="60" y1="321.8718" y2="321.8718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="37" x="62" y="325.2518">Contact</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="101" x2="154" y1="321.8718" y2="321.8718"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="80" x="14" y="417.8517">+Manager, State</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="14" y="435.4717">+IntegratorMethod</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="53" y1="396.3517" y2="396.3517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="51" x="55" y="399.7317">Simulation</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="108" x2="154" y1="396.3517" y2="396.3517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="67" x="14" y="474.7117">+Vec3, Inertia</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="7" x2="59.5" y1="453.2117" y2="453.2117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="38" x="61.5" y="456.5917">Utilities</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="101.5" x2="154" y1="453.2117" y2="453.2117"/><!--MD5=[ea13aecf8df941b18fb8e3885c78c184]
+class Ports--><rect fill="#FEFECE" filter="url(#ftmnoqcxla9js)" height="185.9418" id="Ports" style="stroke: #A80036; stroke-width: 1.5;" width="129" x="535" y="336.5"/><ellipse cx="548" cy="359.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M549.2813,363.0978 Q548.9375,363.2697 548.5625,363.3478 Q548.1875,363.4416 547.7656,363.4416 Q546.2969,363.4416 545.5156,362.4728 Q544.75,361.5041 544.75,359.6603 Q544.75,357.8166 545.5156,356.8478 Q546.2969,355.8791 547.7656,355.8791 Q548.1875,355.8791 548.5625,355.9728 Q548.9531,356.0509 549.2813,356.2228 L549.2813,357.8322 Q548.9063,357.4884 548.5469,357.3322 Q548.2031,357.1759 547.8438,357.1759 Q547.0469,357.1759 546.6406,357.8009 Q546.2344,358.4259 546.2344,359.6603 Q546.2344,360.8947 546.6406,361.5197 Q547.0469,362.1447 547.8438,362.1447 Q548.2031,362.1447 548.5469,361.9884 Q548.9063,361.8322 549.2813,361.4884 L549.2813,363.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="40" x="590.5" y="354.19">«2 dicts»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="97" x="562" y="372.8789">Port Specifications</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="536" x2="663" y1="383.1019" y2="383.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="62" x="543" y="399.7919">INPUT_SPECS</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="546" y="417.4119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="72" x="543" y="435.0318">OUTPUT_SPECS</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="536" x2="663" y1="443.9618" y2="443.9618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="543" y="460.6518">• torque: REAL (N·m)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="67" x="543" y="478.2718">• q: REAL (rad)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="103" x="543" y="495.8918">• omega: REAL (rad/s)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="101" x="543" y="513.5118">• alpha: REAL (rad/s²)</text><!--MD5=[7f356b0e297f8d4aa4055d7023c9bb4c]
+reverse link OSim to OpenSimPendulum--><path d="M160.51,296.5 C174.05,296.5 188.38,296.5 202.68,296.5 " fill="none" id="OSim&lt;-OpenSimPendulum" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="155.16,296.5,164.16,300.5,160.16,296.5,164.16,292.5,155.16,296.5" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="168" y="291.19">uses</text><!--MD5=[bf86a5a451eb6fe2ae867d980d59fb7e]
+link OpenSimPendulum to Params--><path d="M440.35,239.28 C464.01,227.79 488.49,215.91 510.9,205.03 " fill="none" id="OpenSimPendulum-&gt;Params" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="515.65,202.72,505.8068,203.0541,511.1525,204.9045,509.302,210.2502,515.65,202.72" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="50" x="453" y="205.19">configures</text><!--MD5=[a34b7e8aaf5699804edd19c67e147772]
+link OpenSimPendulum to Ports--><path d="M440.35,353.29 C470.96,368.04 502.92,383.44 530.03,396.51 " fill="none" id="OpenSimPendulum-&gt;Ports" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="534.69,398.75,528.3134,391.2441,530.1842,396.5826,524.8456,398.4534,534.69,398.75" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="35" x="460.5" y="354.19">defines</text><!--MD5=[157b069e001f4c6e24d0f3a6e4cc2983]
+link Params to Ports--><!--MD5=[bbc965345ecb0c187c597a47e48acde3]
+@startuml OpenSimPendulum
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+skinparam nodesep 20
+skinparam ranksep 20
+
+left to right direction
+
+
+class OpenSimPendulum <<OpenSimComponent>> {
+    + parameters: Dict[str, Any]
+    - -
+    + coord: Optional[osim.Coordinate]
+    + actuator: Optional[osim.CoordinateActuator]
+    - -
+    - _with_contact: bool
+    - _use_gravity: bool
+    - -
+    + q0: float
+    + omega0: float
+    ==
+    + __init__(name, group)
+    .. Model Building ..
+    - _build()
+    .. Initialization ..
+    + initialize(t0)
+    .. Time Stepping ..
+    # _do_step_internal(t, dt)
+    .. I/O ..
+    + set_inputs(signals, t)
+    + get_outputs(): Dict
+    # _update_output_states(t)
+    .. State Management ..
+    + set_state(state, t)
+    + get_state(): Dict
+    + reset()
+    .. Configuration ..
+    + set_parameters(**parameters)
+    .. Export ..
+    + save_model(file_path)
+}
+
+class "Parameter Sets" as Params <<4 dicts>> {
+    MODEL_PARAMETERS
+    • mass, r_head, length
+    • use_gravity
+    
+    CONTACT_PARAMETERS
+    • with_contact, stiffness
+    • dissipation, friction coeffs
+    
+    INITIAL_CONDITIONS
+    • q0, omega0
+    
+    SOLVER_PARAMETERS
+    • internal_dt, IntegratorMethod
+    • accuracy
+}
+
+class "OpenSim Library" as OSim <<package>> {
+    .. Model Components ..
+    + Model, Body, Ground
+    + PinJoint, WeldJoint
+    + Coordinate, CoordinateSet
+    + CoordinateActuator
+    .. Geometry ..
+    + Sphere, Brick, Cylinder
+    + PhysicalOffsetFrame
+    .. Contact ..
+    + ContactSphere
+    + ContactHalfSpace
+    + HuntCrossleyForce
+    .. Simulation ..
+    + Manager, State
+    + IntegratorMethod
+    .. Utilities ..
+    + Vec3, Inertia
+}
+
+class "Port Specifications" as Ports <<2 dicts>> {
+    INPUT_SPECS
+    • torque: REAL (N·m)
+    
+    OUTPUT_SPECS
+    • q: REAL (rad)
+    • omega: REAL (rad/s)
+    • alpha: REAL (rad/s²)
+}
+
+OpenSimPendulum -up-> OSim : uses
+OpenSimPendulum -down-> Params : configures
+OpenSimPendulum -down-> Ports : defines
+
+Params -[hidden]right- Ports
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

@@ -1,49 +1,84 @@
-@startuml SysSimX_Layers
+@startuml LayerDiagram
 
-!define LAYER rectangle
+'!theme plain
 
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+
+' Vertical layout
+top to bottom direction
 skinparam rectangle {
-    BackgroundColor<<layer1>> LightBlue
-    BackgroundColor<<layer2>> LightGreen
-    BackgroundColor<<layer3>> LightYellow
-    BackgroundColor<<layer4>> LightCoral
-    BackgroundColor<<layer5>> LightGray
+  BackgroundColor White
+  BorderColor #555555
+  RoundCorner 12
+}
+skinparam package {
+  BackgroundColor #f7f7f7
+  BorderColor #888888
+}
+skinparam Arrow {
+  Color #666666
+}
+'skinparam defaultFontName Monospace
+'hide stereotype
+
+title Software Framework – Vertical Layered Architecture
+
+' ===== Cross-cutting concerns (visual ribbon) =====
+rectangle "<b>Cross-Cutting</b>\n• Security & AuthZ\n• Observability (Logs, Metrics, Traces)\n• Configuration & Feature Flags\n• Error Handling\n• I18n/L10n" as CROSSCUTTING #DDDDDD
+
+' ===== LAYERS (top → bottom) =====
+
+package "Presentation / UI Layer" as L1 {
+  rectangle "• CLI / TUI\n• Web UI (React)\n• API Docs (OpenAPI/Swagger)\n• Dashboards" as L1A
 }
 
-LAYER "Layer 1: Core Abstractions\n(SysSimX/core)" as L1 <<layer1>> {
-    [CoSimComponent\n(Abstract Base)]
-    [MultiComponent\n(Composite)]
-    [PortSpec & PortState\n(Interface)]
+package "Application / Orchestration Layer" as L2 {
+  rectangle "• Use Cases / Services\n• Workflow Orchestrator\n• Session & State Mgmt\n• Validation" as L2A
 }
 
-LAYER "Layer 2: Component Types\n(SysSimX/components)" as L2 <<layer2>> {
-    [FMUComponent\n(FMI Wrapper)]
-    [FEMComponent\n(FEM Base)]
-    [OpenSimComponent\n(MBD Base)]
+package "Domain / Modeling Layer" as L3 {
+  rectangle "• Domain Models & Contracts\n• Simulation Graph (Systems, Subsystems)\n• Solvers (explicit/implicit)\n• Rules / Policies" as L3A
 }
 
-LAYER "Layer 3: Concrete Models\n(demos/*)" as L3 <<layer3>> {
-    [FEMPendulum\n(NGSolve)]
-    [OpenSimPendulum\n(Simbody)]
-    [PendulumMultiComp\n(Hybrid)]
+package "Plugin / Module Layer" as L4 {
+  rectangle "• Module SPI (Plugin API)\n• Built-in Modules (Kinematics, Control, Sensors)\n• Sandbox/Isolation" as L4A
 }
 
-LAYER "Layer 4: System Integration\n(SysSimX/system)" as L4 <<layer4>> {
-    [System\n(Orchestrator)]
-    [Connection\n(Signal Routing)]
+package "Integration / Adapters Layer" as L5 {
+  rectangle "• FMI/FMU Adapter\n• OpenSim Adapter\n• FEM/CFD Adapter\n• External Services (Licenses, HPC Queue)\n• Messaging (e.g., gRPC, ZeroMQ)" as L5A
 }
 
-LAYER "Layer 5: Utilities & Viz\n(SysSimX/utilities, SysSimX/viz)" as L5 <<layer5>> {
-    [Units\n(Pint Wrapper)]
-    [FMU Generation\n(OMPython)]
-    [Result Export\n(OpenSim .mot)]
-    [Visualization\n(Graphviz)]
+package "Infrastructure / Data Layer" as L6 {
+  rectangle "• Persistence (DB, Files)\n• Caching\n• Artifact Store (results, metadata)\n• Search/Index" as L6A
 }
 
-L2 -down-> L1 : inherits from
-L3 -down-> L2 : implements
-L4 -down-> L1 : orchestrates
-L5 -down-> L1 : supports
-L5 -down-> L4 : supports
+package "Platform Layer" as L7 {
+  rectangle "• OS & Containers\n• GPU/CPU Acceleration\n• Filesystem/Network\n• Secrets & KMS" as L7A
+}
+
+' ===== DEPENDENCIES (only downward) =====
+L1A -down-> L2A : calls
+L2A -down-> L3A : invokes domain logic
+L3A -down-> L4A : loads plugins
+L4A -down-> L5A : uses adapters
+L5A -down-> L6A : stores/reads data
+L6A -down-> L7A : runs on
+
+' Cross-cutting concerns apply to all layers (dotted)
+CROSSCUTTING .down.> L1A
+CROSSCUTTING .down.> L2A
+CROSSCUTTING .down.> L3A
+CROSSCUTTING .down.> L4A
+CROSSCUTTING .down.> L5A
+CROSSCUTTING .down.> L6A
+CROSSCUTTING .down.> L7A
+
+' ===== Optional: boundary rules =====
+' Upward dependencies (violations) would be dashed in red if ever drawn
+skinparam ArrowMessageAlign center
+' Example (commented out) of a forbidden upward dependency:
+' L3A ..> L1A #red;line.dashed : (avoid)
 
 @enduml
