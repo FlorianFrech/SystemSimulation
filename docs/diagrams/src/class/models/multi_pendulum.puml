@@ -1,0 +1,212 @@
+@startuml PendulumMultiComp
+
+' ============================================================================
+' STYLING
+' ============================================================================
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+skinparam nodesep 30
+skinparam ranksep 10
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
+
+' Force left-to-right layout
+left to right direction
+
+' ============================================================================
+' PENDULUM MULTI COMPONENT CLASS
+' ============================================================================
+
+class PendulumMultiComp <<MultiComponent>> {
+    - _fem_comp: Optional[FEMPendulum]
+    - _opensim_comp: Optional[OpenSimPendulum]
+    - _fmu_comp: Optional[FMUComponent]
+    - _t_end: float
+    --
+    + models: Dict[str, CoSimComponent]
+    + active_mode: str
+    + active_comp: CoSimComponent
+    + mode_selector: Callable
+    + hysteresis: Hysteresis
+    + sync_events: List[Dict]
+    ==
+    + __init__(fem_comp, opensim_comp, fmu_comp, initial_mode)
+    .. Model Management ..
+    - _register_models()
+    .. State Adaptation ..
+    - _adapt_state(state, target_mode): Dict
+    .. Mode Selection ..
+    - _time_based_mode_selector(t, state): str
+    .. Initialization ..
+    + initialize(t0)
+    .. Time Stepping ..
+    - _do_step_internal(t, dt)
+    - _update_output_states(t)
+    .. State Management ..
+    + get_state(): Dict
+    + set_state(state, t)
+    + reset()
+}
+
+class FEMPendulum <<FEMComponent>> {
+    + mass: float
+    + inertia: float
+    + parameters: Dict
+    --
+    - _use_gravity: bool
+    - _with_contact: bool
+    --
+    + initialize(t0)
+    + setup_simulation_diagnostics()
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class OpenSimPendulum <<OpenSimComponent>> {
+    + parameters: Dict
+    --
+    - _use_gravity: bool
+    - _with_contact: bool
+    --
+    + initialize(t0)
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class FMUComponent <<CoSimComponent>> {
+    + parameters: Dict
+    --
+    + initialize(t0)
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class MultiComponent <<abstract>> {
+    + models: Dict[str, CoSimComponent]
+    + active_mode: str
+    + active_comp: CoSimComponent
+    + mode_selector: Callable
+    + hysteresis: Hysteresis
+    + sync_events: List[Dict]
+    ==
+    # _do_step_internal(t, dt)
+    # _update_output_states(t)
+    # _adapt_state(state, target_mode): Dict
+    - _switch_mode(new_mode, t)
+    - _unify_ports()
+}
+
+class Hysteresis {
+    + dwell_time: float
+    - _last_switch_time: float
+    --
+    + should_switch(current_time): bool
+    + record_switch(time)
+}
+
+class "State Format" as StateFormat <<dict>> {
+    Standard for FEM & OpenSim:
+    q: {value, unit}
+    omega: {value, unit}
+    alpha: {value, unit}
+    torque: {value, unit}
+    
+    FMU Format:
+    q0: {value, unit}
+    omega0: {value, unit}
+    torque: {value, unit}
+}
+
+class "Mode Selection Strategy" as ModeStrategy <<function>> {
+    **Time-Based Cycling:**
+    
+    interval = t_end / 12
+    cycle_pos = int(t / interval) % 3
+    
+    • cycle_pos = 0 → FEM
+    • cycle_pos = 1 → EQB
+    • cycle_pos = 2 → OpenSim
+    
+    **Result:** Each mode active
+    4 times during simulation
+}
+
+class "Synchronization Event" as SyncEvent <<dict>> {
+    • time: float
+    • from_mode: str
+    • to_mode: str
+    • retrieved: Dict[str, Any]
+    • now: Dict[str, Any]
+}
+
+' ============================================================================
+' RELATIONSHIPS
+' ============================================================================
+
+PendulumMultiComp -right-|> MultiComponent : extends
+PendulumMultiComp o-up- FEMPendulum : contains
+PendulumMultiComp o-up- OpenSimPendulum : contains
+PendulumMultiComp o-up- FMUComponent : contains
+PendulumMultiComp *-- Hysteresis : uses
+PendulumMultiComp ..> ModeStrategy : implements
+PendulumMultiComp ..> StateFormat : adapts
+PendulumMultiComp ..> SyncEvent : records
+
+' ============================================================================
+' NOTES
+' ============================================================================
+
+' note right of PendulumMultiComp
+'     **Multi-Fidelity Pendulum System**
+    
+'     Seamlessly switches between three
+'     simulation approaches:
+    
+'     • **FEM**: Continuum mechanics (NGSolve)
+'     • **OpenSim**: Rigid multibody (Simbody)
+'     • **EQB**: Equation-based (Modelica FMU)
+    
+'     **Key Features:**
+'     • Automatic parameter synchronization
+'     • State format adaptation
+'     • Hysteresis-based mode switching
+'     • Synchronization event tracking
+' end note
+
+' note bottom of StateFormat
+'     **State Adaptation Required:**
+    
+'     FMU expects initial condition
+'     parameter names (q0, omega0)
+'     while FEM/OpenSim use
+'     standard state variables (q, omega)
+' end note
+
+' note bottom of ModeStrategy
+'     **Cyclic Mode Switching:**
+    
+'     FEM → EQB → OpenSim (repeat 4×)
+    
+'     Each mode gets equal time:
+'     Δt = t_end / 12 per interval
+' end note
+
+' note top of SyncEvent
+'     **Tracking State Transitions:**
+    
+'     Records state before/after
+'     each mode switch for
+'     validation and debugging
+' end note
+
+@enduml

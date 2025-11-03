@@ -9,7 +9,7 @@ model Reference
   
   // Parameters
   parameter Real mean(unit="rad") = 0;
-  parameter Real amplitude(unit="rad") = pi/4;
+  parameter Real amplitude(unit="rad") = pi/9;
   parameter Real frequency(unit="Hz") = 0.25;
 
 equation

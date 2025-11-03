@@ -76,22 +76,18 @@ class PendulumMultiComp(MultiComponent):
     # ---- Mode Selection Strategy ----
     def _time_based_mode_selector(self, t: float, state: Dict[str, Any]) -> str:
         """
-        Cycle through modes in equal time intervals.
+        Cycle through modes 4 times within simulation time.
+        Each complete cycle goes: FEM → EQB → OpenSim
+        Total: 12 intervals (3 modes × 4 cycles)
         """
-        interval = self._t_end / 6
-        
-        if t < interval:
+        interval = self._t_end / 12
+        cycle_position = int(t / interval) % 3
+        if cycle_position == 0:
             return "FEM"
-        elif t < 2 * interval:
+        elif cycle_position == 1:
             return "EQB"
-        elif t < 3 * interval:
-            return "FEM"
-        elif t < 4 * interval:
-            return "EQB"
-        elif t < 5 * interval:
-            return "OpenSim"
         else:
-            return "FEM"
+            return "OpenSim"
 
     # ----Initialization with Parameter Propagation ----
     def initialize(self, t0: float) -> None:
@@ -149,7 +145,11 @@ class PendulumMultiComp(MultiComponent):
 
     # Delegate to base class and/or components of multi component   
     def _do_step_internal(self, t, dt):
-        return super()._do_step_internal(t, dt)
+        active_mode_before = self.active_mode
+        super()._do_step_internal(t, dt)
+        active_mode_after = self.active_mode
+
+        return 
     
     def _update_output_states(self, t):
         return super()._update_output_states(t)

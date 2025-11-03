@@ -291,39 +291,47 @@ class FEMPendulum(FEMComponent):
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
     def set_state(self, state: Dict[str, Any], t: float):
-        theta = state['q']['value']
-        omega = state['omega']['value']
-        torque = state['torque']['value']       
-         
-        c, s = np.cos(theta), np.sin(theta)
-        
-        # rotated radius r0 = R(theta) * (X - P)
-        r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
+        if 'q' in state:
+            theta = state['q']['value']
+            c, s = np.cos(theta), np.sin(theta)
+            # rotated radius r0 = R(theta) * (X - P)
+            r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
                  s * self._X_rel[0] + c * self._X_rel[1]))
-
-        # displacement for initial position
-        u0 = CF((r0[0] - self._X_rel[0],
+            # rotated radius r0 = R(theta) * (X - P)
+            r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
+                 s * self._X_rel[0] + c * self._X_rel[1]))
+            # displacement for initial position
+            u0 = CF((r0[0] - self._X_rel[0],
                  r0[1] - self._X_rel[1]))
+            # Update displacement grid function
+            self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_uold.vec[:] = self._gf_u.vec
+            self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
 
-        # Initial velocity: v0 = omega x r0
-        v0 = CF((-omega * r0[1],
-                  omega * r0[0]))
-        
-        # Apply the torque
-        self.set_drive_torque(torque)
-        
-        # Set initial conditions
-        self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
-        self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
+        if 'omega' in state:
+            omega = state['omega']['value']
+            # Initial velocity: v0 = omega x r0
+            v0 = CF((-omega * r0[1],
+                      omega * r0[0]))
+            # Update velocity grid function
+            self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_vold.vec[:] = self._gf_v.vec
+            self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
 
-        # Copy to "old" variables
-        self._gf_uold.vec[:] = self._gf_u.vec
-        self._gf_vold.vec[:] = self._gf_v.vec
-        
-        # Add to history
-        self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-        self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
 
+        if 'alpha' in state:
+            alpha = state['alpha']['value']
+            a0 = CF((-alpha * r0[1],
+                      alpha * r0[0]))
+            # Update acceleration grid function
+            self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_aold.vec[:] = self._gf_a.vec
+
+        if 'torque' in state:
+            torque = state['torque']['value']
+            # Apply the torque
+            self.set_drive_torque(torque)        
+        
     def get_state(self):
         state = {}
         q_state, omega_state, alpha_state = self._rigid_proxy()

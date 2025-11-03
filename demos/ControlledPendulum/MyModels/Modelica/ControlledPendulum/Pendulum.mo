@@ -12,9 +12,9 @@ model Pendulum
   import Modelica.Constants.pi;
 
   // Parameters
-  parameter Real m(unit="kg") = 80*0.2;
-  parameter Real L(unit="m") = 0.4;
-  parameter Real q0(unit="rad") = -pi/9;
+  parameter Real m(unit="kg") = 40;
+  parameter Real L(unit="m") = 0.6732;
+  parameter Real q0(unit="rad") = 0;
   parameter Real omega0(unit="rad/s") = 0;
   parameter Real g(unit="m/s2") = 9.81;
 

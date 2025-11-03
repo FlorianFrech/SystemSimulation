@@ -1,11 +1,21 @@
 @startuml OpenSimPendulum
 
+' ============================================================================
+' STYLING
+' ============================================================================
+
 skinparam classAttributeIconSize 0
 skinparam padding 2
 skinparam defaultFontSize 10
 skinparam classFontSize 11
-skinparam nodesep 20
-skinparam ranksep 20
+skinparam nodesep 30
+skinparam ranksep 10
+
+' Color scheme - clean white background
+skinparam backgroundColor white
+
+' Remove yellow/red default colors
+skinparam shadowing false
 
 ' Force left-to-right layout
 left to right direction
@@ -86,7 +96,7 @@ class "OpenSim Library" as OSim <<package>> {
 
 class "Port Specifications" as Ports <<2 dicts>> {
     INPUT_SPECS
-    • torque: REAL (N·m)
+    • torque REAL (N·m)
     
     OUTPUT_SPECS
     • q: REAL (rad)

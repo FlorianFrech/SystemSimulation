@@ -1,53 +1,111 @@
 @startuml MultiComponent_Switching
 
+' Color scheme - clean white background
+skinparam backgroundColor white
+skinparam shadowing false
+
 participant System
 participant PendulumMultiComp as Multi
-participant "FEM Model" as FEM
 participant "OpenSim Model" as OpenSim
+participant "FEM Model" as FEM
 participant Hysteresis
 
-System -> Multi: do_step(t, dt)
+== Time Step Execution ==
+note over Multi
+  **New Active State:**
+  active_mode = "OpneSim"
+  active_comp = OpenSim Model
+end note
+System -> Multi: do_step(t=0.05, dt=0.01)
 activate Multi
 
-Multi -> Multi: mode_selector(t, state)
-note right: Returns "OpenSim"
+Multi -> Multi: _do_step_internal(t, dt)
+note right: Base class method from\nMultiComponent
 
-Multi -> Hysteresis: can_switch(t, "OpenSim")
+== Mode Selection ==
+Multi -> Multi: mode_selector(t, state)
+activate Multi
+Multi -> Multi: _time_based_mode_selector(t, state)
+note right: Subclass implementation\nReturns "FEM"
+
+Multi --> Multi: proposed_mode = "FEM"
+deactivate Multi
+
+== Hysteresis Check ==
+Multi -> Hysteresis: can_switch(t, "FEM")
 activate Hysteresis
-Hysteresis -> Hysteresis: check dwell_time
-Hysteresis --> Multi: True
+Hysteresis -> Hysteresis: Check if proposed_mode != last_mode
+Hysteresis -> Hysteresis: Check dwell_time elapsed
+Hysteresis --> Multi: True (switch allowed)
 deactivate Hysteresis
 
-Multi -> FEM: get_state()
+== Mode Switch Execution ==
+Multi -> Multi: _switch_mode("FEM", t=0.05)
+activate Multi
+
+Multi -> OpenSim: get_state()
+Note right: Retrieve current state from\ncurrently active component
+activate OpenSim
+OpenSim --> Multi: {'q': {...}, 'omega': {...}, 'alpha': {...}, 'torque': {...}}
+deactivate OpenSim
+
+' Step 2: Adapt state
+Multi -> Multi: _adapt_state(current_state, "FEM")
+note right: PendulumMultiComp implementation:\nFEM uses standard format (no change)\nEQB would map q→q0, omega→omega0
+Multi --> Multi: adapted_state (unchanged for FEM)
+
+' Step 3: Set state in new component
+Multi -> FEM: set_state(adapted_state, t=0.05)
 activate FEM
-FEM --> Multi: {'q': 0.5, 'omega': 2.1, ...}
+note right
+    Extract values,
+    compute rotation matrix,
+    transform to FEM coordinates
+    Update grid functions: gf_u, gf_v, gf_a
+    Apply torque:\nset_drive_torque(...)
+end note
+
+FEM --> Multi: State initialized
 deactivate FEM
 
-Multi -> Multi: _adapt_state(state, "OpenSim")
-note right: Translate state format\nif needed
+' Step 4: Update active component
+Multi -> Multi: active_mode = "FEM"
+Multi -> Multi: active_comp = FEM
 
-Multi -> OpenSim: set_state(adapted_state, t)
-activate OpenSim
-OpenSim -> OpenSim: set_coordinate_value('q', 0.5)
-OpenSim -> OpenSim: set_coordinate_speed('q', 2.1)
-OpenSim -> OpenSim: realize()
-deactivate OpenSim
+' Step 4.5: Verify state consistency
+Multi -> FEM: get_state()
+activate FEM
+note right: Compute rigid body kinematics\nfrom grid functions
+FEM --> Multi: {'q': {'value': 0.0087, 'unit': 'rad'},\n'omega': {'value': 0.173, 'unit': 'rad/s'},\n'alpha': {'value': 100.86, 'unit': 'rad/s^2'},\n'torque': {'value': 1.0, 'unit': 'N*m'}}
+deactivate FEM
 
-Multi -> Multi: active_comp = OpenSim
-Multi -> Multi: active_mode = "OpenSim"
+' Step 5: Record switch
+Multi -> Hysteresis: record_switch(t=0.05, "FEM")
+activate Hysteresis
+Hysteresis -> Hysteresis: last_switch_time = 0.05
+Hysteresis -> Hysteresis: last_mode = "FEM"
+Hysteresis --> Multi: switch recorded
+deactivate Hysteresis
 
-Multi -> Hysteresis: record_switch(t, "OpenSim")
+deactivate Multi
 
-Multi -> OpenSim: do_step(t, dt)
-activate OpenSim
-OpenSim -> OpenSim: _do_step_internal(t, dt)
-OpenSim --> Multi: step complete
-deactivate OpenSim
+== Execute Active Component ==
+Multi -> FEM: do_step(t=0.05, dt=0.01)
+activate FEM
+FEM -> FEM: _do_step_internal(t, dt)
+note right: NGSolve nonlinear solver\nNewtonMinimization\nNewmark time integration
+FEM --> Multi: step complete
+deactivate FEM
 
-Multi -> OpenSim: get_outputs()
-activate OpenSim
-OpenSim --> Multi: {'q': 0.52, 'omega': 2.3, ...}
-deactivate OpenSim
+== Update Outputs ==
+Multi -> FEM: _update_output_states(t=0.06)
+activate FEM
+FEM -> FEM: update output port states
+FEM --> Multi: outputs updated
+deactivate FEM
+
+Multi -> Multi: Copy outputs from active_comp
+note right: for name in output_specs:\n  self.outputs[name].set(\n    active_comp.outputs[name].get(), t)
 
 Multi --> System: step complete
 deactivate Multi

@@ -202,9 +202,6 @@ class System:
          1) For each generation in execution order, set inputs for all components in the generation
          2) For each generation, call do_step on all components in the generation
         """
-        if not self.execution_order:
-            self.compute_execution_order()
-
         # Phase 1: Set inputs for all generations
         for gen in self.execution_order:
             self._set_inputs_for_generation(gen, t)
@@ -214,12 +211,6 @@ class System:
             for comp_name in gen:
                 comp = self.components[comp_name]
                 comp.do_step(t, dt)
-        
-        # for gen in self.execution_order:
-        #     self._set_inputs_for_generation(gen, t)
-        #     for comp_name in gen:
-        #         comp = self.components[comp_name]
-        #         comp.do_step(t, dt)
 
     def run(self, t0: float, tf: float, dt: float):
         """

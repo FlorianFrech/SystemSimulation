@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1004px" preserveAspectRatio="none" style="width:815px;height:1004px;" version="1.1" viewBox="0 0 815 1004" width="815px" zoomAndPan="magnify"><defs/><g><!--MD5=[64ccabd6e9598a6126c3f5340357917f]
+class PendulumMultiComp--><rect fill="#FEFECE" height="552.7215" id="PendulumMultiComp" style="stroke: #A80036; stroke-width: 1.5;" width="304" x="238" y="135.5"/><ellipse cx="328.25" cy="158.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M329.5313,162.0978 Q329.1875,162.2697 328.8125,162.3478 Q328.4375,162.4416 328.0156,162.4416 Q326.5469,162.4416 325.7656,161.4728 Q325,160.5041 325,158.6603 Q325,156.8166 325.7656,155.8478 Q326.5469,154.8791 328.0156,154.8791 Q328.4375,154.8791 328.8125,154.9728 Q329.2031,155.0509 329.5313,155.2228 L329.5313,156.8322 Q329.1563,156.4884 328.7969,156.3322 Q328.4531,156.1759 328.0938,156.1759 Q327.2969,156.1759 326.8906,156.8009 Q326.4844,157.4259 326.4844,158.6603 Q326.4844,159.8947 326.8906,160.5197 Q327.2969,161.1447 328.0938,161.1447 Q328.4531,161.1447 328.7969,160.9884 Q329.1563,160.8322 329.5313,160.4884 L329.5313,162.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="86" x="360.75" y="153.19">«MultiComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="112" x="347.75" y="171.8789">PendulumMultiComp</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="239" x2="541" y1="182.1019" y2="182.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="177" x="246" y="198.7919">-_fem_comp: Optional[FEMPendulum]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="223" x="246" y="216.4119">-_opensim_comp: Optional[OpenSimPendulum]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="185" x="246" y="234.0318">-_fmu_comp: Optional[FMUComponent]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="246" y="251.6518">-_t_end: float</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="239" x2="541" y1="260.5818" y2="260.5818"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="175" x="246" y="277.2718">+models: Dict[str, CoSimComponent]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="85" x="246" y="294.8918">+active_mode: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="155" x="246" y="312.5118">+active_comp: CoSimComponent</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="121" x="246" y="330.1318">+mode_selector: Callable</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="111" x="246" y="347.7518">+hysteresis: Hysteresis</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="111" x="246" y="365.3718">+sync_events: List[Dict]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="239" x2="541" y1="374.3018" y2="374.3018"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="239" x2="541" y1="376.3018" y2="376.3018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="288" x="246" y="390.9917">+__init__(fem_comp, opensim_comp, fmu_comp, initial_mode)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="90" x="246" y="430.2317">-_register_models()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="339.5" y1="408.7317" y2="408.7317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="341.5" y="412.1117">Model Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="440.5" x2="541" y1="408.7317" y2="408.7317"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="187" x="246" y="469.4717">-_adapt_state(state, target_mode): Dict</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="347.5" y1="447.9717" y2="447.9717"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="81" x="349.5" y="451.3517">State Adaptation</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="432.5" x2="541" y1="447.9717" y2="447.9717"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="196" x="246" y="508.7117">-_time_based_mode_selector(t, state): str</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="351" y1="487.2117" y2="487.2117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="74" x="353" y="490.5917">Mode Selection</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="429" x2="541" y1="487.2117" y2="487.2117"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="246" y="547.9516">+initialize(t0)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="357.5" y1="526.4517" y2="526.4517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="359.5" y="529.8317">Initialization</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="422.5" x2="541" y1="526.4517" y2="526.4517"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="112" x="246" y="587.1916">-_do_step_internal(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="121" x="246" y="604.8116">-_update_output_states(t)</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="353.5" y1="565.6916" y2="565.6916"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="355.5" y="569.0716">Time Stepping</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="426.5" x2="541" y1="565.6916" y2="565.6916"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="246" y="644.0516">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="246" y="661.6716">+set_state(state, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="37" x="246" y="679.2916">+reset()</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="239" x2="342" y1="622.5516" y2="622.5516"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="344" y="625.9316">State Management</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,2.0;" x1="438" x2="541" y1="622.5516" y2="622.5516"/><!--MD5=[482471e633b077974bccc635852d5180]
+class FEMPendulum--><rect fill="#FEFECE" height="246.8018" id="FEMPendulum" style="stroke: #A80036; stroke-width: 1.5;" width="169" x="6" y="539.5"/><ellipse cx="46.25" cy="562.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M47.5313,566.0978 Q47.1875,566.2697 46.8125,566.3478 Q46.4375,566.4416 46.0156,566.4416 Q44.5469,566.4416 43.7656,565.4728 Q43,564.5041 43,562.6603 Q43,560.8166 43.7656,559.8478 Q44.5469,558.8791 46.0156,558.8791 Q46.4375,558.8791 46.8125,558.9728 Q47.2031,559.0509 47.5313,559.2228 L47.5313,560.8322 Q47.1563,560.4884 46.7969,560.3322 Q46.4531,560.1759 46.0938,560.1759 Q45.2969,560.1759 44.8906,560.8009 Q44.4844,561.4259 44.4844,562.6603 Q44.4844,563.8947 44.8906,564.5197 Q45.2969,565.1447 46.0938,565.1447 Q46.4531,565.1447 46.7969,564.9884 Q47.1563,564.8322 47.5313,564.4884 L47.5313,566.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="81" x="63.75" y="557.19">«FEMComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="76" x="66.25" y="575.8789">FEMPendulum</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="174" y1="586.1019" y2="586.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="59" x="14" y="602.7919">+mass: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="66" x="14" y="620.4119">+inertia: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="87" x="14" y="638.0318">+parameters: Dict</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="174" y1="646.9618" y2="646.9618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="14" y="663.6518">-_use_gravity: bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="14" y="681.2718">-_with_contact: bool</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="7" x2="174" y1="690.2018" y2="690.2018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="14" y="706.8918">+initialize(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="153" x="14" y="724.5118">+setup_simulation_diagnostics()</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="14" y="742.1318">+do_step(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="14" y="759.7518">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="14" y="777.3718">+set_state(state, t)</text><!--MD5=[69e00329ecbaf1bd988a736d68dd57f3]
+class OpenSimPendulum--><rect fill="#FEFECE" height="193.9418" id="OpenSimPendulum" style="stroke: #A80036; stroke-width: 1.5;" width="134" x="23.5" y="315"/><ellipse cx="36.5" cy="338.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M37.7813,341.5978 Q37.4375,341.7697 37.0625,341.8478 Q36.6875,341.9416 36.2656,341.9416 Q34.7969,341.9416 34.0156,340.9728 Q33.25,340.0041 33.25,338.1603 Q33.25,336.3166 34.0156,335.3478 Q34.7969,334.3791 36.2656,334.3791 Q36.6875,334.3791 37.0625,334.4728 Q37.4531,334.5509 37.7813,334.7228 L37.7813,336.3322 Q37.4063,335.9884 37.0469,335.8322 Q36.7031,335.6759 36.3438,335.6759 Q35.5469,335.6759 35.1406,336.3009 Q34.7344,336.9259 34.7344,338.1603 Q34.7344,339.3947 35.1406,340.0197 Q35.5469,340.6447 36.3438,340.6447 Q36.7031,340.6447 37.0469,340.4884 Q37.4063,340.3322 37.7813,339.9884 L37.7813,341.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="104" x="49.5" y="332.69">«OpenSimComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="102" x="50.5" y="351.3789">OpenSimPendulum</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="24.5" x2="156.5" y1="361.6019" y2="361.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="87" x="31.5" y="378.2919">+parameters: Dict</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="24.5" x2="156.5" y1="387.2219" y2="387.2219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="88" x="31.5" y="403.9119">-_use_gravity: bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="95" x="31.5" y="421.5318">-_with_contact: bool</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="24.5" x2="156.5" y1="430.4618" y2="430.4618"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="31.5" y="447.1518">+initialize(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="31.5" y="464.7718">+do_step(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="31.5" y="482.3918">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="31.5" y="500.0118">+set_state(state, t)</text><!--MD5=[bb8565d754eafa41406b42859253af5c]
+class FMUComponent--><rect fill="#FEFECE" height="150.7018" id="FMUComponent" style="stroke: #A80036; stroke-width: 1.5;" width="120" x="30.5" y="133.5"/><ellipse cx="43.5" cy="156.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M44.7813,160.0978 Q44.4375,160.2697 44.0625,160.3478 Q43.6875,160.4416 43.2656,160.4416 Q41.7969,160.4416 41.0156,159.4728 Q40.25,158.5041 40.25,156.6603 Q40.25,154.8166 41.0156,153.8478 Q41.7969,152.8791 43.2656,152.8791 Q43.6875,152.8791 44.0625,152.9728 Q44.4531,153.0509 44.7813,153.2228 L44.7813,154.8322 Q44.4063,154.4884 44.0469,154.3322 Q43.7031,154.1759 43.3438,154.1759 Q42.5469,154.1759 42.1406,154.8009 Q41.7344,155.4259 41.7344,156.6603 Q41.7344,157.8947 42.1406,158.5197 Q42.5469,159.1447 43.3438,159.1447 Q43.7031,159.1447 44.0469,158.9884 Q44.4063,158.8322 44.7813,158.4884 L44.7813,160.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="92" x="55.5" y="151.19">«CoSimComponent»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="86" x="58.5" y="169.8789">FMUComponent</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="31.5" x2="149.5" y1="180.1019" y2="180.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="87" x="38.5" y="196.7919">+parameters: Dict</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="31.5" x2="149.5" y1="205.7219" y2="205.7219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="64" x="38.5" y="222.4119">+initialize(t0)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="69" x="38.5" y="240.0318">+do_step(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="82" x="38.5" y="257.6518">+get_state(): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="91" x="38.5" y="275.2718">+set_state(state, t)</text><!--MD5=[687c18f60849347dc48a8597676c79bb]
+class MultiComponent--><rect fill="#FEFECE" height="256.4217" id="MultiComponent" style="stroke: #A80036; stroke-width: 1.5;" width="206" x="287" y="737"/><ellipse cx="339.75" cy="760.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M341.0313,763.5978 Q340.6875,763.7697 340.3125,763.8478 Q339.9375,763.9416 339.5156,763.9416 Q338.0469,763.9416 337.2656,762.9728 Q336.5,762.0041 336.5,760.1603 Q336.5,758.3166 337.2656,757.3478 Q338.0469,756.3791 339.5156,756.3791 Q339.9375,756.3791 340.3125,756.4728 Q340.7031,756.5509 341.0313,756.7228 L341.0313,758.3322 Q340.6563,757.9884 340.2969,757.8322 Q339.9531,757.6759 339.5938,757.6759 Q338.7969,757.6759 338.3906,758.3009 Q337.9844,758.9259 337.9844,760.1603 Q337.9844,761.3947 338.3906,762.0197 Q338.7969,762.6447 339.5938,762.6447 Q339.9531,762.6447 340.2969,762.4884 Q340.6563,762.3322 341.0313,761.9884 L341.0313,763.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="47" x="380.25" y="754.69">«abstract»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="89" x="359.25" y="773.3789">MultiComponent</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="288" x2="492" y1="783.6019" y2="783.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="175" x="295" y="800.2919">+models: Dict[str, CoSimComponent]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="85" x="295" y="817.9119">+active_mode: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="155" x="295" y="835.5318">+active_comp: CoSimComponent</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="121" x="295" y="853.1518">+mode_selector: Callable</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="111" x="295" y="870.7718">+hysteresis: Hysteresis</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="111" x="295" y="888.3918">+sync_events: List[Dict]</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="288" x2="492" y1="897.3218" y2="897.3218"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="288" x2="492" y1="899.3218" y2="899.3218"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="115" x="295" y="914.0118">#_do_step_internal(t, dt)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="124" x="295" y="931.6318">#_update_output_states(t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="190" x="295" y="949.2518">#_adapt_state(state, target_mode): Dict</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="136" x="295" y="966.8718">-_switch_mode(new_mode, t)</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="65" x="295" y="984.4917">-_unify_ports()</text><!--MD5=[24c5d281be7c0b988b0fac2dd47d344e]
+class Hysteresis--><rect fill="#FEFECE" height="115.4618" id="Hysteresis" style="stroke: #A80036; stroke-width: 1.5;" width="183" x="621" y="8.5"/><ellipse cx="680.25" cy="22.9909" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M681.5313,26.2878 Q681.1875,26.4597 680.8125,26.5378 Q680.4375,26.6316 680.0156,26.6316 Q678.5469,26.6316 677.7656,25.6628 Q677,24.6941 677,22.8503 Q677,21.0066 677.7656,20.0378 Q678.5469,19.0691 680.0156,19.0691 Q680.4375,19.0691 680.8125,19.1628 Q681.2031,19.2409 681.5313,19.4128 L681.5313,21.0222 Q681.1563,20.6784 680.7969,20.5222 Q680.4531,20.3659 680.0938,20.3659 Q679.2969,20.3659 678.8906,20.9909 Q678.4844,21.6159 678.4844,22.8503 Q678.4844,24.0847 678.8906,24.7097 Q679.2969,25.3347 680.0938,25.3347 Q680.4531,25.3347 680.7969,25.1784 Q681.1563,25.0222 681.5313,24.6784 L681.5313,26.2878 Z "/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="53" x="699.75" y="27.2589">Hysteresis</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="622" x2="803" y1="37.4819" y2="37.4819"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="86" x="629" y="54.1719">+dwell_time: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="629" y="71.7919">-_last_switch_time: float</text><line style="stroke: #A80036; stroke-width: 1.0;" x1="622" x2="803" y1="80.7219" y2="80.7219"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="167" x="629" y="97.4119">+should_switch(current_time): bool</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="100" x="629" y="115.0318">+record_switch(time)</text><!--MD5=[04d30edf10f1bd38dabd71e4548a7075]
+class StateFormat--><rect fill="#FEFECE" height="238.8018" id="StateFormat" style="stroke: #A80036; stroke-width: 1.5;" width="157" x="634" y="153.5"/><ellipse cx="673.25" cy="176.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M674.5313,180.0978 Q674.1875,180.2697 673.8125,180.3478 Q673.4375,180.4416 673.0156,180.4416 Q671.5469,180.4416 670.7656,179.4728 Q670,178.5041 670,176.6603 Q670,174.8166 670.7656,173.8478 Q671.5469,172.8791 673.0156,172.8791 Q673.4375,172.8791 673.8125,172.9728 Q674.2031,173.0509 674.5313,173.2228 L674.5313,174.8322 Q674.1563,174.4884 673.7969,174.3322 Q673.4531,174.1759 673.0938,174.1759 Q672.2969,174.1759 671.8906,174.8009 Q671.4844,175.4259 671.4844,176.6603 Q671.4844,177.8947 671.8906,178.5197 Q672.2969,179.1447 673.0938,179.1447 Q673.4531,179.1447 673.7969,178.9884 Q674.1563,178.8322 674.5313,178.4884 L674.5313,180.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="27" x="712.75" y="171.19">«dict»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="67" x="692.75" y="189.8789">State Format</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="635" x2="790" y1="200.1019" y2="200.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="141" x="642" y="216.7919">Standard for FEM &amp; OpenSim:</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="71" x="642" y="234.4119">q: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="98" x="642" y="252.0318">omega: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="92" x="642" y="269.6518">alpha: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="642" y="287.2718">torque: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="645" y="304.8918"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="61" x="642" y="322.5118">FMU Format:</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="77" x="642" y="340.1318">q0: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="104" x="642" y="357.7518">omega0: {value, unit}</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="642" y="375.3718">torque: {value, unit}</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="635" x2="790" y1="384.3018" y2="384.3018"/><!--MD5=[e09bdc2da5cf0822ac31db43124f2ff5]
+class ModeStrategy--><rect fill="#FEFECE" height="256.4217" id="ModeStrategy" style="stroke: #A80036; stroke-width: 1.5;" width="163" x="631" y="423"/><ellipse cx="645.8" cy="446.3009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M647.0813,449.5978 Q646.7375,449.7697 646.3625,449.8478 Q645.9875,449.9416 645.5656,449.9416 Q644.0969,449.9416 643.3156,448.9728 Q642.55,448.0041 642.55,446.1603 Q642.55,444.3166 643.3156,443.3478 Q644.0969,442.3791 645.5656,442.3791 Q645.9875,442.3791 646.3625,442.4728 Q646.7531,442.5509 647.0813,442.7228 L647.0813,444.3322 Q646.7063,443.9884 646.3469,443.8322 Q646.0031,443.6759 645.6438,443.6759 Q644.8469,443.6759 644.4406,444.3009 Q644.0344,444.9259 644.0344,446.1603 Q644.0344,447.3947 644.4406,448.0197 Q644.8469,448.6447 645.6438,448.6447 Q646.0031,448.6447 646.3469,448.4884 Q646.7063,448.3322 647.0813,447.9884 L647.0813,449.5978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="48" x="699.7" y="440.69">«function»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="127" x="660.2" y="459.3789">Mode Selection Strategy</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="632" x2="793" y1="469.6019" y2="469.6019"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="100" x="639" y="486.2919">Time-Based Cycling:</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="642" y="503.9119"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="97" x="639" y="521.5318">interval = t_end / 12</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="642" y="539.1518"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="104" x="639" y="556.7718">• cycle_pos = 0 → FEM</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="105" x="639" y="574.3918">• cycle_pos = 1 → EQB</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="127" x="639" y="592.0118">• cycle_pos = 2 → OpenSim</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="0" x="642" y="609.6318"/><text fill="#000000" font-family="sans-serif" font-size="10" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="35" x="639" y="627.2518">Result:</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="85" x="677" y="627.2518">Each mode active</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="124" x="639" y="644.8718">4 times during simulation</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="632" x2="793" y1="653.8018" y2="653.8018"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="147" x="639" y="670.4917">cycle_pos = int(t / interval) % 3</text><!--MD5=[f61269851da6f58598fa2b09aed1d660]
+class SyncEvent--><rect fill="#FEFECE" height="150.7018" id="SyncEvent" style="stroke: #A80036; stroke-width: 1.5;" width="149" x="638" y="709.5"/><ellipse cx="651" cy="732.8009" fill="#ADD1B2" rx="9" ry="9" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M652.2813,736.0978 Q651.9375,736.2697 651.5625,736.3478 Q651.1875,736.4416 650.7656,736.4416 Q649.2969,736.4416 648.5156,735.4728 Q647.75,734.5041 647.75,732.6603 Q647.75,730.8166 648.5156,729.8478 Q649.2969,728.8791 650.7656,728.8791 Q651.1875,728.8791 651.5625,728.9728 Q651.9531,729.0509 652.2813,729.2228 L652.2813,730.8322 Q651.9063,730.4884 651.5469,730.3322 Q651.2031,730.1759 650.8438,730.1759 Q650.0469,730.1759 649.6406,730.8009 Q649.2344,731.4259 649.2344,732.6603 Q649.2344,733.8947 649.6406,734.5197 Q650.0469,735.1447 650.8438,735.1447 Q651.2031,735.1447 651.5469,734.9884 Q651.9063,734.8322 652.2813,734.4884 L652.2813,736.0978 Z "/><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="27" x="710" y="727.19">«dict»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="117" x="665" y="745.8789">Synchronization Event</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="639" x2="786" y1="756.1019" y2="756.1019"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="57" x="646" y="772.7919">• time: float</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="79" x="646" y="790.4119">• from_mode: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="67" x="646" y="808.0318">• to_mode: str</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="118" x="646" y="825.6518">• retrieved: Dict[str, Any]</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="94" x="646" y="843.2718">• now: Dict[str, Any]</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="639" x2="786" y1="852.2018" y2="852.2018"/><!--MD5=[3f7e6625fff25e980e8de2c1883767d5]
+link PendulumMultiComp to MultiComponent--><path d="M390,688.51 C390,697.96 390,707.29 390,716.42 " fill="none" id="PendulumMultiComp-&gt;MultiComponent" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="397,716.7,390,736.7,383,716.7,397,716.7" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="38" x="358.5" y="716.94">extends</text><!--MD5=[6bf73f885e12f36483bae18572cb38e8]
+link FEMPendulum to PendulumMultiComp--><path d="M175.16,592.41 C191.69,578.47 209.56,563.39 227.68,548.11 " fill="none" id="FEMPendulum-&gt;PendulumMultiComp" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#FFFFFF" points="237.76,539.6,230.5952,540.4156,228.5924,547.343,235.7572,546.5274,237.76,539.6" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="41" x="186" y="547.69">contains</text><!--MD5=[b514c15f350b1b2c103f671a3cea731e]
+link OpenSimPendulum to PendulumMultiComp--><path d="M157.52,412 C177.75,412 200.96,412 224.7,412 " fill="none" id="OpenSimPendulum-&gt;PendulumMultiComp" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#FFFFFF" points="237.93,412,231.93,408,225.93,412,231.93,416,237.93,412" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="41" x="186" y="406.69">contains</text><!--MD5=[b8259fb2d17f0b45e0e4a4ec4007bef2]
+link FMUComponent to PendulumMultiComp--><path d="M150.63,249.35 C173,264.61 199.67,282.81 226.95,301.42 " fill="none" id="FMUComponent-&gt;PendulumMultiComp" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#FFFFFF" points="237.83,308.85,235.1276,302.1644,227.9169,302.0875,230.6193,308.7731,237.83,308.85" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="41" x="186" y="269.69">contains</text><!--MD5=[c8b4031d20a0186a8a1e4f7a90ffd0ca]
+reverse link PendulumMultiComp to Hysteresis--><path d="M550.77,211.99 C573.56,186.36 597.33,161.06 621,138 C625.89,133.24 631.08,128.47 636.4,123.78 " fill="none" id="PendulumMultiComp&lt;-Hysteresis" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="542.08,221.82,549.0508,219.9739,550.0278,212.8293,543.057,214.6754,542.08,221.82" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="570.5" y="146.69">uses</text><!--MD5=[393afbf95575c9ffa9ce2f586fb836be]
+link PendulumMultiComp to ModeStrategy--><path d="M542.33,477.63 C571.02,490.07 600.09,502.68 625.84,513.85 " fill="none" id="PendulumMultiComp-&gt;ModeStrategy" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="630.61,515.92,623.9405,508.6731,626.0217,513.9332,620.7616,516.0143,630.61,515.92" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="57" x="553" y="476.69">implements</text><!--MD5=[4b9b4fb6c363eb77cd9ed233fae9b54e]
+link PendulumMultiComp to StateFormat--><path d="M542.33,346.37 C572.09,333.46 602.25,320.38 628.71,308.91 " fill="none" id="PendulumMultiComp-&gt;StateFormat" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="633.6,306.78,623.7516,306.6857,629.0117,308.7668,626.9305,314.0269,633.6,306.78" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="33" x="565" y="311.69">adapts</text><!--MD5=[1d6ade3e2e551b20ff0b582fc152a642]
+link PendulumMultiComp to SyncEvent--><path d="M542.2,602.63 C567.99,633.61 594.89,665.02 621,694 C625.28,698.75 629.74,703.58 634.28,708.4 " fill="none" id="PendulumMultiComp-&gt;SyncEvent" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="637.76,712.1,634.4863,702.8111,634.326,708.4657,628.6715,708.3055,637.76,712.1" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="36" x="563.5" y="612.69">records</text><!--MD5=[8bb0c3bf1db4975a8c73e808c8f4d080]
+@startuml PendulumMultiComp
+
+
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+skinparam nodesep 30
+skinparam ranksep 10
+
+skinparam backgroundColor white
+
+skinparam shadowing false
+
+left to right direction
+
+
+class PendulumMultiComp <<MultiComponent>> {
+    - _fem_comp: Optional[FEMPendulum]
+    - _opensim_comp: Optional[OpenSimPendulum]
+    - _fmu_comp: Optional[FMUComponent]
+    - _t_end: float
+    - -
+    + models: Dict[str, CoSimComponent]
+    + active_mode: str
+    + active_comp: CoSimComponent
+    + mode_selector: Callable
+    + hysteresis: Hysteresis
+    + sync_events: List[Dict]
+    ==
+    + __init__(fem_comp, opensim_comp, fmu_comp, initial_mode)
+    .. Model Management ..
+    - _register_models()
+    .. State Adaptation ..
+    - _adapt_state(state, target_mode): Dict
+    .. Mode Selection ..
+    - _time_based_mode_selector(t, state): str
+    .. Initialization ..
+    + initialize(t0)
+    .. Time Stepping ..
+    - _do_step_internal(t, dt)
+    - _update_output_states(t)
+    .. State Management ..
+    + get_state(): Dict
+    + set_state(state, t)
+    + reset()
+}
+
+class FEMPendulum <<FEMComponent>> {
+    + mass: float
+    + inertia: float
+    + parameters: Dict
+    - -
+    - _use_gravity: bool
+    - _with_contact: bool
+    - -
+    + initialize(t0)
+    + setup_simulation_diagnostics()
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class OpenSimPendulum <<OpenSimComponent>> {
+    + parameters: Dict
+    - -
+    - _use_gravity: bool
+    - _with_contact: bool
+    - -
+    + initialize(t0)
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class FMUComponent <<CoSimComponent>> {
+    + parameters: Dict
+    - -
+    + initialize(t0)
+    + do_step(t, dt)
+    + get_state(): Dict
+    + set_state(state, t)
+}
+
+class MultiComponent <<abstract>> {
+    + models: Dict[str, CoSimComponent]
+    + active_mode: str
+    + active_comp: CoSimComponent
+    + mode_selector: Callable
+    + hysteresis: Hysteresis
+    + sync_events: List[Dict]
+    ==
+    # _do_step_internal(t, dt)
+    # _update_output_states(t)
+    # _adapt_state(state, target_mode): Dict
+    - _switch_mode(new_mode, t)
+    - _unify_ports()
+}
+
+class Hysteresis {
+    + dwell_time: float
+    - _last_switch_time: float
+    - -
+    + should_switch(current_time): bool
+    + record_switch(time)
+}
+
+class "State Format" as StateFormat <<dict>> {
+    Standard for FEM & OpenSim:
+    q: {value, unit}
+    omega: {value, unit}
+    alpha: {value, unit}
+    torque: {value, unit}
+    
+    FMU Format:
+    q0: {value, unit}
+    omega0: {value, unit}
+    torque: {value, unit}
+}
+
+class "Mode Selection Strategy" as ModeStrategy <<function>> {
+    **Time-Based Cycling:**
+    
+    interval = t_end / 12
+    cycle_pos = int(t / interval) % 3
+    
+    • cycle_pos = 0 → FEM
+    • cycle_pos = 1 → EQB
+    • cycle_pos = 2 → OpenSim
+    
+    **Result:** Each mode active
+    4 times during simulation
+}
+
+class "Synchronization Event" as SyncEvent <<dict>> {
+    • time: float
+    • from_mode: str
+    • to_mode: str
+    • retrieved: Dict[str, Any]
+    • now: Dict[str, Any]
+}
+
+
+PendulumMultiComp -right-|> MultiComponent : extends
+PendulumMultiComp o-up- FEMPendulum : contains
+PendulumMultiComp o-up- OpenSimPendulum : contains
+PendulumMultiComp o-up- FMUComponent : contains
+PendulumMultiComp *- - Hysteresis : uses
+PendulumMultiComp ..> ModeStrategy : implements
+PendulumMultiComp ..> StateFormat : adapts
+PendulumMultiComp ..> SyncEvent : records
+
+
+    
+    
+    
+
+    
+
+    
+    
+
+    
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
