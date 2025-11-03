@@ -204,50 +204,48 @@ class FEMPendulum(FEMComponent):
         current_normal_unit = current_normal_unnorm / IfPos(surface_jacobian, surface_jacobian, 1)
         
         # Cross product for torque calculation: r × n (2D cross product gives scalar)
-        torque_moment_arm = -(radius_vector[0] * reference_normal[1] - radius_vector[1] * reference_normal[0])
-        
-        # --- Smooth bipolar weight distribution ---
-        # Create localized weight function near the rotation axis
-        hinge_radius = self.geom_params.r_rod
-        smoothing_width = max(1e-9, 0.5 * hinge_radius)
-        core_weight = exp(-(x*x) / (smoothing_width*smoothing_width))
-        
-        # Split the weight into positive and negative regions using smooth Heaviside
-        heaviside_smoothing = 0.1 * smoothing_width  
-        smooth_heaviside = 0.5 * (1 + x / sqrt(x*x + heaviside_smoothing*heaviside_smoothing))
-        
-        weight_positive_side = core_weight * smooth_heaviside           # Right side weight
-        weight_negative_side = core_weight * (1.0 - smooth_heaviside)   # Left side weight
-        
-        # --- Zero-mean bipolar distribution ---
-        # Ensure the weight distribution has zero net force (pure torque)
-        weight_difference = weight_positive_side - weight_negative_side
-        
-        # Remove mean to ensure ∫ w dA = 0 (no net force)
-        rotation_boundary_area = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        weight_mean = Integrate(weight_difference, self._mesh, definedon=self._mesh.Boundaries("rotation")) / rotation_boundary_area
-        zero_mean_weight = weight_difference - weight_mean
-        
-        # --- Torque application system ---
-        # Drive parameter controls torque magnitude
+        self._torque_moment_arm = -(radius_vector[0] * reference_normal[1] - radius_vector[1] * reference_normal[0])
+
         self._torque_drive_parameter = Parameter(0.0)
+
+        distribution = self.sim_params.torque_traction_distribution
+        
+        if distribution == 'linear':
+            # Linear weight
+            self._weight = x
+                    
+        if distribution == 'bipolar':
+            # Create localized weight function near the rotation axis
+            hinge_radius = self.geom_params.r_rod
+            smoothing_width = max(1e-9, 0.5 * hinge_radius)
+            core_weight = exp(-(x*x) / (smoothing_width*smoothing_width))
+        
+            # Split the weight into positive and negative regions using smooth Heaviside
+            heaviside_smoothing = 0.1 * smoothing_width  
+            smooth_heaviside = 0.5 * (1 + x / sqrt(x*x + heaviside_smoothing*heaviside_smoothing))
+        
+            weight_positive_side = core_weight * smooth_heaviside           # Right side weight
+            weight_negative_side = core_weight * (1.0 - smooth_heaviside)   # Left side weight
+        
+            # --- Zero-mean bipolar distribution ---
+            # Ensure the weight distribution has zero net force (pure torque)
+            weight_difference = weight_positive_side - weight_negative_side
+        
+            # Remove mean to ensure ∫ w dA = 0 (no net force)
+            rotation_edge_length = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+            weight_mean = Integrate(weight_difference, self._mesh, definedon=self._mesh.Boundaries("rotation")) / rotation_edge_length
+            self._weight = weight_difference - weight_mean
         
         # Traction amplitude scaled by zero-mean weight distribution
-        traction_amplitude = self._torque_drive_parameter * zero_mean_weight
-        
+        self._traction_amplitude = self._torque_drive_parameter * self._weight
+            
         # Applied traction in current configuration (includes surface jacobian)
-        self._applied_traction = traction_amplitude * current_normal_unit * surface_jacobian
-        
+        self._applied_traction = self._traction_amplitude * current_normal_unit * surface_jacobian
+            
         # --- Effective moment arm calculation ---
         # Compute the effective lever arm for torque-to-parameter conversion
-        self._effective_moment_arm = Integrate(zero_mean_weight * torque_moment_arm, 
-                                             self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        
-        # Store components for diagnostics
-        self._weight_positive = weight_positive_side
-        self._weight_negative = weight_negative_side
-        self._rotation_normal = reference_normal
-        self._torque_moment_arm = torque_moment_arm
+        self._effective_moment_arm = Integrate(self._weight * self._torque_moment_arm, 
+                                               self._mesh, definedon=self._mesh.Boundaries("rotation"))
 
     def _setup_bilinear_form(self):
         # Bilinear form
@@ -547,10 +545,8 @@ class FEMPendulum(FEMComponent):
             float or tuple: Applied torque in N·m, optionally with (Fx, Fy, Mz)
         """
         # Calculate actual applied torque by integrating moment contributions
-        weight_distribution = self._weight_positive - self._weight_negative
-        applied_torque = Integrate(self._torque_drive_parameter * weight_distribution * self._torque_moment_arm,
-                                 self._mesh, definedon=self._mesh.Boundaries("rotation"))
-        
+        effective_traction = self._traction_amplitude * self._torque_moment_arm
+        applied_torque = Integrate(effective_traction, self._mesh, definedon=self._mesh.Boundaries("rotation"))
         if return_force:
             # Calculate net force components (should be near zero for pure torque)
             force_x = Integrate(self._applied_traction[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))

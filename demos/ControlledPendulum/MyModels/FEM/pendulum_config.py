@@ -1,16 +1,15 @@
 class GeometryParameters:
-    # Pendulum geometry
-    r_rod:    float = 0.05
-    r_hole:   float = 0.1
-    r_head:   float = 0.2
-    l_center: float = 0.8
-    
-    # Wall geometry
-    with_contact:   bool  = False
-    q_wall_deg: float = 0
-    wall_len_x: float = 0.05
-    wall_len_y: float = 0.5
-    wall_len_z: float = 0.1
+    def __init__(self):
+        self.r_rod = 0.05
+        self.r_hole = 0.1
+        self.r_head = 0.2
+        self.l_center = 0.8
+        self.with_contact = False
+        self.q_wall_deg = 0
+        self.wall_len_x = 0.05
+        self.wall_len_y = 0.5   
+        self.wall_len_z = 0.1
+        pass
     
     def __str__(self):
         return (f"Pendulum Geometry:\n"
@@ -26,13 +25,14 @@ class GeometryParameters:
 
 
 class MaterialParameters:
-    E_pendulum:        float = 210e9 
-    nu_pendulum:       float = 0.2      
-    rho_pendulum:      float = 7850      
-    E_wall:            float = 210e9     
-    nu_wall:           float = 0.2       
-    rho_wall:          float = 7850      
-    thickness:         float = 0.1
+    def __init__(self):
+        self.E_pendulum = 210e9 
+        self.nu_pendulum = 0.2      
+        self.rho_pendulum = 7850      
+        self.E_wall = 210e9
+        self.nu_wall = 0.2
+        self.rho_wall = 7850
+        self.thickness = 0.1            
     
     def __str__(self):
             return (f"Material Parameters Pendulum:\n"
@@ -47,10 +47,11 @@ class MaterialParameters:
 
 
 class MeshParameters:
-    max_element_size:  float = 0.03
-    mesh_order:        int   = 2
-    curved_elements:   bool  = True
-    refinement_levels: int   = 0
+    def __init__(self):
+        self.max_element_size = 0.03
+        self.mesh_order = 2
+        self.curved_elements = True
+        self.refinement_levels = 0
 
     def __str__(self):
         return (f"Mesh Parameters:\n"
@@ -61,10 +62,11 @@ class MeshParameters:
     
 
 class InitialConditionParameters:
-    angular_position_deg:  float = 0
-    angular_velocity:      float = 0
-    drive_torque:          float = 0
-    
+    def __init__(self):
+        self.angular_position_deg = 0
+        self.angular_velocity = 0
+        self.drive_torque = 0
+
     def __str__(self):
         return (f"Initial Conditions:\n"
                 f"  Angular Position:     {self.angular_position_deg} deg\n"
@@ -74,19 +76,23 @@ class InitialConditionParameters:
     
     
 class ContactParameters:
-    kn:      float = 1e10         # contact stiffness
+    def __init__(self):
+        self.kn = 1e6
     def __str__(self):
         return (f"Contact Parameters:\n"
                 f"   Contact Stiffness: {self.kn:.2e} N/m")
 
 
 class SimulationParameters:
-    t_start:  float = 0 
-    tau:      float = 0.01
-    t_end:    float = 2
-    use_gravity: bool  = True
-    max_err:   float = 1e-6
-    max_it:    int   = 20
+    def __init__(self):
+        self.t_start = 0.0
+        self.tau = 0.01
+        self.t_end = 2.0
+        self.max_err = 1e-6
+        self.max_it = 20
+
+        self.use_gravity = True
+        self.torque_traction_distribution = 'linear'  # 'linear' or 'bipolar'
     
     def __str__(self):
         return (f"Simulation Parameters:\n"
@@ -95,9 +101,10 @@ class SimulationParameters:
                 f"  Simulation End Time:   {self.t_end} s")       
     
 class AnimationParameters:
-    animate: bool  = True
-    interval: int   = 10       
-    speed:    float = 50
+    def __init__(self):
+        self.animate = True
+        self.interval = 10
+        self.speed = 50
 
     def __str__(self):
         return (f"Animation Parameters:\n"
