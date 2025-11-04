@@ -15,6 +15,7 @@ from ngsolve import *
 from ngsolve.webgui import Draw
 from netgen.occ import *
 from ngsolve.solvers import NewtonMinimization
+
 from IPython.display import display, Markdown
 import ipywidgets as widgets
 from ipywidgets import Layout, HBox, VBox, HTML
@@ -96,6 +97,8 @@ class FEMPendulum(FEMComponent):
                  'torque':{'value': self.init_params.drive_torque}}
 
         self.set_state(state=state, t=t0)
+
+        self.setup_widgets()
 
     #----------------------------------------------------------------------------
     # Initialization helper methods
@@ -264,7 +267,6 @@ class FEMPendulum(FEMComponent):
         self._bfa += (InnerProduct(self._u, self._p) + InnerProduct(self._v, self._q)) * ds('rotation')
 
         # Apply distributed traction for torque generation
-        # (Lagrangian form: traction·velocity in current configuration)
         self._bfa += InnerProduct(self._applied_traction, self._v) * ds("rotation")
         
         # inertia
@@ -291,6 +293,7 @@ class FEMPendulum(FEMComponent):
     def set_state(self, state: Dict[str, Any], t: float):
         if 'q' in state:
             theta = state['q']['value']
+            if hasattr(theta, 'magnitude'): theta = theta.magnitude
             c, s = np.cos(theta), np.sin(theta)
             # rotated radius r0 = R(theta) * (X - P)
             r0 = CF((c * self._X_rel[0] - s * self._X_rel[1],
@@ -360,7 +363,7 @@ class FEMPendulum(FEMComponent):
                 if self._with_contact:
                     self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
                     min_gap = self._get_contact_gap_distance()
-                    self._widget_gap.value = min_gap
+                    self.w_gap.value = min_gap
                     # Reduce time step if pendulum is close to contact
                     if min_gap < 0.0005:
                         self.tau.Set(1e-4)
@@ -378,8 +381,8 @@ class FEMPendulum(FEMComponent):
                 # Update time settings
                 tau = self.tau.Get()
                 t += tau
-                self._widget_time.value = t
-                self._widget_tau.value = tau
+                self.w_time.value = t
+                self.w_tau.value = tau
                 
                 # Solve nonlinear system with Newton               
                 NewtonMinimization(a=self._bfa,
@@ -401,17 +404,8 @@ class FEMPendulum(FEMComponent):
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
                 
                 if self.anim_params.animate:
-                    self._scene.Redraw()
-                
-                # Update widget values
-                Mz = self._get_torque_diagnostics()
-                q_state, omega_state, alpha_state = self._rigid_proxy()
-                self._update_widgets(t=t,
-                                     q_ref_rad=0.0,
-                                     q_state_rad=q_state,
-                                     omega_state=omega_state,
-                                     alpha_state=alpha_state,
-                                     torque=Mz)
+                    self.scene.Redraw()
+                self._update_output_states(t)
                 
     #----------------------------------------------------------------------------
     # Input/output methods
@@ -472,6 +466,7 @@ class FEMPendulum(FEMComponent):
     # Helpers for diagnostics and visualization
     #----------------------------------------------------------------------------
     def _get_contact_gap_distance(self):
+        self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
         gap_vec_master = self._contact.gap
         n_master = self._contact.normal
         gap_n_master = InnerProduct(gap_vec_master, n_master)
@@ -575,87 +570,31 @@ class FEMPendulum(FEMComponent):
     
     #----------------------------------------------------------------------------
     # Visualization methods
-    #----------------------------------------------------------------------------   
-    def setup_simulation_diagnostics(self, qref=0.0):
-        header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px; text-align:center;'>Simulation Diagnostics</h3>")
+    #----------------------------------------------------------------------------
+    def setup_widgets(self) -> None:
+        self.w_time = widgets.FloatText(value=0,
+                                        description=f'Time: t / {self.sim_params.t_end} s',
+                                        step=0.001,
+                                        disabled=True)
         
-        theta, omega, alpha = self._rigid_proxy()
-        torque = self._get_torque_diagnostics()
-
-        self._widget_time   = widgets.FloatText(value=self.sim_params.t_start, description=f'Time: t / {self.sim_params.t_end} s', step=0.001, disabled=True)
-        self._widget_tau    = widgets.FloatText(value=self.sim_params.tau, description='Time Step: dt in s', step=0.0001, disabled=True)
-        self._widget_mode   = widgets.Text(value="", description="Mode:", disabled=True)
-        self._widget_ref    = widgets.FloatText(value=0.0, description='Ref. pos in deg', step=0.001, disabled=True)
-        self._widget_theta  = widgets.FloatText(value=np.rad2deg(theta), description='Ang. Pos: θ in deg', step=0.001, disabled=True)
-        self._widget_omega  = widgets.FloatText(value=omega, description='Ang. Vel: ω in rad/s', step=0.01, disabled=True)
-        self._widget_alpha  = widgets.FloatText(value=alpha, description='Ang. Acc: α in rad/s²', step=0.01, disabled=True)
-        self._widget_torque = widgets.FloatText(value=torque, description='Torque: Mz in Nm', step=0.01, disabled=True)
-        self._widget_gap    = widgets.FloatText(value=0.0, description='Min. Gap in m', step=0.0001, disabled=True)
-
-        self._widgets = [self._widget_time, self._widget_tau,
-                         self._widget_mode, self._widget_ref,
-                         self._widget_theta, self._widget_omega,
-                         self._widget_alpha, self._widget_torque,
-                         self._widget_gap]
-
-        h_box_time = HBox([self._widget_time, self._widget_tau])
-        h_box_mode = HBox([self._widget_mode, self._widget_ref])
-        h_box_state1 = HBox([self._widget_theta, self._widget_omega])
-        h_box_state2 = HBox([self._widget_alpha, self._widget_torque])
-        h_box_contact = HBox([self._widget_gap])
-        if self._with_contact:
-            self._hboxes = [h_box_time, h_box_mode, h_box_state1, h_box_state2, h_box_contact]
-        else:
-            self._hboxes = [h_box_time, h_box_mode, h_box_state1, h_box_state2]
-
-        for w in self._widgets:
-            w.layout.width = '350px'
-            w.layout.margin = '8px 0px 8px 0px'
-            w.layout.align_self = 'center'
-            w.layout.display = 'flex'
-            w.layout.flex_direction = 'column'
-            w.style.description_width = '120px'
-            w.style.font_weight = 'bold'
-            w.style.font_size = '16px'
-            w.style.background = '#f5f7fa'
-            w.style.border = '1px solid #cfd8dc'
-            w.style.border_radius = '8px'
-            w.style.padding = '6px 12px'
-            w.style.color = '#263238'
-            w.style.text_align = 'right'
-
-        # Create a vertical box layout to hold all widgets
-        vbox = VBox([header] + self._hboxes,
-                    layout=Layout(
-                        width='710px',
-                        display='flex',
-                        flex_direction='column',
-                        justify_content='center',
-                        align_items='stretch',
-                        margin='0 auto',
-                        align_self='center'
-                    ))
-
-        display(vbox)
+        self.w_tau  = widgets.FloatText(value=self.sim_params.tau,
+                                        description='Time Step: dt in s',
+                                        step=0.0001,
+                                        disabled=True)
         
-        self._scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
-                           deformation = self._gf_u.components[0], show=True)     
+        self.w_gap  = widgets.FloatText(value=0.0,
+                                        description='Min. Gap in m',
+                                        step=0.0001,
+                                        disabled=True)
 
-    def _update_widgets(self, mode="FEM", t=0.0, q_ref_rad=0, q_state_rad=0.0, omega_state=0.0, alpha_state=0.0, torque=0.0):
-        self._widget_time.value = t  
-        self._widget_mode.value = mode
-        self._widget_ref.value = np.rad2deg(q_ref_rad)
-        self._widget_theta.value = np.rad2deg(q_state_rad)
-        self._widget_omega.value = omega_state
-        self._widget_alpha.value = alpha_state
-        self._widget_torque.value = torque
 
-    def update_scene(self, state):
-        t, q_ref, q_state, omega_state, alpha_state, torque, mode = state
-        self._update_widgets(mode=mode, t=t, q_ref_rad=q_ref, q_state_rad=q_state, omega_state=omega_state, alpha_state=alpha_state, torque=torque)
-        theta_deg = np.rad2deg(q_state)
-        self.set_state(theta_deg=theta_deg, omega=omega_state)
-        self._scene.Redraw()
+    def initialize_scene(self):
+        self.scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
+                            deformation = self._gf_u.components[0], show=True)
+    
+    def update_scene(self, q, t):
+        self.set_state({'q': {'value': q}}, t)            
+        self.scene.Redraw()
 
     def visualize_state(self):
         # Displacement

@@ -7,6 +7,11 @@ import networkx as nx
 from .connection import Connection
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec, PortType
+#from ..ui.simulation_monitor import SimulationMonitor, MonitorableState
+
+from IPython.display import display, Markdown
+import ipywidgets as widgets
+from ipywidgets import Layout, HBox, VBox, HTML
 
 _ports_compatible = PortSpec.compatible
 
@@ -29,6 +34,8 @@ class System:
         self.groups: Dict[str, List[CoSimComponent]] = {}
         self.execution_order: List[List[str]] = []  # [ [comp names in gen0], [gen1], ...]
         self.execution_idx: Dict[str, int] = {}     # comp name -> gen index
+
+        #self.monitor: SimulationMonitor = SimulationMonitor(self)
     
     #--------------------------------------------------------------
     # Register components
@@ -145,11 +152,15 @@ class System:
     #--------------------------------------------------------------
     # Simulation Lifecycle
 
-    def initialize(self, t0: float) -> None:
+    def initialize(self, t0: float, t_end: float) -> None:
+        self.time = t0
+        self.t_end = t_end
         for comp in self.components.values():
             comp.initialize(t0)
         self.build_graphs()
         self.compute_execution_order()
+        #self.monitor.initialize()
+
     
     def _get_latest_values(self, comp_name: str, port_name: str, delay_steps: int) -> Any:
         """
@@ -211,6 +222,10 @@ class System:
             for comp_name in gen:
                 comp = self.components[comp_name]
                 comp.do_step(t, dt)
+        
+        # Phase 3: Update monitor if available
+        #if self.monitor:
+            #self.monitor.update(t) # Inputs of connections are considered thus t and not t + dt
 
     def run(self, t0: float, tf: float, dt: float):
         """
@@ -218,6 +233,22 @@ class System:
         """
         #self.initialize(t0)
         t = t0
+        self.t_end = tf
         while t < tf - 1e-12:
             self.step(t, dt)
             t += dt
+        
+    #--------------------------------------------------------------
+    # Simulation Monitoring
+
+    # def _setup_simulation_monitoring(self) -> None:
+    #     header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px; text-align:center;'>Simulation Diagnostics</h3>")
+    #     self.widgets = {}
+    #     w_time = widgets.FloatText(value=self.time, description=f'Time: t / {self.t_end} s', step=0.001, disabled=True)
+
+    # def enable_monitoring(self) -> SimulationMonitor:
+    #     """
+    #     Enable live monitoring of system state.
+    #     """
+    #     self.monitor = SimulationMonitor(self)
+    #     return self.monitor

@@ -339,7 +339,7 @@ class OpenSimPendulum(OpenSimComponent):
 
         while t_current < t_end:
             # Apply current input
-            torque = float(self.inputs['torque'].get().magnitude)
+            torque = float(self.inputs['torque'].get().magnitude if self.inputs['torque'].get() is not None else 0 )
             self.actuator.setOverrideActuation(self.state, torque)
             self.realize()
 

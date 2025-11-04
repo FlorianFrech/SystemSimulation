@@ -77,7 +77,7 @@ class InitialConditionParameters:
     
 class ContactParameters:
     def __init__(self):
-        self.kn = 1e6
+        self.kn = 1e10
     def __str__(self):
         return (f"Contact Parameters:\n"
                 f"   Contact Stiffness: {self.kn:.2e} N/m")

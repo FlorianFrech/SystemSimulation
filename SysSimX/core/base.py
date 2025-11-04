@@ -118,3 +118,8 @@ class CoSimComponent(ABC):
     def free(self) -> None:
         """Optional: release resources (FMU instances, OpenSim memory, etc.)."""
         pass
+    
+    # ---- Monitoring ----
+    def snapshot(self) -> Dict:
+        """Provides a snapshot of its ports and internal states for monitoring purpose"""
+        pass
