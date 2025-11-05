@@ -1,5 +1,7 @@
 from ast import If
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
+
+import scipy as sp
 
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
@@ -37,6 +39,13 @@ OUTPUT_SPECS = {
 # Pendulum FEM component
 #----------------------------------------------------------------------------  
 class FEMPendulum(FEMComponent):
+    """
+    Finite Element Model of a controlled pendulum using Netgen/NGSolve.
+    Implements a 2D pendulum with optional contact and torque control.
+    Args:
+        name (str): Name of the component.
+        group (str): Group name for organizing components.
+    """
     def __init__(self, name: str, group: str = "Plant"):
         super().__init__(name, group=group)
         
@@ -63,17 +72,57 @@ class FEMPendulum(FEMComponent):
             "Simulation": self.sim_params,
             "Animation": self.anim_params
         }
-
-        self._with_contact = self.geom_params.with_contact
-        self._use_gravity = self.sim_params.use_gravity
-    
+    #----------------------------------------------------------------------------
+    # Setup Configuration Parameters before initialization
+    #---------------------------------------------------------------------------- 
+    def set_parameters(self,
+                       geom_params: Optional[GeometryParameters] = None,
+                       mat_params: Optional[MaterialParameters] = None,
+                       mesh_params: Optional[MeshParameters] = None,
+                       init_params: Optional[InitialConditionParameters] = None,
+                       contact_params: Optional[ContactParameters] = None,
+                       sim_params: Optional[SimulationParameters] = None,
+                       anim_params: Optional[AnimationParameters] = None,
+                       **parameters: Any) -> None:
+        """
+        Set component parameters BEFORE initialize().
+        Override to handle complex parameter objects.
+        Args:
+            geom_params (GeometryParameters): Geometry parameters.
+            mat_params (MaterialParameters): Material parameters.
+            mesh_params (MeshParameters): Mesh parameters.
+            init_params (InitialConditionParameters): Initial condition parameters.
+            contact_params (ContactParameters): Contact parameters.
+            sim_params (SimulationParameters): Simulation parameters.
+            anim_params (AnimationParameters): Animation parameters.
+        """
+        self.geom_params = geom_params if geom_params else self.geom_params
+        self.mat_params = mat_params if mat_params else self.mat_params
+        self.mesh_params = mesh_params if mesh_params else self.mesh_params
+        self.init_params = init_params if init_params else self.init_params
+        self.contact_params = contact_params if contact_params else self.contact_params
+        self.sim_params = sim_params if sim_params else self.sim_params
+        self.anim_params = anim_params if anim_params else self.anim_params
+        super().set_parameters(**parameters)
+        
     #----------------------------------------------------------------------------
     # Initialization method
     #----------------------------------------------------------------------------   
     def _initialize_component(self, t0:float):
         """
         Netgen/NGSolve pendulum specific initialization (called by base-class).
+        1. Setup material laws
+        2. Create mesh and compute mass/inertia
+        3. Initialize FE spaces and grid functions
+        4. Setup contact if enabled
+        5. Setup torque control system
+        6. Setup bilinear form
+        7. Set initial state
+        Args:
+            t0 (float): Start time of the simulation.
         """
+        self._with_contact = self.sim_params.with_contact
+        self._use_gravity = self.sim_params.use_gravity
         self.sim_params.t_start = t0
 
         self._setup_material_law()
@@ -98,7 +147,7 @@ class FEMPendulum(FEMComponent):
 
         self.set_state(state=state, t=t0)
 
-        self.setup_widgets()
+        self.setup_monitoring()
 
     #----------------------------------------------------------------------------
     # Initialization helper methods
@@ -165,6 +214,9 @@ class FEMPendulum(FEMComponent):
         self._gf_stress_history = GridFunction(self._S, multidim=0)
 
     def _initialize_contact(self):
+        """
+        Initialize contact boundary conditions using penalty method and incremental gap function.
+        """
         kn = self.contact_params.kn
         
         master = self._mesh.Boundaries("contact_wall")
@@ -188,11 +240,7 @@ class FEMPendulum(FEMComponent):
     def _initialize_torque_control(self):
         """
         Initialize torque control system using distributed traction on rotation boundary.
-        
-        This method creates a smooth, bipolar weight distribution that generates a
-        pure torque around the hinge axis when multiplied by the drive parameter.
         """
-        
         # --- Geometric quantities ---
         reference_normal = specialcf.normal(2)  # Normal vector in reference configuration
         radius_vector = self._X_rel             # Position vector from pivot to boundary points
@@ -291,6 +339,13 @@ class FEMPendulum(FEMComponent):
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
     def set_state(self, state: Dict[str, Any], t: float):
+        """
+        Reset and initialize the FEM pendulum state from a reference rigid-body state.
+        Args:
+            state (Dict[str, Any]): State dictionary with keys 'q', 'omega', 'alpha', 'torque'.
+            t (float): Current simulation time.
+        """
+
         if 'q' in state:
             theta = state['q']['value']
             if hasattr(theta, 'magnitude'): theta = theta.magnitude
@@ -363,13 +418,13 @@ class FEMPendulum(FEMComponent):
                 if self._with_contact:
                     self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
                     min_gap = self._get_contact_gap_distance()
-                    self.w_gap.value = min_gap
+                    self.widgets['gap'].value = min_gap
                     # Reduce time step if pendulum is close to contact
                     if min_gap < 0.0005:
                         self.tau.Set(1e-4)
-                    elif min_gap < 0.001:
+                    elif min_gap < 0.005:
                         self.tau.Set(5e-4)
-                    elif min_gap < 0.01:
+                    elif min_gap < 0.05:
                         self.tau.Set(1e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
@@ -381,10 +436,10 @@ class FEMPendulum(FEMComponent):
                 # Update time settings
                 tau = self.tau.Get()
                 t += tau
-                self.w_time.value = t
-                self.w_tau.value = tau
-                
-                # Solve nonlinear system with Newton               
+                self.widgets['time'].value = t
+                self.widgets['dt'].value = tau
+
+                # Solve nonlinear system with Newton
                 NewtonMinimization(a=self._bfa,
                                    u=self._gf_u,
                                    printing=False,
@@ -406,6 +461,7 @@ class FEMPendulum(FEMComponent):
                 if self.anim_params.animate:
                     self.scene.Redraw()
                 self._update_output_states(t)
+                self.update_monitoring()
                 
     #----------------------------------------------------------------------------
     # Input/output methods
@@ -466,6 +522,11 @@ class FEMPendulum(FEMComponent):
     # Helpers for diagnostics and visualization
     #----------------------------------------------------------------------------
     def _get_contact_gap_distance(self):
+        """
+        Compute the minimum gap distance at the contact interface.
+        Returns:
+            float: Minimum gap distance
+        """
         self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
         gap_vec_master = self._contact.gap
         n_master = self._contact.normal
@@ -486,6 +547,14 @@ class FEMPendulum(FEMComponent):
         return min_gap   
 
     def _rigid_proxy(self):
+        """
+        Compute rigid-body proxy quantities: angular position, velocity, acceleration.
+        Returns:
+            tuple: (theta, omega, alpha)
+                - theta (float): Angular position in radians
+                - omega (float): Angular velocity in rad/s
+                - alpha (float): Angular acceleration in rad/s^2
+        """
         r   = self._X_rel
         rhoA = self.rho_p * self.mat_params.thickness
         u   = self._gf_u.components[0]
@@ -571,37 +640,188 @@ class FEMPendulum(FEMComponent):
     #----------------------------------------------------------------------------
     # Visualization methods
     #----------------------------------------------------------------------------
-    def setup_widgets(self) -> None:
-        self.w_time = widgets.FloatText(value=0,
+    def initialize_scene(self):
+        """
+        Initialize the stress visualization scene.
+        """
+        self.scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
+                            deformation = self._gf_u.components[0], show=True)
+    def update_scene(self, q: Union[float, Quantity], t: float):
+        """
+        Update the visualization scene with new state.
+
+        Args:
+            q (Union[float, Quantity]): The new state value.
+            t (float): The current time.
+        """
+        self.set_state({'q': {'value': q}}, t)            
+        self.scene.Redraw()
+
+    def visualize_state(self, draw_u: bool = True, draw_v: bool = True, draw_a: bool = True):
+        """
+        Visualizes the current state of the FEM pendulum (displacement, velocity, and acceleration field.)
+
+        Args:
+            draw_u (bool, optional): Whether to draw the displacement field. Defaults to True.
+            draw_v (bool, optional): Whether to draw the velocity field. Defaults to True.
+            draw_a (bool, optional): Whether to draw the acceleration field. Defaults to True.
+        """
+        # Displacement
+        if draw_u:
+            Draw(self._gf_u.components[0], deformation=True)
+
+        # Velocity
+        if draw_v:
+            Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
+
+        # Acceleration
+        if draw_a:
+            Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+
+    #----------------------------------------------------------------------------
+    # Monitoring interface methods
+    #----------------------------------------------------------------------------
+    def _initialize_widgets(self):
+        self.widgets = {}
+        # Input and output monitoring widgets
+        for name, spec in self.input_specs.items():
+            if spec.type == PortType.REAL:
+                self.widgets[name] = widgets.FloatText(value=0.0,
+                                                        description=f'{name} ({spec.unit}):',
+                                                        step=0.01,
+                                                        disabled=True)
+        for name, spec in self.output_specs.items():
+            if spec.type == PortType.REAL:
+                self.widgets[name] = widgets.FloatText(value=0.0,
+                                                        description=f'{name} ({spec.unit}):',
+                                                        step=0.01,
+                                                        disabled=True)
+        # Additional simulation monitoring widgets
+        self.widgets['time'] = widgets.FloatText(value=0,
                                         description=f'Time: t / {self.sim_params.t_end} s',
                                         step=0.001,
                                         disabled=True)
-        
-        self.w_tau  = widgets.FloatText(value=self.sim_params.tau,
+
+        self.widgets['dt']  = widgets.FloatText(value=self.sim_params.tau,
                                         description='Time Step: dt in s',
                                         step=0.0001,
                                         disabled=True)
         
-        self.w_gap  = widgets.FloatText(value=0.0,
-                                        description='Min. Gap in m',
-                                        step=0.0001,
-                                        disabled=True)
-
-
-    def initialize_scene(self):
-        self.scene = Draw(Norm(self._gf_sigma), self._mesh, "displacement",
-                            deformation = self._gf_u.components[0], show=True)
+        self.widgets['mode'] = widgets.Text(value='FEM',
+                                             description='Simulation Mode:',
+                                             disabled=True)
+        if self._with_contact:
+            self.widgets['gap']  = widgets.FloatText(value=0.0,
+                                            description='Min. Gap in m',
+                                            step=0.0001,
+                                            disabled=True)
+        self._format_widgets()
     
-    def update_scene(self, q, t):
-        self.set_state({'q': {'value': q}}, t)            
-        self.scene.Redraw()
+    def _format_widgets(self):
+        for w in self.widgets.values():
+            w.layout.width = '300px'
+            w.layout.margin = '5px'
+            w.style.description_width = '150px'
+            
+            w.readout_format = '.5g'
+            
+            # Professional color scheme
+            w.style.font_family = 'Inter' #, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            w.style.font_size = '13px'
+            w.style.font_weight = '500'
+            
+            # Modern input field styling
+            w.style.background = 'white'
+            w.style.border = '1px solid #e0e0e0'
+            w.style.border_radius = '4px'
+            w.style.padding = '8px 12px'
+            
+            # Text styling
+            w.style.color = '#424242'
+            w.style.description_color = '#757575'
+                
+    def setup_monitoring(self) -> None:
+        """Setup monitoring interface with grouped widgets."""
+        self._initialize_widgets()
+        
+        # Create styled headers
+        main_header = HTML(
+            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
+            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
+            "Pendulum Monitoring</h3>"
+        )
+        
+        # Group headers with modern styling
+        header_style = (
+            "color:#424242; font-family:Inter, sans-serif; font-size:14px; "
+            "font-weight:600; margin:15px 0 8px 0; padding:8px 12px; "
+            "background:linear-gradient(to right, #f5f5f5, #ffffff); "
+            "border-left:4px solid #1565c0; border-radius:4px;"
+        )
+        
+        input_header = HTML(f"<div style='{header_style} text-align:center;'>Input Signals</div>")
+        output_header = HTML(f"<div style='{header_style} text-align:center;'>Output Signals</div>")
+        simulation_header = HTML(f"<div style='{header_style} text-align:center;'>Simulation Status</div>")
+        
+        # Group widgets
+        input_widgets = [self.widgets[name] for name in self.input_specs.keys() if name in self.widgets]
+        output_widgets = [self.widgets[name] for name in self.output_specs.keys() if name in self.widgets]
+        simulation_widgets = [self.widgets['time'], self.widgets['dt'], self.widgets['mode']]
+        if self._with_contact:
+            simulation_widgets.append(self.widgets['gap'])
+        
+        # Create widget groups with padding
+        input_box = VBox([input_header] + input_widgets, layout=Layout(margin='0 0 20px 10px'))
+        output_box = VBox([output_header] + output_widgets, layout=Layout(margin='0 0 20px 10px'))
+        simulation_box = VBox([simulation_header] + simulation_widgets, layout=Layout(margin='0 0 20px 10px'))
+        
+        # Widget Box
+        widget_box = HBox([simulation_box, input_box, output_box],
+                          layout=Layout(justify_content='space-between'))
 
-    def visualize_state(self):
-        # Displacement
-        Draw(self._gf_u.components[0], deformation=True)
+        # Create main container with sections
+        self.monitoring_display = VBox([
+            main_header,
+            widget_box,
+        ], layout=Layout(
+            padding='20px',
+            border='1px solid #e0e0e0',
+            border_radius='8px',
+            background='#fafafa',
+            width='fit-content',
+            margin='0 auto',
+            height='auto',
+            box_shadow='0 4px 8px rgba(0, 0, 0, 0.1)',
+        ))
         
-        # Velocity
-        Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
-        
-        # Acceleration
-        Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+        # Stress visualization header
+        self.scene_header = HTML(
+            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
+            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
+            "Stress Visualization (N/m²)</h3>"
+        )
+    
+    def update_monitoring(self):
+        """Update monitoring widgets with current values."""
+        for name, spec in self.output_specs.items():
+            if name in self.widgets:
+                value = self.outputs[name].get()
+                if value is not None:
+                    if hasattr(value, 'magnitude'):
+                        # Format to 5 significant figures
+                        self.widgets[name].value = float(f'{value.magnitude:.5g}')
+                    else:
+                        self.widgets[name].value = float(f'{value:.5g}')
+        for name, spec in self.input_specs.items():
+            if name in self.widgets:
+                value = self.inputs[name].get()
+                if value is not None:
+                    if hasattr(value, 'magnitude'):
+                        self.widgets[name].value = float(f'{value.magnitude:.5g}')
+                    else:
+                        self.widgets[name].value = float(f'{value:.5g}')
+
+    def display_monitoring(self):
+        """Display the monitoring interface."""
+        display(self.monitoring_display)
+        display(self.scene_header)

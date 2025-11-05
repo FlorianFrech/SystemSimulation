@@ -1,0 +1,50 @@
+{
+    "Geometry": {
+        "r_rod": 0.05,
+        "r_hole": 0.1,
+        "r_head": 0.2,
+        "l_center": 0.8,
+        "q_wall_deg": 0.0,
+        "wall_len_x": 0.05,
+        "wall_len_y": 0.5,
+        "wall_len_z": 0.1
+    },
+    "Material": {
+        "E_pendulum": 210000000000.0,
+        "nu_pendulum": 0.2,
+        "rho_pendulum": 7850,
+        "E_wall": 210000000000.0,
+        "nu_wall": 0.2,
+        "rho_wall": 7850,
+        "thickness": 0.1
+    },
+    "Mesh": {
+        "max_element_size": 0.03,
+        "mesh_order": 2,
+        "curved_elements": true,
+        "refinement_levels": 0
+    },
+    "Initial Conditions": {
+        "angular_position_deg": 0,
+        "angular_velocity": 0,
+        "drive_torque": 0
+    },
+    "Contact": {
+        "kn": 10000000000.0
+    },
+    "Simulation": {
+        "t_start": 0.0,
+        "tau": 0.01,
+        "t_end": 2.0,
+        "max_err": 1e-06,
+        "max_it": 20,
+        "use_gravity": true,
+        "with_contact": false,
+        "torque_traction_distribution": "linear"
+    },
+    "Animation": {
+        "animate": true,
+        "interval": 10,
+        "speed": 50
+    }
+}
