@@ -32,11 +32,11 @@ MODEL_PARAMETERS = {
 
 CONTACT_PARAMETERS = {
     "with_contact": False,      # Enable/disable contact forces
-    "stiffness": 1e6,           # Contact stiffness (N/m)
-    "dissipation": 0.5,         # Contact dissipation
-    "static_friction": 0.9,     # Static friction coefficient
-    "dynamic_friction": 0.9,    # Dynamic friction coefficient
-    "viscous_friction": 0.6     # Viscous friction coefficient
+    "stiffness": 1e12,           # Contact stiffness (N/m)
+    "dissipation": 0.0,         # Contact dissipation
+    "static_friction": 0.0,     # Static friction coefficient
+    "dynamic_friction": 0.0,    # Dynamic friction coefficient
+    "viscous_friction": 0.0     # Viscous friction coefficient
 }
 
 INITIAL_CONDITIONS = {
@@ -157,7 +157,7 @@ class OpenSimPendulum(OpenSimComponent):
         head_com = osim.Vec3(0, 0, 0)
         head_inertia = osim.Inertia(0.0, 0.0, 0.0)
         head = osim.Body(head_name, head_mass, head_com, head_inertia)
-        head_geom = osim.Sphere(0.025)
+        head_geom = osim.Sphere(mp['r_head'])
         head_geom.setColor(osim.Vec3(0.2, 0.2, 0.8))
         head.attachGeometry(head_geom)
         model.addBody(head)
@@ -350,6 +350,7 @@ class OpenSimPendulum(OpenSimComponent):
             # Realize after integration
             self.realize()
             t_current = next_t
+            self._update_output_states(t_current)
 
     #----------------------------------------------------------------------------
     # Input/output methods

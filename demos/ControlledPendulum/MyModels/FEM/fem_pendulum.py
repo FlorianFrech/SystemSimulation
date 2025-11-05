@@ -363,6 +363,8 @@ class FEMPendulum(FEMComponent):
             self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
             self._gf_uold.vec[:] = self._gf_u.vec
             self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+            if self._with_contact:
+                self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
 
         if 'omega' in state:
             omega = state['omega']['value']

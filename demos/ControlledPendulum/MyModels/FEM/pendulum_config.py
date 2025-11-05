@@ -166,7 +166,7 @@ class SimulationParameters:
                  max_err=1e-6,
                  max_it=20,
                  use_gravity=True,
-                 with_contact=False,
+                 with_contact=True,
                  torque_traction_distribution='linear'):
         self.t_start = t_start
         self.tau = tau

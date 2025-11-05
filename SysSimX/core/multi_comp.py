@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict, Optional, Callable, Protocol
-from ..core.base import CoSimComponent
-from ..core.port import PortSpec, PortState
+from .base import CoSimComponent
+from .port import PortSpec, PortState
 from ..utilities.units import ureg, Quantity
 
 # -------------------------------------------------------------------
@@ -245,10 +245,3 @@ class MultiComponent(CoSimComponent):
         for comp in self.models.values():
             if comp is not None:
                 comp.reset()
-
-
-    
-
-    
-
-
