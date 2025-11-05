@@ -364,6 +364,7 @@ class FEMPendulum(FEMComponent):
             self._gf_uold.vec[:] = self._gf_u.vec
             self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
             if self._with_contact:
+                self._initialize_contact()
                 self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
 
         if 'omega' in state:
@@ -423,17 +424,13 @@ class FEMPendulum(FEMComponent):
                     self.widgets['gap'].value = min_gap
                     # Reduce time step if pendulum is close to contact
                     if min_gap < 0.0005:
-                        self.tau.Set(1e-4)
+                        self.tau.Set(2e-4)
                     elif min_gap < 0.005:
-                        self.tau.Set(5e-4)
-                    elif min_gap < 0.05:
+                        self.tau.Set(7.5e-4)
+                    elif min_gap < 0.02:
                         self.tau.Set(1e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
-                
-                # Adapt time step if exceeding end time
-                if t + self.tau.Get() > t_step_end:
-                    self.tau.Set(t_step_end - t)
                 
                 # Update time settings
                 tau = self.tau.Get()
@@ -463,7 +460,7 @@ class FEMPendulum(FEMComponent):
                 if self.anim_params.animate:
                     self.scene.Redraw()
                 self._update_output_states(t)
-                self.update_monitoring()
+                #self.update_monitoring()
                 
     #----------------------------------------------------------------------------
     # Input/output methods

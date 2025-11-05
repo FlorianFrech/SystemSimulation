@@ -23,7 +23,7 @@ class StateAdapter(Protocol):
 # -------------------------------------------------------------------
 class Hysteresis:
     """Prevents chattering by enforcing minimum dwell time between switches."""
-    def __init__(self, dwell_time: float = 0.03):
+    def __init__(self, dwell_time: float = 0.01):
         self.dwell_time = dwell_time
         self.last_switch_time = 0.0
         self.last_mode: ModeKey = ""

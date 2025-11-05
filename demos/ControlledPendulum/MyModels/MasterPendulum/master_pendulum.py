@@ -128,19 +128,28 @@ class MasterPendulum(MultiComponent):
         else:
             return "OpenSim"
         
-    def _gap_based_mode_selector(self, t: float, state: Dict[str, Any]) -> str:
-        # 1) Get current angular position
-        q = self.get_state()['q']['value']
+    def _gap_based_mode_selector(self, t: float, state: Dict[str, Any]) -> str:      
+        # Get current angular position from active component
+        current_state = self.get_state()
+        q = current_state['q']['value']
+        
+        # Handle Quantity objects (with units)
+        if hasattr(q, 'magnitude'):
+            q = q.magnitude
+        
+        # Convert to degrees for threshold comparison
         q_deg = np.rad2deg(q)
-        # 2) Update scene / gf_u of FEM Pendulum if FEM not active
-        if self.active_mode != 'FEM':
-            self._fem_comp.update_scene(q, self.t)
-        # 3) Retrieve the current gap distance
-        gap = self._fem_comp._get_contact_gap_distance()
-        if q_deg is None: return 'EQB'  # Default to EQB if gap not available
-        elif q_deg > 20: return 'EQB'
-        elif q_deg > 5: return  'OpenSim'
-        elif q_deg <= 5: return 'FEM'
+        
+        # Use absolute value for symmetric contact detection
+        q_abs = abs(q_deg)
+        
+        # Mode selection based on angular position thresholds
+        if q_abs > 20:
+            return 'EQB'
+        elif q_abs > 5:
+            return 'OpenSim'
+        else:
+            return 'FEM'
 
     # ----Initialization with Parameter Propagation ----
     def initialize(self, t0: float) -> None:
@@ -208,12 +217,12 @@ class MasterPendulum(MultiComponent):
         super()._do_step_internal(t, dt)
         
         # Update Scene of FEM Pendulum if FEM Pendulum is not active
-        # if self.active_mode != "FEM":
-        #     q = self.active_comp.get_outputs()['q']
-        #     self._fem_comp.update_scene(q, t+dt)
+        if self.active_mode != "FEM":
+            q = self.active_comp.get_outputs()['q']
+            self._fem_comp.update_scene(q, t+dt)
         
         # # Update monitoring widgets
-        # self._update_monitoring(t, dt)
+        self._update_monitoring(t, dt)
     
     def _update_output_states(self, t):
         return super()._update_output_states(t)

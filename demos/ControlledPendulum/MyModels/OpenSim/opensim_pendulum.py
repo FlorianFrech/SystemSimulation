@@ -350,7 +350,7 @@ class OpenSimPendulum(OpenSimComponent):
             # Realize after integration
             self.realize()
             t_current = next_t
-            self._update_output_states(t_current)
+            #self._update_output_states(t_current)
 
     #----------------------------------------------------------------------------
     # Input/output methods
