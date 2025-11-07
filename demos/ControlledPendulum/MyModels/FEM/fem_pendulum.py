@@ -176,12 +176,39 @@ class FEMPendulum(FEMComponent):
         self.mass = area * self.mat_params.thickness * self.rho_p
 
     def _compute_inertia(self):
-        cx = cy = 0
-        self._X_rel = CF((x - cx, y - cy))
-        J_area = Integrate(self.rho_p * (self._X_rel[0]*self._X_rel[0] + self._X_rel[1]*self._X_rel[1]),
+        # Compute center of mass
+        total_mass = Integrate(self.rho_p, self._mesh, definedon=self._mesh.Materials("pendulum"))
+        cx = Integrate(self.rho_p * x, self._mesh, definedon=self._mesh.Materials("pendulum")) / total_mass
+        cy = Integrate(self.rho_p * y, self._mesh, definedon=self._mesh.Materials("pendulum")) / total_mass
+        
+        # Compute effective length from pivot to CoM
+        self._equivalent_length = np.sqrt(cx**2 + cy**2)
+        
+        # Store for torque calculation
+        self._X_rel = CF((x - 0, y - 0))  # Relative to pivot at (0,0)
+        
+        # Parallel axis theorem: I = I_cm + m*d²
+        J_area = Integrate(self.rho_p * (self._X_rel[0]**2 + self._X_rel[1]**2),
                            self._mesh, definedon=self._mesh.Materials("pendulum"))
         self.inertia = J_area * self.mat_params.thickness
-        self._equivalent_length = np.sqrt(self.inertia / self.mass)
+        
+    def _compute_fem_gravity_torque(self):
+        """Compute gravitational torque by integrating moment arm × gravity force."""
+        g = 9.81
+        rhoA_p = self.rho_p * self.mat_params.thickness
+        
+        # CRITICAL: Use deformed positions (X + u), not reference positions X
+        u = self._gf_u.components[0]
+        x_deformed = x + u[0]  # Current x-position after rotation
+        
+        # Torque = ∫ x_deformed * (ρAg) dA
+        # (assuming gravity points in +y direction, torque = arm_x * force_y)
+        torque_fem = Integrate(
+            rhoA_p * g * x_deformed,
+            self._mesh,
+            definedon=self._mesh.Materials("pendulum")
+        )
+        return torque_fem
 
     def _gravity_torque(self, theta: float):
         if not self._use_gravity:
@@ -337,11 +364,11 @@ class FEMPendulum(FEMComponent):
             self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
 
-        g = 11#9.81 * 1.1569507934386003
+        g = -9.81
         if self._use_gravity:
             if self._with_contact:
-                self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
-            self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
+                self._bfa += -rhoA_w*g *InnerProduct(CF((0, 1)), self._v) * dx("wall")
+            self._bfa += -rhoA_p*g *InnerProduct(CF((0, 1)), self._v) * dx("pendulum")
         
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
@@ -373,7 +400,7 @@ class FEMPendulum(FEMComponent):
             if self._with_contact:
                 self._initialize_contact()
                 self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
-
+                
         if 'omega' in state:
             omega = state['omega']['value']
             # Initial velocity: v0 = omega x r0
@@ -388,7 +415,7 @@ class FEMPendulum(FEMComponent):
             torque = state['torque']['value']
             self.set_drive_torque(torque)
 
-        # Solve nonlinear system with Newton
+        #Solve nonlinear system with Newton
         tau = self.tau.Set(self.sim_params.tau / 1000)
         tau = self.tau.Get()
         NewtonMinimization(a=self._bfa,
@@ -465,15 +492,15 @@ class FEMPendulum(FEMComponent):
                 self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
                 # Compute stress
-                self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
+                #self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
 
                 # Store results in time series
-                self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+                #self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
                 
                 if self.anim_params.animate:
                     self.scene.Redraw()
                 self._update_output_states(t)
-                #self.update_monitoring()
+                self.update_monitoring()
                 
     #----------------------------------------------------------------------------
     # Input/output methods
