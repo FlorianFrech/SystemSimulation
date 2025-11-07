@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional, Set
 from SysSimX.system.system import System
-from SysSimX.core.fmu_comp import FMUComponent
+from SysSimX.components.fmu_comp import FMUComponent
 
 @dataclass
 class AppState:

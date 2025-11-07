@@ -10,7 +10,7 @@
         "wall_len_z": 0.1
     },
     "Material": {
-        "E_pendulum": 210000000000.0,
+        "E_pendulum": 2100000000000.0,
         "nu_pendulum": 0.2,
         "rho_pendulum": 7850,
         "E_wall": 210000000000.0,
@@ -39,7 +39,7 @@
         "max_err": 1e-06,
         "max_it": 20,
         "use_gravity": true,
-        "with_contact": false,
+        "with_contact": true,
         "torque_traction_distribution": "linear"
     },
     "Animation": {

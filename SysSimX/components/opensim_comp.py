@@ -36,10 +36,6 @@ class OpenSimComponent(CoSimComponent):
         Complete OpenSim initialization after model is built/loaded.
         Call this at the end of subclass _initialize_component().
         """
-        # Initialize system state
-        self.state = self.model.initSystem()
-        self.state.setTime(t0)
-        
         # Realize to ensure model is ready
         self.realize()
         
@@ -48,6 +44,7 @@ class OpenSimComponent(CoSimComponent):
         self.manager.setIntegratorMethod(self.integrator_method)
         self.manager.setIntegratorAccuracy(self.integrator_accuracy)
         self.manager.initialize(self.state)
+        self.state.setTime(t0)
 
     def realize(self) -> None:
         """

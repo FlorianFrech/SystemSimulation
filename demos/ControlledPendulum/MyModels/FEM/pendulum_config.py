@@ -58,7 +58,7 @@ class MaterialParameters:
         thickness (float): Thickness of the pendulum and wall in m.
     """
     def __init__(self, 
-                 E_pendulum=210e9,
+                 E_pendulum=210e10,
                  nu_pendulum=0.2,
                  rho_pendulum=7850,
                  E_wall=210e9,

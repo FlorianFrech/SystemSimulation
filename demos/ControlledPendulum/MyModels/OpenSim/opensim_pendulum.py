@@ -89,11 +89,7 @@ class OpenSimPendulum(OpenSimComponent):
     #----------------------------------------------------------------------------
     # Initialization method
     #----------------------------------------------------------------------------
-    def _initialize_component(self, t0):
-        pass
-
-    def initialize(self, t0: float) -> None:
-        # Build the OpenSim model
+    def _initialize_component(self, t0: float):
         self._build()
 
         # Get the state
@@ -103,16 +99,12 @@ class OpenSimPendulum(OpenSimComponent):
         self.actuator.overrideActuation(self.state, True)
         self.actuator.setOverrideActuation(self.state, 0.0)
 
-        # Realize model to dynamics
-        self.realize()
-
-        # Manager for time integration
-        self.manager = osim.Manager(self.model)
-        self.manager.setIntegratorMethod(self.parameters['Solver']['IntegratorMethod'])
-        self.manager.setIntegratorAccuracy(self.parameters['Solver']['accuracy'])
-        self.manager.initialize(self.state)
-        self.state.setTime(t0)
+        # Finalize model setup
+        self._finalize_model(t0)
     
+    #----------------------------------------------------------------------------
+    # Initialization helper - build the OpenSim model
+    #----------------------------------------------------------------------------
     def _build(self):
         # Get parameters
         mp = self.parameters['Model']
@@ -239,40 +231,6 @@ class OpenSimPendulum(OpenSimComponent):
         # Finalize model connections
         model.finalizeConnections()
         self.model = model
-        
-    #----------------------------------------------------------------------------
-    # Parameter setting method
-    #----------------------------------------------------------------------------  
-    def set_parameters(self, **parameters: float) -> None:
-        """
-        Set model parameters efficiently with single realization at the end.
-        """
-        params_changed = False
-        
-        if 'q0' in parameters:
-            self.q0 = parameters['q0']
-            self.coord.setValue(self.state, self.q0)
-            params_changed = True
-        
-        if 'omega0' in parameters:
-            self.omega0 = parameters['omega0']
-            self.coord.setSpeedValue(self.state, self.omega0)
-            params_changed = True
-        
-        if 'mass' in parameters:
-            self.mass = parameters['model']['mass']
-            self.model.updBodySet().get('head').setMass(self.mass)
-            params_changed = True
-        
-        if 'length' in parameters:
-            self.length = parameters['model']['length']
-            joint = self.model.updJointSet().get('base_to_ground')
-            joint.updChildFrame().setTranslation(osim.Vec3(0, self.length, 0))
-            params_changed = True
-        
-        # Only realize once after all parameters are set
-        if params_changed:
-            self.realize()
     
     #----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
@@ -289,6 +247,7 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Start from a clean topology/state
         self.state = self.model.initSystem()
+        
         # Refresh handy handles (in case pointers changed)
         joint = self.model.updJointSet().get('head_to_base')
         self.coord = joint.updCoordinate()
@@ -298,18 +257,18 @@ class OpenSimPendulum(OpenSimComponent):
         self.coord.setValue(self.state, float(q_state))          # [rad]
         self.coord.setSpeedValue(self.state, float(omega_state)) # [rad/s]
 
-        # Make sure we’re driving the torque directly (bypassing controls)
+        # Update the applied torque
         self.actuator.overrideActuation(self.state, True)
         self.actuator.setOverrideActuation(self.state, float(torque_state))
         self.set_inputs({'torque': float(torque_state)}, t)
         
-        # Realize up to dynamics so everything is consistent for the integrator
-        self.realize()
-        
         # Create a fresh Manager bound to this (model,state) and initialize it
         self.manager = osim.Manager(self.model)
-        self.manager.setIntegratorAccuracy(1e-6)
+        self.manager.setIntegratorAccuracy(self.integrator_accuracy)
         self.manager.initialize(self.state)
+
+        # Realize for consistency
+        self.realize()
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -327,7 +286,6 @@ class OpenSimPendulum(OpenSimComponent):
         state['omega'] = {'value': omega_state, 'unit': 'rad/s'}
         state['alpha'] = {'value': alpha_state, 'unit': 'rad/s^2'}
         state['torque'] = {'value': torque_state, 'unit': 'N.m'}
-
         return state
 
     #----------------------------------------------------------------------------

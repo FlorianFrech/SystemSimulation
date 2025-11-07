@@ -51,7 +51,7 @@ class MasterPendulum(MultiComponent):
                  fem_comp: Optional[FEMPendulum] = None,
                  opensim_comp: Optional[OpenSimPendulum] = None,
                  fmu_comp: Optional[FMUComponent] = None,
-                 initial_mode: str = "EQB"):
+                 initial_mode: str = "OpenSim"):
         # Initialize base class
         super().__init__(name="Pendulum", initial_mode=initial_mode, group="Plant")
         
@@ -100,15 +100,13 @@ class MasterPendulum(MultiComponent):
         
         FMU format (initial conditions):
             {'q0': {'value': ..., 'unit': 'rad'}, 'omega0': {...}, 'torque': {...}}
-        """
+        """        
         if target_mode == "EQB":
-            # FMU expects initial condition parameter names
             return {
                 'q0': state['q'],
                 'omega0': state['omega'],
-                'torque': state.get('torque', {'value': 0.0, 'unit': 'N*m'})
+                'torque': state['torque']
             }
-        # FEM and OpenSim use standard format
         return state
 
     # ---- Mode Selection Strategy ----
@@ -118,15 +116,14 @@ class MasterPendulum(MultiComponent):
         Each complete cycle goes: FEM → EQB → OpenSim
         Total: 12 intervals (3 modes × 4 cycles)
         """
-        #return "OpenSim"
         interval = self._t_end / 12
         cycle_position = int(t / interval) % 3
         if cycle_position == 0:
-            return "FEM"
-        elif cycle_position == 1:
-            return "EQB"
-        else:
             return "OpenSim"
+        elif cycle_position == 1:
+            return "FEM"
+        else:
+            return "EQB"
         
     def _gap_based_mode_selector(self, t: float, state: Dict[str, Any]) -> str:      
         # Get current angular position from active component
@@ -169,6 +166,7 @@ class MasterPendulum(MultiComponent):
             # Extract master parameters
             use_gravity = self.models['FEM']._use_gravity
             self._with_contact = self.models['FEM']._with_contact
+            self._animate = self.models['FEM'].anim_params.animate
             q0 = np.deg2rad(self.models['FEM'].init_params.angular_position_deg)
             omega0 = self.models['FEM'].init_params.angular_velocity
             mass = self.models['FEM'].mass
@@ -217,7 +215,7 @@ class MasterPendulum(MultiComponent):
         super()._do_step_internal(t, dt)
         
         # Update Scene of FEM Pendulum if FEM Pendulum is not active
-        if self.active_mode != "FEM":
+        if self.active_mode != "FEM" and self._fem_comp.anim_params.animate:
             q = self.active_comp.get_outputs()['q']
             self._fem_comp.update_scene(q, t+dt)
         

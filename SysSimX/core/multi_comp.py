@@ -81,6 +81,10 @@ class MultiComponent(CoSimComponent):
         # List of synchronization events (for logging/debugging)
         self.sync_events: list = []
 
+        # Previous and current state for synchronization
+        self._prev_state: Optional[Dict[str, Any]] = None
+        self._curr_state: Optional[Dict[str, Any]] = None
+
     # ---- Abstract Methods (must be implemented by subclass) ----
     def _register_models(self) -> None:
         """
@@ -165,7 +169,8 @@ class MultiComponent(CoSimComponent):
         """
         # Step 1: Check if mode switch is needed
         if self.mode_selector is not None:
-            proposed_mode = self.mode_selector(t, self.get_state())
+            state = self.get_state()
+            proposed_mode = self.mode_selector(t, state)
             
             # Apply hysteresis if configured
             if self.hysteresis is not None:
@@ -193,11 +198,10 @@ class MultiComponent(CoSimComponent):
         print(f"[{self.name}] Switching: {self.active_mode} to {new_mode} @ t={t:.4f}s")
         
         # Step 1: Get current state
-        current_state = self.active_comp.get_state()
-        synch_event['retrieved'] = current_state
-        
+        synch_event['retrieved'] = self.active_comp.get_state()
+
         # Step 2: Adapt state for new component (subclass hook)
-        adapted_state = self._adapt_state(current_state, new_mode)
+        adapted_state = self._adapt_state(synch_event['retrieved'], new_mode)
         
         # Step 3: Set state in new component
         new_comp = self.models[new_mode]

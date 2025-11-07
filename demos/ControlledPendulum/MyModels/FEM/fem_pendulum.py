@@ -72,6 +72,8 @@ class FEMPendulum(FEMComponent):
             "Simulation": self.sim_params,
             "Animation": self.anim_params
         }
+        self._equivalent_length = 0.0
+
     #----------------------------------------------------------------------------
     # Setup Configuration Parameters before initialization
     #---------------------------------------------------------------------------- 
@@ -144,7 +146,6 @@ class FEMPendulum(FEMComponent):
         state = {'q': {'value': np.deg2rad(self.init_params.angular_position_deg)},
                  'omega': {'value': self.init_params.angular_velocity},
                  'torque':{'value': self.init_params.drive_torque}}
-
         self.set_state(state=state, t=t0)
 
         self.setup_monitoring()
@@ -180,6 +181,12 @@ class FEMPendulum(FEMComponent):
         J_area = Integrate(self.rho_p * (self._X_rel[0]*self._X_rel[0] + self._X_rel[1]*self._X_rel[1]),
                            self._mesh, definedon=self._mesh.Materials("pendulum"))
         self.inertia = J_area * self.mat_params.thickness
+        self._equivalent_length = np.sqrt(self.inertia / self.mass)
+
+    def _gravity_torque(self, theta: float):
+        if not self._use_gravity:
+            return 0.0
+        return self.mass * 9.81 * self._equivalent_length * np.sin(theta)
 
     def _initialize_fe_spaces(self):
         # Create H1 vector space for 3D quantities (displacement, velocity, acceleration)
@@ -330,9 +337,10 @@ class FEMPendulum(FEMComponent):
             self._bfa += rhoA_w * InnerProduct(acc_new, self._v) * dx("wall")
         self._bfa += rhoA_p * InnerProduct(acc_new, self._v) * dx("pendulum")
 
-        g = 9.81
+        g = 11#9.81 * 1.1569507934386003
         if self._use_gravity:
-            self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
+            if self._with_contact:
+                self._bfa += InnerProduct(CF((0, rhoA_w*g)), self._v) * dx("wall")
             self._bfa += InnerProduct(CF((0, rhoA_p*g)), self._v) * dx("pendulum")
         
     #----------------------------------------------------------------------------
@@ -345,7 +353,6 @@ class FEMPendulum(FEMComponent):
             state (Dict[str, Any]): State dictionary with keys 'q', 'omega', 'alpha', 'torque'.
             t (float): Current simulation time.
         """
-
         if 'q' in state:
             theta = state['q']['value']
             if hasattr(theta, 'magnitude'): theta = theta.magnitude
@@ -376,29 +383,33 @@ class FEMPendulum(FEMComponent):
             self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
             self._gf_vold.vec[:] = self._gf_v.vec
             self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
-
-
-        if 'alpha' in state:
-            alpha = state['alpha']['value']
-            a0 = CF((-alpha * r0[1],
-                      alpha * r0[0]))
-            # Update acceleration grid function
-            self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
-            self._gf_aold.vec[:] = self._gf_a.vec
-
+        
         if 'torque' in state:
             torque = state['torque']['value']
-            # Apply the torque
-            self.set_drive_torque(torque)        
-        
+            self.set_drive_torque(torque)
+
+        # Solve nonlinear system with Newton
+        tau = self.tau.Set(self.sim_params.tau / 1000)
+        tau = self.tau.Get()
+        NewtonMinimization(a=self._bfa,
+                                   u=self._gf_u,
+                                   printing=False,
+                                   inverse="sparsecholesky",
+                                   maxerr=self.sim_params.max_err,
+                                   maxit=self.sim_params.max_it
+                                   )        
+        self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
+        self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
+        tau = self.tau.Set(self.sim_params.tau)
+
     def get_state(self):
         state = {}
         q_state, omega_state, alpha_state = self._rigid_proxy()
-        torque_state = self._get_torque_diagnostics()  # Remove sign flip
+        torque_state = self._get_applied_drive_torque()
         state["q"] = {'value': q_state, 'unit': 'rad'}
         state["omega"] = {'value': omega_state, 'unit': 'rad/s'}
         state["alpha"] = {'value': alpha_state, 'unit': 'rad/s**2'}
-        state["torque"] = {'value': torque_state, 'unit': 'N*m'}  # Correct unit
+        state["torque"] = {'value': torque_state, 'unit': 'N*m'}
         return  state
 
     #----------------------------------------------------------------------------
@@ -415,7 +426,7 @@ class FEMPendulum(FEMComponent):
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
                 self._gf_vold.vec[:] = self._gf_v.vec
-                self._gf_aold.vec[:] = self._gf_a.vec
+                self._gf_aold.vec[:] = self._gf_a.vec                
                 
                 # Update contact with the current displacement
                 if self._with_contact:
@@ -423,16 +434,18 @@ class FEMPendulum(FEMComponent):
                     min_gap = self._get_contact_gap_distance()
                     self.widgets['gap'].value = min_gap
                     # Reduce time step if pendulum is close to contact
-                    if min_gap < 0.0005:
+                    if min_gap < 0.001:
                         self.tau.Set(2e-4)
-                    elif min_gap < 0.005:
-                        self.tau.Set(7.5e-4)
-                    elif min_gap < 0.02:
+                    elif min_gap < 0.01:
+                        self.tau.Set(5e-4)
+                    elif min_gap < 0.05:
                         self.tau.Set(1e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
                 
                 # Update time settings
+                tau = self.tau.Get()
+                #self.tau.Set(self.sim_params.tau * 0.947800)
                 tau = self.tau.Get()
                 t += tau
                 self.widgets['time'].value = t
@@ -586,18 +599,26 @@ class FEMPendulum(FEMComponent):
         num_v = num_omega_x + num_omega_y
         omega = num_v / denom
 
-        # Angular acceleration
-        a = self._gf_a.components[0]
-        num_alpha_x = Integrate( rhoA * a[0] * (-r[1]),
-                           self._mesh, definedon=self._mesh.Materials("pendulum") )
-        num_alpha_y = Integrate( rhoA * a[1] * ( r[0]),
-                           self._mesh, definedon=self._mesh.Materials("pendulum") )
-        num_a = num_alpha_x + num_alpha_y
-        alpha = num_a / denom
+        # Angular acceleration via grid function projection
+        # if self._with_contact and self._get_contact_gap_distance() < 0.0:
+        if True:
+            a = self._gf_a.components[0]
+            num_alpha_x = Integrate( rhoA * a[0] * (-r[1]),
+                            self._mesh, definedon=self._mesh.Materials("pendulum") )
+            num_alpha_y = Integrate( rhoA * a[1] * ( r[0]),
+                            self._mesh, definedon=self._mesh.Materials("pendulum") )
+            num_a = num_alpha_x + num_alpha_y
+            alpha = num_a / denom 
+        else:
+            # Compute angular acceleration from torque balance
+            torque_drive = self._get_applied_drive_torque()
+            torque_gravity = self._gravity_torque(theta)
+            torque_net = torque_drive - torque_gravity
+            alpha = torque_net / self.inertia 
 
         return theta, omega, alpha
 
-    def _get_torque_diagnostics(self, return_force=False):
+    def _get_applied_drive_torque(self, return_force=False):
         """
         Compute the actual applied torque from the distributed traction.
         
@@ -609,14 +630,14 @@ class FEMPendulum(FEMComponent):
         """
         # Calculate actual applied torque by integrating moment contributions
         effective_traction = self._traction_amplitude * self._torque_moment_arm
-        applied_torque = Integrate(effective_traction, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+        applied_drive_torque = Integrate(effective_traction, self._mesh, definedon=self._mesh.Boundaries("rotation"))
         if return_force:
             # Calculate net force components (should be near zero for pure torque)
             force_x = Integrate(self._applied_traction[0], self._mesh, definedon=self._mesh.Boundaries("rotation"))
             force_y = Integrate(self._applied_traction[1], self._mesh, definedon=self._mesh.Boundaries("rotation"))
-            return force_x, force_y, applied_torque
+            return force_x, force_y, applied_drive_torque
         else:
-            return applied_torque
+            return applied_drive_torque
     
     def calculate_energy(self):
         # Kinetic energy
