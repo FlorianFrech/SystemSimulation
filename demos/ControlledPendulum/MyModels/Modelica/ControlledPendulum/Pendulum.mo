@@ -17,6 +17,7 @@ model Pendulum
   parameter Real q0(unit="rad") = 0;
   parameter Real omega0(unit="rad/s") = 0;
   parameter Real g(unit="m/s2") = 9.81;
+  parameter Real inertia(unit="kg.m2") = 40 * 0.6732^2;
 
   // Input torque at the pivot
   Modelica.Blocks.Interfaces.RealInput torque(unit="N.m");
@@ -32,5 +33,5 @@ initial equation
 
 equation
   der(q)    = omega;
-  der(omega) = -(g / L) * sin(q) + torque/(m * L^2);
+  der(omega) = -(g * L * m / inertia) * sin(q) + torque/inertia;
 end Pendulum;

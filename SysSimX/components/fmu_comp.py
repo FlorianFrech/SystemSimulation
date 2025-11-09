@@ -69,7 +69,8 @@ class FMUComponent(CoSimComponent):
 
         # Parameters dictionary
         self.parameters: Dict[str, ModelVariable] = {
-            var.name: var for var in self._md.modelVariables if var.causality == "parameter"
+            var.name: var for var in self._md.modelVariables if 
+            var.causality == "parameter" or var.causality == "calculatedParameter" or var.causality == "structuralParameter"
         }
 
     #----------------------------------------------------------------------------

@@ -27,6 +27,7 @@ MODEL_PARAMETERS = {
     "mass": 1.0,                # Mass of the pendulum head (kg)
     "r_head": 0.025,            # Radius of the pendulum head (m)
     "length": 0.4,              # Length of the pendulum rod (m)
+    "inertia": 0.01,            # Moment of inertia of the pendulum head (kg.m^2)
     "use_gravity": False,       # Enable/disable gravity
 }
 
@@ -147,7 +148,8 @@ class OpenSimPendulum(OpenSimComponent):
         head_name = 'pendulum_head'
         head_mass = mp['mass']
         head_com = osim.Vec3(0, 0, 0)
-        head_inertia = osim.Inertia(0.0, 0.0, 0.0)
+        inertia = mp['inertia']
+        head_inertia = osim.Inertia(inertia, inertia, inertia)
         head = osim.Body(head_name, head_mass, head_com, head_inertia)
         head_geom = osim.Sphere(mp['r_head'])
         head_geom.setColor(osim.Vec3(0.2, 0.2, 0.8))

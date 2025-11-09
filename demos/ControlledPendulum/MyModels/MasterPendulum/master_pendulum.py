@@ -169,9 +169,9 @@ class MasterPendulum(MultiComponent):
             self._animate = self.models['FEM'].anim_params.animate
             q0 = np.deg2rad(self.models['FEM'].init_params.angular_position_deg)
             omega0 = self.models['FEM'].init_params.angular_velocity
-            mass = self.models['FEM'].mass
+            length = self.models['FEM']._equivalent_length
             inertia = self.models['FEM'].inertia
-            length = np.sqrt(inertia / mass)  # Equivalent length
+            mass = self.models['FEM'].mass
             
             self._t_end = self.models['FEM'].sim_params.t_end
         else:
@@ -182,6 +182,7 @@ class MasterPendulum(MultiComponent):
             omega0 = 0.0
             mass = 1.0
             length = 0.4
+            inertia = 0.01
 
         # Synchronize OpenSim parameters
         if "OpenSim" in self.models:
@@ -189,6 +190,7 @@ class MasterPendulum(MultiComponent):
             self.models['OpenSim'].parameters['InitialConditions']['omega0'] = omega0
             self.models['OpenSim'].parameters['Model']['mass'] = mass
             self.models['OpenSim'].parameters['Model']['length'] = length
+            self.models['OpenSim'].parameters['Model']['inertia'] = inertia - mass * length**2
             self.models['OpenSim']._use_gravity = use_gravity
             self.models['OpenSim']._with_contact = self._with_contact
             self.models['OpenSim'].initialize(t0)
@@ -199,6 +201,7 @@ class MasterPendulum(MultiComponent):
             self.models["EQB"].parameters['omega0'].start = omega0
             self.models["EQB"].parameters['m'].start = mass
             self.models["EQB"].parameters['L'].start = length
+            self.models["EQB"].parameters['inertia'].start = inertia
             self.models["EQB"].parameters['g'].start = 9.81 if use_gravity else 0.0
             self.models["EQB"].initialize(t0)
         
