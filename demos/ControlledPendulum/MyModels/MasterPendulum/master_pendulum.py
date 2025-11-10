@@ -164,16 +164,20 @@ class MasterPendulum(MultiComponent):
             self.models['FEM'].initialize(t0)
 
             # Extract master parameters
+            self._t_end = self.models['FEM'].sim_params.t_end
+            
             use_gravity = self.models['FEM']._use_gravity
             self._with_contact = self.models['FEM']._with_contact
             self._animate = self.models['FEM'].anim_params.animate
+           
             q0 = np.deg2rad(self.models['FEM'].init_params.angular_position_deg)
             omega0 = self.models['FEM'].init_params.angular_velocity
+            
             length = self.models['FEM']._equivalent_length
             inertia = self.models['FEM'].inertia
             mass = self.models['FEM'].mass
             
-            self._t_end = self.models['FEM'].sim_params.t_end
+            
         else:
             # Default parameters if FEM not available
             use_gravity = False

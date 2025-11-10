@@ -149,7 +149,7 @@ class OpenSimPendulum(OpenSimComponent):
         head_mass = mp['mass']
         head_com = osim.Vec3(0, 0, 0)
         inertia = mp['inertia']
-        head_inertia = osim.Inertia(inertia, inertia, inertia)
+        head_inertia = osim.Inertia(0, 0, inertia) # About z-axis
         head = osim.Body(head_name, head_mass, head_com, head_inertia)
         head_geom = osim.Sphere(mp['r_head'])
         head_geom.setColor(osim.Vec3(0.2, 0.2, 0.8))
