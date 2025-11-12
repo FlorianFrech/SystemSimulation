@@ -2,10 +2,12 @@ within ControlledPendulum;
 
 model Pendulum
   /*
-  The model represents a simple 1-DOF pendulum model with a head with mass m at
-  a radial distance of L relative to the hinge joint center. The connection between
-  joint and head is considered as massless.
-  The state angle q_state is 0 for vertical alignment between head and joint center.
+  The model represents a simple 1-DOF pendulum model with:
+   - m: haead point mass in kg
+   - L: distance head to joint in m
+   - inertia: moment of inertia of the Pendulum
+   - q0: initial position in rad
+   - omega0: initial angular velocity in rad/s
   */
   
   // Imports

@@ -84,6 +84,7 @@ def get_fmu_paths(package_path: Path, fmu_output_dir: Path, force_rebuild=False)
 
     for model_name in found_model_names:
         composed_model_name = f"{package_name}.{model_name}"
+        print(80 * "#")
         print(f"Processing model: {composed_model_name}")
 
         model = create_modelica_system(package_file_path, composed_model_name)
@@ -91,7 +92,7 @@ def get_fmu_paths(package_path: Path, fmu_output_dir: Path, force_rebuild=False)
 
         dst_fmu_path = fmu_output_dir / f"{model_name}.fmu"
         move_file(fmu_path, dst_fmu_path)
-        print(f"FMU for {composed_model_name} moved to {dst_fmu_path}")
+        print(f"FMU for {composed_model_name} moved to:\n{dst_fmu_path}\n")
         fmu_paths[model_name] = dst_fmu_path
 
     return fmu_paths

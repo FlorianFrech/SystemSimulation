@@ -14,14 +14,13 @@ class Connection:
     src_port: str
     dst_comp: str
     dst_port: str
-    delay: int = 0 # 0 = same-tick, strict order; 1 = next-tick, no order
     unit: Optional[Any] = None
 
-    def key(self) -> Tuple[str, str, str, str, int]:
+    def key(self) -> Tuple[str, str, str, str]:
         """
         Unique key for duplicate detection.
         """
-        return (self.src_comp, self.src_port, self.dst_comp, self.dst_port, self.delay)
+        return (self.src_comp, self.src_port, self.dst_comp, self.dst_port)
     
     def is_zero_delay(self) -> bool:
         """

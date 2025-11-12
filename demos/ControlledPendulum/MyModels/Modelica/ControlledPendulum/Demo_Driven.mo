@@ -19,7 +19,8 @@ model Demo_Driven
   AngleEncoder        sensor_state( q_min = -reference.amplitude,
                                     q_max =  reference.amplitude);
   
-  PID_Continuous      pid;
+  //PID_Continuous      pid;
+  PID_Sampled         pid;
   
   Drive               drive;
   
@@ -35,7 +36,7 @@ equation
   connect(sensor_state.U_q, pid.y);
   
   // Connect PID output u_control to drive
-  connect(pid.u, drive.u_control);
+  connect(pid.u_control, drive.u_control);
   
   // Connect drive and Pendulum
   connect(drive.torque, pendulum.torque);

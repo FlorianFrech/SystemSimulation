@@ -11,39 +11,44 @@ model Drive
   
   // Parameter
   parameter Real U_M(unit="V") = 16;
-  
-  // Constants
-  constant Real U_rated(unit="V") = 48;
-  constant Real R_M(unit="Ohm") = 0.151;
-  constant Real L_M(unit="H") = 121e-6;
-  constant Real n_0(unit="1/min") = 12916;
-  constant Real k_M(unit="N.m/A") = 0.03;
-  constant Integer i_M = 60;
-  constant Real eta_M = 0.85;
-  constant Real k_n(unit="(1/min)/V") = n_0/U_rated;
+  parameter Real U_rated(unit="V") = 48;
+  parameter Real R_M(unit="Ohm") = 0.151;
+  parameter Real L_M(unit="H") = 121e-6;
+  parameter Real k_M(unit="N.m/A") = 0.03;
+  parameter Real n_0(unit="1/min") = 12916;  
+  parameter Real i_M = 60;
+  parameter Real eta_M = 0.85;
+
+  // Derived Parameter
+  parameter Real k_n(unit="(1/min)/V") = n_0/U_rated;
+  parameter Real k_e(unit="V.s/rad") = 60 / (2 * pi * k_n);
   
   // Inputs
   Modelica.Blocks.Interfaces.RealInput u_control;
   Modelica.Blocks.Interfaces.RealInput omega(unit="rad/s");
   
   // Outputs
-  Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m", start=0, fixed=true);
+  Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m", start=0);
 
-protected
-  // Internal Parameters
-  Real I(unit="A", start=0);
-  Real U(unit="V", start=0);
-  Real n(unit="1/min", start=0);
+  // Internal Variables
+  Real I(unit="A");
+  Real U(unit="V");
+  Real omega_m(unit="rad/s");
+  Real E(unit="V") "Back EMF Voltage";
+
+initial equation
+  der(I) = 0;
 
 equation
   // Electrical input based on u_control
   U = U_M * u_control;
   
-  // Meachanical speed in rpm (omega_m is in rad/s)
-  n = i_M * omega * 30 / pi;
+  // Motor-side speed and back-EMF
+  omega_m = i_M * omega;
+  E = k_e * omega_m;
   
-  // Current dynamics and torque
-  der(I) = (U - R_M * I - n/k_n) / L_M;
+  // Current dynamics and torque mapping
+  der(I) = (U - R_M * I - E) / L_M;
   torque = eta_M * i_M * k_M * I;
   
   annotation(

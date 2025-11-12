@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, Union
+from typing import Dict, Any, Optional, Tuple, Union, Set
 from .port import PortSpec, PortState
 from ..utilities.units import ureg, Quantity
 
@@ -12,6 +12,7 @@ class CoSimComponent(ABC):
     label: str
     group: Optional[str] = None
     t: float = 0.0  # Current simulation time
+    direct_feedthrough: Dict[str, Set[str]] = {}
 
     def __init__(self, name: str, label: Optional[str] = None, group: Optional[str] = None):
         self.name = name
@@ -119,6 +120,14 @@ class CoSimComponent(ABC):
         """Optional: release resources (FMU instances, OpenSim memory, etc.)."""
         pass
     
+    # ---- Direct Feedthrough for algebraic cycle analysis ----
+    def has_direct_feedthrough(self) -> bool:
+        """
+        Return True if any output directly depends on any input.
+        Default: False. Override in subclasses as needed.
+        """
+        return False
+
     # ---- Monitoring ----
     def snapshot(self) -> Dict:
         """Provides a snapshot of its ports and internal states for monitoring purpose"""

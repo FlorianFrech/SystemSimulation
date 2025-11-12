@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Any, Dict, Optional, Tuple, List, Union
 from pathlib import Path
 
 from fmpy import read_model_description, extract
@@ -30,6 +30,9 @@ class FMUComponent(CoSimComponent):
     _instance: Optional[FMU2Slave]
     _unzipdir: Optional[str]
 
+    # Direct Feedthrough for output dependencies
+    direct_feedthrough: Dict[str, Union[List[str], None]]
+
     # Cached value references per base type and causality
     _vrs_in_real: Dict[str, int]
     _vrs_in_int: Dict[str, int]
@@ -58,6 +61,8 @@ class FMUComponent(CoSimComponent):
         # Port specification containers
         self.input_specs: Dict[str, PortSpec] = {}
         self.output_specs: Dict[str, PortSpec] = {}
+        self.direct_feedthrough = {}
+        self._detect_direct_feedthrough()
 
         # Build port specifications from model description (Real, Int, Bool, Str, Bytes)
         self._build_port_specs()
@@ -118,6 +123,13 @@ class FMUComponent(CoSimComponent):
                 elif port_type == PortType.INT:    self._vrs_out_int[var.name]  = value_reference
                 elif port_type == PortType.BOOL:   self._vrs_out_bool[var.name] = value_reference
                 elif port_type == PortType.STRING: self._vrs_out_str[var.name]  = value_reference
+    
+    def _detect_direct_feedthrough(self) -> None:
+        for unknown in self._md.outputs:
+            self.direct_feedthrough[unknown.variable.name] = []
+            for dep in unknown.dependencies:
+                if dep.causality == 'input':
+                    self.direct_feedthrough[unknown.variable.name].append(dep.name)
 
     #----------------------------------------------------------------------------
     # Initialization

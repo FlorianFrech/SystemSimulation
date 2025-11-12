@@ -172,12 +172,9 @@ class SystemGraphVisualizer:
             
             unit_label = _edge_unit_label(self.system, conn)
             label = f"[{unit_label}]" if unit_label else ""
-            
-            if conn.delay > 0:
-                label += f" delay({conn.delay})"
 
-            style = "dashed" if conn.delay > 0 else "solid"
-            color = "#6b7280" if conn.delay > 0 else "#111827"
+            style = "solid"
+            color = "#111827"
 
             self.dot.edge(tail_name=src_name, 
                           head_name=dst_name,

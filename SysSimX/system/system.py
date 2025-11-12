@@ -7,7 +7,6 @@ import networkx as nx
 from .connection import Connection
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec, PortType
-#from ..ui.simulation_monitor import SimulationMonitor, MonitorableState
 
 from IPython.display import display, Markdown
 import ipywidgets as widgets
@@ -15,6 +14,9 @@ from ipywidgets import Layout, HBox, VBox, HTML
 
 _ports_compatible = PortSpec.compatible
 
+#----------------------------------------------------------------------------
+# System Class
+#----------------------------------------------------------------------------
 class System:
     """
     Represents a system of interconnected CoSimComponents:
@@ -35,11 +37,13 @@ class System:
         self.execution_order: List[List[str]] = []  # [ [comp names in gen0], [gen1], ...]
         self.execution_idx: Dict[str, int] = {}     # comp name -> gen index
 
-        #self.monitor: SimulationMonitor = SimulationMonitor(self)
+        # Algebraic loop diagnostics (SCCs with size > 1 on the direct feed-through graph)
+        self.algebraic_loops: List[List[str]] = []  # Detected algebraic loops (if any)
+        self._scc_index: Dict[str, int] = {}        # comp name -> scc index
     
-    #--------------------------------------------------------------
+    #----------------------------------------------------------------------------
     # Register components
-
+    #----------------------------------------------------------------------------
     def add_component(self, component: CoSimComponent):
         """
         Add a CoSimComponent to the system.
@@ -50,9 +54,9 @@ class System:
         if component.group:
             self.groups.setdefault(component.group, []).append(component)
     
-    #--------------------------------------------------------------
+    #----------------------------------------------------------------------------
     # Connections
-
+    #----------------------------------------------------------------------------
     def _validate_connection(self, c: Connection) -> None:
         # 1) existence
         if c.src_comp not in self.components or c.dst_comp not in self.components:
@@ -82,11 +86,10 @@ class System:
         # 5) duplicate check
         for existing in self.connections:
             if (existing.src_comp == c.src_comp and existing.src_port == c.src_port and
-                existing.dst_comp == c.dst_comp and existing.dst_port == c.dst_port and
-                existing.delay == c.delay):
+                existing.dst_comp == c.dst_comp and existing.dst_port == c.dst_port):
                 raise ValueError(
-                    f"Duplicate connection: {c.src_comp}.{c.src_port} -> {c.dst_comp}.{c.dst_port} with delay {c.delay}"
-                    )
+                    f"Duplicate connection: {c.src_comp}.{c.src_port} -> {c.dst_comp}.{c.dst_port}"
+                )
 
     def add_connection(self, connection: Connection) -> None:
         """
@@ -95,44 +98,52 @@ class System:
         self._validate_connection(connection)
         self.connections.append(connection)
 
-    #--------------------------------------------------------------
+    #----------------------------------------------------------------------------
     # Graphs
-
+    #----------------------------------------------------------------------------
     def build_graphs(self) -> None:
         """
-        Build the full connection graph and the zero-delay DAG.
+        Build:
+          - self.graph: all connections (annotated)
+          - self._dag: zero-delay true-direct-feedthrough dependencies only
+          - self.algebraic_loops: SCCs (>1) on self._dag
         """
         self.graph.clear()
         self._dag.clear()
+        self.algebraic_loops.clear()
+        self._scc_index.clear()
         
         # nodes
         for name in self.components:
             self.graph.add_node(name)
             self._dag.add_node(name)
 
-        # edges
         for c in self.connections:
-            # annotated edges
             self.graph.add_edge(
                 c.src_comp, c.dst_comp,
                 src_port=c.src_port, dst_port=c.dst_port,
-                delay=c.delay, unit=c.unit or None
+                unit=c.unit or None
             )
 
-            # computational DAG (only zero-delay)
-            if c.delay == 0:
+            dst_comp = self.components[c.dst_comp]
+            # direct_feedthrough mapping: output_port -> [input_ports it depends on]
+            # We need to know if ANY output of dst_comp depends on c.dst_port.
+            zero_delay = False
+            for out_port, in_list in dst_comp.direct_feedthrough.items():
+                if in_list:  # only consider non-empty feedthrough lists
+                    if c.dst_port in in_list:
+                        zero_delay = True
+                        break
+            if zero_delay:
                 self._dag.add_edge(
                     c.src_comp, c.dst_comp,
                     src_port=c.src_port, dst_port=c.dst_port
                 )
-        
-        # cycle check for 0-delay dependencies
-        if not nx.is_directed_acyclic_graph(self._dag):
-            cycles = list(nx.simple_cycles(self._dag))
-            raise RuntimeError(
-                "Cycle(s) detected among zero-delay dependencies, add a delay to break the cycle: " +
-                "; ".join(" -> ".join(c) for c in cycles)
-            )
+
+        # Identify algebraic loops (SCCs with size > 1)
+        sccs = list(nx.strongly_connected_components(self._dag))
+        self.algebraic_loops = [list(scc) for scc in sccs if len(scc) > 1]
+
             
     def compute_execution_order(self) -> None:
         """
@@ -140,29 +151,61 @@ class System:
         """
         if self._dag.number_of_nodes() == 0:
             self.build_graphs()
-        gens = list(nx.topological_generations(self._dag))
 
-        # normalize to list of lists
-        self.execution_order = [sorted(list(gen)) for gen in gens] # sort for determinism
+        # Condensation: nodes are SCC ids (0..k-1), edges reflect inter-SCC dependencies
+        condensed = nx.condensation(self._dag)
+        mapping: Dict[str, int] = condensed.graph.get("mapping", {})  # original node -> scc id
+        # Reverse mapping: scc id -> list of original component names
+        scc_members: Dict[int, List[str]] = {}
+        for comp_name, scc_id in mapping.items():
+            scc_members.setdefault(scc_id, []).append(comp_name)
+        for cid in scc_members:
+            scc_members[cid] = sorted(scc_members[cid])  # deterministic
+
+        # Save per-node SCC index for later use (e.g., coupled solving)
+        self._scc_index = {name: mapping[name] for name in self.components.keys() if name in mapping}
+
+        # Topological generations on condensed DAG
+        gens_c = list(nx.topological_generations(condensed))
+
+        # Expand generations back to component names; SCCs appear as grouped lists
+        # Keep shape: List[List[str]] so existing callers continue to work.
+        self.execution_order = []
         self.execution_idx.clear()
-        for idx, gen in enumerate(self.execution_order):
-            for name in gen:
-                self.execution_idx[name] = idx
-    
-    #--------------------------------------------------------------
-    # Simulation Lifecycle
 
+        idx = 0
+        for gen in gens_c:
+            # gen is a list of SCC ids that can run in parallel
+            expanded: List[str] = []
+            for cid in gen:
+                members = scc_members.get(cid, [])
+                # Important: members of the same SCC are not parallelizable in general;
+                # we return them as a single generation entry to be handled by a coupled solver later.
+                # For now we append all; the stepper can be extended to detect SCCs and iterate.
+                expanded.extend(members)
+            expanded = sorted(expanded)  # stable deterministic order across SCCs in the same layer
+            self.execution_order.append(expanded)
+            for name in expanded:
+                self.execution_idx[name] = idx
+            idx += 1
+    
+    #----------------------------------------------------------------------------
+    # Simulation Lifecycle
+    #----------------------------------------------------------------------------
     def initialize(self, t0: float, t_end: float) -> None:
+        """
+        Initialize all components in the system at start time t0.
+        Also build graphs and compute execution order.
+        Store t_end for reference.
+        """
         self.time = t0
         self.t_end = t_end
         for comp in self.components.values():
             comp.initialize(t0)
         self.build_graphs()
         self.compute_execution_order()
-        #self.monitor.initialize()
-
     
-    def _get_latest_values(self, comp_name: str, port_name: str, delay_steps: int) -> Any:
+    def _get_latest_values(self, comp_name: str, port_name: str) -> Any:
         """
         Fetch a value from a component's OUTPUT port,
          - delay_steps == 0 -> current value (read from PortState.value)
@@ -170,13 +213,6 @@ class System:
         """
         comp = self.components[comp_name]
         ps = comp.outputs[port_name]
-
-        if delay_steps <= 0:
-            return ps.get()
-        
-        hist = list(ps.history)
-        if len(hist) >= delay_steps:
-            return hist[-delay_steps][1]  # (time, value)
         return ps.get() # fallback to last known value
     
     def _set_inputs_for_generation(self, gen: List[str], t: float) -> None:
@@ -200,7 +236,7 @@ class System:
                         f"Multiple drivers for input port '{comp_name}.{c.dst_port}' "
                         f"from '{to_set[c.dst_port]}' and '{c.src_comp}.{c.src_port}'"
                     )
-                src_value = self._get_latest_values(c.src_comp, c.src_port, c.delay)
+                src_value = self._get_latest_values(c.src_comp, c.src_port)
                 if src_value is not None:
                     to_set[c.dst_port] = src_value
             
@@ -237,18 +273,3 @@ class System:
         while t < tf - 1e-12:
             self.step(t, dt)
             t += dt
-        
-    #--------------------------------------------------------------
-    # Simulation Monitoring
-
-    # def _setup_simulation_monitoring(self) -> None:
-    #     header = HTML("<h3 style='color:#1565c0; font-family:sans-serif; margin-bottom:10px; text-align:center;'>Simulation Diagnostics</h3>")
-    #     self.widgets = {}
-    #     w_time = widgets.FloatText(value=self.time, description=f'Time: t / {self.t_end} s', step=0.001, disabled=True)
-
-    # def enable_monitoring(self) -> SimulationMonitor:
-    #     """
-    #     Enable live monitoring of system state.
-    #     """
-    #     self.monitor = SimulationMonitor(self)
-    #     return self.monitor
