@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional
 
 import networkx as nx
+import numpy as np
+from scipy.optimize import root
 
 from .connection import Connection
 from ..core.base import CoSimComponent
@@ -144,7 +146,11 @@ class System:
         sccs = list(nx.strongly_connected_components(self._dag))
         self.algebraic_loops = [list(scc) for scc in sccs if len(scc) > 1]
 
-            
+        # Identify single-node SCCs with self-loops as well
+        for node in self._dag.nodes:
+            if self._dag.has_edge(node, node) and node not in self.algebraic_loops:
+                self.algebraic_loops.append([node])
+
     def compute_execution_order(self) -> None:
         """
         Compute a parallelizable execution order based on zero-delay dependencies.
@@ -249,19 +255,21 @@ class System:
          1) For each generation in execution order, set inputs for all components in the generation
          2) For each generation, call do_step on all components in the generation
         """
-        # Phase 1: Set inputs for all generations
         for gen in self.execution_order:
+            # Phase 1: Set inputs for all generations
             self._set_inputs_for_generation(gen, t)
-        
-        # Phase 2: Do step for all generations
+
+            # Phase 2: solve algebraic loops if any in this generation
+            gen_set = set(gen)
+            for loop in self.algebraic_loops:
+                if set(loop).issubset(gen_set):
+                    self._solve_algebraic_scc(loop, t)
+
+        # Phase 3: Do step for all generations
         for gen in self.execution_order:
             for comp_name in gen:
                 comp = self.components[comp_name]
                 comp.do_step(t, dt)
-        
-        # Phase 3: Update monitor if available
-        #if self.monitor:
-            #self.monitor.update(t) # Inputs of connections are considered thus t and not t + dt
 
     def run(self, t0: float, tf: float, dt: float):
         """
@@ -273,3 +281,124 @@ class System:
         while t < tf - 1e-12:
             self.step(t, dt)
             t += dt
+
+    #----------------------------------------------------------------------------
+    # Resolve algebraic loops
+    #----------------------------------------------------------------------------
+    # Evaluate a component's outputs with provided inputs, no side effects if possible
+    def _eval_component_outputs(self, comp: CoSimComponent, in_vals: Dict[str, Any], t: float) -> Dict[str, Any]:
+        # Preferred: user-provided pure function
+        if hasattr(comp, 'eval_outputs') and callable(getattr(comp, 'eval_outputs')):
+            return comp.eval_outputs(**in_vals)
+
+        # Fallback: minimal side-effect evaluation via _do_step_internal
+        # Save old inputs/outputs
+        old_inputs = {k: p.get() for k, p in comp.inputs.items()}
+        old_outputs = {k: p.get() for k, p in comp.outputs.items()}
+
+        # Set given inputs, keep others unchanged
+        for name, val in in_vals.items():
+            if name in comp.inputs:
+                comp.inputs[name].set(val, t)
+
+        # Evaluate at dt=0
+        comp._do_step_internal(t, 0.0)
+        out_now = {k: p.get() for k, p in comp.outputs.items()}
+
+        # Restore
+        for k, v in old_outputs.items():
+            comp.outputs[k].set(v, t)
+        for k, v in old_inputs.items():
+            comp.inputs[k].set(v, t)
+
+        return out_now
+
+    # Collect unknowns for an SCC as the set of (src_comp, src_port) used on zero-delay edges inside SCC
+    def _collect_scc_unknowns(self, scc: List[str]) -> List[Tuple[str, str]]:
+        scc_set = set(scc)
+        unknowns = []
+        for c in self.connections:
+            if c.src_comp in scc_set and c.dst_comp in scc_set:
+                dst_comp = self.components[c.dst_comp]
+                # zero-delay if any output depends on this input port
+                zero_delay = any(
+                    c.dst_port in in_list
+                    for in_list in dst_comp.direct_feedthrough.values()
+                    if in_list
+                )
+                if zero_delay:
+                    unknowns.append((c.src_comp, c.src_port))
+        # unique and stable
+        return sorted(set(unknowns), key=lambda x: (x[0], x[1]))
+
+    def _solve_algebraic_scc(self, scc: List[str], t: float) -> None:
+        if not scc:
+            return
+
+        unknowns = self._collect_scc_unknowns(scc)
+        if not unknowns:
+            return
+
+        idx_of = {key: i for i, key in enumerate(unknowns)}
+        x0 = np.array([
+            self.components[c].outputs[out].get() if self.components[c].outputs[out].get() is not None else 0.0
+            for (c, out) in unknowns
+        ], dtype=float)
+
+        scc_set = set(scc)
+        internal_edges = []      # (src_comp, src_port, dst_comp, dst_port)
+        external_in_edges = []   # (src_comp, src_port, dst_comp, dst_port)
+        for c in self.connections:
+            dst_comp = self.components[c.dst_comp]
+            zero_delay = any(
+                c.dst_port in in_list
+                for in_list in dst_comp.direct_feedthrough.values()
+                if in_list
+            )
+            if not zero_delay:
+                continue
+            if c.src_comp in scc_set and c.dst_comp in scc_set:
+                internal_edges.append((c.src_comp, c.src_port, c.dst_comp, c.dst_port))
+            elif c.src_comp not in scc_set and c.dst_comp in scc_set:
+                external_in_edges.append((c.src_comp, c.src_port, c.dst_comp, c.dst_port))
+
+        def residual(z_vec: np.ndarray) -> np.ndarray:
+            in_vals_by_comp: Dict[str, Dict[str, Any]] = {name: {} for name in scc}
+            # external drivers
+            for src_c, src_p, dst_c, dst_p in external_in_edges:
+                val = self._get_latest_values(src_c, src_p)
+                in_vals_by_comp[dst_c][dst_p] = val
+            # internal drivers (from z)
+            for src_c, src_p, dst_c, dst_p in internal_edges:
+                idx = idx_of.get((src_c, src_p))
+                if idx is not None:
+                    in_vals_by_comp[dst_c][dst_p] = float(z_vec[idx])
+
+            # evaluate outputs
+            computed_out: Dict[Tuple[str, str], float] = {}
+            for comp_name in scc:
+                comp = self.components[comp_name]
+                out_vals = self._eval_component_outputs(comp, in_vals_by_comp.get(comp_name, {}), t)
+                for (cname, out_port) in unknowns:
+                    if cname == comp_name and out_port in out_vals:
+                        computed_out[(cname, out_port)] = float(out_vals[out_port])
+
+            r = np.zeros(len(unknowns), dtype=float)
+            for i, (cname, out_port) in enumerate(unknowns):
+                fi = computed_out.get((cname, out_port), 0.0)
+                r[i] = z_vec[i] - fi
+            return r
+
+        sol = root(residual, x0, method='hybr')
+        if not sol.success:
+            raise RuntimeError(f"Algebraic loop solve failed for SCC {scc}: {sol.message}")
+
+        # commit solved outputs
+        for (cname, out_port), val in zip(unknowns, sol.x):
+            self.components[cname].outputs[out_port].set(float(val), t)
+
+        # write back to downstream inputs inside SCC for consistency
+        for src_c, src_p, dst_c, dst_p in internal_edges:
+            idx = idx_of.get((src_c, src_p))
+            val = float(sol.x[idx]) if idx is not None else float(self._get_latest_values(src_c, src_p))
+            self.components[dst_c].inputs[dst_p].set(val, t)

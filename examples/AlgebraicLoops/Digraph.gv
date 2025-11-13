@@ -1,0 +1,24 @@
+// System: Algebraic Loop System
+digraph {
+	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label="Algebraic Loop System" labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
+	node [color="#3b82f6" fillcolor=white fontname=Helvetica fontsize=10 height=0.7 margin="0.12,0.1" penwidth=1.5 shape=record style="rounded,filled" width=1.5]
+	edge [arrowhead=open arrowsize=0.5 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.4 penwidth=1 style=solid]
+	subgraph cluster_Source {
+		bgcolor="#ebdfe2" color="#9ca3af" fontname=Helvetica fontsize=10 label=Source style=rounded
+		source [label="{ source | { <output> output } }" xlabel="#0"]
+	}
+	subgraph cluster_Subtractors {
+		bgcolor="#dfebdf" color="#9ca3af" fontname=Helvetica fontsize=10 label=Subtractors style=rounded
+		subtractor_outer [label="{ { <input1> input1 | <input2> input2 } | subtractor_outer | { <output> output } }" xlabel="#1"]
+		subtractor_inner [label="{ { <input1> input1 | <input2> input2 } | subtractor_inner | { <output> output } }" xlabel="#2"]
+	}
+	subgraph cluster_Integrator {
+		bgcolor="#ebdfe9" color="#9ca3af" fontname=Helvetica fontsize=10 label=Integrator style=rounded
+		integrator [label="{ { <input> input } | integrator | { <output> output } }" xlabel="#0"]
+	}
+	source -> subtractor_outer [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
+	subtractor_outer -> subtractor_inner [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
+	subtractor_inner -> integrator [label="" color="#111827" headclip=true headport="input:w" style=solid tailclip=true tailport="output:e"]
+	subtractor_inner -> subtractor_inner [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
+	integrator -> subtractor_outer [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
+}

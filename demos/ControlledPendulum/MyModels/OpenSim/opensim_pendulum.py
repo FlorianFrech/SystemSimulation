@@ -1,4 +1,3 @@
-from pyexpat import model
 import opensim as osim
 import numpy as np
 from typing import Dict, Any, Optional
@@ -6,7 +5,7 @@ from typing import Dict, Any, Optional
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
 from SysSimX.components.opensim_comp import OpenSimComponent
-from SysSimX.utilities.units import ureg, Quantity
+
 
 #----------------------------------------------------------------------------
 # Port specifications
