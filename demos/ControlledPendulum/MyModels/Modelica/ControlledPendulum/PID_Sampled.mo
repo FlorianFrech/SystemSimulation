@@ -16,15 +16,15 @@ model PID_Sampled
   Modelica.Blocks.Interfaces.RealInput y(unit="V");
 
   // Outputs
-  Modelica.Blocks.Interfaces.RealOutput u_control(start=0);
+  Modelica.Blocks.Interfaces.RealOutput u(start=0);
   Modelica.Blocks.Interfaces.RealOutput error(start=0);
   Modelica.Blocks.Interfaces.BooleanOutput saturated(start=false);
 
 protected
   // Continuous states (no events)
-  Real xi(start=0) "Integrator state";
-  Real x_de(start=0) "Derivative filter state on error";
-  Real x_dy(start=0) "Derivative filter state on measurement";
+  Real xi(start=0, fixed=true) "Integrator state";
+  Real x_de(start=0, fixed=true) "Derivative filter state on error";
+  Real x_dy(start=0, fixed=true) "Derivative filter state on measurement";
 
   // Internals
   Real e;
@@ -51,7 +51,7 @@ equation
 
   // Output and flags without generating events
   u_unsat   = P_term + I_term + D_term;
-  u_control = noEvent(min(uMax, max(uMin, u_unsat)));
+  u = noEvent(min(uMax, max(uMin, u_unsat)));
   error     = e;
   saturated = noEvent((u_unsat <= uMin) or (u_unsat >= uMax));
 end PID_Sampled;

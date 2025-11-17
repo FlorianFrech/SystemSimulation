@@ -127,6 +127,13 @@ class CoSimComponent(ABC):
         Default: False. Override in subclasses as needed.
         """
         return False
+    
+    def evaluate_outputs(self):
+        """
+        Evaluate outputs based on current inputs without advancing time.
+        Default: no-op. Override in subclasses with direct feedthrough.
+        """
+        pass
 
     # ---- Monitoring ----
     def snapshot(self) -> Dict:

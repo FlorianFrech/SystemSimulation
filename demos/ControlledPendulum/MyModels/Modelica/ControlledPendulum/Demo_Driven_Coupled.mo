@@ -1,6 +1,6 @@
 within ControlledPendulum;
 
-model Demo_Driven
+model Demo_Driven_Coupled
   /* 
   A model of a controlled pendulum system consisting of:
    - Reference trajectory generator
@@ -20,10 +20,8 @@ model Demo_Driven
                                     q_max =  reference.amplitude);
   
   PID_Continuous        pid;
-  //PID_Sampled         pid;
   
-  Drive               drive;
-  //Drive_QStat           drive;
+  Drive_Coupled       drive;
   
   Pendulum            pendulum;
 
@@ -41,10 +39,12 @@ equation
   
   // Connect drive and Pendulum
   connect(drive.torque, pendulum.torque);
-  connect(drive.omega, pendulum.omega);
+  connect(pendulum.q, drive.phi);
+  connect(pendulum.omega, drive.omega);
+  connect(pendulum.alpha, drive.alpha);
   
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.01)
   );
 
-end Demo_Driven;
+end Demo_Driven_Coupled;

@@ -198,7 +198,7 @@ class FMUComponent(CoSimComponent):
     #----------------------------------------------------------------------------
     # Input/output methods
     #----------------------------------------------------------------------------
-    def set_inputs(self, signals: Dict[str, Any], t: Optional[float]) -> None:
+    def set_inputs(self, signals: Dict[str, Any], t: Optional[float]=None) -> None:
         if not signals: return
         assert self._instance is not None
 
@@ -246,7 +246,7 @@ class FMUComponent(CoSimComponent):
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 
-    def _update_output_states(self, t: float) -> None:
+    def _update_output_states(self, t: Optional[float]=None) -> None:
             assert self._instance is not None
 
             # For each base type, batch get and set into PortStates as Quantities (REAL) or raw types
@@ -345,6 +345,15 @@ class FMUComponent(CoSimComponent):
                 state[name]['value'] = val
         self.state = state
         return self.state
+    
+    #----------------------------------------------------------------------------
+    # Evaluate outputs without time step for direct feedthrough
+    #----------------------------------------------------------------------------
+    def evaluate_outputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        self.set_inputs(inputs)
+        self._do_step_internal(t=self.t, dt=0.0)
+        self._update_output_states()
+        return self.get_outputs()
 
     #----------------------------------------------------------------------------
     # Reset method

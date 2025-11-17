@@ -12,9 +12,9 @@ model PID_Continuous
   */
   
   // Parameters
-  parameter Real k=1;
-  parameter Real Ti=0.5;
-  parameter Real Td=0.1;
+  parameter Real k=10;
+  parameter Real Ti=0.1;
+  parameter Real Td=0.2;
   parameter Real Nd=10;
   parameter Real uMin=-1, uMax=1;
   
