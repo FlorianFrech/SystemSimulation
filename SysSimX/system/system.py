@@ -4,6 +4,7 @@ from typing import Dict, List, Any, Tuple, Optional
 
 import networkx as nx
 import numpy as np
+from scipy.fft import dst
 from scipy.optimize import root
 
 from .connection import Connection
@@ -42,6 +43,9 @@ class System:
         # Algebraic loop diagnostics (SCCs with size > 1 on the direct feed-through graph)
         self.algebraic_loops: List[List[str]] = []  # Detected algebraic loops (if any)
         self._scc_index: Dict[str, int] = {}        # comp name -> scc index
+        
+        # Pre-computed connection lookups
+        self._incoming_by_dst: Dict[str, List[Connection]] = {}
     
     #----------------------------------------------------------------------------
     # Register components
@@ -99,6 +103,7 @@ class System:
         """
         self._validate_connection(connection)
         self.connections.append(connection)
+        self._incoming_by_dst.clear()
 
     #----------------------------------------------------------------------------
     # Graphs
@@ -114,6 +119,7 @@ class System:
         self._dag.clear()
         self.algebraic_loops.clear()
         self._scc_index.clear()
+        self._incoming_by_dst.clear()
         
         # nodes
         for name in self.components:
@@ -121,6 +127,7 @@ class System:
             self._dag.add_node(name)
 
         for c in self.connections:
+            self._incoming_by_dst.setdefault(c.dst_comp, []).append(c)
             self.graph.add_edge(
                 c.src_comp, c.dst_comp,
                 src_port=c.src_port, dst_port=c.dst_port,
@@ -211,38 +218,24 @@ class System:
         self.build_graphs()
         self.compute_execution_order()
     
-    def _get_latest_values(self, comp_name: str, port_name: str) -> Any:
-        """
-        Fetch a value from a component's OUTPUT port,
-         - delay_steps == 0 -> current value (read from PortState.value)
-         - delay_steps > 0  -> historical value (read from PortState.history)
-        """
-        comp = self.components[comp_name]
-        ps = comp.outputs[port_name]
-        return ps.get() # fallback to last known value
-    
     def _set_inputs_for_generation(self, gen: List[str], t: float) -> None:
         """
         For each component in the generation, set its INPUT by scanning connections whose
         dst_comp is the component. For delay > 0, use history; for delay == 0, use current value.
-        """
-        # Pre-group edges by destination component
-        incoming_by_dst: Dict[str, List[Connection]] = {}
-        for c in self.connections:
-            incoming_by_dst.setdefault(c.dst_comp, []).append(c)
-        
+        """        
         for comp_name in gen:
             comp = self.components[comp_name]
             to_set: Dict[str, Any] = {}
 
-            for c in incoming_by_dst.get(comp_name, []):
+            for c in self._incoming_by_dst.get(comp_name, []):
                 # Detect multiple drivers for the same input port
                 if c.dst_port in to_set:
                     raise RuntimeError(
                         f"Multiple drivers for input port '{comp_name}.{c.dst_port}' "
                         f"from '{to_set[c.dst_port]}' and '{c.src_comp}.{c.src_port}'"
                     )
-                src_value = self._get_latest_values(c.src_comp, c.src_port)
+                # Get source value
+                src_value = self.components[c.src_comp].outputs[c.src_port].get()
                 if src_value is not None:
                     to_set[c.dst_port] = src_value
             
@@ -263,7 +256,8 @@ class System:
             gen_set = set(gen)
             for loop in self.algebraic_loops:
                 if set(loop).issubset(gen_set):
-                    self._solve_algebraic_scc(loop, t)
+                    #self._solve_algebraic_scc(loop, t)
+                    self._solve_algebraic_scc_ijcsa(loop, t)
 
         # Phase 3: Do step for all generations
         for gen in self.execution_order:
@@ -285,7 +279,6 @@ class System:
     #----------------------------------------------------------------------------
     # Resolve algebraic loops
     #----------------------------------------------------------------------------
-    # Evaluate a component's outputs with provided inputs, no side effects if possible
     def _eval_component_outputs(self, comp: CoSimComponent, in_vals: Dict[str, Any], t: float) -> Dict[str, Any]:
         # Preferred: user-provided pure function
         if hasattr(comp, 'eval_outputs') and callable(getattr(comp, 'eval_outputs')):
@@ -328,26 +321,147 @@ class System:
                 )
                 if zero_delay:
                     unknowns.append((c.src_comp, c.src_port))
-        # unique and stable
         return sorted(set(unknowns), key=lambda x: (x[0], x[1]))
 
+    #----------------------------------------------------------------------------
+    # Interface Jacobian-based Co-Simulation Algorithm (IJCSA)
+    #----------------------------------------------------------------------------
+    def _solve_algebraic_scc_ijcsa(self, scc: List[str], t: float) -> None:
+        scc_set = set(scc)
+        
+        # Collect interface variables
+        interface_inputs: List[Tuple[str, str]] = []   # (dst_comp_name, input_port)
+        for c in self.connections:
+            if c.dst_comp in scc_set:
+                dst_comp = self.components[c.dst_comp]
+                zero_delay = any(
+                    c.dst_port in in_list
+                    for in_list in dst_comp.direct_feedthrough.values()
+                    if in_list
+                )
+                if zero_delay and c.src_comp in scc_set:
+                    interface_inputs.append((c.dst_comp, c.dst_port))
+        
+        interface_inputs = sorted(set(interface_inputs))
+        idx_of = {key: i for i, key in enumerate(interface_inputs)}
+        
+        # Initial guess uses curent input values
+        u0 = []
+        for (c, inp) in interface_inputs:
+            val = self.components[c].inputs[inp].get()
+            if val is None:
+                val = 0.0
+            u0.append(float(val))
+        u0 = np.array(u0, dtype=float)
+        
+        # Build mapping of connections
+        internal_connections = []  # (src_comp, src_port, dst_comp, dst_port)
+        for c in self.connections:
+            if c.src_comp in scc_set and c.dst_comp in scc_set:
+                dst_comp = self.components[c.dst_comp]
+                zero_delay = any(
+                    c.dst_port in in_list
+                    for in_list in dst_comp.direct_feedthrough.values()
+                    if in_list
+                )
+                if zero_delay:
+                    internal_connections.append(c)
+    
+        def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
+            # Set interface inputs to current iteration values
+            for (comp_name, port_name), val in zip(interface_inputs, u_vec):
+                self.components[comp_name].inputs[port_name].set(float(val), t)
+            
+            # Execute all components in the SCC
+            for comp_name in scc:
+                comp = self.components[comp_name]
+                comp._do_step_internal(t, 0.0)
+            
+            # Compute residuals for interface inputs
+            residual = np.zeros(len(interface_inputs), dtype=float)
+            for i, (dst_comp_name, dst_port_name) in enumerate(interface_inputs):
+                # Find the driver for this input
+                for c in internal_connections:
+                    if c.dst_comp == dst_comp_name and c.dst_port == dst_port_name:
+                        computed_output = self.components[c.src_comp].outputs[c.src_port].get()
+                        # Residual = U_set - Y_computed 
+                        residual[i] = u_vec[i] - float(computed_output)
+                        break
+            return residual
+        
+        def compute_interface_jacobian(u_vec: np.ndarray, r_vec: np.ndarray) -> np.ndarray:
+            """
+            Compute Interface Jacobian: J_i = ∂I_i/∂U_i = ∂Y_i/∂U_i
+            Uses finite differences for now (can be optimized with analytical derivatives)
+            """
+            n = len(u_vec)
+            J = np.zeros((n, n), dtype=float)
+            eps = 1e-6
+            
+            for j in range(n):
+                u_perturbed = u_vec.copy()
+                u_perturbed[j] += eps
+                r_perturbed = compute_interface_residual(u_perturbed)
+                J[:, j] = (r_perturbed - r_vec) / eps
+            
+            return J
+    
+        # Newton iteration loop
+        max_iter = 50
+        tol = 1e-6
+        u_current = u0.copy()
+        
+        for iteration in range(max_iter):
+            # Compute residual
+            r_current = compute_interface_residual(u_current)
+            
+            # Check convergence
+            if np.linalg.norm(r_current) < tol:
+                break
+            
+            # Compute Jacobian
+            J_current = compute_interface_jacobian(u_current, r_current)
+            
+            # Solve for correction: J * Δu = -r
+            try:
+                delta_u = np.linalg.solve(J_current, -r_current)
+            except np.linalg.LinAlgError:
+                raise RuntimeError(f"Singular Jacobian in IJCSA for SCC {scc}")
+            
+            # Apply correction
+            u_current += delta_u
+        else:
+            raise RuntimeError(f"IJCSA did not converge for SCC {scc} after {max_iter} iterations")
+        
+        # Final evaluation with converged inputs
+        for (comp_name, port_name), val in zip(interface_inputs, u_current):
+            self.components[comp_name].inputs[port_name].set(float(val), t)
+        
+        for comp_name in scc:
+            comp = self.components[comp_name]
+            comp._do_step_internal(t, 0.0)
+            
+    #----------------------------------------------------------------------------
+    # Resolve algebraic loops using root-finding
+    #----------------------------------------------------------------------------            
     def _solve_algebraic_scc(self, scc: List[str], t: float) -> None:
-        if not scc:
-            return
-
         unknowns = self._collect_scc_unknowns(scc)
-        if not unknowns:
-            return
 
         idx_of = {key: i for i, key in enumerate(unknowns)}
-        x0 = np.array([
-            self.components[c].outputs[out].get() if self.components[c].outputs[out].get() is not None else 0.0
-            for (c, out) in unknowns
-        ], dtype=float)
+        
+        # Get initial guess
+        x0 = []
+        for (c, out) in unknowns:
+            val = self.components[c].outputs[out].get()
+            if val is None:
+                val = 0.0
+            x0.append(float(val))
+        x0 = np.array(x0, dtype=float)
 
         scc_set = set(scc)
         internal_edges = []      # (src_comp, src_port, dst_comp, dst_port)
         external_in_edges = []   # (src_comp, src_port, dst_comp, dst_port)
+        
         for c in self.connections:
             dst_comp = self.components[c.dst_comp]
             zero_delay = any(
@@ -363,22 +477,24 @@ class System:
                 external_in_edges.append((c.src_comp, c.src_port, c.dst_comp, c.dst_port))
 
         def residual(z_vec: np.ndarray) -> np.ndarray:
-            in_vals_by_comp: Dict[str, Dict[str, Any]] = {name: {} for name in scc}
+            component_input_values: Dict[str, Dict[str, Any]] = {name: {} for name in scc}
+            
             # external drivers
             for src_c, src_p, dst_c, dst_p in external_in_edges:
-                val = self._get_latest_values(src_c, src_p)
-                in_vals_by_comp[dst_c][dst_p] = val
+                val = self.components[src_c].outputs[src_p].get()
+                component_input_values[dst_c][dst_p] = val
+            
             # internal drivers (from z)
             for src_c, src_p, dst_c, dst_p in internal_edges:
                 idx = idx_of.get((src_c, src_p))
                 if idx is not None:
-                    in_vals_by_comp[dst_c][dst_p] = float(z_vec[idx])
+                    component_input_values[dst_c][dst_p] = float(z_vec[idx])
 
             # evaluate outputs
             computed_out: Dict[Tuple[str, str], float] = {}
             for comp_name in scc:
                 comp = self.components[comp_name]
-                out_vals = self._eval_component_outputs(comp, in_vals_by_comp.get(comp_name, {}), t)
+                out_vals = self._eval_component_outputs(comp, component_input_values.get(comp_name, {}), t)
                 for (cname, out_port) in unknowns:
                     if cname == comp_name and out_port in out_vals:
                         computed_out[(cname, out_port)] = float(out_vals[out_port])
@@ -400,5 +516,5 @@ class System:
         # write back to downstream inputs inside SCC for consistency
         for src_c, src_p, dst_c, dst_p in internal_edges:
             idx = idx_of.get((src_c, src_p))
-            val = float(sol.x[idx]) if idx is not None else float(self._get_latest_values(src_c, src_p))
+            val = float(sol.x[idx]) if idx is not None else float(self.components[src_c].outputs[src_p].get())
             self.components[dst_c].inputs[dst_p].set(val, t)
