@@ -110,6 +110,6 @@ def test_step():
 
     sys.initialize(0.0)
     omega_state_0 = pendulum.get_outputs()['omega_state']
-    sys.step(t=0.0, dt=0.1)
+    sys.step_jacobi(t=0.0, dt=0.1)
     omega_state_1 = pendulum.get_outputs()['omega_state']
     assert omega_state_0 != omega_state_1  # Expect state to change after step

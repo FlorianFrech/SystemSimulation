@@ -63,6 +63,7 @@ class FMUComponent(CoSimComponent):
         self.output_specs: Dict[str, PortSpec] = {}
         self.direct_feedthrough = {}
         self._detect_direct_feedthrough()
+        self._analyze_model_structure()
 
         # Build port specifications from model description (Real, Int, Bool, Str, Bytes)
         self._build_port_specs()
@@ -124,6 +125,28 @@ class FMUComponent(CoSimComponent):
                 elif port_type == PortType.BOOL:   self._vrs_out_bool[var.name] = value_reference
                 elif port_type == PortType.STRING: self._vrs_out_str[var.name]  = value_reference
     
+    def _analyze_model_structure(self) -> None:
+        for output in self._md.outputs:
+            out_var = output.variable.name
+            deps = []
+            for dep in output.dependencies:
+                deps.append(dep.name)
+            self.model_structure['outputs'][out_var] = deps
+        
+        for derivative in self._md.derivatives:
+            der_var = derivative.variable.name
+            deps = []
+            for dep in derivative.dependencies:
+                deps.append(dep.name)
+            self.model_structure['derivatives'][der_var] = deps
+        
+        for init_unknown in self._md.initialUnknowns:
+            init_var = init_unknown.variable.name
+            deps = []
+            for dep in init_unknown.dependencies:
+                deps.append(dep.name)
+            self.model_structure['initialUnknowns'][init_var] = deps
+
     def _detect_direct_feedthrough(self) -> None:
         for unknown in self._md.outputs:
             self.direct_feedthrough[unknown.variable.name] = []
@@ -353,7 +376,11 @@ class FMUComponent(CoSimComponent):
         self.set_inputs(inputs)
         self._do_step_internal(t=self.t, dt=0.0)
         self._update_output_states()
-        return self.get_outputs()
+        outputs = self.get_outputs()
+        for key, value in outputs.items():
+            value = value.magnitude if isinstance(value, Quantity) else value
+            outputs[key] = value
+        return outputs
 
     #----------------------------------------------------------------------------
     # Reset method

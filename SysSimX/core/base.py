@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, Union, Set
+from typing import Dict, Any, Optional, Tuple, Union, Set, List
 from .port import PortSpec, PortState
 from ..utilities.units import ureg, Quantity
 
@@ -12,7 +12,6 @@ class CoSimComponent(ABC):
     label: str
     group: Optional[str] = None
     t: float = 0.0  # Current simulation time
-    direct_feedthrough: Dict[str, Set[str]] = {}
 
     def __init__(self, name: str, label: Optional[str] = None, group: Optional[str] = None):
         self.name = name
@@ -27,6 +26,13 @@ class CoSimComponent(ABC):
 
         # Parameter container (populated by subclasses)
         self.parameters: Dict[str, Any] = {}
+
+        self.direct_feedthrough: Dict[str, Set[str]] = {}
+        self.model_structure: Dict[str, Dict[str, List[str]]] = {
+            "outputs": {},
+            "derivatives": {},
+            "initialUnknowns": {},
+        }
 
     # ---- Port Management Helper ----
     def _initialize_ports_from_specs(self) -> None:
@@ -120,22 +126,24 @@ class CoSimComponent(ABC):
         """Optional: release resources (FMU instances, OpenSim memory, etc.)."""
         pass
     
-    # ---- Direct Feedthrough for algebraic cycle analysis ----
-    def has_direct_feedthrough(self) -> bool:
+    def evaluate_outputs(self, inputs: Dict[str, Any]) -> None:
         """
-        Return True if any output directly depends on any input.
-        Default: False. Override in subclasses as needed.
-        """
-        return False
-    
-    def evaluate_outputs(self):
-        """
-        Evaluate outputs based on current inputs without advancing time.
+        Evaluate outputs based on given inputs without advancing time.
         Default: no-op. Override in subclasses with direct feedthrough.
         """
         pass
 
-    # ---- Monitoring ----
-    def snapshot(self) -> Dict:
-        """Provides a snapshot of its ports and internal states for monitoring purpose"""
-        pass
+    @property
+    def reactive_inputs(self) -> Set[str]:
+        """Inputs that affect at least one connected output algebraically."""
+        reactive_inputs = set(inp for outs in self.direct_feedthrough.values() for inp in outs)
+        return reactive_inputs
+    
+    @property
+    def has_state(self) -> bool:
+        """Override in subclasses that have ODE/DAE state."""
+        return False
+    
+    @property
+    def has_direct_feedthrough(self) -> bool:
+        return any(self.direct_feedthrough.values())
