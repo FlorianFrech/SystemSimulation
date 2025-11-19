@@ -372,14 +372,21 @@ class FMUComponent(CoSimComponent):
     #----------------------------------------------------------------------------
     # Evaluate outputs without time step for direct feedthrough
     #----------------------------------------------------------------------------
-    def evaluate_outputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        self.set_inputs(inputs)
+    def evaluate_outputs(self, inputs: Dict[str, Any]) -> Dict[str, float]:
+        # 1) Apply inputs without touching histories
+        self.set_inputs(inputs, t=None)
+
+        # 2) Do a zero-time step to update outputs
         self._do_step_internal(t=self.t, dt=0.0)
-        self._update_output_states()
+
+        # 3) Read outputs
+        self._update_output_states(t=None)
+
+        # 4) Return outputs as raw values (Quantities converted to magnitudes)
         outputs = self.get_outputs()
         for key, value in outputs.items():
             value = value.magnitude if isinstance(value, Quantity) else value
-            outputs[key] = value
+            outputs[key] = float(value)
         return outputs
 
     #----------------------------------------------------------------------------

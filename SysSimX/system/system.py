@@ -8,6 +8,7 @@ import numpy as np
 from .connection import Connection
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec
+from ..utilities.units import Quantity
 
 _ports_compatible = PortSpec.compatible
 
@@ -235,7 +236,7 @@ class System:
                 comp.set_inputs(to_set, t=t)
 
     #----------------------------------------------------------------------------
-    # Step methods for Gauss-Seidel and Jacobi algorithms
+    # Gauss-Seidel Co-Simulation Step
     #----------------------------------------------------------------------------
     def step_gs(self, t: float, dt: float) -> None:
         """
@@ -253,7 +254,10 @@ class System:
             for comp_name in gen:
                 comp = self.components[comp_name]
                 comp.do_step(t, dt)
-
+        
+    #----------------------------------------------------------------------------
+    # Jacobi Co-Simulation Step
+    #----------------------------------------------------------------------------
     def step_jacobi(self, t: float, dt: float) -> None:
         """
         Perform a simulation step:
@@ -274,6 +278,27 @@ class System:
                 comp.do_step(t, dt)
 
     #----------------------------------------------------------------------------
+    # Global Interface Jacobian-based Co-Simulation Step
+    #----------------------------------------------------------------------------
+    def step_ijcsa_global(self, t: float, dt: float) -> None:
+        """
+        Perform one global co-simulation step using IJCSA:
+
+        1) Global interface-Newton at t with dt=0 to get consistent interface values.
+        2) Single explicit integration step t -> t+dt using those interface values.
+        """
+        # 1) Global IJCSA on all zero-delay connections
+        self._solve_global_interface_ijcsa(t)
+
+        # 2) Actual time step for all components
+        for gen in self.execution_order:
+            self._set_inputs_for_generation(gen, t)
+
+            for comp_name in gen:
+                comp = self.components[comp_name]
+                comp.do_step(t, dt)
+
+    #----------------------------------------------------------------------------
     # Run System Simulation
     #----------------------------------------------------------------------------
     def run(self, t0: float, tf: float, dt: float):
@@ -287,9 +312,26 @@ class System:
             step_func = self.step_gs
         elif self.algorithm == "Jacobi":
             step_func = self.step_jacobi
+        elif self.algorithm == "IJCSA":
+            step_func = self.step_ijcsa_global
         while t < tf - 1e-12:
             step_func(t, dt)
             t += dt
+    
+    #----------------------------------------------------------------------------
+    # Get history of all components
+    #----------------------------------------------------------------------------
+    def get_history(self) -> Dict[str, Dict[str, List[Any]]]:
+        """
+        Retrieve the history of all components in the system.
+
+        Returns:
+            A dictionary mapping component names to their history dictionaries.
+        """
+        history: Dict[str, Dict[str, List[Any]]] = {}
+        for comp_name, comp in self.components.items():
+            history[comp_name] = comp.get_history()
+        return history
 
     #----------------------------------------------------------------------------
     # Interface Jacobian-based Co-Simulation Algorithm (IJCSA)
@@ -360,7 +402,8 @@ class System:
         # 4) Initial guess U0 from current input values
         u0 = np.zeros(n, dtype=float)
         for (dst_c, dst_p), i in idx_of_input.items():
-            val = self.components[dst_c].inputs[dst_p].value.magnitude
+            val = self.components[dst_c].inputs[dst_p].get()
+            val = val.magnitude if isinstance(val, Quantity) else val
             u0[i] = float(val) if val is not None else 0.0
 
         # 5) Residual Evaluation F(U)
@@ -368,14 +411,15 @@ class System:
             """
             Given interface input values u_vec, evaluate residual F(U) = U - Y(U).
 
-            Uses _eval_component_outputs() to keep FMU state unchanged.
+            Uses comp._evaluate_outputs(in_vals) to keep FMU state unchanged.
             """
             # Build per-component input values
             comp_inputs: Dict[str, Dict[str, Any]] = {name: {} for name in scc}
 
             # 5.1) External zero-delay drivers into SCC
             for scrc_c, src_p, dst_c, dst_p in external_in_connections:
-                val = self.components[scrc_c].outputs[src_p].value.magnitude
+                val = self.components[scrc_c].outputs[src_p].get()
+                val = val.magnitude if isinstance(val, Quantity) else val
                 comp_inputs[dst_c][dst_p] = float(val)
 
             # 5.2) Internal interface inputs (unknowns U)
@@ -387,7 +431,6 @@ class System:
             for comp_name in scc:
                 comp = self.components[comp_name]
                 in_vals = comp_inputs.get(comp_name, {})
-                #out_vals = self._eval_component_outputs(comp, in_vals, t)
                 out_vals = comp.evaluate_outputs(in_vals)
                 if out_vals is None:
                     continue
@@ -400,7 +443,9 @@ class System:
                 src_c, src_p = driver_for_input[(dst_c, dst_p)]
                 y = computed_out.get((src_c, src_p))
                 if y is None:
-                    y = float(self.components[src_c].outputs[src_p].value.magnitude or 0.0)
+                    val = self.components[src_c].outputs[src_p].get()
+                    val = val.magnitude if isinstance(val, Quantity) else val
+                    y = float(val) if val is not None else 0.0
                 r[i] = u_vec[i] - y
             return r
         
@@ -527,3 +572,162 @@ class System:
         for idx, gen in enumerate(self.execution_order):
             for name in gen:
                 self.execution_idx[name] = idx
+
+    def _collect_global_interface_unknowns(self) -> Tuple[List[Tuple[str, str]], Dict[Tuple[str, str], Tuple[str, str]]]:
+        """
+        Collect all interface inputs that participate in zero-delay couplings.
+
+        Returns:
+        interface_inputs: list of (dst_comp_name, dst_port_name)
+        driver_map: mapping (dst_comp, dst_port) -> (src_comp, src_port)
+        """
+        interface_inputs: List[Tuple[str, str]] = []
+        driver_map: Dict[Tuple[str, str], Tuple[str, str]] = {}
+
+        if self._dag is None:
+            return interface_inputs, driver_map
+        
+        for src, dst, data in self._dag.edges(data=True):
+            src_port = data.get('src_port')
+            dst_port = data.get('dst_port')
+            key = (dst, dst_port)
+            interface_inputs.append(key)
+            driver_map[key] = (src, src_port)
+
+        interface_inputs = sorted(set(interface_inputs))
+        return interface_inputs, driver_map
+
+    #----------------------------------------------------------------------------
+    # Global Interface Jacobian-based Co-Simulation Step Helpers
+    #----------------------------------------------------------------------------  
+    def _compute_interface_residual_global(
+            self,
+            U: np.ndarray,
+            interface_inputs: List[Tuple[str, str]],
+            driver_map: Dict[Tuple[str, str], Tuple[str, str]],
+            t: float
+    ) -> np.ndarray:
+        """
+        Compute R(U) = U - Y(U) for ALL zero-delay connections in the system
+        with frozen FMU states at time t.
+
+        U: vector of size n, ordered like interface_inputs.
+        """
+        # Map from input (dst_comp, dst_port) -> scalar value
+        input_values: Dict[Tuple[str, str], float] = {}
+        for key, val in zip(interface_inputs, U):
+            input_values[key] = val
+
+        # 1) Build input dicts per component for this evaluation
+        comp_inputs: Dict[str, Dict[str, float]] = {name: {} for name in self.components.keys()}
+
+        # 2) Set all interface inputs from U
+        for (dst_c, dst_p), val in input_values.items():
+            comp_inputs[dst_c][dst_p] = val
+        
+        # 3) Evaluate outputs of all components
+        for comp_name, comp in self.components.items():
+            inputs = comp_inputs.get(comp_name, {})
+            comp.evaluate_outputs(inputs)
+        
+        # 4) Build residuals
+        R = np.zeros(len(interface_inputs), dtype=float)
+        for i, (dst_c, dst_p) in enumerate(interface_inputs):
+            src_c, src_p = driver_map[(dst_c, dst_p)]
+            y_val = self.components[src_c].outputs[src_p].get()
+            y_val = y_val.magnitude if isinstance(y_val, Quantity) else y_val
+            y = float(y_val) if y_val is not None else 0.0
+            R[i] = U[i] - y
+        
+        return R
+    
+    def _compute_interface_jacobian_global(
+            self,
+            U: np.ndarray,
+            interface_inputs: List[Tuple[str, str]],
+            driver_map: Dict[Tuple[str, str], Tuple[str, str]],
+            t: float,
+            eps: float = 1e-6
+    ) -> np.ndarray:
+        """
+        Finite-difference Jacobian J ≈ ∂R/∂U for the global interface system.
+        """
+        n = len(U)
+        J = np.zeros((n, n), dtype=float)
+
+        # Base residual
+        R0 = self._compute_interface_residual_global(U, interface_inputs, driver_map, t)
+
+        for j in range(n):
+            U_pert = U.copy()
+            delta = eps * max(1.0, abs(U[j]))
+            U_pert[j] += delta
+
+            R_pert = self._compute_interface_residual_global(U_pert, interface_inputs, driver_map, t)
+            J[:, j] = (R_pert - R0) / delta
+        
+        return J
+
+    def _solve_global_interface_ijcsa(self, t: float) -> None:
+        """
+        Global Interface-Newton (IJCSA) at time t:
+
+        - Unknowns: all zero-delay interface inputs in the system.
+        - States are frozen at t (no progression of time).
+        - After convergence, component input and output PortStates are consistent.
+        """
+        interface_inputs, driver_map = self._collect_global_interface_unknowns()
+        n = len(interface_inputs)
+        if n == 0:
+            return  # nothing to solve
+        
+        # 1) Build initial guess U0 from current input values
+        U0 = np.zeros(n, dtype=float)
+        for i, (dst_c, dst_p) in enumerate(interface_inputs):
+            val = self.components[dst_c].inputs[dst_p].get()
+            val = val.magnitude if isinstance(val, Quantity) else val
+            U0[i] = float(val) if val is not None else 0.0
+        
+        # 2) Newton iteration on R(U) = 0
+        max_iter = 50
+        tol = 1e-6
+        U = U0.copy()
+
+        for k in range(max_iter):
+            R = self._compute_interface_residual_global(U, interface_inputs, driver_map, t)
+            norm_R = np.linalg.norm(R, ord=2)
+
+            # Optional debug logging
+            # print(f"IJCSA Iter {k}: ||R|| = {np.linalg.norm(R)}")
+
+            # Check convergence
+            if norm_R < tol:
+                break
+
+            J = self._compute_interface_jacobian_global(U, interface_inputs, driver_map, t)
+
+            try:
+                delta = np.linalg.solve(J, -R)
+            except np.linalg.LinAlgError:
+                # Fallback: damped gradient step
+                delta = -0.1 * R
+            
+            U += delta
+
+        else:
+            raise RuntimeError(f"Global IJCSA did not converge after {max_iter} iterations")
+        
+        # 3) Write back converged inputs and re-evaluate outputs once
+        input_values = {key: float(val) for key, val in zip(interface_inputs, U)}
+
+        # Set inputs per component
+        comp_inputs: Dict[str, Dict[str, float]] = {name: {} for name in self.components.keys()}
+        for (dst_c, dst_p), val in input_values.items():
+            comp_inputs[dst_c][dst_p] = val
+        
+        # Apply to components and evaluate outputs
+        for comp_name, comp in self.components.items():
+            inputs = comp_inputs.get(comp_name, {})
+            if inputs:
+                comp.set_inputs(inputs, t)
+            comp.evaluate_outputs(inputs)

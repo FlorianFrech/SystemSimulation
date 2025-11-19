@@ -117,6 +117,17 @@ class CoSimComponent(ABC):
         """Return current state as dict {var_name: {'value': ..., 'unit': ...}}."""
         ...
 
+    def get_history(self) -> Dict[str, List[Tuple[float, Any]]]:
+        """
+        Optional: return time history of states/outputs for logging or analysis.
+        Default: empty dict.
+        """
+        history = {}
+        for name, out_port in self.outputs.items():
+            if out_port.history:
+                history[name] = out_port.history
+        return history
+
     @abstractmethod
     def reset(self) -> None:
         """Reset to clean state before re-initialization."""
@@ -126,12 +137,19 @@ class CoSimComponent(ABC):
         """Optional: release resources (FMU instances, OpenSim memory, etc.)."""
         pass
     
-    def evaluate_outputs(self, inputs: Dict[str, Any]) -> None:
+    def evaluate_outputs(self, inputs: Dict[str, Any], t: Optional[float] = None) -> Dict[str, Any]:
         """
-        Evaluate outputs based on given inputs without advancing time.
-        Default: no-op. Override in subclasses with direct feedthrough.
+        Default: set given inputs, call an internal "evaluation" step with dt=0,
+        and return current outputs as plain values (no units).
+
+        Components without direct feedthrough can just ignore the inputs and
+        return their already-valid outputs.
         """
-        pass
+        # Default implementation: just set inputs and return outputs
+        if inputs:
+            self.set_inputs(inputs, t=None)
+        # For non-FMUs this is often enough:
+        return {name: port.get() for name, port in self.outputs.items()}
 
     @property
     def reactive_inputs(self) -> Set[str]:

@@ -3,8 +3,8 @@ digraph {
 	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label="Controlled Pendulum System" labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
 	node [color="#3b82f6" fillcolor=white fontname=Helvetica fontsize=10 height=0.7 margin="0.12,0.1" penwidth=1.5 shape=record style="rounded,filled" width=1.5]
 	edge [arrowhead=open arrowsize=0.5 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.4 penwidth=1 style=solid]
-	subgraph cluster_Input {
-		bgcolor="#dfebeb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Input style=rounded
+	subgraph cluster_Reference {
+		bgcolor="#dbeafe" color="#9ca3af" fontname=Helvetica fontsize=10 label=Reference style=rounded
 		ref [label="{ ref | { <q_ref> q_ref } }" xlabel="#0"]
 	}
 	subgraph cluster_Sensors {
@@ -18,19 +18,19 @@ digraph {
 	}
 	subgraph cluster_Actuator {
 		bgcolor="#fef3c7" color="#9ca3af" fontname=Helvetica fontsize=10 label=Actuator style=rounded
-		Drive_Coupled [label="{ { <alpha> alpha | <omega> omega | <phi> phi | <u_control> u_control } | Drive_Coupled | { <torque> torque } }" xlabel="#0"]
+		drive_coupled [label="{ { <alpha> alpha | <omega> omega | <phi> phi | <u_control> u_control } | drive_coupled | { <torque> torque } }" xlabel="#0"]
 	}
 	subgraph cluster_Plant {
 		bgcolor="#e5e7eb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Plant style=rounded
-		EQB_Pendulum [label="{ { <torque> torque } | EQB_Pendulum | { <alpha> alpha | <omega> omega | <q> q } }" xlabel="#0"]
+		pendulum [label="{ { <torque> torque } | pendulum | { <alpha> alpha | <omega> omega | <q> q } }" xlabel="#0"]
 	}
 	ref -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
-	EQB_Pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]
+	pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]
 	sensor_ref -> pid [label="[V]" color="#111827" headclip=true headport="ref:w" style=solid tailclip=true tailport="U_q:e"]
 	sensor_state -> pid [label="[V]" color="#111827" headclip=true headport="y:w" style=solid tailclip=true tailport="U_q:e"]
-	pid -> Drive_Coupled [label="" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u:e"]
-	Drive_Coupled -> EQB_Pendulum [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
-	EQB_Pendulum -> Drive_Coupled [label="[rad]" color="#111827" headclip=true headport="phi:w" style=solid tailclip=true tailport="q:e"]
-	EQB_Pendulum -> Drive_Coupled [label="[rad/s]" color="#111827" headclip=true headport="omega:w" style=solid tailclip=true tailport="omega:e"]
-	EQB_Pendulum -> Drive_Coupled [label="[rad/s²]" color="#111827" headclip=true headport="alpha:w" style=solid tailclip=true tailport="alpha:e"]
+	pid -> drive_coupled [label="" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u:e"]
+	drive_coupled -> pendulum [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
+	pendulum -> drive_coupled [label="[rad]" color="#111827" headclip=true headport="phi:w" style=solid tailclip=true tailport="q:e"]
+	pendulum -> drive_coupled [label="[rad/s]" color="#111827" headclip=true headport="omega:w" style=solid tailclip=true tailport="omega:e"]
+	pendulum -> drive_coupled [label="[rad/s²]" color="#111827" headclip=true headport="alpha:w" style=solid tailclip=true tailport="alpha:e"]
 }
