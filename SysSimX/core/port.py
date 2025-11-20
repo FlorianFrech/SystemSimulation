@@ -1,10 +1,12 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Optional, TypeVar, Literal, Union
+
 from ..utilities.units import ureg, Quantity
-
-
+# -------------------------------------------------------------------
+# Port Types and Specifications - immutable port definitions
+# -------------------------------------------------------------------
 class PortType(str, Enum):
     REAL = "real"
     INT = "int"
@@ -66,6 +68,9 @@ class PortSpec(Generic[T]):
                 return False
         return True
 
+# -------------------------------------------------------------------
+# Port State - mutable state of a port
+# -------------------------------------------------------------------
 @dataclass
 class PortState(Generic[T]):
     """
@@ -75,7 +80,6 @@ class PortState(Generic[T]):
     spec: PortSpec[T]
     value: Optional[Union[T, Quantity]] = None
     t_last: Optional[float] = None
-    history: list[tuple[float, Union[T, Quantity]]] = field(default_factory=list) # (time, value)
 
     # TODO:
     # Add sample time and variablility (continuous / discrete / parameter) to support event handling
@@ -95,7 +99,6 @@ class PortState(Generic[T]):
             self.value = value # INT, BOOL, STRING
         if t is not None:
             self.t_last = t
-            self.history.append((t, self.value))
 
     def get(self, as_unit: Optional[str] = None) -> Union[T, Quantity, None]:
         """

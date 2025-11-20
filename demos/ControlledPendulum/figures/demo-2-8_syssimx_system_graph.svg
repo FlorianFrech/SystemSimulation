@@ -9,11 +9,11 @@
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(68.4 361.33)">
 <title>%3</title>
 <polygon fill="white" stroke="transparent" points="-54,54 -54,-346.93 896.64,-346.93 896.64,54 -54,54"/>
-<text text-anchor="middle" x="421.32" y="-276.13" font-family="Helvetica,sans-Serif" font-size="16.00">Simple Coupled Controlled Pendulum</text>
+<text text-anchor="middle" x="421.32" y="-276.13" font-family="Helvetica,sans-Serif" font-size="16.00">Controlled Pendulum System</text>
 <g id="clust1" class="cluster">
-<title>cluster_Reference</title>
-<path fill="#dbeafe" stroke="#9ca3af" d="M27,-188.93C27,-188.93 111,-188.93 111,-188.93 117,-188.93 123,-194.93 123,-200.93 123,-200.93 123,-246.93 123,-246.93 123,-252.93 117,-258.93 111,-258.93 111,-258.93 27,-258.93 27,-258.93 21,-258.93 15,-252.93 15,-246.93 15,-246.93 15,-200.93 15,-200.93 15,-194.93 21,-188.93 27,-188.93"/>
-<text text-anchor="middle" x="69" y="-246.93" font-family="Helvetica,sans-Serif" font-size="10.00">Reference</text>
+<title>cluster_Input</title>
+<path fill="#dfebeb" stroke="#9ca3af" d="M27,-188.93C27,-188.93 111,-188.93 111,-188.93 117,-188.93 123,-194.93 123,-200.93 123,-200.93 123,-246.93 123,-246.93 123,-252.93 117,-258.93 111,-258.93 111,-258.93 27,-258.93 27,-258.93 21,-258.93 15,-252.93 15,-246.93 15,-246.93 15,-200.93 15,-200.93 15,-194.93 21,-188.93 27,-188.93"/>
+<text text-anchor="middle" x="69" y="-246.93" font-family="Helvetica,sans-Serif" font-size="10.00">Input</text>
 </g>
 <g id="clust2" class="cluster">
 <title>cluster_Sensors</title>
@@ -119,13 +119,13 @@
 <path fill="none" stroke="#111827" d="M561.5,-199.93C604.85,-199.93 616.66,-186.64 650,-158.93 664.44,-146.93 657.87,-125.47 671.93,-121.55"/>
 <polygon fill="#111827" stroke="#111827" points="677,-120.93 672.31,-123.77 674.52,-121.23 672.04,-121.54 672.04,-121.54 672.04,-121.54 674.52,-121.23 671.76,-119.3 677,-120.93 677,-120.93"/>
 </g>
-<!-- pendulum -->
+<!-- Pendulum -->
 <g id="node6" class="node">
-<title>pendulum</title>
+<title>Pendulum</title>
 <path fill="white" stroke="#3b82f6" stroke-width="1.5" d="M434,-25.43C434,-25.43 579,-25.43 579,-25.43 585,-25.43 591,-31.43 591,-37.43 591,-37.43 591,-88.43 591,-88.43 591,-94.43 585,-100.43 579,-100.43 579,-100.43 434,-100.43 434,-100.43 428,-100.43 422,-94.43 422,-88.43 422,-88.43 422,-37.43 422,-37.43 422,-31.43 428,-25.43 434,-25.43"/>
 <text text-anchor="middle" x="447" y="-60.43" font-family="Helvetica,sans-Serif" font-size="10.00">torque</text>
 <polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="472,-25.43 472,-100.43 "/>
-<text text-anchor="middle" x="505.5" y="-60.43" font-family="Helvetica,sans-Serif" font-size="10.00">pendulum</text>
+<text text-anchor="middle" x="505.5" y="-60.43" font-family="Helvetica,sans-Serif" font-size="10.00">Pendulum</text>
 <polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="539,-25.43 539,-100.43 "/>
 <text text-anchor="middle" x="565" y="-85.43" font-family="Helvetica,sans-Serif" font-size="10.00">alpha</text>
 <polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="539,-75.43 591,-75.43 "/>
@@ -134,23 +134,23 @@
 <text text-anchor="middle" x="565" y="-35.43" font-family="Helvetica,sans-Serif" font-size="10.00">q</text>
 <text text-anchor="middle" x="414.5" y="-16.93" font-family="Helvetica,sans-Serif" font-size="10.00">#0</text>
 </g>
-<!-- drive&#45;&gt;pendulum -->
+<!-- drive&#45;&gt;Pendulum -->
 <g id="edge6" class="edge">
-<title>drive:e&#45;&gt;pendulum:w</title>
+<title>drive:e&#45;&gt;Pendulum:w</title>
 <path fill="none" stroke="#111827" d="M835.5,-133.93C846.84,-133.93 842.68,-151.57 834.5,-159.43 784.04,-207.95 732.5,-202.09 677,-159.43 639.99,-130.98 687.01,-86.38 650,-57.93 638.72,-49.26 630.45,-51.05 618,-57.93 598.25,-68.85 610.75,-90.01 591,-100.93 525.07,-137.38 475.46,-153.49 421.5,-100.93 410.82,-90.52 405.05,-68.87 415.47,-63.94"/>
 <polygon fill="#111827" stroke="#111827" points="420.5,-62.93 416.04,-66.12 418.05,-63.42 415.6,-63.92 415.6,-63.92 415.6,-63.92 418.05,-63.42 415.15,-61.71 420.5,-62.93 420.5,-62.93"/>
 <text text-anchor="middle" x="634" y="-60.93" font-family="Helvetica,sans-Serif" font-size="10.00">[m·N]</text>
 </g>
-<!-- pendulum&#45;&gt;sensor_state -->
+<!-- Pendulum&#45;&gt;sensor_state -->
 <g id="edge2" class="edge">
-<title>pendulum:e&#45;&gt;sensor_state:w</title>
+<title>Pendulum:e&#45;&gt;sensor_state:w</title>
 <path fill="none" stroke="#111827" d="M592.5,-37.93C598.29,-37.93 595.75,-28.86 591.5,-24.93 536.23,26.26 496.83,-16.24 422,-24.93 398.87,-27.61 388.24,-21.27 371,-36.93 343.37,-62.01 374.33,-94.69 344,-116.43 292.16,-153.57 246.47,-160.63 200.5,-116.43 193.86,-110.04 189.86,-97.2 194.68,-92.61"/>
 <polygon fill="#111827" stroke="#111827" points="199.5,-90.93 195.52,-94.7 197.14,-91.75 194.78,-92.57 194.78,-92.57 194.78,-92.57 197.14,-91.75 194.04,-90.45 199.5,-90.93 199.5,-90.93"/>
 <text text-anchor="middle" x="383" y="-39.93" font-family="Helvetica,sans-Serif" font-size="10.00">[rad]</text>
 </g>
-<!-- pendulum&#45;&gt;drive -->
+<!-- Pendulum&#45;&gt;drive -->
 <g id="edge7" class="edge">
-<title>pendulum:e&#45;&gt;drive:w</title>
+<title>Pendulum:e&#45;&gt;drive:w</title>
 <path fill="none" stroke="#111827" d="M591,-62.93C642.66,-62.93 624.87,-141.44 671.92,-146.66"/>
 <polygon fill="#111827" stroke="#111827" points="677,-146.93 671.89,-148.91 674.5,-146.79 672.01,-146.66 672.01,-146.66 672.01,-146.66 674.5,-146.79 672.13,-144.41 677,-146.93 677,-146.93"/>
 <text text-anchor="middle" x="634" y="-137.93" font-family="Helvetica,sans-Serif" font-size="10.00">[rad/s]</text>

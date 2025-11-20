@@ -8,6 +8,7 @@ import numpy as np
 from .connection import Connection
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec
+from ..core.history import SystemHistory
 from ..utilities.units import Quantity
 
 _ports_compatible = PortSpec.compatible
@@ -43,7 +44,10 @@ class System:
         self._incoming_by_dst: Dict[str, List[Connection]] = {}
 
         # Algorithm
-        self.algorithm: str = "Gauss-Seidel"  # or "Jacobi"
+        self.algorithm: str = "Gauss-Seidel"  # or "Jacobi" or "IJCSA"
+
+        # History Management
+        self.history = SystemHistory(system_name=name)
     
     #----------------------------------------------------------------------------
     # Register components
@@ -55,6 +59,10 @@ class System:
         if component.name in self.components:
             raise ValueError(f"Component '{component.name}' already in system.")
         self.components[component.name] = component
+        
+        # Register component history
+        self.history.add_component(component.name, component.history)
+        
         if component.group:
             self.groups.setdefault(component.group, []).append(component)
     
@@ -330,7 +338,7 @@ class System:
         """
         history: Dict[str, Dict[str, List[Any]]] = {}
         for comp_name, comp in self.components.items():
-            history[comp_name] = comp.get_history()
+            history[comp_name] = comp.get_history_arrays()
         return history
 
     #----------------------------------------------------------------------------
