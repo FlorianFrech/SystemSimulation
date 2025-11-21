@@ -42,7 +42,8 @@ CONTACT_PARAMETERS = {
 
 INITIAL_CONDITIONS = {
     "q0": 0.0,                  # Initial angle of the pendulum (rad)
-    "omega0": 0.0,              # Initial angular velocity (rad/s)
+    "omega0": 0.0,              # Initial angular velocity of the pendulum (rad/s)
+    "torque0": 0.0              # Initial actuator torque (N*m)
 }
 
 SOLVER_PARAMETERS = {
@@ -98,10 +99,13 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Allow direct actuation override
         self.actuator.overrideActuation(self.state, True)
-        self.actuator.setOverrideActuation(self.state, 0.0)
 
         # Finalize model setup
         self._finalize_model(t0)
+
+        self.actuator.setOverrideActuation(self.state, self.parameters['InitialConditions']['torque0'])
+        self.realize()
+        self._update_output_states(None)
     
     #----------------------------------------------------------------------------
     # Initialization helper - build the OpenSim model
@@ -324,6 +328,7 @@ class OpenSimPendulum(OpenSimComponent):
                 value = value.magnitude
             self.actuator.setOverrideActuation(self.state, value)
             self.realize()
+            self._update_output_states(t)
 
     def get_outputs(self) -> Dict[str, float]:
         return {name: out_port.get() for name, out_port in self.outputs.items()}

@@ -51,7 +51,7 @@ class MasterPendulum(MultiComponent):
                  fem_comp: Optional[FEMPendulum] = None,
                  opensim_comp: Optional[OpenSimPendulum] = None,
                  fmu_comp: Optional[FMUComponent] = None,
-                 initial_mode: str = "OpenSim"):
+                 initial_mode: str = "EQB"):
         # Initialize base class
         super().__init__(name="Pendulum", initial_mode=initial_mode, group="Plant")
         
@@ -172,6 +172,7 @@ class MasterPendulum(MultiComponent):
            
             q0 = np.deg2rad(self.models['FEM'].init_params.angular_position_deg)
             omega0 = self.models['FEM'].init_params.angular_velocity
+            torque0 = self._fem_comp.init_params.drive_torque
             
             length = self.models['FEM']._equivalent_length
             inertia = self.models['FEM'].inertia
@@ -184,6 +185,7 @@ class MasterPendulum(MultiComponent):
             self._with_contact = False
             q0 = 0.0
             omega0 = 0.0
+            torque0 = 0.0
             mass = 1.0
             length = 0.4
             inertia = 0.01
@@ -192,6 +194,7 @@ class MasterPendulum(MultiComponent):
         if "OpenSim" in self.models:
             self.models['OpenSim'].parameters['InitialConditions']['q0'] = q0
             self.models['OpenSim'].parameters['InitialConditions']['omega0'] = omega0
+            self.models['OpenSim'].parameters['InitialConditions']['torque0'] = torque0
             self.models['OpenSim'].parameters['Model']['mass'] = mass
             self.models['OpenSim'].parameters['Model']['length'] = length
             self.models['OpenSim'].parameters['Model']['inertia'] = inertia - mass * length**2
@@ -208,6 +211,12 @@ class MasterPendulum(MultiComponent):
             self.models["EQB"].parameters['inertia'].start = inertia
             self.models["EQB"].parameters['g'].start = 9.81 if use_gravity else 0.0
             self.models["EQB"].initialize(t0)
+
+            # Set initial torque input
+            self._fmu_comp._instance.setReal([self._fmu_comp._md_vars['torque'].valueReference], [torque0])
+            self._fmu_comp._instance.doStep(0, 0)
+            self._fmu_comp._update_output_states()
+            self._fmu_comp._record_outputs(t0)
         
         if self._with_contact:
             self.mode_selector = self._gap_based_mode_selector

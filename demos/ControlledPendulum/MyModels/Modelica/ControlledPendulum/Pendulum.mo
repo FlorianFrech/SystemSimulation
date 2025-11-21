@@ -35,5 +35,5 @@ initial equation
 
 equation
   der(q)    = omega;
-  der(omega) = -(g / L) * sin(q) + torque/inertia;
+  der(omega) = -(m * g * L / inertia) * sin(q) + torque / inertia;
 end Pendulum;

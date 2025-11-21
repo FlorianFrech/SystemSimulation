@@ -401,33 +401,33 @@ class FEMPendulum(FEMComponent):
                 self._initialize_contact()
                 self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
                 
-        if 'omega' in state:
-            omega = state['omega']['value']
-            # Initial velocity: v0 = omega x r0
-            v0 = CF((-omega * r0[1],
-                      omega * r0[0]))
-            # Update velocity grid function
-            self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
-            self._gf_vold.vec[:] = self._gf_v.vec
-            self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
-        
+            if 'omega' in state:
+                omega = state['omega']['value']
+                # Initial velocity: v0 = omega x r0
+                v0 = CF((-omega * r0[1],
+                        omega * r0[0]))
+                # Update velocity grid function
+                self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
+                self._gf_vold.vec[:] = self._gf_v.vec
+                self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
+            
         if 'torque' in state:
             torque = state['torque']['value']
             self.set_drive_torque(torque)
 
-        #Solve nonlinear system with Newton
-        tau = self.tau.Set(self.sim_params.tau / 1000)
-        tau = self.tau.Get()
-        NewtonMinimization(a=self._bfa,
-                                   u=self._gf_u,
-                                   printing=False,
-                                   inverse="sparsecholesky",
-                                   maxerr=self.sim_params.max_err,
-                                   maxit=self.sim_params.max_it
-                                   )        
-        self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
-        self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
-        tau = self.tau.Set(self.sim_params.tau)
+        # #Solve nonlinear system with Newton
+        # tau = self.tau.Set(self.sim_params.tau)
+        # tau = self.tau.Get()
+        # NewtonMinimization(a=self._bfa,
+        #                            u=self._gf_u,
+        #                            printing=False,
+        #                            inverse="sparsecholesky",
+        #                            maxerr=self.sim_params.max_err,
+        #                            maxit=self.sim_params.max_it
+        #                            )        
+        # self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
+        # self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
+        # tau = self.tau.Set(self.sim_params.tau)
 
     def get_state(self):
         state = {}
@@ -628,14 +628,14 @@ class FEMPendulum(FEMComponent):
 
         # Angular acceleration via grid function projection
         # if self._with_contact and self._get_contact_gap_distance() < 0.0:
-        if True:
+        if False:
             a = self._gf_a.components[0]
             num_alpha_x = Integrate( rhoA * a[0] * (-r[1]),
                             self._mesh, definedon=self._mesh.Materials("pendulum") )
             num_alpha_y = Integrate( rhoA * a[1] * ( r[0]),
                             self._mesh, definedon=self._mesh.Materials("pendulum") )
             num_a = num_alpha_x + num_alpha_y
-            alpha = num_a / denom 
+            alpha = num_a / denom
         else:
             # Compute angular acceleration from torque balance
             torque_drive = self._get_applied_drive_torque()

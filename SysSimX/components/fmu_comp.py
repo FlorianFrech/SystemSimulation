@@ -266,6 +266,10 @@ class FMUComponent(CoSimComponent):
         if bool_vrs:  self._instance.setBoolean(bool_vrs, bool_vals)
         if str_vrs:   self._instance.setString(str_vrs, str_vals)
 
+        # Evaluation of direct feedthrough outputs
+        #self._do_step_internal(0.0, 0.0)
+        self._update_output_states(t=None)
+
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 

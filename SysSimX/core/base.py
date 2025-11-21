@@ -77,7 +77,8 @@ class CoSimComponent(ABC):
         """
         self.t = t0
         self._initialize_component(t0)
-        self._update_output_states(t0)  # Ensure outputs ready after init
+        self._update_output_states(t0)
+        self._record_outputs(t0)
 
     @abstractmethod
     def _initialize_component(self, t0: float) -> None:

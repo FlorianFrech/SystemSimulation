@@ -317,6 +317,20 @@ class SystemHistory:
         
         return port_hist.time, port_hist.get_values(as_unit=as_unit)
     
+    def clear(self,
+              component_names: Optional[List[str]] = None,
+              port_names: Optional[Dict[str, List[str]]] = None) -> None:
+        """Clear histories for specified components and ports."""
+        comps = component_names if component_names else list(self._component_histories.keys())
+        
+        for comp_name in comps:
+            if comp_name not in self._component_histories:
+                continue
+            
+            comp_hist = self._component_histories[comp_name]
+            ports = port_names.get(comp_name) if port_names else None
+            comp_hist.clear(port_names=ports)
+    
     #-------------------------------------------------------------------
     # Persistence Methods
     #-------------------------------------------------------------------
