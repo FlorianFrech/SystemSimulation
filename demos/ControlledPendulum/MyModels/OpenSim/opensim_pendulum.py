@@ -43,7 +43,6 @@ CONTACT_PARAMETERS = {
 INITIAL_CONDITIONS = {
     "q0": 0.0,                  # Initial angle of the pendulum (rad)
     "omega0": 0.0,              # Initial angular velocity of the pendulum (rad/s)
-    "torque0": 0.0              # Initial actuator torque (N*m)
 }
 
 SOLVER_PARAMETERS = {
@@ -103,7 +102,6 @@ class OpenSimPendulum(OpenSimComponent):
         # Finalize model setup
         self._finalize_model(t0)
 
-        self.actuator.setOverrideActuation(self.state, self.parameters['InitialConditions']['torque0'])
         self.realize()
         self._update_output_states(None)
     
@@ -315,6 +313,7 @@ class OpenSimPendulum(OpenSimComponent):
             self.realize()
             t_current = next_t
             #self._update_output_states(t_current)
+            #self._record_outputs(t_current)
 
     #----------------------------------------------------------------------------
     # Input/output methods

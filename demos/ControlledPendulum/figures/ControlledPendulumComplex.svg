@@ -9,7 +9,7 @@
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(68.4 441.79)">
 <title>%3</title>
 <polygon fill="white" stroke="transparent" points="-54,54 -54,-427.39 947.34,-427.39 947.34,54 -54,54"/>
-<text text-anchor="middle" x="446.67" y="-356.59" font-family="Helvetica,sans-Serif" font-size="16.00">Controlled Pendulum System</text>
+<text text-anchor="middle" x="446.67" y="-356.59" font-family="Helvetica,sans-Serif" font-size="16.00">Complex Coupled Pendulum System</text>
 <g id="clust1" class="cluster">
 <title>cluster_Reference</title>
 <path fill="#dbeafe" stroke="#9ca3af" d="M27,-269.39C27,-269.39 111,-269.39 111,-269.39 117,-269.39 123,-275.39 123,-281.39 123,-281.39 123,-327.39 123,-327.39 123,-333.39 117,-339.39 111,-339.39 111,-339.39 27,-339.39 27,-339.39 21,-339.39 15,-333.39 15,-327.39 15,-327.39 15,-281.39 15,-281.39 15,-275.39 21,-269.39 27,-269.39"/>

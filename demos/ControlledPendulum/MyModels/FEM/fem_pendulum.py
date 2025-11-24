@@ -415,20 +415,6 @@ class FEMPendulum(FEMComponent):
             torque = state['torque']['value']
             self.set_drive_torque(torque)
 
-        # #Solve nonlinear system with Newton
-        # tau = self.tau.Set(self.sim_params.tau)
-        # tau = self.tau.Get()
-        # NewtonMinimization(a=self._bfa,
-        #                            u=self._gf_u,
-        #                            printing=False,
-        #                            inverse="sparsecholesky",
-        #                            maxerr=self.sim_params.max_err,
-        #                            maxit=self.sim_params.max_it
-        #                            )        
-        # self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
-        # self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
-        # tau = self.tau.Set(self.sim_params.tau)
-
     def get_state(self):
         state = {}
         q_state, omega_state, alpha_state = self._rigid_proxy()
@@ -462,7 +448,7 @@ class FEMPendulum(FEMComponent):
                     self.widgets['gap'].value = min_gap
                     # Reduce time step if pendulum is close to contact
                     if min_gap < 0.001:
-                        self.tau.Set(2e-4)
+                        self.tau.Set(1e-4)
                     elif min_gap < 0.01:
                         self.tau.Set(5e-4)
                     elif min_gap < 0.05:
@@ -471,8 +457,6 @@ class FEMPendulum(FEMComponent):
                         self.tau.Set(self.sim_params.tau)
                 
                 # Update time settings
-                tau = self.tau.Get()
-                #self.tau.Set(self.sim_params.tau * 0.947800)
                 tau = self.tau.Get()
                 t += tau
                 self.widgets['time'].value = t
@@ -500,7 +484,9 @@ class FEMPendulum(FEMComponent):
                 if self.anim_params.animate:
                     self.scene.Redraw()
                 self._update_output_states(t)
+                self._record_outputs(t)
                 self.update_monitoring()
+                
                 
     #----------------------------------------------------------------------------
     # Input/output methods
@@ -628,7 +614,7 @@ class FEMPendulum(FEMComponent):
 
         # Angular acceleration via grid function projection
         # if self._with_contact and self._get_contact_gap_distance() < 0.0:
-        if False:
+        if True:
             a = self._gf_a.components[0]
             num_alpha_x = Integrate( rhoA * a[0] * (-r[1]),
                             self._mesh, definedon=self._mesh.Materials("pendulum") )
