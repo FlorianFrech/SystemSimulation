@@ -39,14 +39,14 @@ class Squarer(CoSimComponent):
         # initialize input values to avoid None issues
         self.inputs['input'].set(1, t0)
         in_value = self.inputs['input'].get()
-        self.result = in_value * in_value * in_value
+        self.result = in_value * in_value
     
     def _do_step_internal(self, t: float, dt: float) -> None:
         """
         Perform a simulation step by multiplying the input signals.
         """
         input_value = self.inputs['input'].get()
-        self.result = input_value * input_value * input_value
+        self.result = input_value * input_value
         self.outputs['output'].set(self.result, t)
 
     def _update_output_states(self, t):
@@ -56,7 +56,7 @@ class Squarer(CoSimComponent):
         input_value = self.inputs['input'].get()
         if input_value is None:
             return
-        self.result = input_value * input_value * input_value
+        self.result = input_value * input_value
         self.outputs['output'].set(self.result, t)
     
     def set_state(self, state, t):
@@ -70,4 +70,4 @@ class Squarer(CoSimComponent):
 
     def eval_outputs(self, **inputs) -> dict:
         i = inputs.get('input', self.inputs['input'].get())
-        return {'output': (i * i * i)}
+        return {'output': (i * i)}

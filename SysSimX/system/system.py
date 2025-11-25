@@ -358,8 +358,9 @@ class System:
         evaluated with frozen internal states.
         """
         scc_set = set(scc)
-        
-        # 1) Collect interface variables
+        # print(f"Solving algebraic SCC {scc}:")
+       
+       # 1) Collect interface variables
         interface_inputs: List[Tuple[str, str]] = []   # (dst_comp_name, input_port)
         for c in self.connections:
             if c.dst_comp not in scc_set or c.src_comp not in scc_set:
@@ -406,6 +407,12 @@ class System:
             key = (dst_c, dst_p)
             if key in idx_of_input:
                 driver_for_input[key] = (src_c, src_p)
+
+        # Debug info: involved components and interface inputs
+        
+        # print(f"  Interface inputs: {interface_inputs}")
+        # print(f"  Internal zero-delay connections: {internal_connections}")
+        # print(f"  External zero-delay inputs: {external_in_connections}")
         
         # 4) Initial guess U0 from current input values
         u0 = np.zeros(n, dtype=float)
@@ -413,6 +420,7 @@ class System:
             val = self.components[dst_c].inputs[dst_p].get()
             val = val.magnitude if isinstance(val, Quantity) else val
             u0[i] = float(val) if val is not None else 0.0
+            # print(f"    Initial guess for {dst_c}.{dst_p} = {u0[i]}")
 
         # 5) Residual Evaluation F(U)
         def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
@@ -429,12 +437,14 @@ class System:
                 val = self.components[scrc_c].outputs[src_p].get()
                 val = val.magnitude if isinstance(val, Quantity) else val
                 comp_inputs[dst_c][dst_p] = float(val)
+                # print(f"    External input for {dst_c}.{dst_p} from {scrc_c}.{src_p} = {comp_inputs[dst_c][dst_p]}")
 
             # 5.2) Internal interface inputs (unknowns U)
             for (dst_c, dst_p), i in idx_of_input.items():
                 comp_inputs[dst_c][dst_p] = float(u_vec[i])
+                # print(f"    Setting interface input {dst_c}.{dst_p} = {comp_inputs[dst_c][dst_p]}")
             
-            # 5.3) Evaluate outputs of all components in SCC
+            # 5.3) Evaluate outputs of all components in SCC (internal and external inputs set)
             computed_out: Dict[Tuple[str, str], float] = {}
             for comp_name in scc:
                 comp = self.components[comp_name]
@@ -444,6 +454,7 @@ class System:
                     continue
                 for port_name, val in out_vals.items():
                     computed_out[(comp_name, port_name)] = float(val)
+                    # print(f"    Computed output {comp_name}.{port_name} = {computed_out[(comp_name, port_name)]}")
 
             # 5.4) Build residuals: F_i = U_i - Y_i(U)
             r = np.zeros(n, dtype=float)
@@ -455,6 +466,7 @@ class System:
                     val = val.magnitude if isinstance(val, Quantity) else val
                     y = float(val) if val is not None else 0.0
                 r[i] = u_vec[i] - y
+                # print(f"    Residual for {dst_c}.{dst_p}: {r[i]}")
             return r
         
         # 6) Interface Jacobian by finite differences        
@@ -481,11 +493,14 @@ class System:
         u_current = u0.copy()
         
         for k in range(max_iter):
+            # print(f"  IJCSA Iteration {k}: u = {u_current}")
+
             # Compute residual
             r_current = compute_interface_residual(u_current)
             
             # Check convergence
             if np.linalg.norm(r_current) < tol:
+                # print(f"  IJCSA converged in {k} iterations.")
                 break
             
             # Compute Jacobian
@@ -505,6 +520,7 @@ class System:
         # 8) Commit solved interface inputs to components
         for (dst_c, dst_p), i in idx_of_input.items():
             self.components[dst_c].inputs[dst_p].set(float(u_current[i]), t)
+            # print(f"    Committed solved input {dst_c}.{dst_p} = {float(u_current[i])}")
             
     #----------------------------------------------------------------------------
     # Helpers

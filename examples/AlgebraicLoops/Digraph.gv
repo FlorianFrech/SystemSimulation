@@ -14,7 +14,6 @@ digraph {
 	subgraph "cluster_Algebraic Loop Components" {
 		bgcolor="#ebdfea" color="#9ca3af" fontname=Helvetica fontsize=10 label="Algebraic Loop Components" style=rounded
 		subtractor_inner [label="{ { <input1> input1 | <input2> input2 } | subtractor_inner | { <output> output } }" xlabel="#2"]
-		squarer [label="{ { <input> input } | squarer | { <output> output } }" xlabel="#2"]
 	}
 	subgraph cluster_Integrator {
 		bgcolor="#ebdfe9" color="#9ca3af" fontname=Helvetica fontsize=10 label=Integrator style=rounded
@@ -22,8 +21,7 @@ digraph {
 	}
 	source -> subtractor_outer [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
 	subtractor_outer -> subtractor_inner [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
-	subtractor_inner -> squarer [label="" color="#111827" headclip=true headport="input:w" style=solid tailclip=true tailport="output:e"]
-	squarer -> integrator [label="" color="#111827" headclip=true headport="input:w" style=solid tailclip=true tailport="output:e"]
-	squarer -> subtractor_inner [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
+	subtractor_inner -> integrator [label="" color="#111827" headclip=true headport="input:w" style=solid tailclip=true tailport="output:e"]
+	subtractor_inner -> subtractor_inner [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
 	integrator -> subtractor_outer [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
 }

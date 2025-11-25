@@ -73,7 +73,15 @@ class Subtractor(CoSimComponent):
     def reset(self):
         self.outputs['output'].set(0.0, self.t)
 
-    def eval_outputs(self, **inputs) -> dict:
+    def evaluate_outputs(self, inputs) -> dict:
+        # Use trial values first, fall back to actual component inputs
         i1 = inputs.get('input1', self.inputs['input1'].get())
         i2 = inputs.get('input2', self.inputs['input2'].get())
-        return {'output': (i1 - i2)}
+
+        # Unwrap quantities if needed
+        if isinstance(i1, Quantity):
+            i1 = i1.magnitude
+        if isinstance(i2, Quantity):
+            i2 = i2.magnitude
+        self.outputs['output'].set(i1 - i2, None)
+        return {'output': i1 - i2}
