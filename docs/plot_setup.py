@@ -7,7 +7,7 @@ def set_professional_style(latex=False, fontsize=12):
 
     # Basic font setup
     plt.rc('font', size=fontsize, family='serif')
-    plt.rc('axes', titlesize=fontsize+2, labelsize=fontsize-2, linewidth=1.2)
+    plt.rc('axes', titlesize=fontsize, labelsize=fontsize, linewidth=1.2)
     plt.rc('legend', fontsize=fontsize, frameon=True, framealpha=0.95, edgecolor='black', fancybox=True)
     plt.rc('xtick', labelsize=fontsize-2, direction='in')
     plt.rc('ytick', labelsize=fontsize-2, direction='in')

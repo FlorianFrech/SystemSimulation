@@ -1,28 +1,28 @@
 // System: Controlled Pendulum System
 digraph {
-	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label="Controlled Pendulum System" labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
-	node [color="#3b82f6" fillcolor=white fontname=Helvetica fontsize=10 height=0.7 margin="0.12,0.1" penwidth=1.5 shape=record style="rounded,filled" width=1.5]
-	edge [arrowhead=open arrowsize=0.5 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.4 penwidth=1 style=solid]
+	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Controlled Pendulum System" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=1.2 sep=0 splines=true]
+	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
+	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
 	subgraph cluster_Input {
-		bgcolor="#dfebeb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Input style=rounded
-		ref [label="{ ref | { <q_ref> q_ref } }" xlabel="#0"]
+		bgcolor="#d0e3e3" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Input margin=12 penwidth=2 style=rounded
+		ref [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>ref</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="q_ref">q_ref</TD></TR></TABLE>>]
 	}
 	subgraph cluster_Sensors {
-		bgcolor="#dcfce7" color="#9ca3af" fontname=Helvetica fontsize=10 label=Sensors style=rounded
-		sensor_ref [label="{ { <q> q } | sensor_ref | { <U_q> U_q } }" xlabel="#1"]
-		sensor_state [label="{ { <q> q } | sensor_state | { <U_q> U_q } }" xlabel="#1"]
+		bgcolor="#dcfce7" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Sensors margin=12 penwidth=2 style=rounded
+		sensor_ref [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="q">q</TD><TD><B>sensor_ref</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="U_q"><FONT COLOR="#ef4444"><B>U_q</B></FONT></TD></TR></TABLE>>]
+		sensor_state [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="q">q</TD><TD><B>sensor_state</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="U_q"><FONT COLOR="#ef4444"><B>U_q</B></FONT></TD></TR></TABLE>>]
 	}
 	subgraph cluster_Control {
-		bgcolor="#fee2e2" color="#9ca3af" fontname=Helvetica fontsize=10 label=Control style=rounded
-		pid [label="{ { <ref> ref | <y> y } | pid | { <u> u } }" xlabel="#2"]
+		bgcolor="#fee2e2" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Control margin=12 penwidth=2 style=rounded
+		pid [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="ref">ref</TD></TR><TR><TD PORT="y">y</TD></TR></TABLE></TD><TD><B>pid</B><BR/><FONT POINT-SIZE="8">#2</FONT></TD><TD PORT="u"><FONT COLOR="#ef4444"><B>u</B></FONT></TD></TR></TABLE>>]
 	}
 	subgraph cluster_Actuator {
-		bgcolor="#fef3c7" color="#9ca3af" fontname=Helvetica fontsize=10 label=Actuator style=rounded
-		drive [label="{ { <omega> omega | <u_control> u_control } | drive | { <torque> torque } }" xlabel="#3"]
+		bgcolor="#fef3c7" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Actuator margin=12 penwidth=2 style=rounded
+		drive [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="u_control">u_control</TD></TR></TABLE></TD><TD><B>drive</B><BR/><FONT POINT-SIZE="8">#3</FONT></TD><TD PORT="torque">torque</TD></TR></TABLE>>]
 	}
 	subgraph cluster_Plant {
-		bgcolor="#e5e7eb" color="#9ca3af" fontname=Helvetica fontsize=10 label=Plant style=rounded
-		Pendulum [label="{ { <torque> torque } | Pendulum | { <alpha> alpha | <omega> omega | <q> q } }" xlabel="#0"]
+		bgcolor="#e5e7eb" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Plant margin=12 penwidth=2 style=rounded
+		Pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="torque">torque</TD><TD><B>Pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha">alpha</TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
 	ref -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
 	Pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]

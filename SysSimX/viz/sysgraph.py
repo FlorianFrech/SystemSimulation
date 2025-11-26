@@ -11,7 +11,7 @@ from ..system.connection import Connection
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec
 
-def _auto_color_for_group(group_name: str, base_saturation: float = 0.25, base_lightness: float = 0.90) -> str:
+def _auto_color_for_group(group_name: str, base_saturation: float = 0.35, base_lightness: float = 0.85) -> str:
     """
     Generate a soft pastel color (hex) deterministically from the group name.
     HSL -> RGB conversion ensures distinct hues for different names.
@@ -19,7 +19,13 @@ def _auto_color_for_group(group_name: str, base_saturation: float = 0.25, base_l
     # Deterministic hash → 0..1 hue
     h = int(hashlib.md5(group_name.encode()).hexdigest(), 16) % 360
     hue = (h / 360.0)
-    r, g, b = colorsys.hls_to_rgb(hue, base_lightness, base_saturation)
+    
+    # Vary saturation and lightness slightly based on hash to create more variation
+    hash_val = int(hashlib.md5(group_name.encode()).hexdigest(), 16)
+    saturation = base_saturation + ((hash_val % 20) - 10) * 0.01  # ±0.1 variation
+    lightness = base_lightness + ((hash_val >> 8) % 20 - 10) * 0.005  # ±0.05 variation
+    
+    r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
     return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
 
 def _build_palette(system) -> dict[str, str]:
@@ -42,33 +48,72 @@ def _build_palette(system) -> dict[str, str]:
             palette[group] = _auto_color_for_group(group)
     return palette
 
-
-
-def _record_label_for_component(comp: CoSimComponent) -> str:
+def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -> str:
     """
-    Build an record-label with explicit port anchors:
-    { { <in1> in1 | <in2> in2 } | comp_name | { <out1> out1 | <out2> out2 } }
+    Build an HTML-like record label with explicit port anchors.
+    Outputs with direct feedthrough are colored red.
+    Inputs are stacked vertically on the left (if multiple), outputs on the right (if multiple).
     """
     ins = sorted(comp.input_specs.keys())
     outs = sorted(comp.output_specs.keys())
 
-    def _ports_to_record(port_names: Iterable[str]) -> str:
-        if not port_names:
-            return ""
-        return "{ " + " | ".join(f"<{name}> {name}" for name in port_names) + " }"
+    # Build HTML table with three columns: inputs | name | outputs
+    label = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">'
     
-    in_rec = _ports_to_record(ins)
-    out_rec = _ports_to_record(outs)
-
-    # 3 cases: both sides, only left, only right
-    if in_rec and out_rec:
-        return f"{{ {in_rec} | {comp.name} | {out_rec} }}"
-    elif in_rec:
-        return f"{{ {in_rec} | {comp.name} }}"
-    elif out_rec:
-        return f"{{ {comp.name} | {out_rec} }}"
+    # Header row
+    label += '<TR>'
+    label += '<TD>in</TD>'
+    label += '<TD>name</TD>'
+    label += '<TD>out</TD>'
+    label += '</TR>'
+    
+    # Content row
+    label += '<TR>'
+    
+    # Input column (left side)
+    if len(ins) == 0:
+        label += '<TD></TD>'
+    elif len(ins) == 1:
+        # Single input - just one cell
+        port_name = ins[0]
+        label += f'<TD PORT="{port_name}">{port_name}</TD>'
     else:
-        return f"{comp.name}"
+        # Multiple inputs - nested table for vertical stacking
+        label += '<TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2">'
+        for port_name in ins:
+            label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
+        label += '</TABLE></TD>'
+    
+    # Component name (middle) with execution order below
+    badge = f"#{execution_idx}" if execution_idx >= 0 else ""
+    label += f'<TD><B>{comp.name}</B><BR/><FONT POINT-SIZE="8">{badge}</FONT></TD>'
+    
+    # Output column (right side)
+    if len(outs) == 0:
+        label += '<TD></TD>'
+    elif len(outs) == 1:
+        # Single output - just one cell
+        port_name = outs[0]
+        has_feedthrough = port_name in comp.direct_feedthrough and comp.direct_feedthrough[port_name]
+        if has_feedthrough:
+            label += f'<TD PORT="{port_name}"><FONT COLOR="#ef4444"><B>{port_name}</B></FONT></TD>'
+        else:
+            label += f'<TD PORT="{port_name}">{port_name}</TD>'
+    else:
+        # Multiple outputs - nested table for vertical stacking
+        label += '<TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2">'
+        for port_name in outs:
+            has_feedthrough = port_name in comp.direct_feedthrough and comp.direct_feedthrough[port_name]
+            if has_feedthrough:
+                label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#ef4444">{port_name}</FONT></TD></TR>'
+            else:
+                label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
+        label += '</TABLE></TD>'
+    
+    label += '</TR>'
+    label += '</TABLE>'
+    
+    return f'<{label}>'
 
 def _edge_unit_label(sys: System, conn: Connection) -> Optional[str]:
     if conn.unit:
@@ -93,45 +138,45 @@ class SystemGraphVisualizer:
                     graph_attr={
                         "rankdir": "LR",
                         "splines": "true",
-                        "pad": "0.75",
-                        "nodesep": "1",
-                        "ranksep": "0.75",
+                        "pad": "0.5",
+                        "nodesep": "0.8",
+                        "ranksep": "0.8",
                         "esep": "0",
                         "sep": "0",
-                        "fontsize": "16",
-                        "fontname": "Helvetica",
+                        "fontsize": "18",
+                        "fontname": "Helvetica-Bold",
                         "bgcolor": "white",
                         "margin": "0.2",
                         "labelloc": "t",
                         "label": self.system.name,
                         "compound": "true",
-                        "smoothType": "graph_dist"
+                        #"smoothType": "graph_dist"
                        },
                     node_attr={
-                        "shape": "record",
-                        "style": "rounded,filled",
+                        "shape": "plaintext",
+                        "style": "",
                         "fillcolor": "white",
-                        "color": "#3b82f6",
-                        "penwidth": "1.5",
+                        #"color": "#3b82f6",
+                        #"penwidth": "1.5",
                         "fontname": "Helvetica",
                         "fontsize": '10',
-                        "width": "1.5",
-                        "height": "0.7",
-                        "margin": "0.12,0.1"
+                        #"width": "1.5",
+                        #"height": "0.7",
+                        "margin": "0.05,0.05"
                           },
                     edge_attr={
-                            "arrowsize": "0.5",
-                            "penwidth": "1",
+                            "arrowsize": "0.7",
+                            "penwidth": "1.2",
                             "color": "#111827",
                             "fontname": "Helvetica",
                             "fontsize": '10',
                             "labelfontcolor": "#374151",
                             "labelangle": "45",
                             "dir": "forward",
-                            "arrowhead": "open",
+                            "arrowhead": "vee",
                             "arrowtail": "none",
-                            "style": "solid",
-                            "minlen": "1.4"
+                            #"style": "solid",
+                            "minlen": "1.2"
                         },
                     )
         palette = _build_palette(self.system)
@@ -143,25 +188,25 @@ class SystemGraphVisualizer:
                 c.attr(
                     label=group,
                     style="rounded",
-                    color="#9ca3af", 
+                    color="#d1d5db",
                     bgcolor=palette.get(group, "white"),
-                    fontname="Helvetica",
-                    fontsize=f"10",
+                    fontname="Helvetica-Bold",
+                    fontsize=f"11",
+                    penwidth="2",
+                    margin="12",
                 )
                 for comp in comps:
                     comp: CoSimComponent = comp if isinstance(comp, CoSimComponent) else self.system.components[str(comp)]
                     grouped_names.add(comp.name)
                     gen = self.system.execution_idx.get(comp.name, -1)
-                    badge = f"#{gen}"
-                    c.node(comp.name, label=_record_label_for_component(comp), xlabel=badge)
+                    c.node(comp.name, label=_record_label_for_component(comp, gen))
 
         # Add any ungrouped components
         for comp_name, comp in self.system.components.items():
             if comp_name in grouped_names:
                 continue
             gen = self.system.execution_idx.get(comp.name, -1)
-            badge = f"#{gen}"
-            self.dot.node(comp.name, label=_record_label_for_component(comp), xlabel=badge)
+            self.dot.node(comp.name, label=_record_label_for_component(comp, gen))
 
         # Add edges with port anchors and unit labels
         for conn in self.system.connections:

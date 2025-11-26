@@ -1,23 +1,23 @@
 // System: Algebraic Loop System
 digraph {
-	graph [bgcolor=white compound=true esep=0 fontname=Helvetica fontsize=16 label="Algebraic Loop System" labelloc=t margin=0.2 nodesep=1 pad=0.75 rankdir=LR ranksep=0.75 sep=0 smoothType=graph_dist splines=true]
-	node [color="#3b82f6" fillcolor=white fontname=Helvetica fontsize=10 height=0.7 margin="0.12,0.1" penwidth=1.5 shape=record style="rounded,filled" width=1.5]
-	edge [arrowhead=open arrowsize=0.5 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.4 penwidth=1 style=solid]
+	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Algebraic Loop System" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
+	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
+	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
 	subgraph cluster_Source {
-		bgcolor="#ebdfe2" color="#9ca3af" fontname=Helvetica fontsize=10 label=Source style=rounded
-		source [label="{ source | { <output> output } }" xlabel="#0"]
+		bgcolor="#dbbcc4" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Source margin=12 penwidth=2 style=rounded
+		source [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>source</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="output">output</TD></TR></TABLE>>]
 	}
-	subgraph cluster_Subtractors {
-		bgcolor="#dfebdf" color="#9ca3af" fontname=Helvetica fontsize=10 label=Subtractors style=rounded
-		subtractor_outer [label="{ { <input1> input1 | <input2> input2 } | subtractor_outer | { <output> output } }" xlabel="#1"]
+	subgraph cluster_Outer {
+		bgcolor="#e2dbcf" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Outer margin=12 penwidth=2 style=rounded
+		subtractor_outer [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="input1">input1</TD></TR><TR><TD PORT="input2">input2</TD></TR></TABLE></TD><TD><B>subtractor_outer</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="output"><FONT COLOR="#ef4444"><B>output</B></FONT></TD></TR></TABLE>>]
 	}
-	subgraph "cluster_Algebraic Loop Components" {
-		bgcolor="#ebdfea" color="#9ca3af" fontname=Helvetica fontsize=10 label="Algebraic Loop Components" style=rounded
-		subtractor_inner [label="{ { <input1> input1 | <input2> input2 } | subtractor_inner | { <output> output } }" xlabel="#2"]
+	subgraph "cluster_Self Loop - Algebraic Cycle" {
+		bgcolor="#c7e6c5" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label="Self Loop - Algebraic Cycle" margin=12 penwidth=2 style=rounded
+		subtractor_inner [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="input1">input1</TD></TR><TR><TD PORT="input2">input2</TD></TR></TABLE></TD><TD><B>subtractor_inner</B><BR/><FONT POINT-SIZE="8">#2</FONT></TD><TD PORT="output"><FONT COLOR="#ef4444"><B>output</B></FONT></TD></TR></TABLE>>]
 	}
 	subgraph cluster_Integrator {
-		bgcolor="#ebdfe9" color="#9ca3af" fontname=Helvetica fontsize=10 label=Integrator style=rounded
-		integrator [label="{ { <input> input } | integrator | { <output> output } }" xlabel="#0"]
+		bgcolor="#e9cfe3" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Integrator margin=12 penwidth=2 style=rounded
+		integrator [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="input">input</TD><TD><B>integrator</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="output">output</TD></TR></TABLE>>]
 	}
 	source -> subtractor_outer [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
 	subtractor_outer -> subtractor_inner [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
