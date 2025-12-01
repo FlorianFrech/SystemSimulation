@@ -1,0 +1,90 @@
+@startuml Local_IJCSA_Algorithm
+
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 150
+skinparam participantPadding 100
+
+participant "Master/\nOrchestrator" as Master
+participant "SU₁\n(in SCC)" as SU1
+participant "SU₂\n(in SCC)" as SU2
+
+== Local IJCSA: Solve Algebraic Loop in SCC at time t ==
+
+Master -> Master: Identify interface inputs U in algebraic loop (SCC)
+
+Master -> Master: Initialize U^(0) from\ncurrent input values
+
+loop until convergence (m = 0, 1, 2, ...)
+
+    note over Master: **1. Evaluate outputs with frozen states**
+    
+    par Parallel Execution
+        Master -> SU1: evaluate_outputs(U1^(m),t)
+        activate SU1
+        SU1 -> SU1: Y1^(m+1) = S1(U1^(m))
+        note right: Compute with dt=0\n(frozen state)
+        SU1 --> Master: Y1^(m+1)
+        deactivate SU1
+    else
+        Master -> SU2: evaluate_outputs(U2^(m),t)
+        activate SU2
+        SU2 -> SU2: Y2^(m+1) = S2(U2^(m))
+        note right: Compute with dt=0\n(frozen state)
+        SU2 --> Master: Y2^(m+1)
+        deactivate SU2
+    end
+    
+    note over Master: **2. Compute residual**
+    
+    Master -> Master: r^(m)=[U1^(m)-Y2^(m+1)]\n             [U2^(m)-Y1^(m+1)]
+    
+    note over Master: **3. Check convergence**
+    
+    alt ||r^(m)|| < tolerance
+        note over Master: ✓ Converged
+        Master -> Master: Exit iteration
+    end
+    
+    note over Master: **4. Compute Jacobian**
+    
+    Master -> Master: J^(m) = dR/dU\nvia finite differences
+    note right
+      Perturb each U_j,
+      evaluate outputs,
+      compute J[:, j]
+    end note
+    
+    note over Master: **5. Solve for correction**
+    
+    Master -> Master: J^(m) · ΔU^(m) = -r^(m)
+    
+    note over Master: **6. Apply correction**
+    
+    Master -> Master: U^(m+1) =U^(m)+ΔU^(m)
+
+end
+
+note over Master: **7. Commit converged solution**
+
+Master -> SU1: set_inputs(U1*, t)
+activate SU1
+SU1 --> Master: committed
+deactivate SU1
+
+Master -> SU2: set_inputs(U2*, t)
+activate SU2
+SU2 --> Master: committed
+deactivate SU2
+
+' note over Master, SU2
+' **Local IJCSA Properties:**
+' • Solves algebraic loops within one SCC
+' • Interface-level Newton iteration
+' • Frozen states (dt=0) during iteration
+' • Jacobian via finite differences
+' • Converges when ||r|| < tolerance
+' end note
+
+@enduml

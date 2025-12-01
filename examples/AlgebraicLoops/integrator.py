@@ -5,11 +5,11 @@ from SysSimX.core.port import PortSpec, PortType
 # Port specifications
 #----------------------------------------------------------------------------   
 INPUT_SPECS = {
-    "input": PortSpec("input", PortType.REAL, direction="in")
+    "dx_dt": PortSpec("dx_dt", PortType.REAL, direction="in")
 }
 
 OUTPUT_SPECS = {
-    "output": PortSpec("output", PortType.REAL, direction="out")
+    "x": PortSpec("x", PortType.REAL, direction="out")
 }
 
 #----------------------------------------------------------------------------
@@ -17,7 +17,8 @@ OUTPUT_SPECS = {
 #---------------------------------------------------------------------------- 
 class Integrator(CoSimComponent):
     """
-    An integrator component that integrates its input signal over time.
+    An integrator component that integrates its input signal dx_dt over time.
+    x(t) = ∫ dx_dt dt
     """
 
     def __init__(self, name="Integrator"):
@@ -44,14 +45,14 @@ class Integrator(CoSimComponent):
         """
         Perform a simulation step by integrating the input signal.
         """
-        input_value = self.inputs['input'].get()
+        input_value = self.inputs['dx_dt'].get()
         self.state += input_value * dt
 
     def _update_output_states(self, t):
         """
         Update the output port states.
         """
-        self.outputs['output'].set(self.state, t)
+        self.outputs['x'].set(self.state, t)
 
     def set_state(self, state, t):
         """

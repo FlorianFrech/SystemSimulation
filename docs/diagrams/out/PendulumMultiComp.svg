@@ -15,7 +15,7 @@ link FMUComponent to PendulumMultiComp--><path d="M150.63,249.35 C173,264.61 199
 reverse link PendulumMultiComp to Hysteresis--><path d="M550.77,211.99 C573.56,186.36 597.33,161.06 621,138 C625.89,133.24 631.08,128.47 636.4,123.78 " fill="none" id="PendulumMultiComp&lt;-Hysteresis" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="542.08,221.82,549.0508,219.9739,550.0278,212.8293,543.057,214.6754,542.08,221.82" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="570.5" y="146.69">uses</text><!--MD5=[393afbf95575c9ffa9ce2f586fb836be]
 link PendulumMultiComp to ModeStrategy--><path d="M542.33,477.63 C571.02,490.07 600.09,502.68 625.84,513.85 " fill="none" id="PendulumMultiComp-&gt;ModeStrategy" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="630.61,515.92,623.9405,508.6731,626.0217,513.9332,620.7616,516.0143,630.61,515.92" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="57" x="553" y="476.69">implements</text><!--MD5=[4b9b4fb6c363eb77cd9ed233fae9b54e]
 link PendulumMultiComp to StateFormat--><path d="M542.33,346.37 C572.09,333.46 602.25,320.38 628.71,308.91 " fill="none" id="PendulumMultiComp-&gt;StateFormat" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="633.6,306.78,623.7516,306.6857,629.0117,308.7668,626.9305,314.0269,633.6,306.78" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="33" x="565" y="311.69">adapts</text><!--MD5=[1d6ade3e2e551b20ff0b582fc152a642]
-link PendulumMultiComp to SyncEvent--><path d="M542.2,602.63 C567.99,633.61 594.89,665.02 621,694 C625.28,698.75 629.74,703.58 634.28,708.4 " fill="none" id="PendulumMultiComp-&gt;SyncEvent" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="637.76,712.1,634.4863,702.8111,634.326,708.4657,628.6715,708.3055,637.76,712.1" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="36" x="563.5" y="612.69">records</text><!--MD5=[8bb0c3bf1db4975a8c73e808c8f4d080]
+link PendulumMultiComp to SyncEvent--><path d="M542.2,602.63 C567.99,633.61 594.89,665.02 621,694 C625.28,698.75 629.74,703.58 634.28,708.4 " fill="none" id="PendulumMultiComp-&gt;SyncEvent" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="637.76,712.1,634.4863,702.8111,634.326,708.4657,628.6715,708.3055,637.76,712.1" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="36" x="563.5" y="612.69">records</text><!--MD5=[e33f9e3fc4ab17d0b238a0fa83d0a268]
 @startuml PendulumMultiComp
 
 
@@ -186,7 +186,7 @@ PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
 (GPL source distribution)
 Java Runtime: OpenJDK Runtime Environment
 JVM: OpenJDK 64-Bit Server VM
-Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Java Version: 21.0.9+10-Ubuntu-124.04
 Operating System: Linux
 Default Encoding: UTF-8
 Language: en

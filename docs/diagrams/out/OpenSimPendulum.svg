@@ -6,7 +6,7 @@ class Ports--><rect fill="#FEFECE" height="185.9418" id="Ports" style="stroke: #
 reverse link OSim to OpenSimPendulum--><path d="M160.45,301.5 C172.78,301.5 185.74,301.5 198.71,301.5 " fill="none" id="OSim&lt;-OpenSimPendulum" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="155.21,301.5,164.21,305.5,160.21,301.5,164.21,297.5,155.21,301.5" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="22" x="166" y="296.19">uses</text><!--MD5=[bf86a5a451eb6fe2ae867d980d59fb7e]
 link OpenSimPendulum to Params--><path d="M436.22,241.34 C458.74,229.83 481.94,217.98 503.29,207.07 " fill="none" id="OpenSimPendulum-&gt;Params" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="507.82,204.75,497.985,205.2726,503.3651,207.0203,501.6174,212.4004,507.82,204.75" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="50" x="447" y="206.19">configures</text><!--MD5=[a34b7e8aaf5699804edd19c67e147772]
 link OpenSimPendulum to Ports--><path d="M436.22,361.23 C465.67,376.17 496.29,391.7 522.41,404.96 " fill="none" id="OpenSimPendulum-&gt;Ports" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="526.9,407.23,520.678,399.5954,522.4394,404.9711,517.0637,406.7325,526.9,407.23" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="35" x="454.5" y="361.19">defines</text><!--MD5=[157b069e001f4c6e24d0f3a6e4cc2983]
-link Params to Ports--><!--MD5=[3935aa11231aa655c0d2db4f202ed1fa]
+link Params to Ports--><!--MD5=[59fa5faa7e2332e8394a7360064b1f77]
 @startuml OpenSimPendulum
 
 
@@ -126,7 +126,7 @@ PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
 (GPL source distribution)
 Java Runtime: OpenJDK Runtime Environment
 JVM: OpenJDK 64-Bit Server VM
-Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Java Version: 21.0.9+10-Ubuntu-124.04
 Operating System: Linux
 Default Encoding: UTF-8
 Language: en

@@ -22,7 +22,7 @@ digraph {
 	}
 	subgraph cluster_Plant {
 		bgcolor="#e5e7eb" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Plant margin=12 penwidth=2 style=rounded
-		pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="torque">torque</TD><TD><B>pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha"><FONT COLOR="#ef4444">alpha</FONT></TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR></TABLE></TD></TR></TABLE>>]
+		pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="torque">torque</TD><TD><B>pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha"><FONT COLOR="#ef4444"><B>alpha</B></FONT></TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
 	ref -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
 	pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]

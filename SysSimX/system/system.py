@@ -212,12 +212,30 @@ class System:
         Also build graphs and compute execution order.
         Store t_end for reference.
         """
+        # 1) Set simulation time parameters
         self.time = t0
         self.t_end = t_end
+
+        # 2) Initialize all CoSimComponents
         for comp in self.components.values():
             comp.initialize(t0)
+        
+        # 3) Build connections and compute execution order
         self.build_graphs()
         self.compute_execution_order()
+        
+        # 4) Set initial inputs and solve for consistent initial state
+        for gen in self.execution_order:
+            self._set_inputs_for_generation(gen, t0)
+
+            gen_set = set(gen)
+            for loop in self.algebraic_loops:
+                if set(loop).issubset(gen_set):
+                    self._solve_algebraic_scc_ijcsa(loop, t0)
+            
+            for comp_name in gen:
+                comp = self.components[comp_name]
+                comp.do_step(0, 0)
     
     def _set_inputs_for_generation(self, gen: List[str], t: float) -> None:
         """
@@ -354,13 +372,13 @@ class System:
 
         Residual for each interface input u_i:
           r_i(U) = u_i - y_i(U)
-        where y_i(U) is the *output* on the driving side of that connection
+        where y_i(U) is the output on the driving side of that connection
         evaluated with frozen internal states.
         """
         scc_set = set(scc)
-        # print(f"Solving algebraic SCC {scc}:")
+        print(60 * '=', f"\nSolving algebraic SCC {scc}:")
        
-       # 1) Collect interface variables
+        # 1) Collect interface variables
         interface_inputs: List[Tuple[str, str]] = []   # (dst_comp_name, input_port)
         for c in self.connections:
             if c.dst_comp not in scc_set or c.src_comp not in scc_set:
@@ -409,10 +427,10 @@ class System:
                 driver_for_input[key] = (src_c, src_p)
 
         # Debug info: involved components and interface inputs
-        
-        # print(f"  Interface inputs: {interface_inputs}")
-        # print(f"  Internal zero-delay connections: {internal_connections}")
-        # print(f"  External zero-delay inputs: {external_in_connections}")
+        print("\nConnections:")
+        print(f"  Interface inputs: {interface_inputs}")
+        print(f"  Internal zero-delay connections: {internal_connections}")
+        print(f"  External zero-delay inputs: {external_in_connections}")
         
         # 4) Initial guess U0 from current input values
         u0 = np.zeros(n, dtype=float)
@@ -420,7 +438,7 @@ class System:
             val = self.components[dst_c].inputs[dst_p].get()
             val = val.magnitude if isinstance(val, Quantity) else val
             u0[i] = float(val) if val is not None else 0.0
-            # print(f"    Initial guess for {dst_c}.{dst_p} = {u0[i]}")
+            print(f"\nInitial guess for {dst_c}.{dst_p} = {u0[i]}")
 
         # 5) Residual Evaluation F(U)
         def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
@@ -466,7 +484,7 @@ class System:
                     val = val.magnitude if isinstance(val, Quantity) else val
                     y = float(val) if val is not None else 0.0
                 r[i] = u_vec[i] - y
-                # print(f"    Residual for {dst_c}.{dst_p}: {r[i]}")
+                print(f"    Residual for {dst_c}.{dst_p}: {r[i]}")
             return r
         
         # 6) Interface Jacobian by finite differences        
@@ -492,19 +510,21 @@ class System:
         tol = 1e-6
         u_current = u0.copy()
         
+        print("\nStarting IJCSA iterations:")
         for k in range(max_iter):
-            # print(f"  IJCSA Iteration {k}: u = {u_current}")
+            print(f"  Iteration {k}: u = {u_current}")
 
             # Compute residual
             r_current = compute_interface_residual(u_current)
             
             # Check convergence
             if np.linalg.norm(r_current) < tol:
-                # print(f"  IJCSA converged in {k} iterations.")
+                print(f"  Converged in {k} iterations.")
                 break
             
             # Compute Jacobian
             J_current = compute_interface_jacobian(u_current, r_current)
+            print(f"    Jacobian J = {J_current}")
             
             # Solve for correction: J * Δu = -r
             try:
@@ -514,13 +534,14 @@ class System:
             
             # Apply correction
             u_current += delta_u
+            print(f"    Correction Δu = {delta_u}")
         else:
             raise RuntimeError(f"IJCSA did not converge for SCC {scc} after {max_iter} iterations")
         
         # 8) Commit solved interface inputs to components
         for (dst_c, dst_p), i in idx_of_input.items():
             self.components[dst_c].inputs[dst_p].set(float(u_current[i]), t)
-            # print(f"    Committed solved input {dst_c}.{dst_p} = {float(u_current[i])}")
+            print(f"\nCommitted solved input {dst_c}.{dst_p} = {float(u_current[i])}")
             
     #----------------------------------------------------------------------------
     # Helpers

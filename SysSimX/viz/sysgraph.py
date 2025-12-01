@@ -105,7 +105,7 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
         for port_name in outs:
             has_feedthrough = port_name in comp.direct_feedthrough and comp.direct_feedthrough[port_name]
             if has_feedthrough:
-                label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#ef4444">{port_name}</FONT></TD></TR>'
+                label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#ef4444"><B>{port_name}</B></FONT></TD></TR>'
             else:
                 label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
         label += '</TABLE></TD>'

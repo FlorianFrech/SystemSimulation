@@ -1,0 +1,73 @@
+@startuml GaussSeidel_Algorithm
+
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 150
+skinparam participantPadding 100
+
+participant "Master/\nOrchestrator" as Master
+participant "SU₁\n(Gen 0)" as SU1
+participant "SU₂\n(Gen 1)" as SU2
+
+== Gauss-Seidel Co-Simulation: One Step t → t+dt ==
+
+Master -> Master: **For each generation sequentially**
+
+note over Master: **Generation 0: Process SU₁**
+
+Master -> SU1: **1. Set inputs** from connections
+activate SU1
+note right: Use outputs from\nprevious time step
+SU1 --> Master: inputs set
+deactivate SU1
+
+alt SU₁ in algebraic loop
+    Master -> SU1: **2. Solve algebraic loop** (IJCSA)
+    activate SU1
+    note right: Interface-Newton iteration\nto resolve coupling
+    SU1 --> Master: converged
+    deactivate SU1
+end
+
+Master -> SU1: **3. Execute time step** do_step(t, dt)
+activate SU1
+SU1 -> SU1: Integrate t → t+dt
+SU1 -> SU1: Update outputs at t+dt
+SU1 --> Master: Y₁(t+dt) available
+deactivate SU1
+
+note over Master: **Generation 1: Process SU₂**
+
+Master -> SU2: **1. Set inputs** from connections
+activate SU2
+note right: Use **fresh** Y₁(t+dt)\nfrom SU₁
+SU2 --> Master: inputs set
+deactivate SU2
+
+alt SU₂ in algebraic loop
+    Master -> SU2: **2. Solve algebraic loop** (IJCSA)
+    activate SU2
+    SU2 --> Master: converged
+    deactivate SU2
+end
+
+Master -> SU2: **3. Execute time step** do_step(t, dt)
+activate SU2
+SU2 -> SU2: Integrate t → t+dt
+SU2 -> SU2: Update outputs at t+dt
+SU2 --> Master: Y₂(t+dt) available
+deactivate SU2
+
+Master -> Master: All generations complete\nt ← t + dt
+
+' note over Master, SU2
+' **Gauss-Seidel Properties:**
+' • Sequential execution by generation
+' • Later components use updated outputs from earlier ones
+' • Reduced phase lag compared to Jacobi
+' • No parallelism within generation
+' • Algebraic loops solved via IJCSA before time step
+' end note
+
+@enduml

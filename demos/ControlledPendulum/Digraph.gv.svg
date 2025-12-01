@@ -172,7 +172,7 @@
 <text text-anchor="start" x="500.5" y="-141.3" font-family="Helvetica,sans-Serif" font-size="8.00">#0</text>
 <polygon fill="none" stroke="black" points="540.5,-117.2 540.5,-178.2 590.5,-178.2 590.5,-117.2 540.5,-117.2"/>
 <polygon fill="none" stroke="black" points="545.5,-156.2 545.5,-173.2 585.5,-173.2 585.5,-156.2 545.5,-156.2"/>
-<text text-anchor="start" x="551.5" y="-162.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#ef4444">alpha</text>
+<text text-anchor="start" x="549.5" y="-163.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#ef4444">alpha</text>
 <polygon fill="none" stroke="black" points="545.5,-139.2 545.5,-156.2 585.5,-156.2 585.5,-139.2 545.5,-139.2"/>
 <text text-anchor="start" x="548.5" y="-145.2" font-family="Helvetica,sans-Serif" font-size="10.00">omega</text>
 <polygon fill="none" stroke="black" points="545.5,-122.2 545.5,-139.2 585.5,-139.2 585.5,-122.2 545.5,-122.2"/>

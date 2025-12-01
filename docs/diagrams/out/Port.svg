@@ -8,7 +8,7 @@ link PortSpec to PortType--><path d="M123.26,400.05 C116.12,424.43 108.39,450.82
 link PortSpec to Direction--><path d="M170.74,400.05 C179.51,430.01 189.18,463 196.84,489.15 " fill="none" id="PortSpec-&gt;Direction" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="198.24,493.95,199.56,484.19,196.84,489.15,191.88,486.43,198.24,493.95" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="27" x="186" y="444.897">uses</text><!--MD5=[1e0ca1515d9b523b0a0233bdb1489492]
 reverse link PortState to PortSpec--><path d="M278.81,166.87 C259.15,189.25 237.93,213.43 218.38,235.7 " fill="none" id="PortState&lt;-PortSpec" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="287.42,157.06,280.4563,158.9328,279.5067,166.0811,286.4704,164.2083,287.42,157.06" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="51" x="257" y="201.897">contains</text><!--MD5=[83fb68f8d46a5cfab446b8007d19d842]
 link PortState to Quantity--><path d="M443.28,157 C466.4,179.97 488.93,206.97 504,236 C548.1,320.93 556.38,435.55 557.42,496.07 " fill="none" id="PortState-&gt;Quantity" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="557.49,501.4,561.361,492.3438,557.4186,496.4005,553.3618,492.4581,557.49,501.4" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="74" x="552" y="323.397">may contain</text><!--MD5=[31a25135c67a683370be7a8290c23e97]
-link PortSpec to Quantity--><path d="M288.1,394.2 C354.34,429.5 430.47,470.07 484.78,499.01 " fill="none" id="PortSpec-&gt;Quantity" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="489.3,501.42,483.2255,493.6675,484.8835,499.076,479.4751,500.7339,489.3,501.42" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="53" x="390" y="444.897">validates</text><!--MD5=[d98c6648f369bf9a5193b179e256ae6f]
+link PortSpec to Quantity--><path d="M288.1,394.2 C354.34,429.5 430.47,470.07 484.78,499.01 " fill="none" id="PortSpec-&gt;Quantity" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="489.3,501.42,483.2255,493.6675,484.8835,499.076,479.4751,500.7339,489.3,501.42" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="53" x="390" y="444.897">validates</text><!--MD5=[8a4e08151778b7c3526c3ac9b2b1880b]
 @startuml Port
 
 skinparam classAttributeIconSize 0
@@ -90,7 +90,7 @@ PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
 (GPL source distribution)
 Java Runtime: OpenJDK Runtime Environment
 JVM: OpenJDK 64-Bit Server VM
-Java Version: 21.0.8+9-Ubuntu-0ubuntu124.04.1
+Java Version: 21.0.9+10-Ubuntu-124.04
 Operating System: Linux
 Default Encoding: UTF-8
 Language: en

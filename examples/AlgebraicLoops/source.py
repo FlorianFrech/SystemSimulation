@@ -7,7 +7,7 @@ from SysSimX.core.port import PortSpec, PortType
 INPUT_SPECS = {}
 
 OUTPUT_SPECS = {
-    "output": PortSpec("output", PortType.REAL, direction="out")
+    "u(t)=1": PortSpec("u(t)=1", PortType.REAL, direction="out")
 }
 
 #----------------------------------------------------------------------------
@@ -45,7 +45,7 @@ class Source(CoSimComponent):
         """
         Update the output port states.
         """
-        self.outputs['output'].set(self.state, t)
+        self.outputs['u(t)=1'].set(self.state, t)
 
     def set_state(self, state, t):
         pass

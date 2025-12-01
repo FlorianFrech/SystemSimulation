@@ -3,25 +3,25 @@ digraph {
 	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Algebraic Loop System" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
 	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
 	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
-	subgraph cluster_Source {
-		bgcolor="#dbbcc4" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Source margin=12 penwidth=2 style=rounded
-		source [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>source</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="output">output</TD></TR></TABLE>>]
+	subgraph cluster_Input {
+		bgcolor="#d0e3e3" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Input margin=12 penwidth=2 style=rounded
+		source [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>source</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="u(t)=1">u(t)=1</TD></TR></TABLE>>]
 	}
-	subgraph cluster_Outer {
-		bgcolor="#e2dbcf" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Outer margin=12 penwidth=2 style=rounded
-		subtractor_outer [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="input1">input1</TD></TR><TR><TD PORT="input2">input2</TD></TR></TABLE></TD><TD><B>subtractor_outer</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="output"><FONT COLOR="#ef4444"><B>output</B></FONT></TD></TR></TABLE>>]
+	subgraph cluster_Feedback {
+		bgcolor="#d0e4d7" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Feedback margin=12 penwidth=2 style=rounded
+		outer_sub [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="neg">neg</TD></TR><TR><TD PORT="pos">pos</TD></TR></TABLE></TD><TD><B>outer_sub</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="diff"><FONT COLOR="#ef4444"><B>diff</B></FONT></TD></TR></TABLE>>]
 	}
-	subgraph "cluster_Self Loop - Algebraic Cycle" {
-		bgcolor="#c7e6c5" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label="Self Loop - Algebraic Cycle" margin=12 penwidth=2 style=rounded
-		subtractor_inner [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="input1">input1</TD></TR><TR><TD PORT="input2">input2</TD></TR></TABLE></TD><TD><B>subtractor_inner</B><BR/><FONT POINT-SIZE="8">#2</FONT></TD><TD PORT="output"><FONT COLOR="#ef4444"><B>output</B></FONT></TD></TR></TABLE>>]
+	subgraph "cluster_Algebraic Loop" {
+		bgcolor="#bccce0" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label="Algebraic Loop" margin=12 penwidth=2 style=rounded
+		inner_sub [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="neg">neg</TD></TR><TR><TD PORT="pos">pos</TD></TR></TABLE></TD><TD><B>inner_sub</B><BR/><FONT POINT-SIZE="8">#2</FONT></TD><TD PORT="diff"><FONT COLOR="#ef4444"><B>diff</B></FONT></TD></TR></TABLE>>]
 	}
-	subgraph cluster_Integrator {
-		bgcolor="#e9cfe3" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Integrator margin=12 penwidth=2 style=rounded
-		integrator [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="input">input</TD><TD><B>integrator</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="output">output</TD></TR></TABLE>>]
+	subgraph cluster_State {
+		bgcolor="#e6d2d0" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=State margin=12 penwidth=2 style=rounded
+		integrator [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="dx_dt">dx_dt</TD><TD><B>integrator</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="x">x</TD></TR></TABLE>>]
 	}
-	source -> subtractor_outer [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
-	subtractor_outer -> subtractor_inner [label="" color="#111827" headclip=true headport="input1:w" style=solid tailclip=true tailport="output:e"]
-	subtractor_inner -> integrator [label="" color="#111827" headclip=true headport="input:w" style=solid tailclip=true tailport="output:e"]
-	subtractor_inner -> subtractor_inner [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
-	integrator -> subtractor_outer [label="" color="#111827" headclip=true headport="input2:w" style=solid tailclip=true tailport="output:e"]
+	source -> outer_sub [label="" color="#111827" headclip=true headport="pos:w" style=solid tailclip=true tailport="u(t)=1:e"]
+	outer_sub -> inner_sub [label="" color="#111827" headclip=true headport="pos:w" style=solid tailclip=true tailport="diff:e"]
+	inner_sub -> integrator [label="" color="#111827" headclip=true headport="dx_dt:w" style=solid tailclip=true tailport="diff:e"]
+	inner_sub -> inner_sub [label="" color="#111827" headclip=true headport="neg:w" style=solid tailclip=true tailport="diff:e"]
+	integrator -> outer_sub [label="" color="#111827" headclip=true headport="neg:w" style=solid tailclip=true tailport="x:e"]
 }

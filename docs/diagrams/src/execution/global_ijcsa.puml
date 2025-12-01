@@ -1,0 +1,117 @@
+@startuml Global_IJCSA_Algorithm
+
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 150
+skinparam participantPadding 100
+
+participant "Master/\nOrchestrator" as Master
+participant "SU₁" as SU1
+participant "SU₂" as SU2
+participant "SU₃" as SU3
+
+== Global IJCSA: One Co-Simulation Step t → t+dt ==
+
+Master -> Master: Collect ALL interface inputs U from zero-delay connections
+
+Master -> Master: Initialize U^(0) from current input values
+
+note over Master: **Phase 1: Global Interface-Newton (dt=0)**
+
+loop until convergence (m = 0, 1, 2, ...)
+
+    note over Master: **1. Evaluate all components with frozen states (dt=0)**
+    
+    par Parallel Execution
+        Master -> SU1: evaluate_outputs(U1^(m),t)
+        activate SU1
+        SU1 -> SU1: Y1^(m+1) = S1(U1^(m))
+        SU1 --> Master: Y1^(m+1)
+        deactivate SU1
+    else
+        Master -> SU2: evaluate_outputs(U2^(m),t)
+        activate SU2
+        SU2 -> SU2: Y2^(m+1) = S2(U2^(m))
+        SU2 --> Master: Y2^(m+1)
+        deactivate SU2
+    else
+        Master -> SU3: evaluate_outputs(U3^(m),t)
+        activate SU3
+        SU3 -> SU3: Y3^(m+1) = S3(U3^(m))
+        SU3 --> Master: Y3^(m+1)
+        deactivate SU3
+    end
+    
+    note over Master: **2. Compute global residual**
+    
+    Master -> Master: R^(m) = [U1^(m)-Y_driver1^(m+1)]            [U2^(m)-Y_driver2^(m+1)]            [U3^(m)-Y_driver3^(m+1)]
+    
+    note over Master: **3. Check convergence**
+    
+    alt ||R^(m)|| < tolerance
+        note over Master: ✓ Converged
+        Master -> Master: Exit iteration
+    end
+    
+    note over Master: **4. Compute global Jacobian**
+    
+    Master -> Master: J^(m) = dR/dU\nvia finite differences
+    note right
+      Perturb each U_j,
+      evaluate all outputs,
+      compute J[:, j]
+    end note
+    
+    note over Master: **5. Solve for correction**
+    
+    Master -> Master: J^(m) · ΔU^(m) = -R^(m)
+    
+    note over Master: **6. Apply correction**
+    
+    Master -> Master: U^(m+1)=U^(m)+ΔU^(m)
+
+end
+
+note over Master: **Phase 2: Time Integration with consistent interface**
+
+Master -> SU1: set_inputs(U1*, t)
+activate SU1
+SU1 --> Master: committed
+deactivate SU1
+
+Master -> SU2: set_inputs(U2*, t)
+activate SU2
+SU2 --> Master: committed
+deactivate SU2
+
+Master -> SU3: set_inputs(U3*, t)
+activate SU3
+SU3 --> Master: committed
+deactivate SU3
+
+note over Master: **All components advance time**
+
+par Parallel Time Integration
+    Master -> SU1: do_step(t, dt)
+    activate SU1
+    SU1 -> SU1: Integrate t → t+dt
+    SU1 --> Master: Y1(t+dt)
+    deactivate SU1
+else
+    Master -> SU2: do_step(t, dt)
+    activate SU2
+    SU2 -> SU2: Integrate t → t+dt
+    SU2 --> Master: Y2(t+dt)
+    deactivate SU2
+else
+    Master -> SU3: do_step(t, dt)
+    activate SU3
+    SU3 -> SU3: Integrate t → t+dt
+    SU3 --> Master: Y3(t+dt)
+    deactivate SU3
+end
+
+Master -> Master: All components at t+dt\nReady for next step
+
+@enduml
