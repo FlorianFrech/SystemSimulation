@@ -2,6 +2,18 @@
 
 This repository contains a framework for simulating dynamic systems using Python. It provides tools for defining system components, configuring simulations, and running experiments.
 
+## Main Functionality
+
+1. A graph-based execution engine that exploits FMI 2.0 model structure to derive execution orders, detect algebraic loops, and build SCC-based generations fo
+parallel co-simulation.
+
+2. Adaptations of Jacobi, Gauss-Seidel and interface-Jacobian co-simulation under FMI 2.0 co-simulation constraints (no rollback, step-mode APIs).
+
+3. A multi-representation master model concept (FEM, OpenSim, equation-based) with parameter and state synchronization to validate heterogeneous integration.
+
+4. A Python framework (SysSimX) with reusable component abstractions for FMUs, OpenSim models, and FEM models.
+
+
 ## Features
 - Modular component design
 - Configuration management using YAML files

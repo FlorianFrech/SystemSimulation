@@ -19,11 +19,18 @@ model ImpactWall
 
   // Parameters
   parameter Real q_wall(unit="rad") = 0 "Angular position of the wall";
-  parameter Real k(unit="N.m/rad") = 5e4 "Contact stiffness";
-  parameter Real c(unit="N.m.s/rad")=50 "Contact damping while compressing";
+  parameter Real k(unit="N.m/rad") = 1e10 "Contact stiffness";
   parameter Real eps(unit="rad")=1e-4 "If > 0, use smooth ReLU for penetration with smooth eps";
   parameter Boolean autoEps = true "Scale smoothing with stiffness";
-  parameter Real tauTol(unit="N.m") = 0.05 "Acceptable pre-contact torque bias";
+  parameter Real tauTol(unit="N.m") = 50 "Acceptable pre-contact torque bias";
+  
+  parameter Boolean autoDamp = true "If true, set damping from k and J_eq";
+  parameter Real zeta = 0.7 "Damping ratio when damping = true";
+  parameter Real J_eq(unit="kg.m2") = 1 "Refelected inertia ar the joint";
+  parameter Real c = 0 "If manual damping is used (autoDamp = false)";
+  parameter Real c_eff = if autoDamp then 2*zeta*sqrt(k*J_eq) else c;
+  
+  
   // Effective smoothing used
   parameter Real eps_eff(unit="rad") = if autoEps then min(eps, 2*tauTol/max(1e-12,k)) else eps;
 
@@ -36,7 +43,6 @@ model ImpactWall
   
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m") "Contact torque";
-  //Modelica.Blocks.Interfaces.RealOutput contactLevel "Smooth contact indicator in [0,1]";
   Modelica.Blocks.Interfaces.BooleanOutput contact "True when penetration > 0";
   Modelica.Blocks.Interfaces.RealOutput penetration(unit="rad");
   
@@ -47,17 +53,6 @@ protected
   Real pen(unit="rad") "Smoothed penetration";
   Real pen_dot(unit="rad/s") "Time derivative of penetration (smoothed)";
   Real comp(unit="rad/s") "Compression rate = max(pen_dot,0)";
-
-initial algorithm
-  contact := x > 0;
-
-algorithm
-  // Update at crossings; avoids change() and keeps contact discrete
-  when x > 0 then
-    contact := true;
-  elsewhen x <= 0 then
-    contact := false;
-  end when;
 
 equation
   // Oriented gap
@@ -74,5 +69,8 @@ equation
   comp    = noEvent(max(pen_dot, 0));
   
   // Hunt–Crossley-like compliant torque
-  torque = -sense * ( k*pen + c*pen*comp );
+  torque = -sense * ( k*pen + c_eff*pen*comp );
+  
+  // Boolean Contact Indicator
+  contact = pen > penEps;
 end ImpactWall;

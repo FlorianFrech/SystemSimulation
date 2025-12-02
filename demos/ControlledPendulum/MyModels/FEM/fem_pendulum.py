@@ -397,9 +397,8 @@ class FEMPendulum(FEMComponent):
             self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
             self._gf_uold.vec[:] = self._gf_u.vec
             self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-            if self._with_contact:
-                self._initialize_contact()
-                self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
+            # if self._with_contact:
+            #     self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
                 
             if 'omega' in state:
                 omega = state['omega']['value']
@@ -410,9 +409,12 @@ class FEMPendulum(FEMComponent):
                 self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
                 self._gf_vold.vec[:] = self._gf_v.vec
                 self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
+                self._gf_a.vec[:] = 0
+                self._gf_aold.vec[:] = 0
             
         if 'torque' in state:
             torque = state['torque']['value']
+            toruqe = 0
             self.set_drive_torque(torque)
 
     def get_state(self):
@@ -454,6 +456,8 @@ class FEMPendulum(FEMComponent):
                     elif min_gap < 0.05:
                         self.tau.Set(1e-3)
                     else:
+                        self.tau.Set(self.sim_params.tau)
+                    if t < 0.5:
                         self.tau.Set(self.sim_params.tau)
                 
                 # Update time settings

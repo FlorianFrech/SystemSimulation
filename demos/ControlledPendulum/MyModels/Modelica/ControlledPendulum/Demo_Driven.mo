@@ -19,11 +19,9 @@ model Demo_Driven
   AngleEncoder        sensor_state( q_min = -reference.amplitude,
                                     q_max =  reference.amplitude);
   
-  PID_Continuous        pid;
-  //PID_Sampled         pid;
+  PID_Continuous       pid(k=10, Ti=0.01, Td=0.75, Nd=10);
   
   Drive               drive;
-  //Drive_QStat           drive;
   
   Pendulum            pendulum;
 
@@ -43,8 +41,10 @@ equation
   connect(drive.torque, pendulum.torque);
   connect(drive.omega, pendulum.omega);
   
+  //pid.freezeI = false;
+  
   annotation(
-    experiment(StartTime = 0, StopTime = 10, Interval = 0.01)
+    experiment(StartTime = 0, StopTime = 10, Interval = 0.001)
   );
 
 end Demo_Driven;

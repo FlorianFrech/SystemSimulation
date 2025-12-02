@@ -30,6 +30,7 @@ class Hysteresis:
     
     def can_switch(self, t: float, proposed_mode: ModeKey) -> bool:
         """Check if sufficient time has passed since last switch."""
+        return True  # Default to always allow switching
         if proposed_mode == self.last_mode:
             return False  # Already in this mode
         return (t - self.last_switch_time) >= self.dwell_time

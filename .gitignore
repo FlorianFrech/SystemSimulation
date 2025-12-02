@@ -20,3 +20,4 @@ VenvSysSimX/
 *.vtu
 
 examples/FMI/FMUs
+syssimx.egg-info/

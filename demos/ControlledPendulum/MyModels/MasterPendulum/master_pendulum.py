@@ -129,6 +129,9 @@ class MasterPendulum(MultiComponent):
         # Get current angular position from active component
         current_state = self.get_state()
         q = current_state['q']['value']
+
+        if t < 0.7:
+            return 'EQB'
         
         # Handle Quantity objects (with units)
         if hasattr(q, 'magnitude'):
@@ -144,7 +147,7 @@ class MasterPendulum(MultiComponent):
         if q_abs > 15:
             return 'EQB'
         elif q_abs > 5:
-            return 'OpenSim'
+            return 'EQB'
         else:
             return 'FEM'
 

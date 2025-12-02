@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "syssimx"
+version = "0.1.0"
+description = "A Python framework for heterogeneous system co-simulation (Modelica FMUs, OpenSim, FEM)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Florian Frech" }
+]
+
+dependencies = [
+  "numpy",
+  "scipy",
+  "pint",
+  "networkx",
+]
+
+[project.optional-dependencies]
+fmi = ["fmpy"]
+fem = ["ngsolve"]
+opensim = ["opensim==4.5"]   # or whatever you actually use
+dev = ["pytest", "pytest-cov", "mypy", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["SysSimX*"]
