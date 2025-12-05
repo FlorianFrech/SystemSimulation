@@ -1,5 +1,4 @@
 Reference
-PendulumWithWallContinuous
 Pendulum
 PID_Continuous
 ImpactWall
@@ -11,3 +10,5 @@ Drive_QStat
 Drive_Coupled
 Demo_Driven_Coupled
 Demo_DrivenWithWall
+PendulumWithWall
+PendulumAnimation

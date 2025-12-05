@@ -147,7 +147,7 @@ class MasterPendulum(MultiComponent):
         if q_abs > 15:
             return 'EQB'
         elif q_abs > 5:
-            return 'EQB'
+            return 'OpenSim'
         else:
             return 'FEM'
 

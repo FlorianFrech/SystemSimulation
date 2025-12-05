@@ -317,7 +317,6 @@ class FMUComponent(CoSimComponent):
     # State methods for setting and getting simulation state
     #----------------------------------------------------------------------------
     def set_state(self, state: Dict[str, Any], t: float) -> None:
-        self._instance.reset()
         self._instance.instantiate()
         self._instance.setupExperiment(startTime=t)
         self._instance.enterInitializationMode()
