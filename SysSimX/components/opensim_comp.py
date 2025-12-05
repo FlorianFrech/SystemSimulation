@@ -52,10 +52,10 @@ class OpenSimComponent(CoSimComponent):
         """
         if self.state is None:
             raise RuntimeError(f"{self.name}: state not initialized")
-        self.model.realizeDynamics(self.state)
+        #self.model.realizeDynamics(self.state)
         self.model.realizeAcceleration(self.state)
-        self.model.realizeVelocity(self.state)
-        self.model.realizePosition(self.state)
+        #self.model.realizeVelocity(self.state)
+        #self.model.realizePosition(self.state)
         
     # ---- Reset ----
     def reset(self) -> None:
