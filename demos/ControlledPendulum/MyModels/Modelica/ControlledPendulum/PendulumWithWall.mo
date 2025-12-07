@@ -5,11 +5,11 @@ model PendulumWithWall
   import Modelica.Constants.pi;
   
   // Parameters
-  parameter Boolean with_contact(start=false)
+  parameter Boolean with_contact(start=true)
     "Boolean flag for contact simulation";
     
   // Components
-  Pendulum            pendulum(q0=1);
+  Pendulum            pendulum(q0=0);
   ImpactWall          wall(k=1e10,
                            q_wall=0,
                            sense=-1,

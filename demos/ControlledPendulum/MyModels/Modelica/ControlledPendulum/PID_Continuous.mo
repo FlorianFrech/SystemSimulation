@@ -3,16 +3,17 @@ within ControlledPendulum;
 model PID_Continuous
   // Parameters
   parameter Real k=10 "Controller gain";
-  parameter Real Ti=0.1 "Integral time constant";
-  parameter Real Td=0.2 "Derivative time constant";
+  parameter Real Ti=0.05 "Integral time constant";
+  parameter Real Td=0.6 "Derivative time constant";
   parameter Real Nd=10 "Derivative filter divisor";
   parameter Real uMin=-1, uMax=1 "Output limits";
-  parameter Real Kaw = 1/Ti "Back-calculation gain for anti-windup 1/Ti";
+  parameter Real Kaw = 30 "Back-calculation gain for anti-windup 1/Ti";
+  parameter Boolean enableFreezeI = true "Enable integrator freeze functionality";
   
   // Inputs
   Modelica.Blocks.Interfaces.RealInput  ref(unit="V") "Reference signal";
   Modelica.Blocks.Interfaces.RealInput  y(unit="V") "Measured output";
-  //Modelica.Blocks.Interfaces.BooleanInput freezeI(start=false) "Freeze integrator when true (e.g., during wall contact)";
+  Modelica.Blocks.Interfaces.BooleanInput freezeI(start=false) "Freeze integrator when true (e.g., during wall contact)";
 
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput u "Control signal";
@@ -32,8 +33,10 @@ model PID_Continuous
   Modelica.Blocks.Math.Gain Gaw(k=Kaw);
   
   // Integrator freeze gate
-  //Modelica.Blocks.Logical.Switch Igate;
-  //Modelica.Blocks.Sources.Constant zero(k=0);
+  Modelica.Blocks.Logical.Switch Igate;
+  Modelica.Blocks.Sources.Constant zero(k=0);
+  Modelica.Blocks.Logical.And freezeGate;
+  Modelica.Blocks.Sources.BooleanConstant enableFreeze(k=enableFreezeI);
   
   // Integral part
   Modelica.Blocks.Continuous.Integrator I(
@@ -73,13 +76,12 @@ equation
   connect(Gaw.y, addIinput.u2);         // scaled anti-windup correction
 
   // Integrator freeze gate
-  // When freezeI = true:  select u1 (zero) -> integrator input = 0 (frozen)
-  // When freezeI = false: select u3 (addIinput.y) -> normal operation with anti-windup
-  //connect(zero.y, Igate.u1);            // frozen value (0)
-  //connect(freezeI, Igate.u2);           // selector
-  //connect(addIinput.y, Igate.u3);       // active value (e + anti-windup)
-  //connect(Igate.y, I.u);                // to integrator
-  connect(addIinput.y, I.u);
+  connect(freezeI, freezeGate.u1);
+  connect(enableFreeze.y, freezeGate.u2);
+  connect(zero.y, Igate.u1);            // frozen value (0)
+  connect(freezeGate.y, Igate.u2);      // combined selector
+  connect(addIinput.y, Igate.u3);       // active value (e + anti-windup)
+  connect(Igate.y, I.u);                // to integrator
   
   // Sum PID terms
   connect(P.y, sumPID.u1);

@@ -19,17 +19,14 @@ model Demo_DrivenWithWall
   AngleEncoder        sensor_state( q_min = -reference.amplitude,
                                     q_max =  reference.amplitude);
   
-  PID_Continuous        pid(Nd=10, Td=0.05, Ti=0.6, k=10);
+  PID_Continuous        pid(Nd=10, Td=0.05, Ti=0.6, k=10,enableFreezeI=true);
   
   Drive               drive;
   
-  //Pendulum pendulum;
-  //ImpactWall wall(J_eq=pendulum.inertia, sense=-1);
-  PendulumWithWallContinuous pendulum;
+  PendulumWithWall pendulum;
  
 protected
-  //Modelica.Blocks.Math.Add torqueSum(k1=1, k2=1);
-  //Boolean refBehindWall "True if reference lies on the 'blocked' side of the wall";
+  Boolean refBehindWall "True if reference lies on the 'blocked' side of the wall";
 
 equation
   // Sensors
@@ -44,21 +41,11 @@ equation
   
   // Drive <-> Pendulum
   connect(drive.omega, pendulum.omega);
-  //connect(drive.torque, torqueSum.u1);
   connect(drive.torque, pendulum.torque);
   
-  // Wall connections
-  //connect(pendulum.q,   wall.q);
-  //connect(pendulum.omega, wall.omega);
-  //connect(wall.torque, torqueSum.u2);
-  
-  // drive torque + wall torque -> pendulum
-  //connect(torqueSum.y, pendulum.torque);
-  
   // Freeze integrator logic
-  //refBehindWall = wall.sense * (reference.q_ref - wall.q_wall) > 0;
-  //pid.freezeI = refBehindWall;
-  //pid.freezeI = false;
+  refBehindWall = pendulum.wall.sense * (reference.q_ref - pendulum.wall.q_wall) > 0;
+  pid.freezeI = refBehindWall;
   
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.01)

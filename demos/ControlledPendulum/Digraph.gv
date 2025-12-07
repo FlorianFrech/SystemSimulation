@@ -22,13 +22,13 @@ digraph {
 	}
 	subgraph cluster_Plant {
 		bgcolor="#e5e7eb" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Plant margin=12 penwidth=2 style=rounded
-		pendulum_wall [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="torque">torque</TD><TD><B>pendulum_wall</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha"><FONT COLOR="#ef4444"><B>alpha</B></FONT></TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR></TABLE></TD></TR></TABLE>>]
+		Pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="torque">torque</TD><TD><B>Pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha">alpha</TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
 	ref -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
-	pendulum_wall -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]
+	Pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]
 	sensor_ref -> pid [label="[V]" color="#111827" headclip=true headport="ref:w" style=solid tailclip=true tailport="U_q:e"]
 	sensor_state -> pid [label="[V]" color="#111827" headclip=true headport="y:w" style=solid tailclip=true tailport="U_q:e"]
 	pid -> drive [label="" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u:e"]
-	drive -> pendulum_wall [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
-	pendulum_wall -> drive [label="[rad/s]" color="#111827" headclip=true headport="omega:w" style=solid tailclip=true tailport="omega:e"]
+	drive -> Pendulum [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
+	Pendulum -> drive [label="[rad/s]" color="#111827" headclip=true headport="omega:w" style=solid tailclip=true tailport="omega:e"]
 }
