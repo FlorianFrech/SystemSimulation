@@ -119,7 +119,8 @@ class Pendulum(FMUComponent):
     """
     FMU-based pendulum component with rollback support.
     """
-    def __init__(self, name, fmu_path, group = None):
+    def __init__(self, name, group = None):
+        fmu_path = Path(__file__).parent.parent / "test_data" / "FMUs" / "Pendulum.fmu"
         super().__init__(name, fmu_path, group)
 
     def snapshot_state(self):
@@ -229,16 +230,13 @@ def test_rollback_with_event_indicators():
 # -------------------------------------------------------------------
 def test_fmu_rollback_support():
     test_file_path = Path(__file__)
-    fmu_path = test_file_path.parent.parent / "test_data" / "FMUs" / "Pendulum_Cvode.fmu"
-    pendulum = Pendulum(name="Pendulum", fmu_path=str(fmu_path))
+    pendulum = Pendulum(name="Pendulum")
     pendulum.initialize(t0=0.0)
     assert pendulum.supports_rollback
 
 def test_fmu_rollback_functionality():
     # 1) Initialize Pendulum FMU
-    test_file_path = Path(__file__)
-    fmu_path = test_file_path.parent.parent / "test_data" / "FMUs" / "Pendulum_Cvode.fmu"
-    pendulum = Pendulum(name="Pendulum", fmu_path=str(fmu_path))
+    pendulum = Pendulum(name="Pendulum")
     pendulum.set_parameters(q0=np.deg2rad(45.0), omega0=0.0)
     pendulum.initialize(t0=0.0)
 
@@ -284,11 +282,9 @@ def test_fmu_rollback_functionality():
     assert np.isclose(restored_omega2, omega_after_step1)
 
 def test_fmu_rollback_and_continue():
-    test_file_path = Path(__file__)
-    fmu_path = test_file_path.parent.parent / "test_data" / "FMUs" / "Pendulum_Cvode.fmu"
     
     # First simulation run
-    pendulum1 = Pendulum(name="Pendulum1", fmu_path=str(fmu_path))
+    pendulum1 = Pendulum(name="Pendulum1")
     pendulum1.set_parameters(q0=np.deg2rad(30.0), omega0=0.0)
     pendulum1.initialize(t0=0.0)
     pendulum1.do_step(t=0.0, dt=0.5)
@@ -297,7 +293,7 @@ def test_fmu_rollback_and_continue():
     omega_reference = pendulum1.get_outputs()['omega']
     
     # Second simulation with rollback
-    pendulum2 = Pendulum(name="Pendulum2", fmu_path=str(fmu_path))
+    pendulum2 = Pendulum(name="Pendulum2")
     pendulum2.set_parameters(q0=np.deg2rad(30.0), omega0=0.0)
     pendulum2.initialize(t0=0.0)
     

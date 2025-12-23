@@ -5,9 +5,8 @@ from dataclasses import dataclass
 class Connection:
     """
     Defines a connection between two components in a co-simulation environment.
-     - src_comp, dst_commp: NAMES (str) of source and destination components
+     - src_comp, dst_comp: NAMES (str) of source and destination components
      - src_port, dst_port: port NAMES (str) of source and destination ports
-     - delay: int, 0 = same-tick (strict order), 1 = next-tick (no order)
      - unit: Optional[Any], unit label for the connection (if applicable)
     """
     src_comp: str

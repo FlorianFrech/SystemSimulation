@@ -17,7 +17,7 @@ class Pendulum(FMUComponent):
     FMU-based pendulum component with rollback support.
     """
     def __init__(self, name, group = None):
-        fmu_path = Path(__file__).parent.parent / "test_data" / "FMUs" / "Pendulum_Cvode.fmu"
+        fmu_path = Path(__file__).parent.parent / "test_data" / "FMUs" / "Pendulum.fmu"
         super().__init__(name, fmu_path, group)
 
     def snapshot_state(self):
