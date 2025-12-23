@@ -41,7 +41,7 @@ equation
   connect(drive.torque, pendulum.torque);
   connect(drive.omega, pendulum.omega);
   
-  pid.freezeI = false;
+  pid.resetI = false;
   
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.001)

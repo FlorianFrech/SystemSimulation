@@ -346,7 +346,6 @@ class FMUComponent(CoSimComponent):
         4. Store the variable name and its attributes and retrieved value in a dictionary.
         5. Return the dictionary containing all variable names and their attributes with values.
         """
-        assert self._instance is not None
         state = {}
         for var in self._md.modelVariables:
             if var.variability == "fixed" or var.causality == "local": continue
@@ -399,6 +398,9 @@ class FMUComponent(CoSimComponent):
         if self._instance is not None:
             try:
                 self._instance.reset()
+                self._instance.instantiate()
+                self.history.clear()
+                self._update_output_states(t=None)
             finally:
                 self._instance = None
 

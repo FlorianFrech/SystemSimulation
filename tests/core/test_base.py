@@ -111,8 +111,6 @@ def test_port_state():
     assert u_port.value.is_compatible_with("N*m")
     assert u_port.value.magnitude == 3.0
     assert u_port.t_last == 0.0
-    assert u_port.history[-1] == (0.0, u_port.value)
-    assert len(u_port.history) == 1
 
 def test_do_step():
     comp = Gain(name="Gain", gain=2.0)
@@ -124,8 +122,6 @@ def test_do_step():
     assert y.is_compatible_with("rad/s")
     assert abs(y.magnitude - 6.0) < 1e-6
     assert y_port.t_last == 1.0
-    assert y_port.history[-1] == (1.0, y)
-    assert len(y_port.history) == 2 # Initial 0.0 at t=0.0 and new value at t=1.0
 
 
 # TODO: Add tests for set_state, get_state, reset

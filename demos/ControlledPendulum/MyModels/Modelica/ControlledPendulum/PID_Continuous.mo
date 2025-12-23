@@ -7,16 +7,15 @@ model PID_Continuous
   parameter Real Td=0.6 "Derivative time constant";
   parameter Real Nd=10 "Derivative filter divisor";
   parameter Real uMin=-1, uMax=1 "Output limits";
-  parameter Real Kaw = 30 "Back-calculation gain for anti-windup 1/Ti";
-  parameter Boolean enableFreezeI = true "Enable integrator freeze functionality";
   
   // Inputs
   Modelica.Blocks.Interfaces.RealInput  ref(unit="V") "Reference signal";
   Modelica.Blocks.Interfaces.RealInput  y(unit="V") "Measured output";
-  Modelica.Blocks.Interfaces.BooleanInput freezeI(start=false) "Freeze integrator when true (e.g., during wall contact)";
+  Modelica.Blocks.Interfaces.BooleanInput resetI(start=false) "Reset integrator on rising edge";
 
   // Outputs
   Modelica.Blocks.Interfaces.RealOutput u "Control signal";
+  Modelica.Blocks.Interfaces.RealOutput I_out "Integrator output (for monitoring)";
 
   // Internal constants
   constant Real xi_start=0 "Integrator initial state";
@@ -27,22 +26,15 @@ model PID_Continuous
   
   // Proportional part
   Modelica.Blocks.Math.Gain P(k=1);
- 
-  // Anti-windup: integrator input = e + Kaw*(u_sat - u_presat)
-  Modelica.Blocks.Math.Add addIinput;
-  Modelica.Blocks.Math.Gain Gaw(k=Kaw);
   
-  // Integrator freeze gate
-  Modelica.Blocks.Logical.Switch Igate;
-  Modelica.Blocks.Sources.Constant zero(k=0);
-  Modelica.Blocks.Logical.And freezeGate;
-  Modelica.Blocks.Sources.BooleanConstant enableFreeze(k=enableFreezeI);
-  
-  // Integral part
-  Modelica.Blocks.Continuous.Integrator I(
-    k=1/Ti, 
+  // Integral part with reset capability
+  Modelica.Blocks.Continuous.LimIntegrator I(
+    k=1/Ti,
+    outMax=1e10,
+    outMin=-1e10,
     y_start=xi_start,
-    initType=Modelica.Blocks.Types.Init.InitialState);
+    initType=Modelica.Blocks.Types.Init.InitialState,
+    use_reset=true);
   
   // Derivative part with first-order filter
   Modelica.Blocks.Continuous.Derivative D(
@@ -57,9 +49,6 @@ model PID_Continuous
  
   // Output saturation
   Modelica.Blocks.Nonlinear.Limiter lim(uMin=uMin, uMax=uMax);
-  
-  // For anti-windup: compute (u_sat - u_presat)
-  Modelica.Blocks.Math.Add difSat(k1=1, k2=-1);     // u_sat - u_presat
 
 equation
   // Error: e = ref - y
@@ -68,20 +57,11 @@ equation
   
   // Distribute error to P, I, D branches
   connect(addErr.y, P.u);
+  connect(addErr.y, I.u);
   connect(addErr.y, D.u);
   
-  // Anti-windup feedback: I_input = e + Kaw*(u_sat - u_presat)
-  connect(addErr.y, addIinput.u1);      // base error
-  connect(difSat.y, Gaw.u);             // saturation difference
-  connect(Gaw.y, addIinput.u2);         // scaled anti-windup correction
-
-  // Integrator freeze gate
-  connect(freezeI, freezeGate.u1);
-  connect(enableFreeze.y, freezeGate.u2);
-  connect(zero.y, Igate.u1);            // frozen value (0)
-  connect(freezeGate.y, Igate.u2);      // combined selector
-  connect(addIinput.y, Igate.u3);       // active value (e + anti-windup)
-  connect(Igate.y, I.u);                // to integrator
+  // Reset integrator on trigger
+  connect(resetI, I.reset);
   
   // Sum PID terms
   connect(P.y, sumPID.u1);
@@ -90,11 +70,10 @@ equation
   
   // Apply total gain -> limiter -> output
   connect(sumPID.y, gainK.u);
-  connect(gainK.y, lim.u);              // u_presat goes to limiter
-  connect(lim.y, u);                    // saturated output
-  
-  // Anti-windup: difference between saturated and pre-saturated
-  connect(lim.y, difSat.u1);            // u_sat
-  connect(gainK.y, difSat.u2);          // u_presat (directly from gainK)
+  connect(gainK.y, lim.u);
+  connect(lim.y, u);
+
+  // Expose integrator output
+  I_out = I.y;
   
 end PID_Continuous;

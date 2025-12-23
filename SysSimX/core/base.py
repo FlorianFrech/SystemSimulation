@@ -1,8 +1,10 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, Set, List
+from typing import Dict, Any, Optional, Tuple, Set, List, Callable
 from .port import PortSpec, PortState
 from .history import ComponentHistory
+from .events import EventIndicator, _sign
 
 # -------------------------------------------------------------------
 # CoSimComponent - Base Class for Co-Simulation Components
@@ -32,13 +34,17 @@ class CoSimComponent(ABC):
 
         # Parameter container (populated by subclasses)
         self.parameters: Dict[str, Any] = {}
-
+        
+        # Model structure and direct feedthrough info
         self.direct_feedthrough: Dict[str, Set[str]] = {}
         self.model_structure: Dict[str, Dict[str, List[str]]] = {
             "outputs": {},
             "derivatives": {},
             "initialUnknowns": {},
         }
+
+        # Hybrid capabilities
+        self.event_indicators: Dict[str, EventIndicator] = {}
 
     # -------------------------------------------------------------------
     # Construction of Port States from Specs
@@ -111,7 +117,7 @@ class CoSimComponent(ABC):
         # Default implementation: just set inputs and return outputs
         if inputs:
             self.set_inputs(inputs, t=None)
-        # For non-FMUs this is often enough:
+        # For non-FMUs
         return {name: port.get() for name, port in self.outputs.items()}
     
     # -------------------------------------------------------------------
@@ -198,6 +204,99 @@ class CoSimComponent(ABC):
         return self.history.to_arrays(port_names=port_names, units=units)
     
     # -------------------------------------------------------------------
+    # Hybrid Capabilities - Event Indicators and Handling
+    # -------------------------------------------------------------------
+    def add_event_indicator(self, name: str, func: Callable[["CoSimComponent"], float], direction: int=0) -> None:
+        if name in self.event_indicators:
+            raise KeyError(f"Event indicator '{name}' already exists in component '{self.name}'.")
+        if direction not in (-1, 0, 1):
+            raise ValueError("Direction must be -1 (falling), 0 (both), or +1 (rising).")
+        self.event_indicators[name] = EventIndicator(name, func, direction)
+
+    def evaluate_event_indicators(self) -> Dict[str, float]:
+        """
+        Evaluate all event indicators and return their current values.
+        """
+        indicators = {}
+        for name, indicator in self.event_indicators.items():
+            indicators[name] = indicator.evaluate(self)
+        return indicators
+    
+    def detect_event_crossing(self, previous: Dict[str, float],
+                              current: Dict[str, float],
+                              sign_tolerance: float = 1e-10) -> List[str]:
+        """
+        Detect zero-crossings between previous and current indicator values.
+        
+        Args:
+            sign_tolerance: Values smaller than this are considered zero for sign detection
+        """
+        events = []
+        for name, indicator in self.event_indicators.items():
+            prev_sign = _sign(previous[name], sign_tolerance)
+            curr_sign = _sign(current[name], sign_tolerance)
+            value = current[name]
+            
+            # Check for crossing according to indicator direction
+            if indicator.direction == 0:  # Any direction
+                crossed = prev_sign * curr_sign < 0
+            elif indicator.direction == 1:  # Rising only
+                crossed = prev_sign < 0 and curr_sign > 0
+            elif indicator.direction == -1:  # Falling only
+                crossed = prev_sign > 0 and curr_sign < 0
+            
+            if crossed:
+                events.append(name)
+        
+        return events
+    
+    @property
+    def has_state_events(self) -> bool:
+        """True if the component currently has one or more state event indicators."""
+        return bool(self.event_indicators)
+
+    # -------------------------------------------------------------------
+    # Hybrid Capabilities - State Snapshots and Rollback
+    # -------------------------------------------------------------------
+    def snapshot_state(self) -> Any:
+        """
+        Return an opaque snapshot that can be passed back to restore_state().
+        Components that do not support rollback must override supports_rollback to False
+        and may raise NotImplementedError here.
+        """
+        raise NotImplementedError("snapshot_state() not implemented for this component.")
+
+    def restore_state(self, snapshot: Any, t: float) -> None:
+        """
+        Restore the component to the state represented by 'snapshot' at time t.
+        This must be a *pure rollback*: subsequent do_step(t, dt) calls behave as if
+        the component had never advanced past t.
+        """
+        raise NotImplementedError("restore_state() not implemented for this component.")
+
+    @property
+    def supports_rollback(self) -> bool:
+        """True if the component supports state snapshot and rollback."""
+        # Check if methods are overridden from base class
+        return (
+            type(self).snapshot_state is not CoSimComponent.snapshot_state and
+            type(self).restore_state is not CoSimComponent.restore_state
+        )
+    
+    # -------------------------------------------------------------------
+    # Hybrid Capabilities - Event Handling
+    # -------------------------------------------------------------------
+    def handle_event(self, event_names: List[str], t: float) -> None:
+        """
+        Handle events by calling subclass hook.
+        """
+        self._handle_events_internal(event_names, t)
+    
+    def _handle_events_internal(self, event_names: List[str], t: float) -> None:
+        """Subclass hook: handle events (state updates, re-initialization, etc.)."""
+        pass
+
+    # -------------------------------------------------------------------
     # Cleanup - reset and free
     # -------------------------------------------------------------------
     @abstractmethod
@@ -217,11 +316,6 @@ class CoSimComponent(ABC):
         """Inputs that affect at least one connected output algebraically."""
         reactive_inputs = set(inp for outs in self.direct_feedthrough.values() for inp in outs)
         return reactive_inputs
-    
-    @property
-    def has_state(self) -> bool:
-        """Override in subclasses that have ODE/DAE state."""
-        return False
     
     @property
     def has_direct_feedthrough(self) -> bool:

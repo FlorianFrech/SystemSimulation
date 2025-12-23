@@ -43,8 +43,8 @@ equation
   connect(pendulum.omega, drive.omega);
   connect(pendulum.alpha, drive.alpha);
   
-  pid.freezeI = false;
-  
+  pid.resetI = false;
+    
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.01)
   );
