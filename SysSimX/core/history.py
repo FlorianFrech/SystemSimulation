@@ -185,6 +185,7 @@ class SystemHistory:
     """
     system_name: str
     _component_histories: Dict[str, ComponentHistory] = field(default_factory=dict)
+    _event_histories: Dict[Tuple[str, str], List[float]] = field(default_factory=dict)  # (component, event_name) -> times
     
     def add_component(self, component_name: str, component_history: ComponentHistory) -> None:
         """Register a component's history."""
@@ -199,6 +200,22 @@ class SystemHistory:
     def get_all_histories(self) -> Dict[str, ComponentHistory]:
         """Get all component histories as dictionary."""
         return dict(self._component_histories)
+
+    def record_event(self, component_name: str, event_name: str, t: float) -> None:
+        """Record an event occurrence time."""
+        key = (component_name, event_name)
+        if key not in self._event_histories:
+            self._event_histories[key] = []
+        self._event_histories[key].append(t)
+    
+    def get_event_history(self, component_name: str, event_name: str) -> List[float]:
+        """Get recorded times for a specific event."""
+        key = (component_name, event_name)
+        return self._event_histories.get(key, [])
+    
+    def get_all_event_histories(self) -> Dict[Tuple[str, str], List[float]]:
+        """Get all recorded event histories."""
+        return dict(self._event_histories)
 
     #----------------------------------------------------------------------------
     # Retrieval Methods

@@ -29,7 +29,7 @@ class DenseTime:
 class Event:
     name: str
     source: str
-    time: DenseTime
+    time: Optional[DenseTime] = None
     direction: Optional[int] = None # -1: falling, 0: any, 1: rising
 
 # -------------------------------------------------------------------

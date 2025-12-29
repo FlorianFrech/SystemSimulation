@@ -102,9 +102,9 @@ class FMUComponent(CoSimComponent):
                 description=var.description
             )
             if direction == "in":
-                self.input_specs[var.name] = spec
+                self.input_specs.update({var.name: spec})
             else:
-                self.output_specs[var.name] = spec
+                self.output_specs.update({var.name: spec})
     
     def _build_value_reference_map(self) -> None:
         for var in self._md.modelVariables:
@@ -274,8 +274,6 @@ class FMUComponent(CoSimComponent):
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 
     def _update_output_states(self, t: Optional[float]=None) -> None:
-            assert self._instance is not None
-
             # For each base type, batch get and set into PortStates as Quantities (REAL) or raw types
             if self._vrs_out_real:
                 vrs = list(self._vrs_out_real.values())

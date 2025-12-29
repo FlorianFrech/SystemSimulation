@@ -56,6 +56,7 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
     """
     ins = sorted(comp.input_specs.keys())
     outs = sorted(comp.output_specs.keys())
+    #print(f"Building label for component '{comp.name}' with inputs {ins} and outputs {outs}")
 
     # Build HTML table with three columns: inputs | name | outputs
     label = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">'
@@ -229,6 +230,30 @@ class SystemGraphVisualizer:
                           tailclip="true", headclip="true",
                           style=style,
                           color=color)
+
+        # Add event connection edges (distinctive styling)
+        for event_conn in self.system.event_connections:
+            src_name = event_conn.src_comp
+            dst_name = event_conn.dst_comp
+            src_anchor = f"{event_conn.src_port}:e"
+            dst_anchor = f"{event_conn.dst_port}:w"
+            
+            # Distinctive styling for event connections
+            label = f""  # No unit label for events
+            style = "dashed"  # Dashed line to distinguish from data connections
+            color = "#ec0b31"  
+            
+            self.dot.edge(tail_name=src_name,
+                          head_name=dst_name,
+                          label=label,
+                          tailport=src_anchor,
+                          headport=dst_anchor,
+                          tailclip="true", headclip="true",
+                          style=style,
+                          color=color,
+                          penwidth="1.5",
+                          arrowhead="odot",  # Open dot arrowhead for events
+                          fontcolor=color)
 
         # Render without auto-opening (view=False)
         self.dot.render(view=False)        

@@ -4,6 +4,7 @@ import numpy as np
 
 from SysSimX.core.base import CoSimComponent
 from SysSimX.core.port import PortSpec, PortType
+from SysSimX.core.events import Event, DenseTime
 from SysSimX.utilities.units import Quantity
 
 # -------------------------------------------------------------------
@@ -45,6 +46,20 @@ class HybridComponent(CoSimComponent):
             
     def get_state(self) -> Dict[str, Any]:
         return {"x": Quantity(self.x, "m")}
+    
+    # Rollback capability
+    def snapshot_state(self):
+        snapshot = {
+            "t": self.t,
+            "x": self.x,
+            "v": self.v
+        }
+        return snapshot
+    
+    def restore_state(self, snapshot) -> None:
+        self.t = snapshot["t"]
+        self.x = snapshot["x"]
+        self.v = snapshot["v"]
     
     def reset(self) -> None:
         super().reset()
@@ -188,3 +203,35 @@ def test_event_crossing_detection_both():
     curr_values = comp.evaluate_event_indicators()
     crossings = comp.detect_event_crossing(previous=prev_values, current=curr_values)
     assert 'test_event' in crossings
+
+def test_event_subscription():
+    comp = HybridComponent('HybridComp', x0=1.0, velocity=-1.0)
+    comp.initialize(t0=0.0)
+
+    test_event = Event(name='test_event',
+                       source=comp.name,
+                       direction=-1)
+    test_indicator = lambda c: c.x
+
+    comp.add_event_indicator(name=test_event.name,
+                             func=test_indicator,
+                             direction=test_event.direction)
+    comp.subscribe_event(event=test_event)
+    assert comp.has_state_events
+    assert test_event.name in comp.event_indicators
+    assert test_event in comp.event_subscriptions
+
+def test_event_subsriptions_invalid():
+    comp = HybridComponent('HybridComp', x0=1.0, velocity=-1.0)
+    comp.initialize(t0=0.0)
+
+    test_event = Event(name='test_event',
+                       source=comp.name,
+                       time=DenseTime(1.0),
+                        direction=-1)
+    try:
+        comp.subscribe_event(event=test_event)
+        assert False, "Expected ValueError for event with fixed time"
+    except ValueError:
+        pass
+                       

@@ -12,6 +12,7 @@ class PortType(str, Enum):
     INT = "int"
     BOOL = "bool"
     STRING = "string"
+    EVENT = "event"  # Special type for event ports (boolean)
 
 Direction = Literal['in', 'out']
 T = TypeVar('T', float, int, bool, str) # types from fmpy.model_description.read_model_description

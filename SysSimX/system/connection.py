@@ -1,6 +1,9 @@
 from typing import Optional, Any, Tuple
 from dataclasses import dataclass
 
+#----------------------------------------------------------------------------
+# Standard Connection
+#----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Connection:
     """
@@ -26,3 +29,13 @@ class Connection:
         Check if the connection is zero-delay (delay == 0).
         """
         return self.delay == 0
+    
+#----------------------------------------------------------------------------
+# Event Connection
+#----------------------------------------------------------------------------
+@dataclass(frozen=True)
+class EventConnection:
+    src_comp: str
+    src_port: str
+    dst_comp: str
+    dst_port: str

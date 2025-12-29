@@ -1,14 +1,17 @@
 from __future__ import annotations
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
+from dataclasses import dataclass
 
 import networkx as nx
 
-from .connection import Connection
+from .connection import Connection, EventConnection
 from . import graph
 from .algorithms.base import Algorithm
 from .algorithms.gauss_seidel import GaussSeidelAlgorithm
+from .algorithms.hybrid_jacobi import HybridJacobiAlgorithm
 from .algorithms.ijcsa import solve_algebraic_scc_ijcsa
 from ..core.base import CoSimComponent
+from ..core.events import Event
 from ..core.port import PortSpec
 from ..core.history import SystemHistory
 
@@ -29,6 +32,7 @@ class System:
         self.name = name
         self.components: Dict[str, CoSimComponent] = {}
         self.connections: List[Connection] = []
+        self.event_connections: List[EventConnection] = []
         self.graph = nx.MultiDiGraph()  # All connections (including delayed)
         self._dag = nx.DiGraph()        # Zero-delay connections only
         
@@ -43,6 +47,7 @@ class System:
         # Pre-computed connection lookups
         self._incoming_by_dst: Dict[str, List[Connection]] = {}
         self._input_sources: Dict[str, Dict[str, Connection]] = {}
+        self._event_targets_by_source: Dict[Tuple[str, str], List[str]] = {}
 
         # Algorithm
         self.algorithm: Algorithm = GaussSeidelAlgorithm()
@@ -51,7 +56,7 @@ class System:
         self.history = SystemHistory(system_name=name)
     
     #----------------------------------------------------------------------------
-    # Algorith
+    # Algorithm
     #----------------------------------------------------------------------------
     def set_algorithm(self, algorithm: Algorithm) -> None:
         """
@@ -125,6 +130,62 @@ class System:
         self._input_sources.clear()
 
     #----------------------------------------------------------------------------
+    # Event Connections
+    #----------------------------------------------------------------------------
+    def _validate_event_connection(self, connection: EventConnection) -> None:
+        if connection.src_comp not in self.components:
+            raise ValueError(f"Event source '{connection.src_comp}' is not in the system.")
+        if connection.dst_comp not in self.components:
+            raise ValueError(f"Event target '{connection.dst_comp}' is not in the system.")
+
+        source = self.components[connection.src_comp]
+        target = self.components[connection.dst_comp]
+        event_name = connection.src_port
+        if event_name not in source.event_indicators:
+            raise KeyError(
+                f"Event '{event_name}' not found on source component '{source.name}'."
+            )
+
+        has_subscription = False
+        for event in target.event_subscriptions:
+            if event.name == event_name:
+                has_subscription = True
+                break
+        
+        if not has_subscription:
+            raise KeyError(
+                f"Target '{target.name}' is not subscribed to event '{source.name}:{event_name}'."
+            )
+
+        for existing in self.event_connections:
+            if existing == connection:
+                raise ValueError(
+                    f"Duplicate event connection: {connection.src_comp}:{connection.event_name} -> {connection.target_comp}"
+                )
+
+    def add_event_connection(self, connection: EventConnection) -> None:
+        self._validate_event_connection(connection)
+        self.event_connections.append(connection)
+        key = (connection.src_comp, connection.src_port)
+        self._event_targets_by_source.setdefault(key, []).append(connection.dst_comp)
+
+    def get_event_targets(self, source_comp: str, event_name: str) -> List[str]:
+        return self._event_targets_by_source.get((source_comp, event_name), []).copy()
+
+    def dispatch_event(self, event: Event, t: float, notify: bool = True) -> List[str]:
+        """
+        Resolve event listeners for a given event and optionally notify them.
+        """
+        if event.source not in self.components:
+            raise ValueError(f"Event source '{event.source}' is not in the system.")
+
+        targets = self.get_event_targets(event.source, event.name)
+        if notify:
+            for comp_name in targets:
+                self.components[comp_name].handle_event([event.name], t)
+        return targets
+
+    #----------------------------------------------------------------------------
     # Graphs
     #----------------------------------------------------------------------------
     def build_graphs(self) -> None:
@@ -141,11 +202,38 @@ class System:
         Compute a parallelizable execution order based on zero-delay dependencies.
         """
         graph.compute_execution_order(self)
+
+    def classify_components(self) -> Dict[str, List[str]]:
+        """
+        Classify components for hybrid co-simulation handling.
+
+        Returns:
+            Dict with keys:
+            - "event_sources": components with indicators (rollback required)
+            - "event_listeners": components subscribed to events only
+            - "continuous_only": components without hybrid capabilities
+        """
+        self.event_sources: List[str] = []
+        self.event_listeners: List[str] = []
+        self.continuous_only: List[str] = []
+
+        for comp in self.components.values():
+            if comp.has_state_events:
+                self.event_sources.append(comp)
+            if comp.has_event_subscriptions:
+                self.event_listeners.append(comp)
+            if not comp.has_state_events and not comp.has_event_subscriptions:
+                self.continuous_only.append(comp)
+        return {
+            "event_sources": self.event_sources,
+            "event_listeners": self.event_listeners,
+            "continuous_only": self.continuous_only,
+        }
     
     #----------------------------------------------------------------------------
     # Simulation Lifecycle
     #----------------------------------------------------------------------------
-    def initialize(self, t0: float, t_end: float) -> None:
+    def initialize(self, t0: float) -> None:
         """
         Initialize all components in the system at start time t0.
         Also build graphs and compute execution order.
@@ -153,11 +241,15 @@ class System:
         """
         # 1) Set simulation time parameters
         self.time = t0
-        self.t_end = t_end
 
         # 2) Initialize all CoSimComponents
         for comp in self.components.values():
             comp.initialize(t0)
+
+        # 2.5) Auto-select hybrid algorithm if needed
+        self.classify_components()
+        if self.event_sources:
+            self.algorithm = HybridJacobiAlgorithm()
         
         # 3) Build connections and compute execution order
         self.build_graphs()
@@ -203,6 +295,7 @@ class System:
         t = t0
         self.t_end = tf
         while t < tf - 1e-12:
+            dt = min(dt, tf - t)
             self.algorithm.step(self, t, dt)
             t += dt
     
@@ -219,4 +312,5 @@ class System:
         history: Dict[str, Dict[str, List[Any]]] = {}
         for comp_name, comp in self.components.items():
             history[comp_name] = comp.get_history_arrays()
+        history['Events'] = self.history.get_all_event_histories()
         return history

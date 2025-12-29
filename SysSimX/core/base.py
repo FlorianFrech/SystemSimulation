@@ -2,9 +2,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, Set, List, Callable
-from .port import PortSpec, PortState
+from .port import PortSpec, PortState, PortType
 from .history import ComponentHistory
-from .events import EventIndicator, _sign
+from .events import EventIndicator, Event, _sign
 
 # -------------------------------------------------------------------
 # CoSimComponent - Base Class for Co-Simulation Components
@@ -45,6 +45,7 @@ class CoSimComponent(ABC):
 
         # Hybrid capabilities
         self.event_indicators: Dict[str, EventIndicator] = {}
+        self.event_subscriptions: List[Event] = []
 
     # -------------------------------------------------------------------
     # Construction of Port States from Specs
@@ -139,7 +140,7 @@ class CoSimComponent(ABC):
         ...
     
     @abstractmethod
-    def _update_output_states(self, t: float) -> None:
+    def _update_output_states(self, t: Optional[float]=None) -> None:
         """
         Subclass hook: read internal state and update self.outputs[...].set(value, t).
         Called automatically after initialize() and do_step().
@@ -207,11 +208,27 @@ class CoSimComponent(ABC):
     # Hybrid Capabilities - Event Indicators and Handling
     # -------------------------------------------------------------------
     def add_event_indicator(self, name: str, func: Callable[["CoSimComponent"], float], direction: int=0) -> None:
+        if not self.supports_rollback:
+            raise RuntimeError(
+                f"Component '{self.name}' must support rollback to register event indicators."
+            )
         if name in self.event_indicators:
             raise KeyError(f"Event indicator '{name}' already exists in component '{self.name}'.")
         if direction not in (-1, 0, 1):
             raise ValueError("Direction must be -1 (falling), 0 (both), or +1 (rising).")
         self.event_indicators[name] = EventIndicator(name, func, direction)
+
+        # Add event port to output specs, outputs, and history
+        event_port_spec = PortSpec(
+            name=name,
+            type=PortType.EVENT,
+            direction="out")
+        self.output_specs.update({event_port_spec.name: event_port_spec})
+        self.outputs[event_port_spec.name] = PortState(event_port_spec)
+        self.outputs[event_port_spec.name].set(False, t=self.t)
+        self.history.add_port(event_port_spec.name)
+        self._update_output_states(self.t)
+        self._record_outputs(self.t)
 
     def evaluate_event_indicators(self) -> Dict[str, float]:
         """
@@ -239,11 +256,11 @@ class CoSimComponent(ABC):
             
             # Check for crossing according to indicator direction
             if indicator.direction == 0:  # Any direction
-                crossed = prev_sign * curr_sign < 0
+                crossed = prev_sign != curr_sign
             elif indicator.direction == 1:  # Rising only
-                crossed = prev_sign < 0 and curr_sign > 0
+                crossed = prev_sign < 0 and curr_sign >= 0
             elif indicator.direction == -1:  # Falling only
-                crossed = prev_sign > 0 and curr_sign < 0
+                crossed = prev_sign > 0 and curr_sign <= 0
             
             if crossed:
                 events.append(name)
@@ -254,6 +271,21 @@ class CoSimComponent(ABC):
     def has_state_events(self) -> bool:
         """True if the component currently has one or more state event indicators."""
         return bool(self.event_indicators)
+
+    def subscribe_event(self, event: Event) -> None:
+        """Register an explicit event subscription (time must be omitted)."""
+        if event.time is not None:
+            raise ValueError("Subscription events must not include a time.")
+        for existing in self.event_subscriptions:
+            if existing.name == event.name and existing.source == event.source:
+                raise KeyError(
+                    f"Event subscription '{event.source}:{event.name}' already exists in component '{self.name}'."
+                )
+        self.event_subscriptions.append(event)
+
+    @property
+    def has_event_subscriptions(self) -> bool:
+        return bool(self.event_subscriptions)
 
     # -------------------------------------------------------------------
     # Hybrid Capabilities - State Snapshots and Rollback
@@ -320,3 +352,13 @@ class CoSimComponent(ABC):
     @property
     def has_direct_feedthrough(self) -> bool:
         return any(self.direct_feedthrough.values())
+    
+    # -------------------------------------------------------------------
+    # General Representation
+    # -------------------------------------------------------------------
+    def __repr__(self):
+        repr = f"<CoSimComponent name='{self.name}'>"
+        return repr
+    
+    def __str__(self):
+        return self.__repr__()
