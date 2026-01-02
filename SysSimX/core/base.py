@@ -73,6 +73,10 @@ class CoSimComponent(ABC):
             if name not in self.parameters:
                 raise KeyError(f"Unknown parameter '{name}' in component '{self.name}'")
             self.parameters[name] = value
+    
+    def get_parameters(self) -> Dict[str, Any]:
+        """Return current parameters as dict."""
+        return self.parameters.copy()
 
     # -------------------------------------------------------------------
     # Initialization

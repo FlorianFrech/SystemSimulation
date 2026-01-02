@@ -4,6 +4,9 @@ model Demo_DrivenWithWall
   /* 
   A model of a controlled pendulum system with integrator reset on wall contact.
   */
+  
+  // Parameters
+  parameter Boolean useReset(start=false, fixed=false);
 
   // Components
   Reference           reference;
@@ -49,7 +52,11 @@ equation
   end when;
   
   // Reset integrator on wall impact
-  pid.resetI = contactRisingEdge;
+  if useReset then
+    pid.resetI = contactRisingEdge;
+  else
+    pid.resetI = false;
+ end if;
   
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.01)

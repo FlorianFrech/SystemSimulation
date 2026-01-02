@@ -9,7 +9,7 @@ from IPython.display import display
 from ..system.system import System
 from ..system.connection import Connection
 from ..core.base import CoSimComponent
-from ..core.port import PortSpec
+from ..core.port import PortSpec, PortType
 
 def _auto_color_for_group(group_name: str, base_saturation: float = 0.35, base_lightness: float = 0.85) -> str:
     """
@@ -70,19 +70,29 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
     
     # Content row
     label += '<TR>'
-    
+
+    # Get event ports for special formatting
+    events_in_ports = [port.name for port in comp.input_specs.values() if port.type == PortType.EVENT]
+    event_out_ports = [port.name for port in comp.output_specs.values() if port.type == PortType.EVENT]
+
     # Input column (left side)
     if len(ins) == 0:
         label += '<TD></TD>'
     elif len(ins) == 1:
         # Single input - just one cell
         port_name = ins[0]
-        label += f'<TD PORT="{port_name}">{port_name}</TD>'
+        if port_name in events_in_ports:
+            label += f'<TD PORT="{port_name}"><FONT COLOR="#0b84ff"><B>{port_name}</B></FONT></TD>'
+        else:
+            label += f'<TD PORT="{port_name}">{port_name}</TD>'
     else:
         # Multiple inputs - nested table for vertical stacking
         label += '<TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2">'
         for port_name in ins:
-            label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
+            if port_name in events_in_ports:
+                label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#0b84ff"><B>{port_name}</B></FONT></TD></TR>'
+            else:
+                label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
         label += '</TABLE></TD>'
     
     # Component name (middle) with execution order below
@@ -95,8 +105,11 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
     elif len(outs) == 1:
         # Single output - just one cell
         port_name = outs[0]
+        is_event = port_name in event_out_ports
         has_feedthrough = port_name in comp.direct_feedthrough and comp.direct_feedthrough[port_name]
-        if has_feedthrough:
+        if is_event:
+            label += f'<TD PORT="{port_name}"><FONT COLOR="#0b84ff"><B>{port_name}</B></FONT></TD>'
+        elif has_feedthrough:
             label += f'<TD PORT="{port_name}"><FONT COLOR="#ef4444"><B>{port_name}</B></FONT></TD>'
         else:
             label += f'<TD PORT="{port_name}">{port_name}</TD>'
@@ -104,8 +117,11 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
         # Multiple outputs - nested table for vertical stacking
         label += '<TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2">'
         for port_name in outs:
+            is_event = port_name in event_out_ports
             has_feedthrough = port_name in comp.direct_feedthrough and comp.direct_feedthrough[port_name]
-            if has_feedthrough:
+            if is_event:
+                label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#0b84ff"><B>{port_name}</B></FONT></TD></TR>'
+            elif has_feedthrough:
                 label += f'<TR><TD PORT="{port_name}"><FONT COLOR="#ef4444"><B>{port_name}</B></FONT></TD></TR>'
             else:
                 label += f'<TR><TD PORT="{port_name}">{port_name}</TD></TR>'
@@ -181,6 +197,37 @@ class SystemGraphVisualizer:
                         },
                     )
         palette = _build_palette(self.system)
+
+        # Add legend as a subgraph
+        with self.dot.subgraph(name="cluster_legend") as legend:
+            legend.attr(
+                label="Legend",
+                style="rounded",
+                color="#d1d5db",
+                bgcolor="#f9fafb",
+                fontname="Helvetica-Bold",
+                fontsize="10",
+                penwidth="1.5",
+                margin="8",
+                rank="sink"
+            )
+            
+            # Create legend table
+            legend_label = '''<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2" CELLPADDING="2">
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Edges:</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">───&gt; Data flow</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff">┄┄┄o Event connection</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Ports:</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>red</B></FONT> Direct feedthrough</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>blue</B></FONT> Event port</TD></TR>
+            </TABLE>
+            >'''
+            
+            legend.node("legend_node", 
+                       label=legend_label,
+                       shape="plaintext",
+                       fontsize="8")
         
         # Add nodes grouped by their group attribute
         grouped_names = set()
@@ -241,7 +288,7 @@ class SystemGraphVisualizer:
             # Distinctive styling for event connections
             label = f""  # No unit label for events
             style = "dashed"  # Dashed line to distinguish from data connections
-            color = "#ec0b31"  
+            color = "#0b84ff"  
             
             self.dot.edge(tail_name=src_name,
                           head_name=dst_name,
@@ -251,7 +298,7 @@ class SystemGraphVisualizer:
                           tailclip="true", headclip="true",
                           style=style,
                           color=color,
-                          penwidth="1.5",
+                          penwidth="2.0",
                           arrowhead="odot",  # Open dot arrowhead for events
                           fontcolor=color)
 

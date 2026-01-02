@@ -406,7 +406,9 @@ class FMUComponent(CoSimComponent):
 # Helper functions
 #----------------------------------------------------------------------------
 def _port_type_from_var(var: ModelVariable) -> PortType:
-    if   var._python_type == float: return PortType.REAL
+    port_tyoe = None
+    if   var.variability == "discrete": return PortType.EVENT
+    elif var._python_type == float: return PortType.REAL
     elif var._python_type == int:   return PortType.INT
     elif var._python_type == bool:  return PortType.BOOL
     elif var._python_type == str:   return PortType.STRING
