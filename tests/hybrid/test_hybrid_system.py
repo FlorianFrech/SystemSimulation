@@ -10,7 +10,7 @@ from SysSimX.core.events import EventLocator, Event
 
 from SysSimX.system.connection import EventConnection
 from SysSimX.system.system import System
-from SysSimX.system.algorithms.hybrid_jacobi import HybridJacobiAlgorithm
+from SysSimX.system.algorithms.hybrid import HybridAlgorithm
 
 from SysSimX.components.fmu_comp import FMUComponent
 
@@ -179,7 +179,7 @@ def test_hybrid_system_setup():
     assert system.event_sources == [src_comp]
     assert system.event_listeners == [listener_comp]
     assert system.continuous_only == []
-    assert isinstance(system.algorithm, HybridJacobiAlgorithm)
+    assert isinstance(system.algorithm, HybridAlgorithm)
 
 def test_hybrid_system_run():
     system, src_comp, listener_comp, event = setup_hybrid_system()

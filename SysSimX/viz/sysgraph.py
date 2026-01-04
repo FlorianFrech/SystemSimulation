@@ -72,8 +72,9 @@ def _record_label_for_component(comp: CoSimComponent, execution_idx: int = -1) -
     label += '<TR>'
 
     # Get event ports for special formatting
-    events_in_ports = [port.name for port in comp.input_specs.values() if port.type == PortType.EVENT]
-    event_out_ports = [port.name for port in comp.output_specs.values() if port.type == PortType.EVENT]
+    isEventPort = lambda port: port.type != PortType.REAL
+    events_in_ports = [port.name for port in comp.input_specs.values() if isEventPort(port)]
+    event_out_ports = [port.name for port in comp.output_specs.values() if isEventPort(port)]
 
     # Input column (left side)
     if len(ins) == 0:

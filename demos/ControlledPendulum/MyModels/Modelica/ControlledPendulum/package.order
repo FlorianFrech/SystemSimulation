@@ -12,3 +12,5 @@ Demo_Driven_Coupled
 Demo_DrivenWithWall
 Demo_Driven
 AngleEncoder
+PendulumWithWallDiscrete
+Demo_DrivenWithWallDiscrete

@@ -273,7 +273,7 @@ class FMUComponent(CoSimComponent):
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 
-    def _update_output_states(self, t: Optional[float]=None) -> None:
+    def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[]) -> None:
             # For each base type, batch get and set into PortStates as Quantities (REAL) or raw types
             if self._vrs_out_real:
                 vrs = list(self._vrs_out_real.values())
@@ -406,9 +406,7 @@ class FMUComponent(CoSimComponent):
 # Helper functions
 #----------------------------------------------------------------------------
 def _port_type_from_var(var: ModelVariable) -> PortType:
-    port_tyoe = None
-    if   var.variability == "discrete": return PortType.EVENT
-    elif var._python_type == float: return PortType.REAL
+    if var._python_type == float: return PortType.REAL
     elif var._python_type == int:   return PortType.INT
     elif var._python_type == bool:  return PortType.BOOL
     elif var._python_type == str:   return PortType.STRING

@@ -8,7 +8,7 @@ from .connection import Connection, EventConnection
 from . import graph
 from .algorithms.base import Algorithm
 from .algorithms.gauss_seidel import GaussSeidelAlgorithm
-from .algorithms.hybrid_jacobi import HybridJacobiAlgorithm
+from .algorithms.hybrid import HybridAlgorithm
 from .algorithms.ijcsa import solve_algebraic_scc_ijcsa
 from ..core.base import CoSimComponent
 from ..core.events import Event
@@ -180,6 +180,7 @@ class System:
             raise ValueError(f"Event source '{event.source}' is not in the system.")
 
         targets = self.get_event_targets(event.source, event.name)
+        print(f"Dispatching event '{event.name}' from '{event.source}' to targets: {targets}")
         if notify:
             for comp_name in targets:
                 self.components[comp_name].handle_event([event.name], t)
@@ -249,7 +250,7 @@ class System:
         # 2.5) Auto-select hybrid algorithm if needed
         self.classify_components()
         if self.event_sources:
-            self.algorithm = HybridJacobiAlgorithm()
+            self.algorithm = HybridAlgorithm()
         
         # 3) Build connections and compute execution order
         self.build_graphs()

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Tuple, Any
 
 from .base import Algorithm
+from .gauss_seidel import GaussSeidelAlgorithm
 from .ijcsa import solve_algebraic_scc_ijcsa
 from ...core.events import Event
 
@@ -12,16 +13,20 @@ if TYPE_CHECKING:
     from ...core.base import CoSimComponent
 
 
-@dataclass
-class HybridJacobiAlgorithm(Algorithm):
+#@dataclass
+class HybridAlgorithm(Algorithm):
     """
-    Hybrid Jacobi algorithm with frozen inputs during a macro step.
+    Hybrid co-simulation algorithm which is using a Jacobi approach for event detection and localization.
+    A Gauss-Seidel approach is used when no events are detected, and for stepping all components to the event time.
+    Algebraic loops are solved using the IJCSA method before stepping and after handling events.
     """
-    name: str = "Hybrid-Jacobi"
-    tol_value: float = 1e-8
-    max_iter: int = 50
-    sign_tolerance: float = 1e-10
-    tol_time: float = 1e-10
+    def __init__(self):
+        self.name: str = "Hybrid-Algorithm"
+        self.tol_value: float = 1e-8
+        self.max_iter: int = 50
+        self.sign_tolerance: float = 1e-10
+        self.tol_time: float = 1e-10
+        self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
 
     def step(self, system: "System", t: float, dt: float) -> None:
         event_sources = system.event_sources
@@ -41,7 +46,7 @@ class HybridJacobiAlgorithm(Algorithm):
 
             # 3) If no crossings, do a full step and exit
             if not crossings:
-                self._step_all(system, t_left, t_right - t_left)
+                self.gauss_seidel_algorithm.step(system, t_left, t_right - t_left)
                 return
 
             # 4) Locate event time
@@ -56,18 +61,18 @@ class HybridJacobiAlgorithm(Algorithm):
             for comp_name, event_name in event_pairs:
                 system.history.record_event(comp_name, event_name, t_event)
 
-            print(f"\n{'='*60}")
+            print(f"{'='*80}")
             print(f"Event(s) detected in interval [{t_left:.8f}, {t_right:.8f}]")
             print(f"Located at t={t_event:.8f}")
             print(f"Events: {event_pairs}")
-            print(f"{'='*60}\n")
 
             # 5) Step to event time
-            self._step_all(system, t_left, t_event - t_left)
+            self.gauss_seidel_algorithm.step(system, t_left, t_event - t_left)
 
             # 6) Dispatch events: components handle events internally
             for comp_name, event_name in event_pairs:
                 system.dispatch_event(Event(name=event_name, source=comp_name), t_event)
+            print(f"{'='*80}\n")
 
             # 7) Prepare for next interval
             self._prepare_inputs(system, t_event)
@@ -76,6 +81,9 @@ class HybridJacobiAlgorithm(Algorithm):
             t_left = t_event
 
     def _prepare_inputs(self, system: "System", t: float) -> None:
+        """
+        Set inputs for all generations and solve algebraic loops.
+        """
         for gen in system.execution_order:
             system._set_inputs_for_generation(gen, t)
             gen_set = set(gen)
@@ -83,26 +91,21 @@ class HybridJacobiAlgorithm(Algorithm):
                 if set(loop).issubset(gen_set):
                     solve_algebraic_scc_ijcsa(system, loop, t)
 
-    def _step_all(self, system: "System", t: float, dt: float) -> None:
-        for gen in system.execution_order:
-            for comp_name in gen:
-                system.components[comp_name].do_step(t, dt)
-
-    def _jacobi_step(self, system: "System", t: float, dt: float) -> None:
-        self._prepare_inputs(system, t)
-        self._step_all(system, t, dt)
-
-    def _detect_crossings(
-        self,
-        event_sources: List["CoSimComponent"],
-        t_left: float,
-        t_right: float,
-    ) -> Tuple[
-        Dict[str, Any],
-        Dict[str, Dict[str, Any]],
-        Dict[str, Dict[str, float]],
-        List[Tuple[str, str]],
-    ]:
+    def _detect_crossings(self, event_sources: List["CoSimComponent"],
+                          t_left: float, t_right: float) -> Tuple[Dict[str, Any],              # snapshots
+                                                                  Dict[str, Dict[str, Any]],   # input_cache
+                                                                  Dict[str, Dict[str, float]], # indicators_left
+                                                                  List[Tuple[str, str]]]:      # crossings
+        """
+        Detect event crossings in the interval [t_left, t_right] for the given event source components.
+        
+        Returns:
+            
+            - snapshots: state snapshots of components at t_left
+            - input_cache: cached inputs of components at t_left
+            - indicators_left: event indicator values at t_left
+            - crossings: list of (component name, event name) tuples where crossings were detected
+        """
         snapshots: Dict[str, Any] = {}
         input_cache: Dict[str, Dict[str, Any]] = {}
         indicators_left: Dict[str, Dict[str, float]] = {}
@@ -136,15 +139,16 @@ class HybridJacobiAlgorithm(Algorithm):
 
         return snapshots, input_cache, indicators_left, crossings
 
-    def _locate_event_time(
-        self,
-        event_sources: List["CoSimComponent"],
-        snapshots: Dict[str, Any],
-        input_cache: Dict[str, Dict[str, Any]],
-        indicators_left: Dict[str, Dict[str, float]],
-        t_left: float,
-        t_right: float,
-    ) -> Tuple[float, List[Tuple[str, str]]]:
+    def _locate_event_time(self,
+                           event_sources: List["CoSimComponent"],
+                           snapshots: Dict[str, Any],
+                           input_cache: Dict[str, Dict[str, Any]],
+                           indicators_left: Dict[str, Dict[str, float]],
+                           t_left: float, t_right: float) -> Tuple[float, List[Tuple[str, str]]]:
+        """
+        Locate the event time within [t_left, t_right] using bisection.
+        Returns the located event time and the list of (component name, event name) tuples.
+        """
         left = t_left
         right = t_right
         indicators_at_left: Dict[str, Dict[str, float]] = indicators_left
@@ -227,14 +231,15 @@ class HybridJacobiAlgorithm(Algorithm):
 
         return return_time, events_at_mid if events_at_mid else last_events
 
-    def _evaluate_indicators_at(
-        self,
-        event_sources: List["CoSimComponent"],
-        snapshots: Dict[str, Any],
-        input_cache: Dict[str, Dict[str, Any]],
-        t_left: float,
-        t_target: float,
-    ) -> Dict[str, Dict[str, float]]:
+    def _evaluate_indicators_at(self,
+                                event_sources: List["CoSimComponent"],
+                                snapshots: Dict[str, Any],
+                                input_cache: Dict[str, Dict[str, Any]],
+                                t_left: float, t_target: float) -> Dict[str, Dict[str, float]]:
+        """
+        Evaluate event indicators for all event source components at t_target
+        starting from snapshots and input caches at t_left.
+        """
         indicators: Dict[str, Dict[str, float]] = {}
         for comp in event_sources:
             indicators[comp.name] = self._evaluate_component_indicators(
@@ -242,19 +247,23 @@ class HybridJacobiAlgorithm(Algorithm):
             )
         return indicators
 
-    def _evaluate_component_indicators(
-        self,
-        comp: "CoSimComponent",
-        snapshot: Any,
-        inputs: Dict[str, Any],
-        t_left: float,
-        t_target: float,
-    ) -> Dict[str, float]:
+    def _evaluate_component_indicators(self,
+                                       comp: "CoSimComponent",
+                                       snapshot: Any,
+                                       inputs: Dict[str, Any],
+                                       t_left: float, t_target: float) -> Dict[str, float]:
+        """
+        Evaluate event indicators for a single component at t_target
+        starting from snapshot and input cache at t_left.
+        """
         self._restore_with_inputs(comp, snapshot, inputs, t_left)
         comp.do_step(t_left, t_target - t_left)
         return comp.evaluate_event_indicators()
 
     def _capture_inputs(self, comp: "CoSimComponent") -> Dict[str, Any]:
+        """
+        Capture the current inputs of the component.
+        """
         inputs: Dict[str, Any] = {}
         for name, port in comp.inputs.items():
             value = port.get()
@@ -262,13 +271,14 @@ class HybridJacobiAlgorithm(Algorithm):
                 inputs[name] = value
         return inputs
 
-    def _restore_with_inputs(
-        self,
-        comp: "CoSimComponent",
-        snapshot: Any,
-        inputs: Dict[str, Any],
-        t: float,
-    ) -> None:
+    def _restore_with_inputs(self,
+                             comp: "CoSimComponent",
+                             snapshot: Any,
+                             inputs: Dict[str, Any],
+                             t: float) -> None:
+        """
+        Restore the component's state from snapshot and set its inputs.
+        """
         try:
             comp.restore_state(snapshot, t=t)
         except TypeError:
