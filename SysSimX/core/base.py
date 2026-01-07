@@ -46,6 +46,8 @@ class CoSimComponent(ABC):
         # Hybrid capabilities
         self.event_indicators: Dict[str, EventIndicator] = {}
         self.event_subscriptions: List[Event] = []
+        self.event_annotations: Dict[str, Dict[str, Any]] = {}
+        self.event_commutativity: Dict[Tuple[str, str], bool] = {}
 
     # -------------------------------------------------------------------
     # Construction of Port States from Specs

@@ -104,10 +104,8 @@ class HybridAlgorithm(Algorithm):
                     for comp in event_sources
                 }
                 
-                # c) Dispatch events
-                for comp_name, event_name in event_pairs:
-                    system.dispatch_event(Event(name=event_name, source=comp_name), current_time.t)
-                    all_handled_events.add((comp_name, event_name))
+                # c) Handle events
+                self.handle_events(system, event_pairs, current_time)
 
                 # d) Update inputs and solve algebraic loops
                 self._prepare_inputs(system, current_time.t)
@@ -122,7 +120,7 @@ class HybridAlgorithm(Algorithm):
                 new_events = []
                 for comp in event_sources:
                     events = comp.detect_event_crossing(
-                        indicators_left[comp.name],
+                        indicators_before_handling[comp.name],
                         indicators_after_handling[comp.name],
                         sign_tolerance=self.sign_tolerance,
                     )
@@ -260,6 +258,7 @@ class HybridAlgorithm(Algorithm):
         left = t_left
         right = t_right
         t_left_ref = t_left # Reference time for current snapshots
+        t_event = t_right   # Default event time if not found
 
         # 2) Indicator values at boundaries
         indicators_left: Dict[str, Dict[str, float]] = indicators_left
@@ -275,6 +274,7 @@ class HybridAlgorithm(Algorithm):
         for iteration in range(self.max_iter):
             # 1) Check termination: interval width
             if right - left <= self.tol_time:
+                t_event = right
                 break
 
             # 2) Bisect the interval
@@ -310,6 +310,7 @@ class HybridAlgorithm(Algorithm):
                 indicators_left = indicators_mid
                 working_snapshots = {comp.name: comp.snapshot_state() for comp in event_sources}
                 t_left_ref = mid
+                t_event = right
 
         # 6) Collect all events at located time
         all_events_at_t = []
@@ -395,3 +396,111 @@ class HybridAlgorithm(Algorithm):
                 input_cache[comp.name],
                 t_left
             )
+    #--------------------------------------------------------------------------
+    # Event Handling
+    #--------------------------------------------------------------------------
+    def handle_events(self,
+                      system: "System",
+                      event_pairs: List[Tuple[str, str]],
+                      current_time: DenseTime) -> None:
+        """
+        Handles the event_pairs that occur at current_time in the given system.
+        If multiple events occur simultaneously, checks for conflicts based on event annotations.
+        Ensures that the result is indepnedent of the order of event handling when possible.
+        """
+        # 1) Group for each listener component the events to be handled
+        events_by_component: Dict[str, List[str]] = {listener.name: [] for listener in system.event_listeners}
+        for listener_name in events_by_component.keys():
+            for event_pair in event_pairs:
+                if listener_name in system._event_targets_by_source.get(event_pair, []):
+                    events_by_component.setdefault(listener_name, []).append(event_pair[1])
+        print(f"\nEvents grouped by component for handling: {events_by_component}")
+
+        # 2) Check for conflicts in each component
+        for comp_name, event_names in events_by_component.items():
+            if len(event_names) > 1:
+                comp = system.components[comp_name]
+                if not self._check_event_commutativity(comp, event_names):
+                    raise RuntimeError(
+                        f"Non-commutative events {event_names} on component {comp_name} detected. "
+                        f"Cannot handle simultaneously at {current_time}.")
+
+        # 3) Dispatch events
+        for comp_name, event_name in event_pairs:
+            system.dispatch_event(Event(name=event_name, source=comp_name), current_time.t)
+
+    def _check_event_commutativity(self,
+                                    comp: "CoSimComponent",
+                                    event_names: List[str]) -> bool:
+            """
+            Verify that event handlers commute (order of execution does not matter) for the given component.
+
+            Methods: 
+            1. Check annotations that specify which states/outputs are modified by each event.
+            2. Run all permutations and compare results dynamically (requires state rollback).
+            """
+            if self.verbose: 
+                print(f"\nChecking commutativity for events {event_names} on component {comp.name}...")
+            # Method 1) Annotation-based check
+            if comp.event_commutativity is not None:
+                for i, event1 in enumerate(event_names):
+                    for event2 in event_names[i+1:]:
+                        if not comp.event_commutativity.get((event1, event2), False):
+                            return False
+                if self.verbose:
+                    print(f"Event handlers {event_names} on component {comp.name} verified as commutative via annotations.")
+                return True
+
+            # Method 2) Dynamic check via permutations
+            return self._verify_event_commutativity_dynamically(comp, event_names)
+
+    def _verify_event_commutativity_dynamically(self,
+                                                comp: "CoSimComponent",
+                                                event_names: List[str]) -> bool:
+        """
+        Executes all permutations of event handling and checks if the final state is the same.
+        This requires the component to support state snapshotting and restoration.
+        """
+        from itertools import permutations
+
+        # 1) Save initial state
+        initial_snapshot = comp.snapshot_state()
+
+        # 2) Iterate over all orderings
+        results = []
+        for ordering in permutations(event_names):
+            # a) Restore initial state
+            comp.restore_state(initial_snapshot)
+
+            # b) Handle events in the specified order
+            for event_name in ordering:
+                comp._handle_events_internal(Event(name=event_name, source=comp.name))
+                comp._update_output_states(event_name=event_name)
+            
+            # c) Record final state
+            final_state = comp.get_state()
+            results.append(final_state)
+        
+        # 3) Check if all results are identical
+        comp.restore_state(initial_snapshot)  # Restore to initial state
+        first_result = results[0]
+        if all(self._states_equal(first_result, other) for other in results[1:]):
+            if self.verbose:
+                print(f"Event handlers {event_names} on component {comp.name} verified as commutative via dynamic check.")
+            return True
+        else:
+            if self.verbose:
+                print(f"Event handlers {event_names} on component {comp.name} are non-commutative (dynamic check).")
+            return False
+
+    def _states_equal(self, state1: Dict, state2: Dict) -> bool:
+        """
+        Compares two component states for equality.
+        This method may need to be customized based on the component's state structure.
+        """
+        if state1.keys() != state2.keys():
+            return False
+        for key in state1.keys():
+            if abs(state1[key] - state2[key]) > self.tol_value:
+                return False
+        return True

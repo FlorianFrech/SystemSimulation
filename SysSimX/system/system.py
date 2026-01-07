@@ -180,7 +180,7 @@ class System:
             raise ValueError(f"Event source '{event.source}' is not in the system.")
 
         targets = self.get_event_targets(event.source, event.name)
-        print(f"Dispatching event '{event.name}' from '{event.source}' to targets: {targets}")
+        print(f"\nDispatching event '{event.name}' from '{event.source}' to targets: {targets}")
         if notify:
             for comp_name in targets:
                 self.components[comp_name].handle_event([event.name], t)
