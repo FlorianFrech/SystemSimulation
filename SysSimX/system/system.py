@@ -204,7 +204,7 @@ class System:
         """
         graph.compute_execution_order(self)
 
-    def classify_components(self) -> Dict[str, List[str]]:
+    def classify_components(self) -> Dict[str, List[CoSimComponent]]:
         """
         Classify components for hybrid co-simulation handling.
 
@@ -214,9 +214,9 @@ class System:
             - "event_listeners": components subscribed to events only
             - "continuous_only": components without hybrid capabilities
         """
-        self.event_sources: List[str] = []
-        self.event_listeners: List[str] = []
-        self.continuous_only: List[str] = []
+        self.event_sources: List[CoSimComponent] = []
+        self.event_listeners: List[CoSimComponent] = []
+        self.continuous_only: List[CoSimComponent] = []
 
         for comp in self.components.values():
             if comp.has_state_events:

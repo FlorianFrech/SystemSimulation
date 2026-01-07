@@ -19,7 +19,7 @@ model Demo_Driven
   AngleEncoder        sensor_state( q_min = -reference.amplitude,
                                     q_max =  reference.amplitude);
   
-  PID_Continuous       pid(k=10, Ti=0.01, Td=0.75, Nd=10);
+  PID_Continuous       pid(Nd=10, Td=0.2, Ti=0.1, k=30);
   
   Drive               drive;
   

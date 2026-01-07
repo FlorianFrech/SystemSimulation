@@ -17,7 +17,7 @@ model Demo_DrivenWithWallDiscrete
   AngleEncoder        sensor_state( q_min = -reference.amplitude,
                                     q_max =  reference.amplitude);
   
-  PID_Continuous      pid(Nd=10, Td=0.05, Ti=0.6, k=10);
+  PID_Continuous      pid(Nd=10, Td=0.1, Ti=0.2, k=10);
   
   Drive               drive;
   

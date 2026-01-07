@@ -230,9 +230,9 @@ class CoSimComponent(ABC):
         self.output_specs.update({event_port_spec.name: event_port_spec})
         self.outputs[event_port_spec.name] = PortState(event_port_spec)
         self.outputs[event_port_spec.name].set(False, t=self.t)
-        #self.history.add_port(event_port_spec.name)
+        self.history.add_port(event_port_spec.name)
         self._update_output_states(self.t)
-        #self._record_outputs(self.t)
+        self._record_outputs(self.t)
 
     def evaluate_event_indicators(self) -> Dict[str, float]:
         """

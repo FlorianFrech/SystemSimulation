@@ -36,7 +36,7 @@ equation
   e = ref - y;
 
   // Integrator and derivative filters (event-free ODEs)
-  der(xi)  = e;
+  der(xi)   = e;
   der(x_de) = (e - x_de)/Tdf;
   der(x_dy) = (y - x_dy)/Tdf;
 

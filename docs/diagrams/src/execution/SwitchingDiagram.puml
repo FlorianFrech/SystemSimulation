@@ -2,7 +2,12 @@
 
 ' Color scheme - clean white background
 skinparam backgroundColor white
-skinparam shadowing false
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 300
+skinparam participantPadding 100
+skinparam wrapWidth 0
+skinparam maxMessageSize 500
 
 participant System
 participant PendulumMultiComp as Multi

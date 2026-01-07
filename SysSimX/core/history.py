@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import csv
 
+from .events import DenseTime
 from ..utilities.units import ureg, Quantity
 
 # -------------------------------------------------------------------
@@ -201,7 +202,7 @@ class SystemHistory:
         """Get all component histories as dictionary."""
         return dict(self._component_histories)
 
-    def record_event(self, component_name: str, event_name: str, t: float) -> None:
+    def record_event(self, component_name: str, event_name: str, t: DenseTime) -> None:
         """Record an event occurrence time."""
         key = (component_name, event_name)
         if key not in self._event_histories:
