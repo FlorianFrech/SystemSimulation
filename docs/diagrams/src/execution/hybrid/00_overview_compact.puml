@@ -1,0 +1,63 @@
+@startuml Hybrid_CoSim_Compact
+
+!include ../includes/common_styling.puml
+
+title Hybrid Co-Simulation Algorithm
+
+participant "Master" as M
+participant "Event\nSources" as ES
+participant "Listeners" as L
+
+== Macro-Step [t, t+dt] ==
+
+note over M: t_left = t, t_right = t+dt
+
+loop while t_left < t_right
+
+    M -> ES: **1. Prepare inputs** at t_left
+    activate ES
+    ES --> M: ready
+    deactivate ES
+    
+    M -> ES: **2. Detect events** [t_left, t_right]
+    activate ES
+    ES -> ES: snapshot → trial step → detect crossings → restore
+    ES --> M: crossings found?
+    deactivate ES
+    
+    alt No events
+        M -> M: **Gauss-Seidel step**\n[t_left, t_right]
+        note over M: t_left = t_right\n**EXIT LOOP**
+        
+    else Events detected
+        M -> M: **3. Bisection:**\nLocate t_event
+        
+        M -> ES: **4. Step all**\n[t_left, t_event]
+        activate ES
+        deactivate ES
+        M -> L: step to t_event
+        activate L
+        deactivate L
+        
+        loop **5. Superdense time** (t_event, n)
+            M -> L: **Handle events**
+            activate L
+            L -> L: _handle_events_internal()
+            L --> M: done
+            deactivate L
+            
+            M -> M: Detect new events?
+            
+            alt New events
+                note over M: n ← n+1
+            else No new events
+                note over M: Exit microstep loop
+            end
+        end
+        
+        M -> M: t_left ← t_event
+        note over M: **Continue loop**
+    end
+end
+
+@enduml

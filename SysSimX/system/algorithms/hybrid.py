@@ -17,9 +17,13 @@ if TYPE_CHECKING:
 #--------------------------------------------------------------------------
 class HybridAlgorithm(Algorithm):
     """
-    Hybrid co-simulation algorithm which is using a Jacobi approach for event detection and localization.
-    A Gauss-Seidel approach is used when no events are detected, and for stepping all components to the event time.
-    Algebraic loops are solved using the IJCSA method before stepping and after handling events.
+    Hybrid co-simulation algorithm which supports
+        - event detection via evaluation of event indicators
+        - event time localization using bisection
+        - iterative event handling at superdense time points
+        - checking for commutativity of event handlers to ensure consistent results
+    
+    In absence of events, falls back to Gauss-Seidel algorithm for continuous integration.
     """
     def __init__(self):
         self.name: str = "Hybrid-Algorithm"
@@ -442,7 +446,7 @@ class HybridAlgorithm(Algorithm):
             if self.verbose: 
                 print(f"\nChecking commutativity for events {event_names} on component {comp.name}...")
             # Method 1) Annotation-based check
-            if comp.event_commutativity is not None:
+            if comp.event_commutativity:
                 for i, event1 in enumerate(event_names):
                     for event2 in event_names[i+1:]:
                         if not comp.event_commutativity.get((event1, event2), False):
@@ -452,6 +456,7 @@ class HybridAlgorithm(Algorithm):
                 return True
 
             # Method 2) Dynamic check via permutations
+            print('Verifying dynamically ...')
             return self._verify_event_commutativity_dynamically(comp, event_names)
 
     def _verify_event_commutativity_dynamically(self,
@@ -465,24 +470,26 @@ class HybridAlgorithm(Algorithm):
 
         # 1) Save initial state
         initial_snapshot = comp.snapshot_state()
+        t = comp.t
 
         # 2) Iterate over all orderings
         results = []
+        print(event_names)
         for ordering in permutations(event_names):
             # a) Restore initial state
-            comp.restore_state(initial_snapshot)
+            comp.restore_state(initial_snapshot, t=t)
 
             # b) Handle events in the specified order
             for event_name in ordering:
-                comp._handle_events_internal(Event(name=event_name, source=comp.name))
-                comp._update_output_states(event_name=event_name)
+                comp._handle_events_internal([event_name], t=t)
+                comp._update_output_states()
             
             # c) Record final state
             final_state = comp.get_state()
             results.append(final_state)
         
         # 3) Check if all results are identical
-        comp.restore_state(initial_snapshot)  # Restore to initial state
+        comp.restore_state(initial_snapshot, t=t)  # Restore to initial state
         first_result = results[0]
         if all(self._states_equal(first_result, other) for other in results[1:]):
             if self.verbose:
