@@ -1,5 +1,4 @@
-from ast import If
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 
 import scipy as sp
 
@@ -26,7 +25,8 @@ from ipywidgets import Layout, HBox, VBox, HTML
 # Port specifications
 #----------------------------------------------------------------------------   
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N.m")
+    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N.m"),
+    "omega_invert": PortSpec("omega_invert", PortType.EVENT, direction="in")
 }
 
 OUTPUT_SPECS = {
@@ -376,10 +376,9 @@ class FEMPendulum(FEMComponent):
     def set_state(self, state: Dict[str, Any], t: float):
         """
         Reset and initialize the FEM pendulum state from a reference rigid-body state.
-        Args:
-            state (Dict[str, Any]): State dictionary with keys 'q', 'omega', 'alpha', 'torque'.
-            t (float): Current simulation time.
         """
+        self.t = t
+        
         if 'q' in state:
             theta = state['q']['value']
             if hasattr(theta, 'magnitude'): theta = theta.magnitude
@@ -397,24 +396,34 @@ class FEMPendulum(FEMComponent):
             self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
             self._gf_uold.vec[:] = self._gf_u.vec
             self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-            # if self._with_contact:
-            #     self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
                 
             if 'omega' in state:
                 omega = state['omega']['value']
                 # Initial velocity: v0 = omega x r0
                 v0 = CF((-omega * r0[1],
                         omega * r0[0]))
+                
                 # Update velocity grid function
                 self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
-                self._gf_vold.vec[:] = self._gf_v.vec
                 self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
-                self._gf_a.vec[:] = 0
-                self._gf_aold.vec[:] = 0
+
+
+                # Initialize previous velocity for Newmark
+                self._gf_vold.vec[:] = self._gf_v.vec
+
+                # Initialize accelartion from dynamics
+                torque_drive = self._get_applied_drive_torque() if 'torque' in state else 0.0
+                torque_gravity = self._gravity_torque(theta)
+                alpha_init = (torque_drive - torque_gravity) / self.inertia
+
+                # Convert scalar angular acceleration to acceleration field
+                a0 = CF((-alpha_init * r0[1],
+                         alpha_init * r0[0]))
+                self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
+                self._gf_aold.vec[:] = self._gf_a.vec
             
         if 'torque' in state:
             torque = state['torque']['value']
-            toruqe = 0
             self.set_drive_torque(torque)
 
     def get_state(self):
@@ -428,6 +437,76 @@ class FEMPendulum(FEMComponent):
         return  state
 
     #----------------------------------------------------------------------------
+    # Hybrid methods for snapshot/restore and event handling
+    #----------------------------------------------------------------------------
+    def snapshot_state(self):
+        """
+        Capture complete Newmark time integration state.
+        Must include current AND previous time step data.
+        """
+        return {
+            # Current state
+            'u': self._gf_u.vec.FV().NumPy().copy(),
+            'v': self._gf_v.vec.FV().NumPy().copy(),
+            'a': self._gf_a.vec.FV().NumPy().copy(),
+            
+            # Previous time step  for Newmark
+            'u_old': self._gf_uold.vec.FV().NumPy().copy(),
+            'v_old': self._gf_vold.vec.FV().NumPy().copy(),
+            'a_old': self._gf_aold.vec.FV().NumPy().copy(),
+            
+            # Time step size (may vary during contact)
+            'tau': self.tau.Get(),
+            
+            # Time
+            't': self.t
+        }
+    
+    def restore_state(self, snapshot: Dict[str, Any], t: float):
+        """
+        Restore complete Newmark state from snapshot.
+        Critical: Must restore BOTH current and old states.
+        """
+        # Restore time
+        self.t = t
+        
+        # Restore current state
+        self._gf_u.vec.FV().NumPy()[:] = snapshot['u']
+        self._gf_v.vec.FV().NumPy()[:] = snapshot['v']
+        self._gf_a.vec.FV().NumPy()[:] = snapshot['a']
+        
+        # Restore previous time step (THIS IS CRITICAL!)
+        self._gf_uold.vec.FV().NumPy()[:] = snapshot['u_old']
+        self._gf_vold.vec.FV().NumPy()[:] = snapshot['v_old']
+        self._gf_aold.vec.FV().NumPy()[:] = snapshot['a_old']
+        
+        # Restore time step size
+        self.tau.Set(snapshot['tau'])
+        
+        # Update outputs and record
+        self._update_output_states(t)
+        self._record_outputs(t)
+    
+    def _handle_events_internal(self, event_names, t):
+        if 'wall_hit' not in event_names:
+            return
+        
+        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s: Inverting velocity")
+        
+        # Invert velocity field (keep displacement and old states unchanged)
+        self._gf_v.vec.data = -1.0 * self._gf_v.vec
+        self._gf_vold.vec.data = -1.0 * self._gf_vold.vec
+        
+        # Recompute acceleration from inverted velocity (Newmark update)
+        tau = self.tau.Get()
+        acc_new = 2/tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
+        self._gf_a.vec.data = acc_new
+        
+        # Update outputs
+        self._update_output_states(t, event_names=event_names)
+        self._record_outputs(t)
+
+    #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
     def _do_step_internal(self, t, dt):
@@ -435,6 +514,10 @@ class FEMPendulum(FEMComponent):
         Advance FEM pendulum simulation from t to t+dt (called by base-class).
         """
         t_step_end = t + dt if t + dt < self.sim_params.t_end else self.sim_params.t_end
+        if dt < self.sim_params.tau:
+            self.tau.Set(dt)
+        else:
+            self.tau.Set(self.sim_params.tau)
         
         with TaskManager():
             while t < t_step_end:
@@ -519,7 +602,7 @@ class FEMPendulum(FEMComponent):
     def get_outputs(self) -> Dict[str, Any]:
         return {name: out_port.get() for name, out_port in self.outputs.items() if out_port.get() is not None}
 
-    def _update_output_states(self, t: float):
+    def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[]):
         """
         Convert rigid-body proxy to output ports (called by base-class).
         """
@@ -530,6 +613,15 @@ class FEMPendulum(FEMComponent):
         self.outputs['q'].set(q_state, t=t)
         self.outputs['omega'].set(omega_state, t=t)
         self.outputs['alpha'].set(alpha_state, t=t)
+
+        if event_names:
+            for event_name in event_names:
+                if event_name in self.output_specs.keys():
+                    self.outputs[event_name].set(True, t=t)
+        else:
+            for out_port in self.outputs.values():
+                if out_port.spec.type == PortType.EVENT:
+                    out_port.set(False, t=t) 
 
     #----------------------------------------------------------------------------
     # Reset method
@@ -616,22 +708,14 @@ class FEMPendulum(FEMComponent):
         num_v = num_omega_x + num_omega_y
         omega = num_v / denom
 
-        # Angular acceleration via grid function projection
-        # if self._with_contact and self._get_contact_gap_distance() < 0.0:
-        if True:
-            a = self._gf_a.components[0]
-            num_alpha_x = Integrate( rhoA * a[0] * (-r[1]),
-                            self._mesh, definedon=self._mesh.Materials("pendulum") )
-            num_alpha_y = Integrate( rhoA * a[1] * ( r[0]),
-                            self._mesh, definedon=self._mesh.Materials("pendulum") )
-            num_a = num_alpha_x + num_alpha_y
-            alpha = num_a / denom
-        else:
-            # Compute angular acceleration from torque balance
-            torque_drive = self._get_applied_drive_torque()
-            torque_gravity = self._gravity_torque(theta)
-            torque_net = torque_drive - torque_gravity
-            alpha = torque_net / self.inertia 
+        # Angular acceleration - NOW ALWAYS USE GRID FUNCTION
+        a = self._gf_a.components[0]
+        num_alpha_x = Integrate(rhoA * a[0] * (-r[1]),
+                        self._mesh, definedon=self._mesh.Materials("pendulum"))
+        num_alpha_y = Integrate(rhoA * a[1] * (r[0]),
+                        self._mesh, definedon=self._mesh.Materials("pendulum"))
+        num_a = num_alpha_x + num_alpha_y
+        alpha = num_a / denom
 
         return theta, omega, alpha
 

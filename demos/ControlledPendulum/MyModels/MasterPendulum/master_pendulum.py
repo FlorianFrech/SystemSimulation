@@ -244,6 +244,15 @@ class MasterPendulum(MultiComponent):
     def reset(self):
         for comp in self.models.values():
             comp.reset()
+    
+    #----------------------------------------------------------------------------
+    # Hybrid Interface
+    #----------------------------------------------------------------------------
+    def snapshot_state(self):
+        return self.active_comp.snapshot_state()
+    
+    def restore_state(self, snapshot, t):
+        self.active_comp.restore_state(snapshot, t)
 
     #----------------------------------------------------------------------------
     # Monitoring interface methods

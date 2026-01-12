@@ -1,0 +1,24 @@
+// System: Hybrid FEM Penulum
+digraph {
+	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Hybrid FEM Penulum" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
+	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
+	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
+	subgraph cluster_legend {
+		bgcolor="#f9fafb" color="#d1d5db" fontname="Helvetica-Bold" fontsize=10 label=Legend margin=8 penwidth=1.5 rank=sink style=rounded
+		legend_node [label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2" CELLPADDING="2">
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Edges:</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">───&gt; Data flow</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff">┄┄┄o Event connection</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Ports:</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>red</B></FONT> Direct feedthrough</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>blue</B></FONT> Event port</TD></TR>
+            </TABLE>
+            > fontsize=8 shape=plaintext]
+	}
+	subgraph cluster_Plant {
+		bgcolor="#e5e7eb" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Plant margin=12 penwidth=2 style=rounded
+		FEM_Pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="omega_invert"><FONT COLOR="#0b84ff"><B>omega_invert</B></FONT></TD></TR><TR><TD PORT="torque">torque</TD></TR></TABLE></TD><TD><B>FEM_Pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha">alpha</TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR><TR><TD PORT="wall_hit"><FONT COLOR="#0b84ff"><B>wall_hit</B></FONT></TD></TR></TABLE></TD></TR></TABLE>>]
+	}
+	FEM_Pendulum -> FEM_Pendulum [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="omega_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="wall_hit:e"]
+}

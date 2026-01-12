@@ -1,6 +1,6 @@
-// System: Hybrid Pendulum System
+// System: Hybrid System - Event Handling
 digraph {
-	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Hybrid Pendulum System" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
+	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Hybrid System - Event Handling" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
 	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
 	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
 	subgraph cluster_legend {
@@ -16,34 +16,15 @@ digraph {
             </TABLE>
             > fontsize=8 shape=plaintext]
 	}
-	subgraph cluster_Reference {
-		bgcolor="#dbeafe" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Reference margin=12 penwidth=2 style=rounded
-		reference [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>reference</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="q_ref">q_ref</TD></TR></TABLE>>]
+	subgraph cluster_Sources {
+		bgcolor="#e3b9b9" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Sources margin=12 penwidth=2 style=rounded
+		Source_1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_1</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="Trigger_1"><FONT COLOR="#0b84ff"><B>Trigger_1</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
+		Source_2 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_2</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="Trigger_2"><FONT COLOR="#0b84ff"><B>Trigger_2</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
-	subgraph cluster_Sensor {
-		bgcolor="#e2bcd9" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Sensor margin=12 penwidth=2 style=rounded
-		sensor_ref [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="q">q</TD><TD><B>sensor_ref</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="U_q"><FONT COLOR="#ef4444"><B>U_q</B></FONT></TD></TR></TABLE>>]
-		sensor_state [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="q">q</TD><TD><B>sensor_state</B><BR/><FONT POINT-SIZE="8">#1</FONT></TD><TD PORT="U_q"><FONT COLOR="#ef4444"><B>U_q</B></FONT></TD></TR></TABLE>>]
+	subgraph cluster_Listener {
+		bgcolor="#ebdddd" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Listener margin=12 penwidth=2 style=rounded
+		Listener [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="v_invert"><FONT COLOR="#0b84ff"><B>v_invert</B></FONT></TD><TD><B>Listener</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="x">x</TD></TR></TABLE>>]
 	}
-	subgraph cluster_Controller {
-		bgcolor="#ebe7da" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Controller margin=12 penwidth=2 style=rounded
-		pid [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="ref">ref</TD></TR><TR><TD PORT="resetI"><FONT COLOR="#0b84ff"><B>resetI</B></FONT></TD></TR><TR><TD PORT="y">y</TD></TR></TABLE></TD><TD><B>pid</B><BR/><FONT POINT-SIZE="8">#2</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="I_out">I_out</TD></TR><TR><TD PORT="u"><FONT COLOR="#ef4444"><B>u</B></FONT></TD></TR></TABLE></TD></TR></TABLE>>]
-	}
-	subgraph cluster_Drive {
-		bgcolor="#e8ded8" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Drive margin=12 penwidth=2 style=rounded
-		drive [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="u_control">u_control</TD></TR></TABLE></TD><TD><B>drive</B><BR/><FONT POINT-SIZE="8">#3</FONT></TD><TD PORT="torque">torque</TD></TR></TABLE>>]
-	}
-	subgraph cluster_Pendulum {
-		bgcolor="#d6ece2" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Pendulum margin=12 penwidth=2 style=rounded
-		pendulum [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="omega_invert"><FONT COLOR="#0b84ff"><B>omega_invert</B></FONT></TD></TR><TR><TD PORT="torque">torque</TD></TR></TABLE></TD><TD><B>pendulum</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="alpha"><FONT COLOR="#ef4444"><B>alpha</B></FONT></TD></TR><TR><TD PORT="omega">omega</TD></TR><TR><TD PORT="q">q</TD></TR><TR><TD PORT="wall_hit"><FONT COLOR="#0b84ff"><B>wall_hit</B></FONT></TD></TR></TABLE></TD></TR></TABLE>>]
-	}
-	reference -> sensor_ref [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q_ref:e"]
-	pendulum -> sensor_state [label="[rad]" color="#111827" headclip=true headport="q:w" style=solid tailclip=true tailport="q:e"]
-	sensor_ref -> pid [label="[V]" color="#111827" headclip=true headport="ref:w" style=solid tailclip=true tailport="U_q:e"]
-	sensor_state -> pid [label="[V]" color="#111827" headclip=true headport="y:w" style=solid tailclip=true tailport="U_q:e"]
-	pid -> drive [label="" color="#111827" headclip=true headport="u_control:w" style=solid tailclip=true tailport="u:e"]
-	drive -> pendulum [label="[m·N]" color="#111827" headclip=true headport="torque:w" style=solid tailclip=true tailport="torque:e"]
-	pendulum -> drive [label="[rad/s]" color="#111827" headclip=true headport="omega:w" style=solid tailclip=true tailport="omega:e"]
-	pendulum -> pid [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="resetI:w" penwidth=2.0 style=dashed tailclip=true tailport="wall_hit:e"]
-	pendulum -> pendulum [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="omega_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="wall_hit:e"]
+	Source_1 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="Trigger_1:e"]
+	Source_2 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="Trigger_2:e"]
 }

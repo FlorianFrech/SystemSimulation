@@ -62,6 +62,7 @@ class HybridAlgorithm(Algorithm):
         t_left = t
         t_right = t + dt
         eps = 1e-12
+        if self.verbose: print(f"Time: {t:.4f} s", end='\r')
 
         while t_left < t_right - eps:
             # 1) Prpare inputs: set inputs and resolve algebraic loops
@@ -418,7 +419,8 @@ class HybridAlgorithm(Algorithm):
             for event_pair in event_pairs:
                 if listener_name in system._event_targets_by_source.get(event_pair, []):
                     events_by_component.setdefault(listener_name, []).append(event_pair[1])
-        print(f"\nEvents grouped by component for handling: {events_by_component}")
+        if self.verbose:
+            print(f"\nEvents grouped by component for handling: {events_by_component}")
 
         # 2) Check for conflicts in each component
         for comp_name, event_names in events_by_component.items():
@@ -474,7 +476,6 @@ class HybridAlgorithm(Algorithm):
 
         # 2) Iterate over all orderings
         results = []
-        print(event_names)
         for ordering in permutations(event_names):
             # a) Restore initial state
             comp.restore_state(initial_snapshot, t=t)
