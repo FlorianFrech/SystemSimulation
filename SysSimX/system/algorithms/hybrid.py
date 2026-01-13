@@ -77,6 +77,11 @@ class HybridAlgorithm(Algorithm):
             if not crossings:
                 self.gauss_seidel_algorithm.step(system, t_left, t_right - t_left)
                 return
+            
+            if self.verbose:
+                print(f"\n{80*'='}")
+                print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
+                print(f"Events: {crossings}")
 
             # 4) Locate event time
             dense_time, initial_events = self._locate_event_time(
@@ -84,9 +89,9 @@ class HybridAlgorithm(Algorithm):
             )
             
             if self.verbose:
-                print(f"\n{80*'='}")
-                print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
-                print(f"Events: {initial_events}")
+                # print(f"\n{80*'='}")
+                # print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
+                # print(f"Events: {initial_events}")
                 print(f"Located at t={dense_time}")
                 
             # 5) Step all components to event time
@@ -194,29 +199,41 @@ class HybridAlgorithm(Algorithm):
         dt = t_right - t_left
         dt = max(0, dt) # Ensure non-negative step size
         for comp in event_sources:
-            # a) Save the state snapshot, input cache, and indicators at t_left
-            snapshots[comp.name] = comp.snapshot_state()
-            input_cache[comp.name] = self._capture_inputs(comp)
-            indicators_left[comp.name] = comp.evaluate_event_indicators()
+            # a) Disable mode switching for trial step
+            if hasattr(comp, '_allow_mode_switching'):
+                original_flag = comp._allow_mode_switching
+                comp._allow_mode_switching = False
+            try:
+                # b) Save the state snapshot, input cache, and indicators at t_left
+                snapshots[comp.name] = comp.snapshot_state()
+                input_cache[comp.name] = self._capture_inputs(comp)
+                indicators_left[comp.name] = comp.evaluate_event_indicators()
+                
+                # c) Step to t_right and evaluate indicators at t_right
+                internal_events = comp._do_step_internal(t_left, dt)
+                if internal_events:
+                    print(f"Internal events detected in component {comp.name}: {internal_events}")
+                comp._update_output_states()
+                indicators_right = comp.evaluate_event_indicators()
+
+                # d) Detect crossings between left and right
+                events = comp.detect_event_crossing(
+                    indicators_left[comp.name],
+                    indicators_right,
+                    sign_tolerance=self.sign_tolerance,
+                )
+
+                # e) Record crossings
+                for event_name in [events+internal_events]:
+                    crossings.append((comp.name, event_name))
+
+                # f) Restore to t_left
+                self._restore_with_inputs(comp, snapshots[comp.name], input_cache[comp.name], t_left)
             
-            # b) Step to t_right and evaluate indicators at t_right
-            comp._do_step_internal(t_left, dt)
-            comp._update_output_states()
-            indicators_right = comp.evaluate_event_indicators()
-
-            # c) Detect crossings between left and right
-            events = comp.detect_event_crossing(
-                indicators_left[comp.name],
-                indicators_right,
-                sign_tolerance=self.sign_tolerance,
-            )
-
-            # d) Record crossings
-            for event_name in events:
-                crossings.append((comp.name, event_name))
-
-            # e) Restore to t_left
-            self._restore_with_inputs(comp, snapshots[comp.name], input_cache[comp.name], t_left)
+            finally:
+                # g) Re-enable mode switching
+                if hasattr(comp, '_allow_mode_switching'):
+                    comp._allow_mode_switching = original_flag
 
         return snapshots, input_cache, indicators_left, crossings
     
@@ -358,12 +375,19 @@ class HybridAlgorithm(Algorithm):
         Evaluate event indicators for a single component at t_target
         starting from snapshot and input cache at t_left.
         """
-        self._restore_with_inputs(comp, snapshot, inputs, t_left)
-        comp._do_step_internal(t_left, t_target - t_left)
-        comp._update_output_states()
-        if self.verbose:
-            comp._record_outputs(t_target)
-        return comp.evaluate_event_indicators()
+        if hasattr(comp, '_allow_mode_switching'):
+            original_flag = comp._allow_mode_switching
+            comp._allow_mode_switching = False
+        try:
+            self._restore_with_inputs(comp, snapshot, inputs, t_left)
+            comp._do_step_internal(t_left, t_target - t_left)
+            comp._update_output_states()
+            if self.verbose:
+                comp._record_outputs(t_target)
+            return comp.evaluate_event_indicators()
+        finally:
+            if hasattr(comp, '_allow_mode_switching'):
+                comp._allow_mode_switching = original_flag
 
 
     def _detect_crossing_between(self,

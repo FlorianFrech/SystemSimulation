@@ -1,6 +1,6 @@
 import opensim as osim
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union, List
 
 from SysSimX.core.port import PortSpec, PortType, PortState
 from SysSimX.core.base import CoSimComponent
@@ -12,7 +12,8 @@ from SysSimX.utilities.units import ureg, Quantity
 # Port specifications
 #----------------------------------------------------------------------------   
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N*m").units)
+    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N*m").units),
+    "omega_invert": PortSpec("omega_invert", PortType.EVENT, direction="in")
 }
 
 OUTPUT_SPECS = {
@@ -20,6 +21,7 @@ OUTPUT_SPECS = {
     "omega": PortSpec("omega", PortType.REAL, direction="out", unit=ureg("rad/s").units),
     "alpha": PortSpec("alpha", PortType.REAL, direction="out", unit=ureg("rad/s^2").units)
 }
+
 #----------------------------------------------------------------------------
 # Parameters
 #----------------------------------------------------------------------------
@@ -291,7 +293,32 @@ class OpenSimPendulum(OpenSimComponent):
         state['alpha'] = {'value': alpha_state, 'unit': 'rad/s^2'}
         state['torque'] = {'value': torque_state, 'unit': 'N.m'}
         return state
+    
+    #----------------------------------------------------------------------------
+    # Hybrid methods for snapshot/restore and event handling
+    #----------------------------------------------------------------------------
+    def snapshot_state(self):
+        state = self.get_state()
+        state['time'] = {'value': self.state.getTime(), 'unit': 's'}
+        state['mode'] = 'OpenSim'
+        return state
+    
+    def restore_state(self, snapshot, t):
+        if snapshot.get('mode', '') != 'OpenSim':
+            raise ValueError(f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'.")
+        self.set_state(snapshot, t)
+    
+    def _handle_events_internal(self, event_names, t):
+        if 'wall_hit' not in event_names:
+            return
+        
+        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s: Inverting velocity")
 
+        # Invert angular velocity
+        omega_new = -1 * self.get_coordinate_speed('q')
+        self.coord.setSpeedValue(self.state, omega_new)
+        self.realize()
+        
     #----------------------------------------------------------------------------
     # Time stepping method
     #----------------------------------------------------------------------------
@@ -312,8 +339,6 @@ class OpenSimPendulum(OpenSimComponent):
             # Realize after integration
             self.realize()
             t_current = next_t
-            #self._update_output_states(t_current)
-            #self._record_outputs(t_current)
 
     #----------------------------------------------------------------------------
     # Input/output methods
@@ -332,7 +357,7 @@ class OpenSimPendulum(OpenSimComponent):
     def get_outputs(self) -> Dict[str, float]:
         return {name: out_port.get() for name, out_port in self.outputs.items()}
 
-    def _update_output_states(self, t: float) -> None:
+    def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[] ) -> None:
         for name, out_port in self.outputs.items():
             if name == 'q':
                 value = float(self.coord.getValue(self.state))
@@ -346,6 +371,15 @@ class OpenSimPendulum(OpenSimComponent):
                 value = float(self.coord.getAccelerationValue(self.state))
                 value = self.get_coordinate_acceleration('q')
                 out_port.set(value * ureg("rad/s^2"), t=t)
+        # Hybrid event outputs
+        if event_names:
+            for event_name in event_names:
+                if event_name in self.output_specs.keys():
+                    self.outputs[event_name].set(True, t=t)
+        else:
+            for out_port in self.outputs.values():
+                if out_port.spec.type == PortType.EVENT:
+                    out_port.set(False, t=t) 
 
     #----------------------------------------------------------------------------
     # Reset method

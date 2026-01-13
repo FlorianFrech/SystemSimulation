@@ -1,9 +1,12 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import numpy as np
 
+from SysSimX.core.base import CoSimComponent
 from SysSimX.core.port import PortType
 from SysSimX.core.multi_comp import MultiComponent, Hysteresis
 from SysSimX.components.fmu_comp import FMUComponent
+from SysSimX.core.events import Event, EventIndicator
+from MyModels.EQB.hybrid_fmu_pendulum import Pendulum as EQBPendulum
 from MyModels.FEM.fem_pendulum import FEMPendulum
 from MyModels.OpenSim.opensim_pendulum import OpenSimPendulum
 
@@ -50,7 +53,7 @@ class MasterPendulum(MultiComponent):
     def __init__(self,
                  fem_comp: Optional[FEMPendulum] = None,
                  opensim_comp: Optional[OpenSimPendulum] = None,
-                 fmu_comp: Optional[FMUComponent] = None,
+                 fmu_comp: Optional[EQBPendulum] = None,
                  initial_mode: str = "EQB"):
         # Initialize base class
         super().__init__(name="Pendulum", initial_mode=initial_mode, group="Plant")
@@ -81,7 +84,9 @@ class MasterPendulum(MultiComponent):
         # Store widget references
         self._widget_links = []
 
-    # ---- Model Registration ----
+    #----------------------------------------------------------------------------
+    # Model Registration
+    #---------------------------------------------------------------------------- 
     def _register_models(self) -> None:
         """Register all available pendulum models."""
         self.models = {
@@ -90,7 +95,9 @@ class MasterPendulum(MultiComponent):
                         "EQB": self._fmu_comp
                     }
 
-    # ---- State Adaptation ----
+    #----------------------------------------------------------------------------
+    # State Adaptation
+    #---------------------------------------------------------------------------- 
     def _adapt_state(self, state: Dict[str, Any], target_mode: str) -> Dict[str, Any]:
         """
         Translate state between component-specific formats.
@@ -109,7 +116,9 @@ class MasterPendulum(MultiComponent):
             }
         return state
 
-    # ---- Mode Selection Strategy ----
+    #----------------------------------------------------------------------------
+    # Mode Selection Logic
+    #---------------------------------------------------------------------------- 
     def _time_based_mode_selector(self, t: float, state: Dict[str, Any]) -> str:
         """
         Cycle through modes 4 times within simulation time.
@@ -129,6 +138,8 @@ class MasterPendulum(MultiComponent):
         # Get current angular position from active component
         current_state = self.get_state()
         q = current_state['q']['value']
+
+        #return 'EQB'  # TEMPORARY OVERRIDE FOR TESTING
 
         if t < 0.7:
             return 'EQB'
@@ -151,7 +162,9 @@ class MasterPendulum(MultiComponent):
         else:
             return 'FEM'
 
-    # ----Initialization with Parameter Propagation ----
+    #----------------------------------------------------------------------------
+    # Initialization Logic
+    #---------------------------------------------------------------------------- 
     def initialize(self, t0: float) -> None:
         # Call base class initialization (sets active component, unifies ports)
         """
@@ -179,7 +192,6 @@ class MasterPendulum(MultiComponent):
             length = self.models['FEM']._equivalent_length
             inertia = self.models['FEM'].inertia
             mass = self.models['FEM'].mass
-            
             
         else:
             # Default parameters if FEM not available
@@ -217,42 +229,55 @@ class MasterPendulum(MultiComponent):
         else:
             self.mode_selector = self._time_based_mode_selector
         
+        ### TESTING ONLY ###
+        self.mode_selector = self._gap_based_mode_selector
+        
         self.setup_monitoring()
 
-    # Delegate to base class and/or components of multi component   
-    def _do_step_internal(self, t, dt):        
-        # Perform simulation step using base class method
-        super()._do_step_internal(t, dt)
+    #----------------------------------------------------------------------------
+    # Setup Event Detection
+    #----------------------------------------------------------------------------
+    def setup_event_detection(self) -> None:
+        """
+        Setup event indicators that work across all models.
+        Call this AFTER initialize().
+        """
+        def wall_contact_indicator(comp: CoSimComponent) -> float:
+            """Universal event indicator that works for any sub-component."""
+            # Access through component's outputs (unified interface)
+            q = comp.get_outputs().get('q')
+            if hasattr(q, 'magnitude'):
+                q = q.magnitude
+            return q - 0.0  # Wall at q=0
         
-        # Update Scene of FEM Pendulum if FEM Pendulum is not active
+        # Add to all models that support rollback
+        event_name = 'wall_hit'
+        direction = -1  # Detect falling edge (approaching from positive q)
+        
+        for mode, comp in self.models.items():
+            if comp and comp.supports_rollback:
+                comp.add_event_indicator(event_name, wall_contact_indicator, direction)
+        
+        # Subscribe to the event
+        event = Event(name=event_name, source=self.name, direction=direction)
+        self.subscribe_event(event)
+        
+    #----------------------------------------------------------------------------
+    # Time Stepping Logic
+    #----------------------------------------------------------------------------  
+    def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[]):
+        super()._update_output_states(t, event_names=event_names)
+
+        # 2) Update monitoring widgets (only if t is provided)
+        if t is not None:
+            dt = t - self.t if hasattr(self, 't') else 0.0
+            self._update_monitoring(t, dt)
+        
+        # 3) Update FEM scene if not active (for visualization consistency)
         if self.active_mode != "FEM" and self._fem_comp.anim_params.animate:
             q = self.active_comp.get_outputs()['q']
-            self._fem_comp.update_scene(q, t+dt)
-        
-        # # Update monitoring widgets
-        self._update_monitoring(t, dt)
-    
-    def _update_output_states(self, t):
-        return super()._update_output_states(t)
-    
-    def get_state(self):
-        return self.active_comp.get_state()
-    
-    def set_state(self, state, t):
-        self.active_comp.set_state(state, t)
-
-    def reset(self):
-        for comp in self.models.values():
-            comp.reset()
-    
-    #----------------------------------------------------------------------------
-    # Hybrid Interface
-    #----------------------------------------------------------------------------
-    def snapshot_state(self):
-        return self.active_comp.snapshot_state()
-    
-    def restore_state(self, snapshot, t):
-        self.active_comp.restore_state(snapshot, t)
+            if t is not None:
+                self._fem_comp.update_scene(q, t)
 
     #----------------------------------------------------------------------------
     # Monitoring interface methods

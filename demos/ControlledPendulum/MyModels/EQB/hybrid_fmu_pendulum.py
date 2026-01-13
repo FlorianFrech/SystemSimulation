@@ -18,12 +18,12 @@ class Pendulum(FMUComponent):
     """
     FMU-based pendulum component with rollback support.
     """
-    def __init__(self, name, group = "Pendulum", solver: str = "Cvode"):
+    def __init__(self, name, group = "Pendulum", solver: str = "Euler"):
         # Select FMU based on solver choice
         if solver == "Euler":
-            fmu_path = Path.cwd().parent / "FMUs" / "Pendulum_Euler.fmu"
+            fmu_path = Path(__file__).parent.parent.parent / "MyModels/FMUs" / "Pendulum_Euler.fmu"
         elif solver == "Cvode":
-            fmu_path = Path.cwd().parent / "FMUs" / "Pendulum_Cvode.fmu"
+            fmu_path = Path(__file__).parent.parent.parent / "MyModels/FMUs" / "Pendulum_Cvode.fmu"
         self.solver = solver
         
         # Initialize base class
@@ -34,17 +34,29 @@ class Pendulum(FMUComponent):
             'omega_invert': PortSpec('omega_invert', PortType.EVENT, "in")
         })
 
+    def _do_step_internal(self, t, dt):
+        t_right = t + dt
+        while t < t_right:
+            step_size = min(1e-4, t_right - t)
+            super()._do_step_internal(t, step_size)
+            t += step_size
+
     # Snapshot and restore state methods for rollback
     def snapshot_state(self):
+        state = {'mode': 'EQB'}
         if self.solver == "Euler":
-            return self._instance.getFMUState()
+            state['fmu_state'] = self._instance.getFMUState()
         elif self.solver == "Cvode":
-            return super().get_state()
+            current_state = super().get_state()
+            state.update(current_state)
+        return state        
 
     def restore_state(self, snapshot, t):
+        if snapshot.get('mode', '') != 'EQB':
+            raise ValueError(f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'.")
         self.t = t
         if self.solver == "Euler":
-            self._instance.setFMUState(snapshot)
+            self._instance.setFMUState(snapshot['fmu_state'])
         elif self.solver == "Cvode":        
             q0 = snapshot['q']['value']
             omega0 = snapshot['omega']['value']
@@ -76,9 +88,6 @@ class Pendulum(FMUComponent):
         self._apply_parameters_starts()
         self._apply_input_starts()
         self._instance.exitInitializationMode()
-
-        self._update_output_states(t, event_names)
-        self._record_outputs(t)
     
     def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[]):
         super()._update_output_states(t)

@@ -143,7 +143,8 @@ class System:
         event_name = connection.src_port
         if event_name not in source.event_indicators:
             raise KeyError(
-                f"Event '{event_name}' not found on source component '{source.name}'."
+                f"Event '{event_name}' not found on source component '{source.name}'. "
+                f"Verify to have the correct event name."
             )
 
         has_subscription = False
@@ -154,7 +155,8 @@ class System:
         
         if not has_subscription:
             raise KeyError(
-                f"Target '{target.name}' is not subscribed to event '{source.name}:{event_name}'."
+                f"Target '{target.name}' is not subscribed to event '({source.name}, {event_name})'. "
+                f"Subscribe before connecting via: target.subscribe_event(event)."
             )
 
         for existing in self.event_connections:

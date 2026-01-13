@@ -45,6 +45,7 @@ class CoSimComponent(ABC):
 
         # Hybrid capabilities
         self.event_indicators: Dict[str, EventIndicator] = {}
+        self.detected_events: List[str] = []
         self.event_subscriptions: List[Event] = []
         self.event_annotations: Dict[str, Dict[str, Any]] = {}
         self.event_commutativity: Dict[Tuple[str, str], bool] = {}
@@ -329,6 +330,8 @@ class CoSimComponent(ABC):
         Handle events by calling subclass hook.
         """
         self._handle_events_internal(event_names, t)
+        self._update_output_states(t, event_names)
+        self._record_outputs(t)
     
     def _handle_events_internal(self, event_names: List[str], t: float) -> None:
         """Subclass hook: handle events (state updates, re-initialization, etc.)."""

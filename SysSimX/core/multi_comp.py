@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Callable, Protocol
+from typing import Any, Dict, Optional, Callable, Protocol, List
 from .base import CoSimComponent
-from .port import PortSpec, PortState
+from .port import PortSpec, PortState, PortType
 from ..utilities.units import ureg, Quantity
 
 # -------------------------------------------------------------------
@@ -82,11 +82,16 @@ class MultiComponent(CoSimComponent):
         # List of synchronization events (for logging/debugging)
         self.sync_events: list = []
 
+        # Flag to prevent mode switching during event detection
+        self._allow_mode_switching: bool = True
+
         # Previous and current state for synchronization
         self._prev_state: Optional[Dict[str, Any]] = None
         self._curr_state: Optional[Dict[str, Any]] = None
 
-    # ---- Abstract Methods (must be implemented by subclass) ----
+    # -------------------------------------------------------------------
+    # Registration and Adaptation Hooks
+    # -------------------------------------------------------------------
     def _register_models(self) -> None:
         """
         Register all sub-components in self.models.
@@ -106,7 +111,9 @@ class MultiComponent(CoSimComponent):
         """
         return NotImplemented(f"{self.name}: Subclass must implement _adapt_state()")
 
-    # ---- Lifecycle (Template Methods) ----    
+    # -------------------------------------------------------------------
+    # Initialization Logic
+    # -------------------------------------------------------------------
     def _initialize_component(self, t0: float) -> None:
         """
         Initialize all sub-components and set up port unification.
@@ -132,6 +139,9 @@ class MultiComponent(CoSimComponent):
         # Step 5: Unify ports (adopt active component's port specs)
         self._unify_ports()
     
+    # -------------------------------------------------------------------
+    # Port Unification and Validation
+    # -------------------------------------------------------------------
     def _unify_ports(self) -> None:
         """
         Adopt port specifications from active component and validate compatibility.
@@ -163,13 +173,15 @@ class MultiComponent(CoSimComponent):
                         f"{self.name}: Model '{mode_key}' missing output port '{name}'"
                     )
 
-    # ---- Mode Switching Logic ----
+    # -------------------------------------------------------------------
+    # Time Stepping with Mode Switching
+    # -------------------------------------------------------------------
     def _do_step_internal(self, t: float, dt: float) -> None:
         """
         Execute time step with potential mode switching.
         """
         # Step 1: Check if mode switch is needed
-        if self.mode_selector is not None:
+        if self._allow_mode_switching and  self.mode_selector is not None:
             state = self.get_state()
             proposed_mode = self.mode_selector(t, state)
             
@@ -185,6 +197,9 @@ class MultiComponent(CoSimComponent):
         # Step 2: Execute active component's time step
         self.active_comp.do_step(t, dt)
 
+    # -------------------------------------------------------------------
+    # Mode Switching with State Synchronization
+    # -------------------------------------------------------------------
     def _switch_mode(self, new_mode: ModeKey, t: float) -> None:
         """
         Switch from active_comp to new mode with state synchronization.
@@ -207,7 +222,7 @@ class MultiComponent(CoSimComponent):
         # Step 3: Set state in new component
         new_comp = self.models[new_mode]
         new_comp.set_state(adapted_state, t)
-        
+
         # Step 4: Update active component
         self.active_mode = new_mode
         self.active_comp = new_comp
@@ -221,21 +236,33 @@ class MultiComponent(CoSimComponent):
         if self.hysteresis is not None:
             self.hysteresis.record_switch(t, new_mode)
 
-    # ---- I/O Delegation ----
+    # -------------------------------------------------------------------
+    # Input/Output Delegation
+    # -------------------------------------------------------------------
     def set_inputs(self, signals: Dict[str, Any], t: Optional[float] = None) -> None:
         """Delegate to all models (for state synchronization) or just active."""
         for comp in self.models.values():
             if comp is not None:
                 comp.set_inputs(signals, t)
     
-    def _update_output_states(self, t: float) -> None:
+    def _update_output_states(self, t: Optional[float]=None, event_names: Optional[List[str]]=[]) -> None:
         """Copy outputs from active component to self.outputs."""
         for name in self.output_specs.keys():
             value = self.active_comp.outputs[name].get()
             if value is not None:
                 self.outputs[name].set(value, t=t)
+        if event_names:
+            for event_name in event_names:
+                if event_name in self.output_specs.keys():
+                    self.outputs[event_name].set(value=True, t=t)
+        else:
+            for out_port in self.outputs.values():
+                if out_port.spec.type == PortType.EVENT:
+                    out_port.set(value=False, t=t)
 
-    # ---- State Management ----
+    # -------------------------------------------------------------------
+    # State Management Delegation
+    # -------------------------------------------------------------------
     def set_state(self, state: Dict[str, Any], t: float) -> None:
         """Delegate to active component (with optional adaptation)."""
         adapted_state = self._adapt_state(state, self.active_mode)
@@ -245,6 +272,59 @@ class MultiComponent(CoSimComponent):
         """Get state from active component."""
         return self.active_comp.get_state()
     
+    # -------------------------------------------------------------------
+    # Hybrid Capabilities Delegation
+    # -------------------------------------------------------------------
+    def add_event_indicator(self, name: str, func: Callable, direction: int = 0) -> None:
+        """
+        Add event indicator to ALL sub-components for consistency.
+        """
+        for comp in self.models.values():
+            if comp is not None and comp.supports_rollback:
+                comp.add_event_indicator(name, func, direction)
+        
+        # Also add to self for port management
+        super().add_event_indicator(name, func, direction)
+
+    def evaluate_event_indicators(self) -> Dict[str, float]:
+        """Delegate to active component."""
+        if self.active_comp.has_state_events:
+            return self.active_comp.evaluate_event_indicators()
+        return {}
+    
+    def detect_event_crossing(self, previous: Dict[str, float],
+                          current: Dict[str, float],
+                          sign_tolerance: float = 1e-10) -> List[str]:
+        """Delegate to active component."""
+        if self.active_comp.has_state_events:
+            return self.active_comp.detect_event_crossing(previous, current, sign_tolerance)
+        return []
+
+    def snapshot_state(self):
+        return self.active_comp.snapshot_state()
+    
+    def restore_state(self, snapshot, t) -> None:
+        self.active_comp.restore_state(snapshot, t)
+
+    @property
+    def has_state_events(self) -> bool:
+        """True if active component has event indicators."""
+        return self.active_comp.has_state_events if self.active_comp else False
+
+    @property
+    def supports_rollback(self) -> bool:
+        """True if active component supports rollback."""
+        return self.active_comp.supports_rollback if self.active_comp else False
+
+    def _handle_events_internal(self, event_names: List[str], t: float) -> None:
+        """Delegate event handling to active component."""
+        if self.active_comp:
+            self.active_comp.handle_event(event_names, t)
+        
+
+    # -------------------------------------------------------------------
+    # Reset Logic
+    # -------------------------------------------------------------------
     def reset(self) -> None:
         """Reset all sub-components."""
         for comp in self.models.values():

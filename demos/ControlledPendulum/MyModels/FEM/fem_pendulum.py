@@ -445,6 +445,9 @@ class FEMPendulum(FEMComponent):
         Must include current AND previous time step data.
         """
         return {
+            # Mode Identifier
+            'mode': 'FEM',
+
             # Current state
             'u': self._gf_u.vec.FV().NumPy().copy(),
             'v': self._gf_v.vec.FV().NumPy().copy(),
@@ -467,6 +470,10 @@ class FEMPendulum(FEMComponent):
         Restore complete Newmark state from snapshot.
         Critical: Must restore BOTH current and old states.
         """
+        # Check mode
+        if snapshot.get('mode', '') != 'FEM':
+            raise ValueError(f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'.")
+        
         # Restore time
         self.t = t
         
@@ -491,20 +498,21 @@ class FEMPendulum(FEMComponent):
         if 'wall_hit' not in event_names:
             return
         
-        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s: Inverting velocity")
+        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s.")
         
         # Invert velocity field (keep displacement and old states unchanged)
-        self._gf_v.vec.data = -1.0 * self._gf_v.vec
-        self._gf_vold.vec.data = -1.0 * self._gf_vold.vec
-        
-        # Recompute acceleration from inverted velocity (Newmark update)
-        tau = self.tau.Get()
-        acc_new = 2/tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
-        self._gf_a.vec.data = acc_new
-        
-        # Update outputs
-        self._update_output_states(t, event_names=event_names)
-        self._record_outputs(t)
+        if not self._with_contact:
+            self._gf_v.vec.data = -1.0 * self._gf_v.vec
+            self._gf_vold.vec.data = -1.0 * self._gf_vold.vec
+            
+            # Recompute acceleration from inverted velocity (Newmark update)
+            tau = self.tau.Get()
+            acc_new = 2/tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
+            self._gf_a.vec.data = acc_new
+            
+            # Update outputs
+            self._update_output_states(t, event_names=event_names)
+            self._record_outputs(t)
 
     #----------------------------------------------------------------------------
     # Time stepping method
@@ -518,9 +526,12 @@ class FEMPendulum(FEMComponent):
             self.tau.Set(dt)
         else:
             self.tau.Set(self.sim_params.tau)
-        
+        detected_events = set()
         with TaskManager():
             while t < t_step_end:
+                # Evaluate indicator at start of time step
+                indicators_left = self.evaluate_event_indicators()
+                
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
                 self._gf_vold.vec[:] = self._gf_v.vec
@@ -563,7 +574,7 @@ class FEMPendulum(FEMComponent):
                 self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
                 # Compute stress
-                #self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
+                self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
 
                 # Store results in time series
                 #self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
@@ -571,8 +582,17 @@ class FEMPendulum(FEMComponent):
                 if self.anim_params.animate:
                     self.scene.Redraw()
                 self._update_output_states(t)
+
+                # Evaluate event indicators at end of time step
+                indicators_right = self.evaluate_event_indicators()
+                events = self.detect_event_crossing(indicators_left, indicators_right)
+                for event in events:
+                    detected_events.add(event)
+
                 self._record_outputs(t)
                 self.update_monitoring()
+        
+        return list(detected_events)
                 
                 
     #----------------------------------------------------------------------------
@@ -775,8 +795,9 @@ class FEMPendulum(FEMComponent):
             q (Union[float, Quantity]): The new state value.
             t (float): The current time.
         """
-        self.set_state({'q': {'value': q}}, t)            
-        self.scene.Redraw()
+        if self.scene:
+            self.set_state({'q': {'value': q}}, t)            
+            self.scene.Redraw()
 
     def visualize_state(self, draw_u: bool = True, draw_v: bool = True, draw_a: bool = True):
         """
