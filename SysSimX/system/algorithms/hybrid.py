@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple, Any
+from typing import TYPE_CHECKING, Dict, List, Tuple, Any, Optional, Set
+
+import numpy as np
 
 from .base import Algorithm
 from .gauss_seidel import GaussSeidelAlgorithm
 from .ijcsa import solve_algebraic_scc_ijcsa
-from ...core.events import Event, DenseTime
+from ...core.events import Event, DenseTime, InternalEventInfo
 
 if TYPE_CHECKING:
     from ..system import System
@@ -63,13 +65,16 @@ class HybridAlgorithm(Algorithm):
         t_right = t + dt
         eps = 1e-12
         if self.verbose: print(f"Time: {t:.4f} s", end='\r')
+        
+        # Track all events handled in this macro-step (to avoid duplicates at boundaries)
+        handled_events_this_step: Set[Tuple[str, str, float]] = set()
 
         while t_left < t_right - eps:
             # 1) Prpare inputs: set inputs and resolve algebraic loops
             self._prepare_inputs(system, t_left)
 
-            # 2) Detect crossings
-            snapshots, input_cache, indicators_left, crossings = self._detect_crossings(
+            # 2) Detect crossings (also collects internal event hints)
+            snapshots, input_cache, indicators_left, crossings, internal_hints = self._detect_crossings(
                 event_sources, t_left, t_right
             )
 
@@ -81,32 +86,61 @@ class HybridAlgorithm(Algorithm):
             if self.verbose:
                 print(f"\n{80*'='}")
                 print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
-                print(f"Events: {crossings}")
+                print(f"Crossings: {crossings}")
+                if internal_hints:
+                    print(f"Internal hints: {[(c, [h.event_name for h in hs]) for c, hs in internal_hints.items()]}")
+                    
 
-            # 4) Locate event time
+            # 4) Locate event time (using internal hints if available)
             dense_time, initial_events = self._locate_event_time(
-                event_sources, snapshots, input_cache, indicators_left, t_left, t_right,
+                event_sources, snapshots, input_cache, indicators_left,
+                t_left, t_right, internal_hints
             )
             
             if self.verbose:
-                # print(f"\n{80*'='}")
-                # print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
-                # print(f"Events: {initial_events}")
                 print(f"Located at t={dense_time}")
                 
-            # 5) Step all components to event time
+            # 5) Filter out events that were already handled at this time
+            t_event_rounded = np.round(dense_time.t, decimals=6)
+            new_events = []
+            for comp_name, event_name in initial_events:
+                event_key = (comp_name, event_name, t_event_rounded)
+                if event_key not in handled_events_this_step:
+                    new_events.append((comp_name, event_name))
+                elif self.verbose:
+                    print(f"  Skipping already-handled event: {comp_name}.{event_name} at t≈{t_event_rounded:.8f}")
+            
+            # # 6) If all events were already handled, advance past this time and continue
+            # if not new_events:
+            #     if self.verbose:
+            #         print(f"  All events at t={dense_time.t:.8f} already handled, advancing...")
+            #     # Step to just past the event time
+            #     dt_to_skip = dense_time.t - t_left + self.tol_time
+            #     if dt_to_skip > eps:
+            #         self.gauss_seidel_algorithm.step(system, t_left, dt_to_skip)
+            #     t_left = dense_time.t + self.tol_time
+            #     continue
+            
+            initial_events = new_events
+                
+            # 7) Step all components to event time
             self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
 
-            # 6) Iterative event handling
+            # 8) Iterative event handling
             all_handled_events = set()
             event_pairs = initial_events
             current_time = dense_time
             while event_pairs and current_time.micro < self.max_microsteps:
                 if self.verbose:
+                    print(f"Already handled events: {handled_events_this_step}")
                     print(f"\nHandling events at {current_time}: {event_pairs}")
-                # a) Record events with microstep
+                
+                # a) Record events with microstep and mark as handled
                 for comp_name, event_name in event_pairs:
                     system.history.record_event(comp_name, event_name, current_time)
+                    all_handled_events.add((comp_name, event_name))
+                    event_key = (comp_name, event_name, t_event_rounded)
+                    handled_events_this_step.add(event_key)
 
                 # b) Indicators before handling
                 indicators_before_handling = {
@@ -155,7 +189,7 @@ class HybridAlgorithm(Algorithm):
             self._prepare_inputs(system, dense_time)
 
             # 8) Update left time
-            t_left = dense_time.t
+            t_left = dense_time.t + self.tol_time
             if self.verbose:
                 print(f"{80*'='}\n")
 
@@ -180,24 +214,27 @@ class HybridAlgorithm(Algorithm):
                           t_left: float, t_right: float) -> Tuple[Dict[str, Any],              # snapshots
                                                                   Dict[str, Dict[str, Any]],   # input_cache
                                                                   Dict[str, Dict[str, float]], # indicators_left
-                                                                  List[Tuple[str, str]]]:      # crossings
+                                                                  List[Tuple[str, str]],       # crossings
+                                                                  Dict[str, List[InternalEventInfo]]]:  # internal_hints
         """
         Detect event crossings in the interval [t_left, t_right] for the given event source components.
         
         Returns:
-            
             - snapshots: state snapshots of components at t_left
             - input_cache: cached inputs of components at t_left
             - indicators_left: event indicator values at t_left
             - crossings: list of (component name, event name) tuples where crossings were detected
+            - internal_hints: dict mapping component names to lists of InternalEventInfo
         """
         snapshots: Dict[str, Any] = {}
         input_cache: Dict[str, Dict[str, Any]] = {}
         indicators_left: Dict[str, Dict[str, float]] = {}
         crossings: List[Tuple[str, str]] = []
+        internal_hints: Dict[str, List[InternalEventInfo]] = {}
 
         dt = t_right - t_left
-        dt = max(0, dt) # Ensure non-negative step size
+        dt = max(0, dt)
+        
         for comp in event_sources:
             # a) Disable mode switching for trial step
             if hasattr(comp, '_allow_mode_switching'):
@@ -210,32 +247,50 @@ class HybridAlgorithm(Algorithm):
                 indicators_left[comp.name] = comp.evaluate_event_indicators()
                 
                 # c) Step to t_right and evaluate indicators at t_right
-                internal_events = comp._do_step_internal(t_left, dt)
-                if internal_events:
-                    print(f"Internal events detected in component {comp.name}: {internal_events}")
+                comp._do_step_internal(t_left, dt)
                 comp._update_output_states()
                 indicators_right = comp.evaluate_event_indicators()
+                
+                # d) Collect internal event hints and filter to (t_left, t_right]
+                raw_hints = comp.get_internal_event_hints()
+                filtered_hints = []
+                if raw_hints:
+                    for hint in raw_hints:
+                        # Only keep hints that are strictly within the interval
+                        # t_after must be > t_left (not at or before the start)
+                        if hint.t_after > t_left + self.tol_time and hint.t_before < t_right:
+                            filtered_hints.append(hint)
+                            if self.verbose:
+                                print(f"  Internal hint from {comp.name}: {hint.event_name} "
+                                    f"in [{hint.t_before:.8f}, {hint.t_after:.8f}]")
+                
+                if filtered_hints:
+                    internal_hints[comp.name] = filtered_hints
 
-                # d) Detect crossings between left and right
-                events = comp.detect_event_crossing(
+                # e) Detect crossings between left and right
+                macro_events = comp.detect_event_crossing(
                     indicators_left[comp.name],
                     indicators_right,
                     sign_tolerance=self.sign_tolerance,
                 )
 
-                # e) Record crossings
-                for event_name in [events+internal_events]:
+                # f) Combine macro events and micro events (from hints)
+                micro_event_names = [hint.event_name for hint in filtered_hints] if filtered_hints else []
+                all_event_names = set(macro_events) | set(micro_event_names)
+
+                # g) Record crossings - iterate over event names, not wrap in list
+                for event_name in all_event_names:
                     crossings.append((comp.name, event_name))
 
-                # f) Restore to t_left
+                # h) Restore to t_left
                 self._restore_with_inputs(comp, snapshots[comp.name], input_cache[comp.name], t_left)
             
             finally:
-                # g) Re-enable mode switching
+                # i) Re-enable mode switching
                 if hasattr(comp, '_allow_mode_switching'):
                     comp._allow_mode_switching = original_flag
 
-        return snapshots, input_cache, indicators_left, crossings
+        return snapshots, input_cache, indicators_left, crossings, internal_hints
     
     def _capture_inputs(self, comp: "CoSimComponent") -> Dict[str, Any]:
         """
@@ -271,9 +326,16 @@ class HybridAlgorithm(Algorithm):
                            snapshots_left: Dict[str, Any],
                            input_cache: Dict[str, Dict[str, Any]],
                            indicators_left: Dict[str, Dict[str, float]],
-                           t_left: float, t_right: float) -> Tuple[DenseTime, List[Tuple[str, str]]]:
+                           t_left: float, t_right: float,
+                           internal_hints: Optional[Dict[str, List[InternalEventInfo]]] = None
+                           ) -> Tuple[DenseTime, List[Tuple[str, str]]]:
         """
         Locate the event time within [t_left, t_right] using bisection.
+        
+        If internal_hints are provided (from components with internal micro-stepping),
+        the algorithm uses these to narrow the search interval before bisection,
+        significantly reducing the number of iterations needed.
+        
         Returns the located event time and the list of (component name, event name) tuples.
         """
         # 1) Initialize bisection boundaries
@@ -282,70 +344,181 @@ class HybridAlgorithm(Algorithm):
         t_left_ref = t_left # Reference time for current snapshots
         t_event = t_right   # Default event time if not found
 
-        # 2) Indicator values at boundaries
-        indicators_left: Dict[str, Dict[str, float]] = indicators_left
-        indicators_right = self._evaluate_indicators_at(event_sources,
-                                                           snapshots_left,
-                                                           input_cache,
-                                                           t_left, t_right)
+        # 2) Collect events from internal hints that fall within the interval
+        events_from_hints: List[Tuple[str, str]] = []
+        if internal_hints:
+            for comp_name, hints in internal_hints.items():
+                for hint in hints:
+                    # Only consider hints within [t_left, t_right]
+                    if hint.t_before >= t_left - 1e-12 and hint.t_after <= t_right + 1e-12:
+                        events_from_hints.append((comp_name, hint.event_name))
         
-        # 3) Working snapshots
-        working_snapshots = snapshots_left.copy()
+        # 3) Use internal hints to narrow the initial interval
+        if internal_hints:
+            earliest_hint = self._get_earliest_event_hint(internal_hints, t_left, t_right)
+            if earliest_hint:
+                # Narrow the search interval based on internal micro-step timing
+                hint_left = max(t_left, earliest_hint.t_before)
+                hint_right = min(t_right, earliest_hint.t_after)
+                
+                if self.verbose:
+                    print(f"  Using internal hint to narrow interval: "
+                          f"[{left:.8f}, {right:.8f}] -> [{hint_left:.8f}, {hint_right:.8f}]")
+                
+                # Update boundaries
+                left = hint_left
+                right = hint_right
+                
+                # If the hint interval is already precise enough, use it directly
+                if right - left <= self.tol_time:
+                    t_event = right
+                    # Ensure components are at t_left
+                    self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
+                    # Return events from hints since indicator check may miss them
+                    if events_from_hints:
+                        return DenseTime(t=t_event, micro=0), events_from_hints
+                    # Fallback to indicator-based collection
+                    for comp in event_sources:
+                        self._restore_with_inputs(comp, snapshots_left[comp.name], 
+                                                  input_cache[comp.name], t_left)
+                        comp._do_step_internal(t_left, t_event - t_left)
+                        comp._update_output_states()
+                    all_events = self._collect_events_at_time(event_sources)
+                    self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
+                    return DenseTime(t=t_event, micro=0), all_events if all_events else events_from_hints
 
-        # 4) Bisection loop
+        # 4) Indicator values at boundaries
+        indicators_left_vals: Dict[str, Dict[str, float]] = indicators_left
+        indicators_right = self._evaluate_indicators_at(event_sources,
+                                                        snapshots_left,
+                                                        input_cache,
+                                                        t_left, right)
+        
+        # 5) If we narrowed with hints, also update left indicators
+        if left > t_left:
+            indicators_left_vals = self._evaluate_indicators_at(event_sources,
+                                                                snapshots_left,
+                                                                input_cache,
+                                                                t_left, left)
+            t_left_ref = left
+        
+        # 6) Working snapshots - start from t_left_ref
+        working_snapshots = {}
+        for comp in event_sources:
+            self._restore_with_inputs(comp, snapshots_left[comp.name], input_cache[comp.name], t_left)
+            if t_left_ref > t_left + 1e-12:
+                comp._do_step_internal(t_left, t_left_ref - t_left)
+                comp._update_output_states()
+            working_snapshots[comp.name] = comp.snapshot_state()
+
+        # 7) Bisection loop
         for iteration in range(self.max_iter):
-            # 1) Check termination: interval width
+            # a) Check termination: interval width
             if right - left <= self.tol_time:
                 t_event = right
                 break
 
-            # 2) Bisect the interval
+            # b) Bisect the interval
             mid = 0.5 * (left + right)
 
-            # 3) Evaluate indicators at midpoint (with frozen inputs from t_left_ref)
+            # c) Evaluate indicators at midpoint (with frozen inputs from t_left_ref)
             indicators_mid = self._evaluate_indicators_at(
                 event_sources, working_snapshots, input_cache, t_left_ref, mid)
             
-            # 4) Detect crossings in [left, mid] and [mid, right]
-            events_left = self._detect_crossing_between(
-                event_sources, indicators_left, indicators_mid
+            # d) Detect crossings in [left, mid] and [mid, right]
+            events_left_interval = self._detect_crossing_between(
+                event_sources, indicators_left_vals, indicators_mid
             )
-            events_right = self._detect_crossing_between(
+            events_right_interval = self._detect_crossing_between(
                 event_sources, indicators_mid, indicators_right
             )
 
-            # 5) Narrow interval based on where events were detected
-            if len(events_left) == 1:
-                comp_name, event_name = events_left[0]
+            # e) Check if we found exact crossing at midpoint
+            if len(events_left_interval) == 1:
+                comp_name, event_name = events_left_interval[0]
                 indicator_value = indicators_mid[comp_name][event_name]
                 if abs(indicator_value) <= self.tol_value:
                     # Found exact event time
                     t_event = mid
                     break
-            if events_left:
-                # Multiple events in [left, mid], narrow to find the earliest
+            
+            # f) Narrow interval based on where events were detected
+            if events_left_interval:
+                # Events in [left, mid], narrow to find the earliest
                 right = mid
                 indicators_right = indicators_mid
             else:
                 # No events in [left, mid], the event must be in [mid, right]
                 left = mid
-                indicators_left = indicators_mid
+                indicators_left_vals = indicators_mid
+                # Update working snapshots
                 working_snapshots = {comp.name: comp.snapshot_state() for comp in event_sources}
                 t_left_ref = mid
                 t_event = right
 
-        # 6) Collect all events at located time
-        all_events_at_t = []
+        # 8) Collect all events at located time
+        #    Step all components to t_event and check indicators
+        for comp in event_sources:
+            self._restore_with_inputs(comp, snapshots_left[comp.name], input_cache[comp.name], t_left)
+            comp._do_step_internal(t_left, t_event - t_left)
+            comp._update_output_states()
+        
+        all_events_at_t = self._collect_events_at_time(event_sources)
+        
+        # If indicator-based collection missed events, use hint-based events
+        if not all_events_at_t and events_from_hints:
+            # Filter hints to those near t_event
+            all_events_at_t = []
+            for comp_name, event_name in events_from_hints:
+                if internal_hints and comp_name in internal_hints:
+                    for hint in internal_hints[comp_name]:
+                        if (hint.event_name == event_name and 
+                            hint.t_before <= t_event <= hint.t_after + self.tol_time):
+                            all_events_at_t.append((comp_name, event_name))
+                            break
+
+        # 9) Restore all components to state at t_left
+        self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
+
+        return DenseTime(t=t_event, micro=0), all_events_at_t
+    
+    def _get_earliest_event_hint(self, 
+                                 internal_hints: Dict[str, List[InternalEventInfo]],
+                                 t_left: Optional[float] = None,
+                                 t_right: Optional[float] = None
+                                 ) -> Optional[InternalEventInfo]:
+        """
+        Find the earliest event hint across all components.
+        
+        Only considers hints that fall within [t_left, t_right] if provided.
+        Returns the InternalEventInfo with the smallest t_before value.
+        """
+        earliest: Optional[InternalEventInfo] = None
+        for comp_name, hints in internal_hints.items():
+            for hint in hints:
+                # Filter hints to current interval
+                if t_left is not None and hint.t_after <= t_left + self.tol_time:
+                    continue  # Hint is at or before current interval start
+                if t_right is not None and hint.t_before >= t_right:
+                    continue  # Hint is after current interval
+                    
+                if earliest is None or hint.t_before < earliest.t_before:
+                    earliest = hint
+        return earliest
+
+    def _collect_events_at_time(self, 
+                                event_sources: List["CoSimComponent"]
+                                ) -> List[Tuple[str, str]]:
+        """
+        Collect all events at the current time based on indicator values.
+        """
+        all_events = []
         for comp in event_sources:
             indicators = comp.evaluate_event_indicators()
             for event_name, value in indicators.items():
                 if abs(value) <= self.tol_value:
-                    all_events_at_t.append((comp.name, event_name))
-
-        # 7) Restore all components to state at t_left
-        self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
-
-        return DenseTime(t=t_event, micro=0), all_events_at_t
+                    all_events.append((comp.name, event_name))
+        return all_events
 
     #--------------------------------------------------------------------------
     # Event Trigger Time Localization - Helpers
@@ -382,8 +555,8 @@ class HybridAlgorithm(Algorithm):
             self._restore_with_inputs(comp, snapshot, inputs, t_left)
             comp._do_step_internal(t_left, t_target - t_left)
             comp._update_output_states()
-            if self.verbose:
-                comp._record_outputs(t_target)
+            # if self.verbose:
+            #     comp._record_outputs(t_target)
             return comp.evaluate_event_indicators()
         finally:
             if hasattr(comp, '_allow_mode_switching'):

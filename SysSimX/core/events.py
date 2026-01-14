@@ -40,6 +40,49 @@ class Event:
     time: Optional[DenseTime] = None
     direction: Optional[int] = None # -1: falling, 0: any, 1: rising
 
+
+# -------------------------------------------------------------------
+# Internal Event Info (for components with internal micro-stepping)
+# -------------------------------------------------------------------
+@dataclass
+class InternalEventInfo:
+    """
+    Information about an event detected during internal micro-stepping.
+    
+    Components that use internal micro-stepping (e.g., FEM models) can detect
+    events more precisely than the master algorithm. This class allows them
+    to communicate timing hints to the master algorithm for more efficient
+    event localization.
+    
+    Attributes:
+        event_name: Name of the detected event (must match an event indicator)
+        t_before: Time of the last micro-step before the event (indicator was positive/negative)
+        t_after: Time of the first micro-step after the event (indicator crossed zero)
+        indicator_before: Indicator value at t_before (optional, for verification)
+        indicator_after: Indicator value at t_after (optional, for verification)
+    
+    Usage:
+        The master algorithm can use [t_before, t_after] as an initial narrow
+        interval for bisection, rather than searching the full macro-step.
+    """
+    event_name: str
+    t_before: float
+    t_after: float
+    indicator_before: Optional[float] = None
+    indicator_after: Optional[float] = None
+    
+    def __post_init__(self):
+        if self.t_after < self.t_before:
+            raise ValueError(
+                f"t_after ({self.t_after}) must be >= t_before ({self.t_before})"
+            )
+    
+    @property
+    def interval_width(self) -> float:
+        """Width of the event localization interval."""
+        return self.t_after - self.t_before
+
+
 # -------------------------------------------------------------------
 # Event Indicator
 # -------------------------------------------------------------------

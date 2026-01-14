@@ -148,6 +148,10 @@ class FEMPendulum(FEMComponent):
                  'torque':{'value': self.init_params.drive_torque}}
         self.set_state(state=state, t=t0)
 
+        if self._with_contact:
+            self.gap = self._get_contact_gap_distance()
+            self.gap_prev = self.gap
+        
         self.setup_monitoring()
 
     #----------------------------------------------------------------------------
@@ -396,6 +400,11 @@ class FEMPendulum(FEMComponent):
             self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
             self._gf_uold.vec[:] = self._gf_u.vec
             self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+            
+            # Update gap if contact is enabled
+            if self._with_contact:
+                self.gap_prev = state.get('gap_prev', float('inf'))
+                self.gap = self._get_contact_gap_distance()               
                 
             if 'omega' in state:
                 omega = state['omega']['value']
@@ -434,6 +443,9 @@ class FEMPendulum(FEMComponent):
         state["omega"] = {'value': omega_state, 'unit': 'rad/s'}
         state["alpha"] = {'value': alpha_state, 'unit': 'rad/s**2'}
         state["torque"] = {'value': torque_state, 'unit': 'N*m'}
+        if self._with_contact:
+            state["gap"] = {'value': self.gap, 'unit': 'm'}
+            state["gap_prev"] = {'value': self.gap_prev, 'unit': 'm'}
         return  state
 
     #----------------------------------------------------------------------------
@@ -461,6 +473,10 @@ class FEMPendulum(FEMComponent):
             # Time step size (may vary during contact)
             'tau': self.tau.Get(),
             
+            # Contact gap info
+            'gap': self.gap if self._with_contact else None,
+            'gap_prev': self.gap_prev if self._with_contact else None,
+            
             # Time
             't': self.t
         }
@@ -474,6 +490,8 @@ class FEMPendulum(FEMComponent):
         if snapshot.get('mode', '') != 'FEM':
             raise ValueError(f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'.")
         
+        self.internal_event_hints.clear()
+        
         # Restore time
         self.t = t
         
@@ -486,6 +504,11 @@ class FEMPendulum(FEMComponent):
         self._gf_uold.vec.FV().NumPy()[:] = snapshot['u_old']
         self._gf_vold.vec.FV().NumPy()[:] = snapshot['v_old']
         self._gf_aold.vec.FV().NumPy()[:] = snapshot['a_old']
+        
+        # Update contact gap info
+        if self._with_contact:
+            self.gap = snapshot.get('gap', float('inf'))
+            self.gap_prev = snapshot.get('gap_prev', float('inf'))
         
         # Restore time step size
         self.tau.Set(snapshot['tau'])
@@ -520,17 +543,24 @@ class FEMPendulum(FEMComponent):
     def _do_step_internal(self, t, dt):
         """
         Advance FEM pendulum simulation from t to t+dt (called by base-class).
+        
+        Reports internal event hints when wall contact is detected during
+        micro-stepping, enabling precise event localization by the master algorithm.
         """
-        t_step_end = t + dt if t + dt < self.sim_params.t_end else self.sim_params.t_end
+        # Clear any stale internal event hints from previous steps
+        self.internal_event_hints.clear()
+        
         if dt < self.sim_params.tau:
-            self.tau.Set(dt)
+            effective_dt = dt
         else:
-            self.tau.Set(self.sim_params.tau)
-        detected_events = set()
+            effective_dt = self.sim_params.tau
+            
+        t_current = t
+        t_end = t + dt
+        
         with TaskManager():
-            while t < t_step_end:
-                # Evaluate indicator at start of time step
-                indicators_left = self.evaluate_event_indicators()
+            while t_current < t_end - 1e-12:               
+                tau = min(effective_dt, t_end - t_current)
                 
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
@@ -539,25 +569,26 @@ class FEMPendulum(FEMComponent):
                 
                 # Update contact with the current displacement
                 if self._with_contact:
+                    # Update contact conditions
                     self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
-                    min_gap = self._get_contact_gap_distance()
-                    self.widgets['gap'].value = min_gap
+                    self.gap_prev = self._get_contact_gap_distance()
+                    t_prev = t_current
+                    self.widgets['gap'].value = self.gap_prev
+                    
                     # Reduce time step if pendulum is close to contact
-                    if min_gap < 0.001:
+                    if self.gap_prev < 0.001:
                         self.tau.Set(1e-4)
-                    elif min_gap < 0.01:
+                    elif self.gap_prev < 0.01:
                         self.tau.Set(5e-4)
-                    elif min_gap < 0.05:
+                    elif self.gap_prev < 0.05:
                         self.tau.Set(1e-3)
                     else:
-                        self.tau.Set(self.sim_params.tau)
-                    if t < 0.5:
                         self.tau.Set(self.sim_params.tau)
                 
                 # Update time settings
                 tau = self.tau.Get()
-                t += tau
-                self.widgets['time'].value = t
+                t_current += tau
+                self.widgets['time'].value = t_current
                 self.widgets['dt'].value = tau
 
                 # Solve nonlinear system with Newton
@@ -573,6 +604,21 @@ class FEMPendulum(FEMComponent):
                 self._gf_v.vec[:] = 2/tau * (self._gf_u.vec-self._gf_uold.vec) - self._gf_vold.vec
                 self._gf_a.vec[:] = 2/tau * (self._gf_v.vec-self._gf_vold.vec) - self._gf_aold.vec
                 
+                # Check for wall contact event (gap crossing zero)
+                if self._with_contact:
+                    self.gap = self._get_contact_gap_distance()
+                    
+                    # Detect zero-crossing: gap went from positive to non-positive
+                    if self.gap_prev > 0.0 and self.gap <= 0.0:
+                        # Report internal event with precise timing from micro-steps
+                        self.report_internal_event(
+                            event_name='wall_hit',
+                            t_before=t_prev,
+                            t_after=t_current,
+                            indicator_before=self.gap_prev,
+                            indicator_after=self.gap
+                        )
+                
                 # Compute stress
                 self._gf_sigma.Interpolate(self._sigma_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u))
 
@@ -583,17 +629,8 @@ class FEMPendulum(FEMComponent):
                     self.scene.Redraw()
                 self._update_output_states(t)
 
-                # Evaluate event indicators at end of time step
-                indicators_right = self.evaluate_event_indicators()
-                events = self.detect_event_crossing(indicators_left, indicators_right)
-                for event in events:
-                    detected_events.add(event)
-
-                self._record_outputs(t)
-                self.update_monitoring()
-        
-        return list(detected_events)
-                
+                #self._record_outputs(t)
+                self.update_monitoring()                
                 
     #----------------------------------------------------------------------------
     # Input/output methods

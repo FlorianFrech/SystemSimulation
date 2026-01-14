@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, Set, List, Callable
 from .port import PortSpec, PortState, PortType
 from .history import ComponentHistory
-from .events import EventIndicator, Event, _sign
+from .events import EventIndicator, Event, InternalEventInfo, _sign
 
 # -------------------------------------------------------------------
 # CoSimComponent - Base Class for Co-Simulation Components
@@ -45,11 +45,33 @@ class CoSimComponent(ABC):
 
         # Hybrid capabilities
         self.event_indicators: Dict[str, EventIndicator] = {}
-        self.detected_events: List[str] = []
+        self.internal_event_hints: List[InternalEventInfo] = []  # For precise event localization
         self.event_subscriptions: List[Event] = []
         self.event_annotations: Dict[str, Dict[str, Any]] = {}
         self.event_commutativity: Dict[Tuple[str, str], bool] = {}
-
+        
+        # Integer Time
+        self.resolution_exponent: int = 0
+        self.time_index: int = 0
+    
+    # -------------------------------------------------------------------
+    # Integer Time Management
+    # -------------------------------------------------------------------
+    def set_resolution_exponent(self, exponent: int) -> None:
+        """
+        Set the resolution exponent for integer time representation.
+        Integer time = real time * 10**exponent
+        """
+        self.resolution_exponent = exponent
+    
+    def get_resolution_exponent(self) -> int:
+        """Get the current resolution exponent."""
+        return self.resolution_exponent
+    
+    def get_integer_time(self) -> int:
+        """Get the current time as an integer based on resolution exponent."""
+        return self.time_index * (10 ** self.resolution_exponent)
+    
     # -------------------------------------------------------------------
     # Construction of Port States from Specs
     # -------------------------------------------------------------------
@@ -259,7 +281,6 @@ class CoSimComponent(ABC):
         for name, indicator in self.event_indicators.items():
             prev_sign = _sign(previous[name], sign_tolerance)
             curr_sign = _sign(current[name], sign_tolerance)
-            value = current[name]
             
             # Check for crossing according to indicator direction
             if indicator.direction == 0:  # Any direction
@@ -271,8 +292,46 @@ class CoSimComponent(ABC):
             
             if crossed:
                 events.append(name)
-        
         return events
+    
+    def report_internal_event(self,
+                              event_name: str,
+                              t_before: float,
+                              t_after: float,
+                              indicator_before: Optional[float] = None,
+                              indicator_after: Optional[float] = None) -> None:
+        """
+        Report an event detected during internal micro-stepping.
+        
+        Call this from _do_step_internal when an event is detected internally.
+        The master algorithm will use this hint to narrow the bisection interval.
+        
+        Args:
+            event_name: Name of the event (must match an event indicator)
+            t_before: Last micro-step time before the event
+            t_after: First micro-step time after the event
+            indicator_before: Indicator value at t_before (optional)
+            indicator_after: Indicator value at t_after (optional)
+        """
+        hint = InternalEventInfo(
+            event_name=event_name,
+            t_before=t_before,
+            t_after=t_after,
+            indicator_before=indicator_before,
+            indicator_after=indicator_after
+        )
+        self.internal_event_hints.append(hint)
+    
+    def get_internal_event_hints(self) -> List[InternalEventInfo]:
+        """
+        Retrieve and clear internal event hints.
+        
+        Returns:
+            List of InternalEventInfo objects with timing hints for event localization.
+        """
+        hints = self.internal_event_hints.copy()
+        self.internal_event_hints.clear()
+        return hints
     
     @property
     def has_state_events(self) -> bool:

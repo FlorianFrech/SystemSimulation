@@ -1,6 +1,6 @@
-// System: Hybrid System - Event Handling
+// System: Hybrid System - Event Commutativity
 digraph {
-	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Hybrid System - Event Handling" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
+	graph [bgcolor=white compound=true esep=0 fontname="Helvetica-Bold" fontsize=18 label="Hybrid System - Event Commutativity" labelloc=t margin=0.2 nodesep=0.8 pad=0.5 rankdir=LR ranksep=0.8 sep=0 splines=true]
 	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.05,0.05" shape=plaintext style=""]
 	edge [arrowhead=vee arrowsize=0.7 arrowtail=none color="#111827" dir=forward fontname=Helvetica fontsize=10 labelangle=45 labelfontcolor="#374151" minlen=1.2 penwidth=1.2]
 	subgraph cluster_legend {
@@ -18,13 +18,13 @@ digraph {
 	}
 	subgraph cluster_Sources {
 		bgcolor="#e3b9b9" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Sources margin=12 penwidth=2 style=rounded
-		Source_1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_1</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="Trigger_1"><FONT COLOR="#0b84ff"><B>Trigger_1</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
-		Source_2 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_2</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="Trigger_2"><FONT COLOR="#0b84ff"><B>Trigger_2</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
+		Source_1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_1</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="v_invert"><FONT COLOR="#0b84ff"><B>v_invert</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
+		Source_2 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD></TD><TD><B>Source_2</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="v_double"><FONT COLOR="#0b84ff"><B>v_double</B></FONT></TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
 	subgraph cluster_Listener {
 		bgcolor="#ebdddd" color="#d1d5db" fontname="Helvetica-Bold" fontsize=11 label=Listener margin=12 penwidth=2 style=rounded
-		Listener [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD PORT="v_invert"><FONT COLOR="#0b84ff"><B>v_invert</B></FONT></TD><TD><B>Listener</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD PORT="x">x</TD></TR></TABLE>>]
+		Listener [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD>in</TD><TD>name</TD><TD>out</TD></TR><TR><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="v_double"><FONT COLOR="#0b84ff"><B>v_double</B></FONT></TD></TR><TR><TD PORT="v_invert"><FONT COLOR="#0b84ff"><B>v_invert</B></FONT></TD></TR></TABLE></TD><TD><B>Listener</B><BR/><FONT POINT-SIZE="8">#0</FONT></TD><TD><TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="2"><TR><TD PORT="v">v</TD></TR><TR><TD PORT="x">x</TD></TR></TABLE></TD></TR></TABLE>>]
 	}
-	Source_1 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="Trigger_1:e"]
-	Source_2 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="Trigger_2:e"]
+	Source_1 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_invert:w" penwidth=2.0 style=dashed tailclip=true tailport="v_invert:e"]
+	Source_2 -> Listener [label="" arrowhead=odot color="#0b84ff" fontcolor="#0b84ff" headclip=true headport="v_double:w" penwidth=2.0 style=dashed tailclip=true tailport="v_double:e"]
 }
