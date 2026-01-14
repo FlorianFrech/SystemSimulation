@@ -110,23 +110,12 @@ class HybridAlgorithm(Algorithm):
                 elif self.verbose:
                     print(f"  Skipping already-handled event: {comp_name}.{event_name} at t≈{t_event_rounded:.8f}")
             
-            # # 6) If all events were already handled, advance past this time and continue
-            # if not new_events:
-            #     if self.verbose:
-            #         print(f"  All events at t={dense_time.t:.8f} already handled, advancing...")
-            #     # Step to just past the event time
-            #     dt_to_skip = dense_time.t - t_left + self.tol_time
-            #     if dt_to_skip > eps:
-            #         self.gauss_seidel_algorithm.step(system, t_left, dt_to_skip)
-            #     t_left = dense_time.t + self.tol_time
-            #     continue
-            
             initial_events = new_events
                 
-            # 7) Step all components to event time
+            # 6) Step all components to event time
             self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
 
-            # 8) Iterative event handling
+            # 7) Iterative event handling
             all_handled_events = set()
             event_pairs = initial_events
             current_time = dense_time
@@ -185,10 +174,10 @@ class HybridAlgorithm(Algorithm):
             if current_time.micro >= self.max_microsteps:
                 raise RuntimeError("Maximum number of microsteps reached during event handling.")
 
-            # 7) Prepare for next interval
+            # 8) Prepare for next interval
             self._prepare_inputs(system, dense_time)
 
-            # 8) Update left time
+            # 9) Update left time
             t_left = dense_time.t + self.tol_time
             if self.verbose:
                 print(f"{80*'='}\n")
@@ -255,9 +244,8 @@ class HybridAlgorithm(Algorithm):
                 raw_hints = comp.get_internal_event_hints()
                 filtered_hints = []
                 if raw_hints:
+                    # Only keep hints that are strictly within the interval
                     for hint in raw_hints:
-                        # Only keep hints that are strictly within the interval
-                        # t_after must be > t_left (not at or before the start)
                         if hint.t_after > t_left + self.tol_time and hint.t_before < t_right:
                             filtered_hints.append(hint)
                             if self.verbose:

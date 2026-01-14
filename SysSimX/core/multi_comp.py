@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Callable, Protocol, List
 from .base import CoSimComponent
 from .port import PortSpec, PortState, PortType
+from .events import InternalEventInfo
 from ..utilities.units import ureg, Quantity
 
 # -------------------------------------------------------------------
@@ -320,7 +321,12 @@ class MultiComponent(CoSimComponent):
         """Delegate event handling to active component."""
         if self.active_comp:
             self.active_comp.handle_event(event_names, t)
-        
+    
+    def get_internal_event_hints(self) -> List[InternalEventInfo]:
+        """Delegate to active component."""
+        if self.active_comp and self.active_comp.has_state_events:
+            return self.active_comp.get_internal_event_hints()
+        return []
 
     # -------------------------------------------------------------------
     # Reset Logic

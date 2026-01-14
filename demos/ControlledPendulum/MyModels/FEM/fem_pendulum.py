@@ -550,7 +550,9 @@ class FEMPendulum(FEMComponent):
         # Clear any stale internal event hints from previous steps
         self.internal_event_hints.clear()
         
-        if dt < self.sim_params.tau:
+        if dt < 1e4:
+            effective_dt = dt
+        elif dt < self.sim_params.tau:
             effective_dt = dt
         else:
             effective_dt = self.sim_params.tau
@@ -576,7 +578,9 @@ class FEMPendulum(FEMComponent):
                     self.widgets['gap'].value = self.gap_prev
                     
                     # Reduce time step if pendulum is close to contact
-                    if self.gap_prev < 0.001:
+                    if effective_dt <= 1e-4:
+                        self.tau.Set(effective_dt)
+                    elif self.gap_prev < 0.001:
                         self.tau.Set(1e-4)
                     elif self.gap_prev < 0.01:
                         self.tau.Set(5e-4)
