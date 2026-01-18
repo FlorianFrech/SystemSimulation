@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>syssimx.system.system &#8212; SysSimX 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for syssimx.system.system</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">CoSimComponent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.events</span><span class="w"> </span><span class="kn">import</span> <span class="n">Event</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">SystemHistory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.port</span><span class="w"> </span><span class="kn">import</span> <span class="n">PortSpec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">graph</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.algorithms.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Algorithm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.algorithms.gauss_seidel</span><span class="w"> </span><span class="kn">import</span> <span class="n">GaussSeidelAlgorithm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.algorithms.hybrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">HybridAlgorithm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.algorithms.ijcsa</span><span class="w"> </span><span class="kn">import</span> <span class="n">solve_algebraic_scc_ijcsa</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">EventConnection</span>
+
+<span class="n">_ports_compatible</span> <span class="o">=</span> <span class="n">PortSpec</span><span class="o">.</span><span class="n">compatible</span>
+
+
+<span class="c1"># ----------------------------------------------------------------------------</span>
+<span class="c1"># System Class</span>
+<span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">System</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a system of interconnected CoSimComponents:</span>
+<span class="sd">     - Manages components and their connections</span>
+<span class="sd">     - Validates connections</span>
+<span class="sd">     - Builds a zero-delay directed acyclic graph (DAG) to compute parallelizable execution order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">CoSimComponent</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Connection</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_connections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EventConnection</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>  <span class="c1"># All connections (including delayed)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>  <span class="c1"># Zero-delay connections only</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">CoSimComponent</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execution_order</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># [ [comp names in gen0], [gen1], ...]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execution_idx</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># comp name -&gt; gen index</span>
+
+        <span class="c1"># Algebraic loop diagnostics (SCCs with size &gt; 1 on the direct feed-through graph)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algebraic_loops</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Detected algebraic loops (if any)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scc_index</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># comp name -&gt; scc index</span>
+
+        <span class="c1"># Pre-computed connection lookups</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_incoming_by_dst</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Connection</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Connection</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_event_targets_by_source</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="o">=</span> <span class="n">GaussSeidelAlgorithm</span><span class="p">()</span>
+
+        <span class="c1"># History Management</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">history</span> <span class="o">=</span> <span class="n">SystemHistory</span><span class="p">(</span><span class="n">system_name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Algorithm</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.set_algorithm">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.set_algorithm">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_algorithm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">:</span> <span class="n">Algorithm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the co-simulation stepping algorithm.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="n">Algorithm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;algorithm must implement Algorithm&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Register components</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.add_component">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.add_component">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="n">CoSimComponent</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a CoSimComponent to the system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Cannot add components after system initialization.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Component &#39;</span><span class="si">{</span><span class="n">component</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; already in system.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">component</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">component</span>
+
+        <span class="c1"># Register component history</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">component</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">component</span><span class="o">.</span><span class="n">history</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">component</span><span class="o">.</span><span class="n">group</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">component</span><span class="o">.</span><span class="n">group</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Connections</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># 1) existence</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">src_comp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="ow">or</span> <span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Both &#39;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_comp</span><span class="si">}</span><span class="s2">&#39; and &#39;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span><span class="si">}</span><span class="s2">&#39; must be added to the system before connecting them.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">src_comp</span><span class="p">]</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span><span class="p">]</span>
+
+        <span class="c1"># 2) port existence</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">src_port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">src</span><span class="o">.</span><span class="n">output_specs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Source port &#39;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_port</span><span class="si">}</span><span class="s2">&#39; is not an OUTPUT port of component &#39;</span><span class="si">{</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">dst_port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dst</span><span class="o">.</span><span class="n">input_specs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Destination port &#39;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_port</span><span class="si">}</span><span class="s2">&#39; is not an INPUT port of component &#39;</span><span class="si">{</span><span class="n">dst</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">src_ps</span><span class="p">:</span> <span class="n">PortSpec</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">output_specs</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">src_port</span><span class="p">]</span>
+        <span class="n">dst_ps</span><span class="p">:</span> <span class="n">PortSpec</span> <span class="o">=</span> <span class="n">dst</span><span class="o">.</span><span class="n">input_specs</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">dst_port</span><span class="p">]</span>
+
+        <span class="c1"># 3) type and unit compatibility</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_ports_compatible</span><span class="p">(</span><span class="n">src_ps</span><span class="p">,</span> <span class="n">dst_ps</span><span class="p">):</span>
+            <span class="n">src_unit</span> <span class="o">=</span> <span class="n">src_ps</span><span class="o">.</span><span class="n">unit</span> <span class="k">if</span> <span class="n">src_ps</span><span class="o">.</span><span class="n">unit</span> <span class="k">else</span> <span class="s2">&quot;unitless&quot;</span>
+            <span class="n">dst_unit</span> <span class="o">=</span> <span class="n">dst_ps</span><span class="o">.</span><span class="n">unit</span> <span class="k">if</span> <span class="n">dst_ps</span><span class="o">.</span><span class="n">unit</span> <span class="k">else</span> <span class="s2">&quot;unitless&quot;</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port incompatibility: </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_comp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_port</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">src_ps</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">src_unit</span><span class="si">}</span><span class="s2">) &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;-&gt; </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_port</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">dst_ps</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dst_unit</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># 5) duplicate check</span>
+        <span class="k">for</span> <span class="n">existing</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">existing</span><span class="o">.</span><span class="n">src_comp</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">src_comp</span>
+                <span class="ow">and</span> <span class="n">existing</span><span class="o">.</span><span class="n">src_port</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">src_port</span>
+                <span class="ow">and</span> <span class="n">existing</span><span class="o">.</span><span class="n">dst_comp</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span>
+                <span class="ow">and</span> <span class="n">existing</span><span class="o">.</span><span class="n">dst_port</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">dst_port</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Duplicate connection: </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_comp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">src_port</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_comp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">dst_port</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+<div class="viewcode-block" id="System.add_connection">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.add_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a Connection between two components in the system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_connection</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_incoming_by_dst</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_sources</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Event Connections</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_event_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="n">EventConnection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">src_comp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Event source &#39;</span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">src_comp</span><span class="si">}</span><span class="s2">&#39; is not in the system.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">dst_comp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Event target &#39;</span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">dst_comp</span><span class="si">}</span><span class="s2">&#39; is not in the system.&quot;</span><span class="p">)</span>
+
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">connection</span><span class="o">.</span><span class="n">src_comp</span><span class="p">]</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">connection</span><span class="o">.</span><span class="n">dst_comp</span><span class="p">]</span>
+        <span class="n">event_name</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">src_port</span>
+        <span class="k">if</span> <span class="n">event_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">event_indicators</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Event &#39;</span><span class="si">{</span><span class="n">event_name</span><span class="si">}</span><span class="s2">&#39; not found on source component &#39;</span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Verify to have the correct event name.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">has_subscription</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">event_subscriptions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">event_name</span><span class="p">:</span>
+                <span class="n">has_subscription</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_subscription</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Target &#39;</span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not subscribed to event &#39;(</span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">event_name</span><span class="si">}</span><span class="s2">)&#39;. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Subscribe before connecting via: target.subscribe_event(event).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">existing</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_connections</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">existing</span> <span class="o">==</span> <span class="n">connection</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Duplicate event connection: </span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">src_comp</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">event_name</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">target_comp</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+<div class="viewcode-block" id="System.add_event_connection">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.add_event_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_event_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="n">EventConnection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_event_connection</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_connections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">src_comp</span><span class="p">,</span> <span class="n">connection</span><span class="o">.</span><span class="n">src_port</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_event_targets_by_source</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">dst_comp</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="System.get_event_targets">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.get_event_targets">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_event_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_comp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">event_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_targets_by_source</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">source_comp</span><span class="p">,</span> <span class="n">event_name</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="System.dispatch_event">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.dispatch_event">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dispatch_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">Event</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">notify</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resolve event listeners for a given event and optionally notify them.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Event source &#39;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">&#39; is not in the system.&quot;</span><span class="p">)</span>
+
+        <span class="n">targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_event_targets</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Dispatching event &#39;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; from &#39;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">&#39; to targets: </span><span class="si">{</span><span class="n">targets</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">notify</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span><span class="o">.</span><span class="n">handle_event</span><span class="p">([</span><span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">t</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">targets</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Graphs</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.build_graphs">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.build_graphs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_graphs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build:</span>
+<span class="sd">          - self.graph: all connections (annotated)</span>
+<span class="sd">          - self._dag: zero-delay true-direct-feedthrough dependencies only</span>
+<span class="sd">          - self.algebraic_loops: SCCs (&gt;1) on self._dag</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">build_graphs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="System.compute_execution_order">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.compute_execution_order">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_execution_order</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a parallelizable execution order based on zero-delay dependencies.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">compute_execution_order</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="System.classify_components">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.classify_components">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">classify_components</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">CoSimComponent</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Classify components for hybrid co-simulation handling.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict with keys:</span>
+<span class="sd">            - &quot;event_sources&quot;: components with indicators (rollback required)</span>
+<span class="sd">            - &quot;event_listeners&quot;: components subscribed to events only</span>
+<span class="sd">            - &quot;continuous_only&quot;: components without hybrid capabilities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CoSimComponent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_listeners</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CoSimComponent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">continuous_only</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CoSimComponent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">comp</span><span class="o">.</span><span class="n">has_state_events</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">event_sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">comp</span><span class="o">.</span><span class="n">has_event_subscriptions</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">event_listeners</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">comp</span><span class="o">.</span><span class="n">has_state_events</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">comp</span><span class="o">.</span><span class="n">has_event_subscriptions</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">continuous_only</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;event_sources&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_sources</span><span class="p">,</span>
+            <span class="s2">&quot;event_listeners&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_listeners</span><span class="p">,</span>
+            <span class="s2">&quot;continuous_only&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">continuous_only</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Simulation Lifecycle</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.initialize">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.initialize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t0</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize all components in the system at start time t0.</span>
+<span class="sd">        Also build graphs and compute execution order.</span>
+<span class="sd">        Store t_end for reference.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">t0</span>
+
+        <span class="c1"># 1) Initialize all CoSimComponents</span>
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">comp</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">t0</span><span class="p">)</span>
+
+        <span class="c1"># 2) Auto-select hybrid algorithm if needed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classify_components</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_sources</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">HybridAlgorithm</span><span class="p">()</span>
+
+        <span class="c1"># 3) Build connections and compute execution order</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_graphs</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_execution_order</span><span class="p">()</span>
+
+        <span class="c1"># 4) Set initial inputs and solve for consistent initial state</span>
+        <span class="k">for</span> <span class="n">gen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_order</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_inputs_for_generation</span><span class="p">(</span><span class="n">gen</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+
+            <span class="n">gen_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">gen</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">loop</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">algebraic_loops</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">gen_set</span><span class="p">):</span>
+                    <span class="n">solve_algebraic_scc_ijcsa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loop</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">:</span>
+                <span class="n">comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+                <span class="n">comp</span><span class="o">.</span><span class="n">do_step</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_inputs_for_generation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">t</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For each component in the generation, set its INPUT by scanning connections whose</span>
+<span class="sd">        dst_comp is the component, using the current output value from the source.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">:</span>
+            <span class="n">comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+            <span class="n">to_set</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">input_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="k">for</span> <span class="n">dst_port</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">input_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">src_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">src_comp</span><span class="p">]</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">src_port</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">src_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">to_set</span><span class="p">[</span><span class="n">dst_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">src_value</span>
+
+            <span class="k">if</span> <span class="n">to_set</span><span class="p">:</span>
+                <span class="n">comp</span><span class="o">.</span><span class="n">set_inputs</span><span class="p">(</span><span class="n">to_set</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Run System Simulation</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.run">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">tf</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the simulation from t0 to tf with step size dt.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">t0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_end</span> <span class="o">=</span> <span class="n">tf</span>
+        <span class="k">while</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">tf</span> <span class="o">-</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">tf</span> <span class="o">-</span> <span class="n">t</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+            <span class="n">t</span> <span class="o">+=</span> <span class="n">dt</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Get history of all components</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="System.get_history">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.System.get_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve the history of all components in the system.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary mapping component names to their history dictionaries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">history</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">comp_name</span><span class="p">,</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">history</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">get_history_arrays</span><span class="p">()</span>
+        <span class="n">history</span><span class="p">[</span><span class="s2">&quot;Events&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">get_all_event_histories</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">history</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">SysSimX</a></h1>
+
+
+
+<p class="blurb">A Python framework for heterogeneous system co-simulation</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=FlorianFrech&repo=SystemSimulation&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Florian Frech.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

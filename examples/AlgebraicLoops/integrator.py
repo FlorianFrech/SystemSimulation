@@ -1,20 +1,17 @@
-from SysSimX.core.base import CoSimComponent
-from SysSimX.core.port import PortSpec, PortType
+from syssimx.core.base import CoSimComponent
+from syssimx.core.port import PortSpec, PortType
 
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Port specifications
-#----------------------------------------------------------------------------   
-INPUT_SPECS = {
-    "dx_dt": PortSpec("dx_dt", PortType.REAL, direction="in")
-}
+# ----------------------------------------------------------------------------
+INPUT_SPECS = {"dx_dt": PortSpec("dx_dt", PortType.REAL, direction="in")}
 
-OUTPUT_SPECS = {
-    "x": PortSpec("x", PortType.REAL, direction="out")
-}
+OUTPUT_SPECS = {"x": PortSpec("x", PortType.REAL, direction="out")}
 
-#----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
 # Simple Integrator Component
-#---------------------------------------------------------------------------- 
+# ----------------------------------------------------------------------------
 class Integrator(CoSimComponent):
     """
     An integrator component that integrates its input signal dx_dt over time.
@@ -45,14 +42,14 @@ class Integrator(CoSimComponent):
         """
         Perform a simulation step by integrating the input signal.
         """
-        input_value = self.inputs['dx_dt'].get()
+        input_value = self.inputs["dx_dt"].get()
         self.state += input_value * dt
 
     def _update_output_states(self, t):
         """
         Update the output port states.
         """
-        self.outputs['x'].set(self.state, t)
+        self.outputs["x"].set(self.state, t)
 
     def set_state(self, state, t):
         """
@@ -66,7 +63,7 @@ class Integrator(CoSimComponent):
         Get the current integrator state.
         """
         return self.state
-    
+
     def reset(self, t):
         """
         Reset the integrator state to zero.

@@ -37,9 +37,10 @@
 # [2] Implementation -- https://github.com/CMA-ES/pycma
 # [3] Documentation -- http://cma.gforge.inria.fr/apidocs-pycma/cma.html
 
-import opensim as osim
 import time
+
 import cma
+import opensim as osim
 
 
 # OBJECTIVE FUNCTION
@@ -48,56 +49,57 @@ import cma
 # objective function value (i.e. the final location of the pelvis).
 def walker_simulation_objective_function(candsol):
     global model, initial_state, all_distances, all_candsols
-    
+
     # Set the initial hip and knee angles.
-    initial_state.updQ()[3] = candsol[0]    # left hip
-    initial_state.updQ()[4] = candsol[1]    # right hip
-    initial_state.updQ()[5] = candsol[2]    # left knee
-    initial_state.updQ()[6] = candsol[3]    # right knee
-    
+    initial_state.updQ()[3] = candsol[0]  # left hip
+    initial_state.updQ()[4] = candsol[1]  # right hip
+    initial_state.updQ()[5] = candsol[2]  # left knee
+    initial_state.updQ()[6] = candsol[3]  # right knee
+
     # Set the initial forward velocity of the pelvis.
-    vx0 = candsol[4]    # needed to compute the objective function, below
+    vx0 = candsol[4]  # needed to compute the objective function, below
     initial_state.updU()[1] = vx0
-    
+
     # Set the initial hip and knee angular velocities.
-    initial_state.updU()[3] = candsol[5]    # left hip
-    initial_state.updU()[4] = candsol[6]    # right hip
-    initial_state.updU()[5] = candsol[7]    # left knee
-    initial_state.updU()[6] = candsol[8]    # right knee
-    
+    initial_state.updU()[3] = candsol[5]  # left hip
+    initial_state.updU()[4] = candsol[6]  # right hip
+    initial_state.updU()[5] = candsol[7]  # left knee
+    initial_state.updU()[6] = candsol[8]  # right knee
+
     # Simulate.
     manager = osim.Manager(model)
     manager.initialize(initial_state)
     manager.integrate(10.0)
-    
+
     # Get the final location of the pelvis in the X direction.
     st = manager.getStatesTable()
-    dc = st.getDependentColumn('/jointset/PelvisToPlatform/Pelvis_tx/value')
-    x  = dc[ dc.nrow()-1 ]
+    dc = st.getDependentColumn("/jointset/PelvisToPlatform/Pelvis_tx/value")
+    x = dc[dc.nrow() - 1]
     # Store the candidate solution and the distance traveled.
     all_candsols.append(candsol)
     all_distances.append(x)
-    print('Distance traveled: %f meters' % (x))
-    
+    print("Distance traveled: %f meters" % (x))
+
     # To maximize distance, minimize its negative. Also penalize candidate
     # solutions that increase the initial pelvis velocity beyond 2 m/s (to
     # avoid simply launching the model forward). This could also be done by
     # adding a hard constraint.
     k = 10.0
-    penalty1 = k*(vx0**2.0) if vx0 < 0 else 0.0         # lower bound: 0 m/s
-    penalty2 = k*((vx0-2.0)**2.0) if vx0 > 2 else 0.0   # upper bound: 2 m/s
+    penalty1 = k * (vx0**2.0) if vx0 < 0 else 0.0  # lower bound: 0 m/s
+    penalty2 = k * ((vx0 - 2.0) ** 2.0) if vx0 > 2 else 0.0  # upper bound: 2 m/s
     J = -x + penalty1 + penalty2
-    return (J)
+    return J
+
 
 # MAIN
 # Perform an optimization using cma with the above objective function. The
 # final model will be saved as 'dynamic_walker_example_model_optimized.osim'.
 global model, initial_state, all_distances, all_candsols
 all_distances = []
-all_candsols  = []
+all_candsols = []
 
 # Load OpenSim model.
-model = osim.Model('dynamic_walker_example_model.osim')
+model = osim.Model("dynamic_walker_example_model.osim")
 
 # Create the underlying computational system. Note that we reuse the State
 # in the objective function to avoid the high computational cost of calling
@@ -109,41 +111,44 @@ initial_state = model.initSystem()
 # correctly, it should increase this value to 2.0 (the upper bound); see the
 # penalty calculation in the objective function.
 candsol = []
-candsol.append(model.getCoordinateSet().get('LHip_rz').getDefaultValue())
-candsol.append(model.getCoordinateSet().get('RHip_rz').getDefaultValue())
-candsol.append(model.getCoordinateSet().get('LKnee_rz').getDefaultValue())
-candsol.append(model.getCoordinateSet().get('RKnee_rz').getDefaultValue())
+candsol.append(model.getCoordinateSet().get("LHip_rz").getDefaultValue())
+candsol.append(model.getCoordinateSet().get("RHip_rz").getDefaultValue())
+candsol.append(model.getCoordinateSet().get("LKnee_rz").getDefaultValue())
+candsol.append(model.getCoordinateSet().get("RKnee_rz").getDefaultValue())
 candsol.append(0.1)
-candsol.append(model.getCoordinateSet().get('LHip_rz').getDefaultSpeedValue())
-candsol.append(model.getCoordinateSet().get('RHip_rz').getDefaultSpeedValue())
-candsol.append(model.getCoordinateSet().get('LKnee_rz').getDefaultSpeedValue())
-candsol.append(model.getCoordinateSet().get('RKnee_rz').getDefaultSpeedValue())
+candsol.append(model.getCoordinateSet().get("LHip_rz").getDefaultSpeedValue())
+candsol.append(model.getCoordinateSet().get("RHip_rz").getDefaultSpeedValue())
+candsol.append(model.getCoordinateSet().get("LKnee_rz").getDefaultSpeedValue())
+candsol.append(model.getCoordinateSet().get("RKnee_rz").getDefaultSpeedValue())
 
 # Optimize.
 t_start = time.time()
 # For a description of arguments to fmin(), run cma.CMAOptions() or see
 # http://cma.gforge.inria.fr/apidocs-pycma/cma.evolution_strategy.html#fmin
-result = cma.fmin(walker_simulation_objective_function, candsol, 0.5,
-                  options = {'popsize':20, 'tolfun':1e-3, 'tolx':1e-3,
-                             'maxfevals':100})
+result = cma.fmin(
+    walker_simulation_objective_function,
+    candsol,
+    0.5,
+    options={"popsize": 20, "tolfun": 1e-3, "tolx": 1e-3, "maxfevals": 100},
+)
 t_elapsed = time.time() - t_start
-print('Elapsed time: %f seconds' % (t_elapsed))
+print("Elapsed time: %f seconds" % (t_elapsed))
 
 # Find the best solution.
 max_distance = max(all_distances)
-print('Best distance: %f meters' % (max_distance))
+print("Best distance: %f meters" % (max_distance))
 idx = all_distances.index(max_distance)
 bestsol = all_candsols[idx]
 print(bestsol)
 
 # Assign best solution to model and save.
-model.getCoordinateSet().get('LHip_rz').setDefaultValue(bestsol[0])
-model.getCoordinateSet().get('RHip_rz').setDefaultValue(bestsol[1])
-model.getCoordinateSet().get('LKnee_rz').setDefaultValue(bestsol[2])
-model.getCoordinateSet().get('RKnee_rz').setDefaultValue(bestsol[3])
-model.getCoordinateSet().get('Pelvis_tx').setDefaultSpeedValue(bestsol[4])
-model.getCoordinateSet().get('LHip_rz').setDefaultSpeedValue(bestsol[5])
-model.getCoordinateSet().get('RHip_rz').setDefaultSpeedValue(bestsol[6])
-model.getCoordinateSet().get('LKnee_rz').setDefaultSpeedValue(bestsol[7])
-model.getCoordinateSet().get('RKnee_rz').setDefaultSpeedValue(bestsol[8])
-model.printToXML('dynamic_walker_example_model_optimized.osim')
+model.getCoordinateSet().get("LHip_rz").setDefaultValue(bestsol[0])
+model.getCoordinateSet().get("RHip_rz").setDefaultValue(bestsol[1])
+model.getCoordinateSet().get("LKnee_rz").setDefaultValue(bestsol[2])
+model.getCoordinateSet().get("RKnee_rz").setDefaultValue(bestsol[3])
+model.getCoordinateSet().get("Pelvis_tx").setDefaultSpeedValue(bestsol[4])
+model.getCoordinateSet().get("LHip_rz").setDefaultSpeedValue(bestsol[5])
+model.getCoordinateSet().get("RHip_rz").setDefaultSpeedValue(bestsol[6])
+model.getCoordinateSet().get("LKnee_rz").setDefaultSpeedValue(bestsol[7])
+model.getCoordinateSet().get("RKnee_rz").setDefaultSpeedValue(bestsol[8])
+model.printToXML("dynamic_walker_example_model_optimized.osim")

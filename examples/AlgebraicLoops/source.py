@@ -1,18 +1,10 @@
-from SysSimX.core.base import CoSimComponent
-from SysSimX.core.port import PortSpec, PortType
+from syssimx.core.base import CoSimComponent
+from syssimx.core.port import PortSpec, PortType
 
-#----------------------------------------------------------------------------
-# Port specifications
-#----------------------------------------------------------------------------   
-INPUT_SPECS = {}
 
-OUTPUT_SPECS = {
-    "u(t)=1": PortSpec("u(t)=1", PortType.REAL, direction="out")
-}
-
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Simple Source Component
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 class Source(CoSimComponent):
     """
     A source component that provides a constant output signal.
@@ -22,9 +14,7 @@ class Source(CoSimComponent):
         super().__init__(name)
 
         # Define ports
-        self.input_specs = INPUT_SPECS
-        self.output_specs = OUTPUT_SPECS
-        self._initialize_ports_from_specs()      
+        self.output_specs.update({"u(t)=1": PortSpec("u(t)=1", PortType.REAL, direction="out")})
 
         # Direct feedthrough information
         self.direct_feedthrough = {}  # No direct feedthrough
@@ -45,14 +35,13 @@ class Source(CoSimComponent):
         """
         Update the output port states.
         """
-        self.outputs['u(t)=1'].set(self.state, t)
+        self.outputs["u(t)=1"].set(self.state, t)
 
     def set_state(self, state, t):
         pass
 
     def get_state(self):
         return self.state
-    
+
     def reset(self):
-        self.state = 0.0
-    
+        pass

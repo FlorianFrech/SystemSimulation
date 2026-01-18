@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>syssimx.core.history &#8212; SysSimX 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for syssimx.core.history</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..utilities.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">QuantityClass</span><span class="p">,</span> <span class="n">QuantityType</span><span class="p">,</span> <span class="n">ureg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.events</span><span class="w"> </span><span class="kn">import</span> <span class="n">DenseTime</span>
+
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># Port History - stores time series data for a single port variable</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+<div class="viewcode-block" id="PortHistory">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PortHistory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for storing and managing time-series history of a port&#39;s values.</span>
+
+<span class="sd">    This class maintains a chronological record of values associated with timestamps,</span>
+<span class="sd">    with optional unit support and conversion capabilities. It provides efficient</span>
+<span class="sd">    storage using lists internally while exposing numpy arrays for analysis.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        port_name: The name of the port this history belongs to.</span>
+<span class="sd">        unit: The unit of measurement for the values stored in this history.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; history = PortHistory(port_name=&quot;temperature&quot;, unit=&quot;celsius&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; history.append(0.0, 25.0)</span>
+<span class="sd">        &gt;&gt;&gt; history.append(1.0, 26.5)</span>
+<span class="sd">        &gt;&gt;&gt; print(history.time)</span>
+<span class="sd">        [0. 1.]</span>
+<span class="sd">        &gt;&gt;&gt; print(history.values)</span>
+<span class="sd">        [25.  26.5]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_timestamps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">_values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PortHistory.append">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory.append">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">QuantityType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a new time-value pair to the history.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timestamps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">magnitude</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="PortHistory.clear">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory.clear">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear the history.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timestamps</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">time</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get timestamps as a numpy array.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timestamps</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get values as a numpy array.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PortHistory.get_values">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory.get_values">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get values as a numpy array, converting to the specified unit if applicable.&quot;&quot;&quot;</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span>
+        <span class="k">if</span> <span class="n">as_unit</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="ow">and</span> <span class="n">as_unit</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">:</span>
+            <span class="c1"># Convert entire array at once</span>
+            <span class="n">converted</span> <span class="o">=</span> <span class="n">ureg</span><span class="o">.</span><span class="n">Quantity</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">as_unit</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">converted</span><span class="o">.</span><span class="n">magnitude</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">vals</span></div>
+
+
+<div class="viewcode-block" id="PortHistory.to_dict">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the history as a dictionary with &#39;time&#39; array, &#39;values&#39; array, and unit.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="n">as_unit</span><span class="p">),</span>
+            <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="n">as_unit</span> <span class="k">if</span> <span class="n">as_unit</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="PortHistory.to_tuple">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory.to_tuple">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export history as tuple (time, values, unit).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">as_unit</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="n">as_unit</span><span class="p">),</span> <span class="n">as_unit</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="n">as_unit</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of entries in the history.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timestamps</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the history has any entries.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># Component History - stores time series data for all ports of a component</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+<div class="viewcode-block" id="ComponentHistory">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ComponentHistory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manages the collection of port histories for a single component.</span>
+
+<span class="sd">    This class provides convenient access patterns for retrieving and</span>
+<span class="sd">    manipulating trajectory data across all ports of a component.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        component_name: Name of the component whose ports are tracked.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; history = ComponentHistory(component_name=&quot;Tank1&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; history.add_port(&quot;temperature&quot;, unit=&quot;K&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; history.append(&quot;temperature&quot;, t=0.0, value=300.0)</span>
+<span class="sd">        &gt;&gt;&gt; history.append(&quot;temperature&quot;, t=1.0, value=305.0)</span>
+<span class="sd">        &gt;&gt;&gt; port_hist = history.get_port_history(&quot;temperature&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">_port_histories</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PortHistory</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ComponentHistory.add_port">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.add_port">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_port</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Register a port for history tracking.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">port_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">PortHistory</span><span class="p">(</span><span class="n">port_name</span><span class="o">=</span><span class="n">port_name</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.append">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.append">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append value to port history.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">port_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="n">port_name</span><span class="si">}</span><span class="s2">&#39; not registered for history tracking&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.get_port_history">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.get_port_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_port_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PortHistory</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get history object for a specific port.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">port_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No history for port &#39;</span><span class="si">{</span><span class="n">port_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.get_all_histories">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.get_all_histories">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_histories</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PortHistory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all port histories as dictionary.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.to_dict">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">port_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Export histories as nested dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            port_names: List of ports to export. If None, exports all.</span>
+<span class="sd">            units: Dict mapping port names to desired units for conversion.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict mapping port names to their history dicts.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">target_unit</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">port</span><span class="p">)</span> <span class="k">if</span> <span class="n">units</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">as_unit</span><span class="o">=</span><span class="n">target_unit</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.to_arrays">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.to_arrays">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_arrays</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">port_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Export as common time array and dict of value arrays.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            port_names: List of ports to export. If None, exports all.</span>
+<span class="sd">            units: Dict mapping port names to desired units.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (time_array, {port_name: values_array})</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span> <span class="p">{}</span>
+
+        <span class="c1"># Get common time array from first port</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">ports</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">time</span>
+
+        <span class="n">values_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">target_unit</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">port</span><span class="p">)</span> <span class="k">if</span> <span class="n">units</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">values_dict</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port</span><span class="p">]</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="n">as_unit</span><span class="o">=</span><span class="n">target_unit</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">time</span><span class="p">,</span> <span class="n">values_dict</span></div>
+
+
+<div class="viewcode-block" id="ComponentHistory.clear">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory.clear">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear history for specified ports or all ports.&quot;&quot;&quot;</span>
+        <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">[</span><span class="n">port</span><span class="p">]</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of ports with history.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if port has history.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_port_histories</span></div>
+
+
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># System History - stores time series data for components in a system</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+<div class="viewcode-block" id="SystemHistory">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SystemHistory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manages simulation history data for an entire system.</span>
+
+<span class="sd">    This class serves as a container for component-level histories and event recordings</span>
+<span class="sd">    in a system simulation. It provides methods for storing, retrieving, and persisting</span>
+<span class="sd">    simulation results across multiple components and their ports.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        system_name: Name identifier for the system.</span>
+
+<span class="sd">    Key Features:</span>
+
+<span class="sd">    - Component history management: Register and retrieve histories for individual components</span>
+<span class="sd">    - Event recording: Track discrete event occurrences with timestamps</span>
+<span class="sd">    - Flexible data retrieval: Export histories in nested or flat dictionary formats</span>
+<span class="sd">    - Unit conversion: Support for automatic unit conversion during data retrieval</span>
+<span class="sd">    - Persistence: Save/load simulation results to/from CSV files</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; history = SystemHistory(system_name=&quot;my_system&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; history.add_component(&quot;motor&quot;, motor_history)</span>
+<span class="sd">        &gt;&gt;&gt; history.record_event(&quot;motor&quot;, &quot;start&quot;, 0.5)</span>
+<span class="sd">        &gt;&gt;&gt; trajectory = history.get_port_trajectory(&quot;motor&quot;, &quot;speed&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; history.save_csv(Path(&quot;results.csv&quot;))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">system_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">_component_histories</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ComponentHistory</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">_event_histories</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">DenseTime</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span>
+    <span class="p">)</span>  <span class="c1"># (component, event_name) -&gt; times</span>
+
+<div class="viewcode-block" id="SystemHistory.add_component">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.add_component">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">component_history</span><span class="p">:</span> <span class="n">ComponentHistory</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Register a component&#39;s history.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">component_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">component_history</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.get_component_history">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.get_component_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_component_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComponentHistory</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get history object for a specific component.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">component_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No history for component &#39;</span><span class="si">{</span><span class="n">component_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">component_name</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.get_all_histories">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.get_all_histories">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_histories</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ComponentHistory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all component histories as dictionary.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.record_event">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.record_event">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">record_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">event_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">DenseTime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Record an event occurrence time.&quot;&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">event_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_histories</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_event_histories</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_event_histories</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.get_event_history">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.get_event_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_event_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">event_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DenseTime</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get recorded times for a specific event.&quot;&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">event_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_histories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.get_all_event_histories">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.get_all_event_histories">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_event_histories</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">DenseTime</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all recorded event histories.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_event_histories</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+    <span class="c1"># Retrieval Methods</span>
+    <span class="c1"># ----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="SystemHistory.to_dict">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">component_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">port_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;nested&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve histories from components in the system.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            component_names: List of components to retrieve. If None, retrieves all.</span>
+<span class="sd">            port_names: Dict mapping component names to lists of port names to retrieve.</span>
+<span class="sd">                       If None, retrieves all ports for each component.</span>
+<span class="sd">            units: Nested dict {comp_name: {port_name: target_unit}} for unit conversion.</span>
+<span class="sd">            format: &#39;nested&#39; or &#39;flat&#39;</span>
+<span class="sd">                   - &#39;nested&#39;: {&#39;comp1&#39;: {&#39;port1&#39;: {...}, &#39;port2&#39;: {...}}, &#39;comp2&#39;: {...}}</span>
+<span class="sd">                   - &#39;flat&#39;: {&#39;comp1.port1&#39;: {...}, &#39;comp2.port2&#39;: {...}}</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary with component/port histories based on format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">comps</span> <span class="o">=</span> <span class="n">component_names</span> <span class="k">if</span> <span class="n">component_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;nested&quot;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">comps</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">comp_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">comp_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+                <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">comp_units</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">units</span> <span class="k">else</span> <span class="kc">None</span>
+
+                <span class="n">result</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp_hist</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">port_names</span><span class="o">=</span><span class="n">ports</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">comp_units</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;flat&quot;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">comps</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">comp_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">comp_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+                <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">comp_units</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">units</span> <span class="k">else</span> <span class="kc">None</span>
+
+                <span class="n">comp_data</span> <span class="o">=</span> <span class="n">comp_hist</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">port_names</span><span class="o">=</span><span class="n">ports</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">comp_units</span><span class="p">)</span>
+
+                <span class="c1"># Flatten: comp.port as key</span>
+                <span class="k">for</span> <span class="n">port_name</span><span class="p">,</span> <span class="n">port_data</span> <span class="ow">in</span> <span class="n">comp_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">flat_key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">comp_name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">port_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">flat_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">port_data</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown format &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Use &#39;nested&#39; or &#39;flat&#39;.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.to_arrays">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.to_arrays">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_arrays</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">component_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">port_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get histories as numpy arrays per component.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            component_names: List of components to retrieve. If None, retrieves all.</span>
+<span class="sd">            port_names: Dict mapping component names to lists of port names.</span>
+<span class="sd">            units: Nested dict for unit conversion.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict mapping component names to (time_array, values_dict) tuples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">comps</span> <span class="o">=</span> <span class="n">component_names</span> <span class="k">if</span> <span class="n">component_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">comps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">comp_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">comp_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+            <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">comp_units</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">units</span> <span class="k">else</span> <span class="kc">None</span>
+
+            <span class="n">result</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp_hist</span><span class="o">.</span><span class="n">to_arrays</span><span class="p">(</span><span class="n">port_names</span><span class="o">=</span><span class="n">ports</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">comp_units</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.get_port_trajectory">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.get_port_trajectory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_port_trajectory</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get time and value arrays for a specific port (convenience method).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            component: Component name</span>
+<span class="sd">            port: Port name</span>
+<span class="sd">            as_unit: Target unit for conversion</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (time_array, values_array)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">component</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Component &#39;</span><span class="si">{</span><span class="n">component</span><span class="si">}</span><span class="s2">&#39; not found in history&quot;</span><span class="p">)</span>
+
+        <span class="n">comp_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">component</span><span class="p">]</span>
+        <span class="n">port_hist</span> <span class="o">=</span> <span class="n">comp_hist</span><span class="o">.</span><span class="n">get_port_history</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">port_hist</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">port_hist</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="n">as_unit</span><span class="o">=</span><span class="n">as_unit</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.clear">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.clear">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">component_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">port_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear histories for specified components and ports.&quot;&quot;&quot;</span>
+        <span class="n">comps</span> <span class="o">=</span> <span class="n">component_names</span> <span class="k">if</span> <span class="n">component_names</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">comps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">comp_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">comp_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_component_histories</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+            <span class="n">ports</span> <span class="o">=</span> <span class="n">port_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span> <span class="k">if</span> <span class="n">port_names</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">comp_hist</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span><span class="n">port_names</span><span class="o">=</span><span class="n">ports</span><span class="p">)</span></div>
+
+
+    <span class="c1"># -------------------------------------------------------------------</span>
+    <span class="c1"># Persistence Methods</span>
+    <span class="c1"># -------------------------------------------------------------------</span>
+<div class="viewcode-block" id="SystemHistory.save_csv">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.save_csv">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_csv</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filepath</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">component_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">port_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">long_format</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save as single CSV file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filepath: Output CSV file path</span>
+<span class="sd">            component_names: Components to save. If None, saves all.</span>
+<span class="sd">            port_names: Specific ports to save per component.</span>
+<span class="sd">            units: Unit conversion specifications.</span>
+<span class="sd">            long_format: If True, uses long/tidy format (time, component, port, value).</span>
+<span class="sd">                        If False, uses wide format (time, comp1.port1, comp1.port2, ...).</span>
+
+<span class="sd">        Format:</span>
+<span class="sd">            time, ref.q_ref, pendulum.q, pendulum.omega, ...</span>
+<span class="sd">            0.0,  1.57,      0.0,         0.0,            ...</span>
+<span class="sd">            0.01, 1.55,      0.015,       0.3,            ...</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filepath</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Get histories in flat format</span>
+        <span class="n">histories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span>
+            <span class="n">component_names</span><span class="o">=</span><span class="n">component_names</span><span class="p">,</span> <span class="n">port_names</span><span class="o">=</span><span class="n">port_names</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;flat&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">histories</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No data to save.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Get all time points (assuming all signals have same time base)</span>
+        <span class="n">first_key</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">histories</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="n">time_array</span> <span class="o">=</span> <span class="n">histories</span><span class="p">[</span><span class="n">first_key</span><span class="p">][</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Build header rows</span>
+        <span class="n">signal_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">histories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">units_row</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">signal</span> <span class="ow">in</span> <span class="n">signal_names</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">histories</span><span class="p">[</span><span class="n">signal</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;unit&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+            <span class="n">units_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unit</span> <span class="k">if</span> <span class="n">unit</span> <span class="k">else</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Write CSV</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+            <span class="c1"># Header row 1: signal names</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">signal_names</span><span class="p">)</span>
+
+            <span class="c1"># Header row 2: units</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;s&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">units_row</span><span class="p">)</span>
+
+            <span class="c1"># Data rows</span>
+            <span class="n">n_points</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">time_array</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_points</span><span class="p">):</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">time_array</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+                <span class="k">for</span> <span class="n">signal</span> <span class="ow">in</span> <span class="n">signal_names</span><span class="p">:</span>
+                    <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">histories</span><span class="p">[</span><span class="n">signal</span><span class="p">][</span><span class="s2">&quot;values&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SystemHistory.load_csv">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.load_csv">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_csv</span><span class="p">(</span><span class="n">filepath</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load CSV file (auto-detects wide or long format).</span>
+
+<span class="sd">        Args</span>
+<span class="sd">            filepath: Path to CSV file</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary with loaded data in nested format</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filepath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>  <span class="c1"># signal names</span>
+            <span class="n">units_row</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>  <span class="c1"># units</span>
+
+            <span class="c1"># Read all data rows</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+            <span class="n">time_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">])</span>
+
+            <span class="c1"># Parse each signal column</span>
+            <span class="k">for</span> <span class="n">col_idx</span><span class="p">,</span> <span class="n">signal_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">headers</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_idx</span><span class="p">])</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">])</span>
+                <span class="n">unit</span> <span class="o">=</span> <span class="n">units_row</span><span class="p">[</span><span class="n">col_idx</span><span class="p">]</span> <span class="k">if</span> <span class="n">units_row</span><span class="p">[</span><span class="n">col_idx</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+
+                <span class="c1"># Parse component.port</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">signal_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">comp_name</span><span class="p">,</span> <span class="n">port_name</span> <span class="o">=</span> <span class="n">parts</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">comp_name</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span>
+                    <span class="n">port_name</span> <span class="o">=</span> <span class="n">signal_name</span>
+
+                <span class="c1"># Organize into nested structure</span>
+                <span class="k">if</span> <span class="n">comp_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+                <span class="n">data</span><span class="p">[</span><span class="n">comp_name</span><span class="p">][</span><span class="n">port_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">time_vals</span><span class="p">,</span> <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="n">values</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="n">unit</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">SysSimX</a></h1>
+
+
+
+<p class="blurb">A Python framework for heterogeneous system co-simulation</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=FlorianFrech&repo=SystemSimulation&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Florian Frech.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

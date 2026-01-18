@@ -23,28 +23,29 @@
 # This example shows how to use the StatesTrajectory to analyze a simulation
 # (computing joint reaction forces).
 
-import opensim as osim
 import math
 
+import opensim as osim
+
 model = osim.Model()
-model.setName('model')
+model.setName("model")
 
 # Create a pendulum model.
 # ------------------------
 # In the default pose, the system is a mass hanging 1 meter down from a hinge.
-body = osim.Body('body', 1.0, osim.Vec3(0), osim.Inertia(1))
+body = osim.Body("body", 1.0, osim.Vec3(0), osim.Inertia(1))
 model.addComponent(body)
 
-joint = osim.PinJoint('joint',
-        model.getGround(), osim.Vec3(0), osim.Vec3(0), 
-        body, osim.Vec3(0, 1.0, 0), osim.Vec3(0))
-joint.updCoordinate().setName('q')
+joint = osim.PinJoint(
+    "joint", model.getGround(), osim.Vec3(0), osim.Vec3(0), body, osim.Vec3(0, 1.0, 0), osim.Vec3(0)
+)
+joint.updCoordinate().setName("q")
 model.addComponent(joint)
 
 # This reporter will collect states throughout the simulation at intervals of
 # 0.05 seconds.
 reporter = osim.StatesTrajectoryReporter()
-reporter.setName('reporter')
+reporter.setName("reporter")
 reporter.set_report_time_interval(0.05)
 model.addComponent(reporter)
 
@@ -54,7 +55,7 @@ state = model.initSystem()
 
 # The initial position is that the pendulum is rotated 45 degrees
 # counter-clockwise from its default pose.
-model.setStateVariableValue(state, 'joint/q/value', 0.25 * math.pi)
+model.setStateVariableValue(state, "joint/q/value", 0.25 * math.pi)
 
 manager = osim.Manager(model, state)
 manager.integrate(1.0)
@@ -67,16 +68,15 @@ statesTraj = reporter.getStates()
 for itime in range(statesTraj.getSize()):
     state = statesTraj[itime]
     time = state.getTime()
-    q = model.getStateVariableValue(state, 'joint/q/value')
+    q = model.getStateVariableValue(state, "joint/q/value")
 
     # Calculating joint reactions requires realizing to Acceleration.
     model.realizeAcceleration(state)
     # This returns a SpatialVec, which is two Vec3's ([0]: moment, [1]: force).
     reaction = joint.calcReactionOnParentExpressedInGround(state)
     force = reaction.get(1)
-    force_mag = math.sqrt(force[0]**2 + force[1]**2 + force[2]**2)
-    print('time: %f s.  q: %f rad.  reaction force magnitude: %f N.' % (
-        time, q, force_mag))
+    force_mag = math.sqrt(force[0] ** 2 + force[1] ** 2 + force[2] ** 2)
+    print("time: %f s.  q: %f rad.  reaction force magnitude: %f N." % (time, q, force_mag))
 
     # The reaction could also be accessed as an output:
     # abstractOutput = joint.getOutput('reaction_on_parent')
@@ -91,5 +91,5 @@ statesTraj2 = osim.StatesTrajectory.createFromStatesTable(model, statesTable)
 for itime in range(statesTraj2.getSize()):
     state = statesTraj2[itime]
     time = state.getTime()
-    u = model.getStateVariableValue(state, 'joint/q/speed')
-    print('time: %f s.  u: %f rad/s.' % (time, u))
+    u = model.getStateVariableValue(state, "joint/q/speed")
+    print("time: %f s.  u: %f rad/s." % (time, u))

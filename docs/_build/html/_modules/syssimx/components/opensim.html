@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>syssimx.components.opensim &#8212; SysSimX 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for syssimx.components.opensim</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">opensim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">osim</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">CoSimComponent</span>
+
+
+<div class="viewcode-block" id="OpenSimComponent">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">OpenSimComponent</span><span class="p">(</span><span class="n">CoSimComponent</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper around an OpenSim model to implement the CoSimComponent interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">model</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">Model</span>
+    <span class="n">manager</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">Manager</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">State</span>
+
+    <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="OpenSimComponent.__init__">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">osim_model_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor for the OpenSimComponent class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">CoSimComponent</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">osim_model_path</span>
+
+        <span class="c1"># Populated by subclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">Model</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">State</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="p">:</span> <span class="n">osim</span><span class="o">.</span><span class="n">Manager</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Default Solver Parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator_method</span> <span class="o">=</span> <span class="n">osim</span><span class="o">.</span><span class="n">Manager</span><span class="o">.</span><span class="n">IntegratorMethod_RungeKuttaMerson</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator_accuracy</span> <span class="o">=</span> <span class="mf">1e-6</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_dt</span> <span class="o">=</span> <span class="mf">1e-4</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_finalize_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t0</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Complete OpenSim initialization after model is built/loaded.</span>
+<span class="sd">        Call this at the end of subclass _initialize_component().</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Realize to ensure model is ready</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+
+        <span class="c1"># Create and initialize manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">osim</span><span class="o">.</span><span class="n">Manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setIntegratorMethod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">integrator_method</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setIntegratorAccuracy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">integrator_accuracy</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">setTime</span><span class="p">(</span><span class="n">t0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OpenSimComponent.realize">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.realize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">realize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Realizes the stage: Position, Velocity, Dynamics, Acceleration</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: state not initialized&quot;</span><span class="p">)</span>
+        <span class="c1"># self.model.realizeDynamics(self.state)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">realizeAcceleration</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">)</span></div>
+
+        <span class="c1"># self.model.realizeVelocity(self.state)</span>
+        <span class="c1"># self.model.realizePosition(self.state)</span>
+
+    <span class="c1"># ---- Reset ----</span>
+<div class="viewcode-block" id="OpenSimComponent.reset">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset the component to a clean state before (before initialization).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">initSystem</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">osim</span><span class="o">.</span><span class="n">Manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ---- Coordinate Helpers ----</span>
+<div class="viewcode-block" id="OpenSimComponent.get_coordinate_value">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.get_coordinate_value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_coordinate_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current value of named coordinate (generalized position).&quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_coordinate</span><span class="p">(</span><span class="n">coord_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">coord</span><span class="o">.</span><span class="n">getValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="OpenSimComponent.get_coordinate_speed">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.get_coordinate_speed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_coordinate_speed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current speed of named coordinate (generalized velocity).&quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_coordinate</span><span class="p">(</span><span class="n">coord_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">coord</span><span class="o">.</span><span class="n">getSpeedValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="OpenSimComponent.get_coordinate_acceleration">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.get_coordinate_acceleration">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_coordinate_acceleration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current acceleration of named coordinate.&quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_coordinate</span><span class="p">(</span><span class="n">coord_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">coord</span><span class="o">.</span><span class="n">getAccelerationValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="OpenSimComponent.set_coordinate_value">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.set_coordinate_value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_coordinate_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set value of named coordinate.&quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_coordinate</span><span class="p">(</span><span class="n">coord_name</span><span class="p">)</span>
+        <span class="n">coord</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="OpenSimComponent.set_coordinate_speed">
+<a class="viewcode-back" href="../../../api/syssimx.html#syssimx.components.OpenSimComponent.set_coordinate_speed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_coordinate_speed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set speed of named coordinate.&quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_coordinate</span><span class="p">(</span><span class="n">coord_name</span><span class="p">)</span>
+        <span class="n">coord</span><span class="o">.</span><span class="n">setSpeedValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_coordinate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">osim</span><span class="o">.</span><span class="n">Coordinate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find coordinate by name in model.&quot;&quot;&quot;</span>
+        <span class="n">coord_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getCoordinateSet</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">coord_set</span><span class="o">.</span><span class="n">getSize</span><span class="p">()):</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="n">coord_set</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">coord</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">coord</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Coordinate &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; not found in model &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">SysSimX</a></h1>
+
+
+
+<p class="blurb">A Python framework for heterogeneous system co-simulation</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=FlorianFrech&repo=SystemSimulation&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Florian Frech.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

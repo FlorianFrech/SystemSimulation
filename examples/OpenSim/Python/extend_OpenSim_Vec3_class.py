@@ -30,18 +30,20 @@
 
 import opensim as osim
 
+
 # Define the function that will be used when the `+` operator is called
 # with two Vec3s.
-def myVec3Add(self,v):
-    newvec = osim.Vec3(self[0]+v[0], self[1]+v[1], self[2]+v[2])
+def myVec3Add(self, v):
+    newvec = osim.Vec3(self[0] + v[0], self[1] + v[1], self[2] + v[2])
     return newvec
+
 
 # Assign this function to `operator+` in the existing Vec3 class.
 osim.Vec3.__add__ = myVec3Add
 
 # Test.
-a = osim.Vec3(1,2,3)
-b = osim.Vec3(4,5,6)
-c = a+b
+a = osim.Vec3(1, 2, 3)
+b = osim.Vec3(4, 5, 6)
+c = a + b
 print(c)
 print(type(c))

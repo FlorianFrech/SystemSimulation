@@ -13,11 +13,14 @@ VenvSysSimX/
 
 # Pytest Cache
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # FMU logs
 *_log.txt
 
 *.vtu
-
+.covergage
+htmlcov/
 examples/FMI/FMUs
 syssimx.egg-info/

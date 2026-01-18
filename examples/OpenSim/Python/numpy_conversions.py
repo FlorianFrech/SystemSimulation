@@ -55,4 +55,3 @@ osimMatrix = osim.Matrix.createFromMat(npArray2D)
 print(osimMatrix)
 npArray4 = osimMatrix.to_numpy()
 print(npArray4)
-
