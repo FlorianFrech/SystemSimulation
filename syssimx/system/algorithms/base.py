@@ -1,3 +1,5 @@
+"""Algorithm interfaces for advancing a System one time step."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -11,11 +13,20 @@ if TYPE_CHECKING:
 # Abstract Algorithm Base Class
 # ----------------------------------------------------------------------------
 class Algorithm(ABC):
-    """Algorithm interface for advancing a System by one time step."""
+    """Interface for simulation algorithms.
+
+    Implementations are responsible for advancing a System from time t to t + dt.
+    """
 
     name: str
 
     @abstractmethod
     def step(self, system: System, t: float, dt: float) -> None:
-        """Advance the system from t to t+dt."""
+        """Advance the system from time t to t + dt.
+
+        Args:
+            system: System to advance.
+            t: Current simulation time.
+            dt: Step size.
+        """
         ...

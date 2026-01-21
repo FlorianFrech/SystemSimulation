@@ -252,6 +252,16 @@ class HybridListener(CoSimComponent):
             print(
                 f"{self.name} handled event at t={t:.4f}: v doubled from {self.v / 2.0} to {self.v}"
             )
+    
+    def snapshot_state(self):
+        snapshot = {"t": self.t, "x": self.x, "v": self.v, "t0": self.t0}
+        return snapshot
+    
+    def restore_state(self, snapshot, t) -> None:
+        self.t = snapshot["t"]
+        self.x = snapshot["x"]
+        self.v = snapshot["v"]
+        self.t0 = snapshot["t0"]
 
     def reset(self) -> None:
         super().reset()
@@ -259,3 +269,30 @@ class HybridListener(CoSimComponent):
         self._t0 = None
         self.inputs = {}
         self.outputs = {}
+
+
+class NoRollbackComponent(CoSimComponent):
+    """
+    Component that does not support rollback.
+    """
+    def __init__(self, name: str):
+        super().__init__(name, group="NoRollback")
+
+    @property
+    def supports_rollback(self) -> bool:
+        return False
+    
+    def _initialize_component(self, t0: float) -> None:
+        pass
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = []) -> None:
+        pass    
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        pass
+
+    def get_state(self) -> dict[str, Any]:
+        return {} 

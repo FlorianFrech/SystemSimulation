@@ -114,6 +114,14 @@ class SimpleMultiComponent(MultiComponent):
 
     def __init__(self, name: str, initial_mode: ModeKey = "A"):
         super().__init__(name, initial_mode=initial_mode)
+        
+        self._register_models()
+        
+        if initial_mode not in self.models:
+            raise ValueError(f"Initial mode '{initial_mode}' not found in registered models.")
+        self.active_comp = self.models[initial_mode]
+        
+        self._unify_ports()
 
     def _register_models(self) -> None:
         self.models = {

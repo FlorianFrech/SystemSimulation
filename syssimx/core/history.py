@@ -1,3 +1,16 @@
+"""History management for ports, components, and systems.
+
+This module provides classes to store, retrieve, and manage
+history data for port variables, components, and entire systems
+during co-simulation runs.
+
+Overview of Classes:
+- PortHistory: Stores time series data for a single port variable.
+- ComponentHistory: Manages PortHistory instances for all ports of a component.
+- SystemHistory: Manages ComponentHistory instances for all components in a system,
+  along with event recording.
+"""
+
 from __future__ import annotations
 
 import csv
@@ -16,8 +29,7 @@ from .events import DenseTime
 # -------------------------------------------------------------------
 @dataclass
 class PortHistory:
-    """
-    A class for storing and managing time-series history of a port's values.
+    """Stores and manages time-series history of a port's values.
 
     This class maintains a chronological record of values associated with timestamps,
     with optional unit support and conversion capabilities. It provides efficient
@@ -102,8 +114,7 @@ class PortHistory:
 # -------------------------------------------------------------------
 @dataclass
 class ComponentHistory:
-    """
-    Manages the collection of port histories for a single component.
+    """Manages the collection of port histories for a single component.
 
     This class provides convenient access patterns for retrieving and
     manipulating trajectory data across all ports of a component.
@@ -146,8 +157,7 @@ class ComponentHistory:
     def to_dict(
         self, port_names: list[str] | None = None, units: dict[str, str] | None = None
     ) -> dict[str, dict[str, Any]]:
-        """
-        Export histories as nested dictionary.
+        """Export histories as nested dictionary.
 
         Args:
             port_names: List of ports to export. If None, exports all.
@@ -170,8 +180,7 @@ class ComponentHistory:
     def to_arrays(
         self, port_names: list[str] | None = None, units: dict[str, str] | None = None
     ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
-        """
-        Export as common time array and dict of value arrays.
+        """Export as common time array and dict of value arrays.
 
         Args:
             port_names: List of ports to export. If None, exports all.
@@ -218,8 +227,7 @@ class ComponentHistory:
 # -------------------------------------------------------------------
 @dataclass
 class SystemHistory:
-    """
-    Manages simulation history data for an entire system.
+    """Manages simulation history data for an entire system.
 
     This class serves as a container for component-level histories and event recordings
     in a system simulation. It provides methods for storing, retrieving, and persisting
@@ -290,8 +298,7 @@ class SystemHistory:
         units: dict[str, dict[str, str]] | None = None,
         format: str = "nested",
     ) -> dict[str, Any]:
-        """
-        Retrieve histories from components in the system.
+        """Retrieve histories from components in the system.
 
         Args:
             component_names: List of components to retrieve. If None, retrieves all.
@@ -346,8 +353,7 @@ class SystemHistory:
         port_names: dict[str, list[str]] | None = None,
         units: dict[str, dict[str, str]] | None = None,
     ) -> dict[str, tuple[np.ndarray, dict[str, np.ndarray]]]:
-        """
-        Get histories as numpy arrays per component.
+        """Get histories as numpy arrays per component.
 
         Args:
             component_names: List of components to retrieve. If None, retrieves all.
@@ -375,8 +381,7 @@ class SystemHistory:
     def get_port_trajectory(
         self, component: str, port: str, as_unit: str | None = None
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Get time and value arrays for a specific port (convenience method).
+        """Get time and value arrays for a specific port (convenience method).
 
         Args:
             component: Component name
@@ -421,8 +426,7 @@ class SystemHistory:
         units: dict[str, dict[str, str]] | None = None,
         long_format: bool = False,
     ) -> None:
-        """
-        Save as single CSV file.
+        """Save as single CSV file.
 
         Args:
             filepath: Output CSV file path
@@ -482,8 +486,7 @@ class SystemHistory:
 
     @staticmethod
     def load_csv(filepath: Path) -> dict[str, Any]:
-        """
-        Load CSV file (auto-detects wide or long format).
+        """Load CSV file (auto-detects wide or long format).
 
         Args
             filepath: Path to CSV file

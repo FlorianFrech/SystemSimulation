@@ -57,8 +57,11 @@ class TestMultiComponentInitialization:
         mc = SimpleMultiComponent(name="TestMulti", initial_mode="A")
         assert mc.name == "TestMulti"
         assert mc.active_mode == "A"
-        assert mc.active_comp is None
-        assert mc.models == {}
+        assert mc.active_comp == mc.models["A"]
+        assert mc.models == {
+            "A": mc.models["A"],
+            "B": mc.models["B"],
+        }
 
     def test_initialize_register_models(self):
         mc = SimpleMultiComponent(name="TestMulti", initial_mode="A")
@@ -78,8 +81,8 @@ class TestMultiComponentInitialization:
             assert port_name in mc.active_comp.output_specs
 
     def test_initialize_invalid_mode(self):
-        mc = SimpleMultiComponent(name="TestMulti", initial_mode="C")
         with pytest.raises(ValueError):
+            mc = SimpleMultiComponent(name="TestMulti", initial_mode="C")
             mc.initialize(t0=0.0)
 
     def test_initialize_empty_models(self):
@@ -154,36 +157,39 @@ class TestTimestepping:
 
     def test_do_step_delegates_to_active_component(self, multi_comp: SimpleMultiComponent):
         multi_comp.do_step(t=0.0, dt=0.01)
-
-        # Active component should have received do_step call
         assert "do_step(0.0, 0.01)" in multi_comp.active_comp.call_log
 
     def test_do_step_with_mode_selector(self, multi_comp):
-        # Mode selector that switches to B after t=0.5
         def selector(t: float, state: dict[str, Any]) -> ModeKey:
             return "B" if t >= 0.5 else "A"
 
         multi_comp.mode_selector = selector
-
-        # Step before switch point
         multi_comp.do_step(t=0.0, dt=0.1)
         assert multi_comp.active_mode == "A"
-
-        # Step at switch point
         multi_comp.do_step(t=0.5, dt=0.1)
         assert multi_comp.active_mode == "B"
 
     def test_do_step_mode_switching_disabled(self, multi_comp: SimpleMultiComponent):
         def selector(t: float, state: dict[str, Any]) -> ModeKey:
-            return "B"  # Always want B
+            return "B"
 
         multi_comp.mode_selector = selector
         multi_comp._allow_mode_switching = False
-
         multi_comp.do_step(t=0.0, dt=0.1)
-
-        # Should stay in A because switching is disabled
         assert multi_comp.active_mode == "A"
+
+    def test_do_step_hysteresis_blocks_rapid_switch_back(self, multi_comp: SimpleMultiComponent):
+        def selector(t: float, state: dict[str, Any]) -> ModeKey:
+            return "B" if t < 0.1 else "A"
+
+        multi_comp.mode_selector = selector
+        multi_comp.hysteresis = Hysteresis(dwell_time=0.05)
+
+        multi_comp.do_step(t=0.0, dt=0.01)
+        assert multi_comp.active_mode == "A" # Switch to B not allowed yet
+
+        multi_comp.do_step(t=0.05, dt=0.01)
+        assert multi_comp.active_mode == "B" # Switch to B allowed 
 
 
 # ============================================================================

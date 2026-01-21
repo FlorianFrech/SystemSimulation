@@ -1,3 +1,57 @@
+"""Co-simulation system orchestration and management.
+
+This module provides the ``System`` class, which is the central orchestrator
+for heterogeneous co-simulation. It manages components, connections, execution
+order computation, and delegates simulation stepping to pluggable algorithms.
+
+Key Responsibilities:
+    - **Component Management**: Register and organize ``CoSimComponent`` instances
+    - **Connection Validation**: Type and unit compatibility checking between ports
+    - **Graph Analysis**: Build dependency graphs and detect algebraic loops
+    - **Execution Ordering**: Compute parallelizable generations using topological sort
+    - **Algorithm Delegation**: Step simulation using Jacobi, Gauss-Seidel, or Hybrid algorithms
+    - **Event Routing**: Dispatch events between components via event connections
+    - **History Aggregation**: Collect time-series data from all components
+
+Typical Usage:
+    Building and running a co-simulation::
+
+        from syssimx import System, Connection
+        from syssimx.components import FMUComponent
+
+        # Create system
+        system = System(name="ControlledPendulum")
+
+        # Add components
+        pendulum = FMUComponent("Pendulum", fmu_path="Pendulum.fmu")
+        controller = FMUComponent("PID", fmu_path="Controller.fmu")
+        system.add_component(pendulum)
+        system.add_component(controller)
+
+        # Define connections
+        system.add_connection(Connection(
+            src_comp="Pendulum", src_port="angle",
+            dst_comp="PID", dst_port="measurement"
+        ))
+        system.add_connection(Connection(
+            src_comp="PID", src_port="control",
+            dst_comp="Pendulum", dst_port="torque"
+        ))
+
+        # Initialize and run
+        system.initialize(t0=0.0)
+        system.run(t0=0.0, tf=10.0, dt=0.001)
+
+        # Retrieve results
+        history = system.get_history()
+
+See Also:
+    :class:`Connection`: Signal connections between component ports
+    :class:`EventConnection`: Event routing between components
+    :mod:`syssimx.system.algorithms`: Stepping algorithm implementations
+    :mod:`syssimx.system.graph`: Graph analysis utilities
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,14 +76,57 @@ _ports_compatible = PortSpec.compatible
 # System Class
 # ----------------------------------------------------------------------------
 class System:
-    """
-    Represents a system of interconnected CoSimComponents:
-     - Manages components and their connections
-     - Validates connections
-     - Builds a zero-delay directed acyclic graph (DAG) to compute parallelizable execution order
+    """Central orchestrator for heterogeneous co-simulation systems.
+
+    The ``System`` class manages a collection of interconnected
+    ``CoSimComponent`` instances, validates their connections, computes
+    execution order, and coordinates simulation stepping through a
+    pluggable algorithm.
+
+    Attributes:
+        name (str): Identifier for this system.
+        components (dict[str, CoSimComponent]): Registered components by name.
+        connections (list[Connection]): Signal connections between components.
+        event_connections (list[EventConnection]): Event routing connections.
+        graph (nx.MultiDiGraph): Complete connection graph (including delayed).
+        groups (dict[str, list[CoSimComponent]]): Components organized by group.
+        execution_order (list[list[str]]): Topologically sorted generations.
+            Each generation contains components that can execute in parallel.
+        algebraic_loops (list[list[str]]): Detected algebraic loops (SCCs > 1).
+        algorithm (Algorithm): Stepping algorithm (Gauss-Seidel, Jacobi, Hybrid).
+        history (SystemHistory): Aggregated time-series data from all components.
+        is_initialized (bool): Whether ``initialize()`` has been called.
+        t (float): Current simulation time.
+
+    Example:
+        Creating a simple two-component system::
+    >>>     system = System("Feedback")
+    >>>     system.add_component(plant)
+    >>>     system.add_component(controller)
+    >>>     system.add_connection(Connection(
+    >>>         src_comp="plant", src_port="y",
+    >>>         dst_comp="controller", dst_port="measurement"
+    >>>     ))
+    >>>     system.initialize(t0=0.0)
+    >>>     system.run(t0=0.0, tf=10.0, dt=0.01)
+
+    See Also:
+        :class:`Connection`: Signal connection specification
+        :class:`Algorithm`: Base class for stepping algorithms
     """
 
     def __init__(self, name: str):
+        """Initialize a new co-simulation system.
+
+        Args:
+            name: Identifier for this system. Used in logging and
+                history tracking.
+
+        Example:
+            >>> system = System("ControlledPendulum")
+            >>> system.name
+            'ControlledPendulum'
+        """
         self.name = name
         self.components: dict[str, CoSimComponent] = {}
         self.connections: list[Connection] = []
@@ -63,8 +160,29 @@ class System:
     # Algorithm
     # ----------------------------------------------------------------------------
     def set_algorithm(self, algorithm: Algorithm) -> None:
-        """
-        Set the co-simulation stepping algorithm.
+        """Set the co-simulation stepping algorithm.
+
+        The algorithm determines how components are stepped during
+        simulation. Available algorithms include:
+
+        - ``GaussSeidelAlgorithm``: Sequential stepping (default)
+        - ``JacobiAlgorithm``: Parallel stepping with delayed inputs
+        - ``HybridAlgorithm``: Event-driven with bisection localization
+
+        Args:
+            algorithm: An instance implementing the ``Algorithm`` interface.
+
+        Raises:
+            TypeError: If ``algorithm`` doesn't implement ``Algorithm``.
+
+        Example:
+            >>> from syssimx.system.algorithms import JacobiAlgorithm
+            >>> system.set_algorithm(JacobiAlgorithm())
+
+        Note:
+            If components with event indicators are detected during
+            ``initialize()``, the algorithm is automatically upgraded
+            to ``HybridAlgorithm``.
         """
         if not isinstance(algorithm, Algorithm):
             raise TypeError("algorithm must implement Algorithm")
@@ -74,8 +192,29 @@ class System:
     # Register components
     # ----------------------------------------------------------------------------
     def add_component(self, component: CoSimComponent):
-        """
-        Add a CoSimComponent to the system.
+        """Register a component with the system.
+
+        Components must be added before connections can reference them.
+        Each component's history is automatically registered with the
+        system's history tracker.
+
+        Args:
+            component: A ``CoSimComponent`` instance to add. Its ``name``
+                attribute must be unique within this system.
+
+        Raises:
+            RuntimeError: If called after ``initialize()``.
+            ValueError: If a component with the same name already exists.
+
+        Example:
+            >>> pendulum = FMUComponent("Pendulum", fmu_path="model.fmu")
+            >>> system.add_component(pendulum)
+            >>> "Pendulum" in system.components
+            True
+
+        Note:
+            If the component has a ``group`` attribute set, it will be
+            added to ``system.groups[group]`` for visual organization.
         """
         if self.is_initialized:
             raise RuntimeError("Cannot add components after system initialization.")
@@ -138,8 +277,30 @@ class System:
                 )
 
     def add_connection(self, connection: Connection) -> None:
-        """
-        Add a Connection between two components in the system.
+        """Add a signal connection between two components.
+
+        Validates port existence, type compatibility, and unit
+        compatibility before registering the connection.
+
+        Args:
+            connection: A ``Connection`` specifying source and destination
+                component/port pairs.
+
+        Raises:
+            ValueError: If source or destination component not in system,
+                or if connection is a duplicate.
+            KeyError: If specified ports don't exist on the components.
+            TypeError: If port types or units are incompatible.
+
+        Example:
+            >>> system.add_connection(Connection(
+            ...     src_comp="Sensor", src_port="value",
+            ...     dst_comp="Controller", dst_port="measurement"
+            ... ))
+
+        See Also:
+            :class:`Connection`: Connection specification class
+            :meth:`add_event_connection`: For event-based connections
         """
         self._validate_connection(connection)
         self.connections.append(connection)
@@ -150,50 +311,146 @@ class System:
     # Event Connections
     # ----------------------------------------------------------------------------
     def _validate_event_connection(self, connection: EventConnection) -> None:
+        """Validate an event connection before registration.
+
+        Performs the following checks:
+
+        1. Source component exists in the system
+        2. Target component exists in the system
+        3. Event indicator is registered on the source component
+        4. No duplicate connections exist
+
+        Args:
+            connection: The ``EventConnection`` to validate.
+
+        Raises:
+            ValueError: If source or target component not in system,
+                or if connection is a duplicate.
+            KeyError: If the event indicator is not registered on the
+                source component.
+
+        Note:
+            Event subscription on the target is handled automatically
+            by ``add_event_connection()``, not during validation.
+        """
         if connection.src_comp not in self.components:
             raise ValueError(f"Event source '{connection.src_comp}' is not in the system.")
         if connection.dst_comp not in self.components:
             raise ValueError(f"Event target '{connection.dst_comp}' is not in the system.")
 
         source = self.components[connection.src_comp]
-        target = self.components[connection.dst_comp]
         event_name = connection.src_port
+
+        # Check event indicator exists on source
         if event_name not in source.event_indicators:
             raise KeyError(
-                f"Event '{event_name}' not found on source component '{source.name}'. "
-                f"Verify to have the correct event name."
+                f"Event indicator '{event_name}' not found on source component '{source.name}'. "
+                f"Register it via: source.add_event_indicator(name='{event_name}', func=..., direction=...)"
             )
 
-        has_subscription = False
-        for event in target.event_subscriptions:
-            if event.name == event_name:
-                has_subscription = True
-                break
-
-        if not has_subscription:
-            raise KeyError(
-                f"Target '{target.name}' is not subscribed to event '({source.name}, {event_name})'. "
-                f"Subscribe before connecting via: target.subscribe_event(event)."
-            )
-
+        # Check for duplicate connections
         for existing in self.event_connections:
-            if existing == connection:
+            if existing.key() == connection.key():
                 raise ValueError(
                     f"Duplicate event connection: {connection.src_comp}:{connection.event_name} -> {connection.target_comp}"
                 )
 
     def add_event_connection(self, connection: EventConnection) -> None:
+        """Add an event connection with automatic target subscription.
+
+        Registers an event connection and automatically subscribes the
+        target component to receive the event. This eliminates the need
+        for manual ``Event`` object creation and ``subscribe_event()`` calls.
+
+        Args:
+            connection: ``EventConnection`` specifying the source component's
+                event indicator and the target component to notify.
+
+        Raises:
+            ValueError: If source/target not in system or duplicate connection.
+            KeyError: If event indicator not registered on source component.
+
+        Example:
+            >>> # Ball emits 'bounce' event, floor handles it
+            >>> system.add_event_connection(EventConnection(
+            ...     src_comp="Ball", event_name="bounce",
+            ...     dst_comp="Floor"
+            ... ))
+
+        Note:
+            The target component must implement ``_handle_events_internal()``
+            to respond to the event when it fires.
+
+        See Also:
+            :class:`EventConnection`: Event connection specification
+            :meth:`dispatch_event`: Manual event dispatching
+        """
         self._validate_event_connection(connection)
+
+        # Auto-subscribe the target component to this event
+        source = self.components[connection.src_comp]
+        target = self.components[connection.dst_comp]
+        event_name = connection.event_name
+
+        # Get direction from connection or from event indicator
+        if connection.direction is not None:
+            direction = connection.direction
+        else:
+            direction = source.event_indicators[event_name].direction
+
+        # Create Event object for subscription (source, name, direction)
+        event = Event(name=event_name, source=connection.src_comp, direction=direction)
+
+        # Subscribe target if not already subscribed
+        already_subscribed = any(
+            e.name == event_name and e.source == connection.src_comp
+            for e in target.event_subscriptions
+        )
+        if not already_subscribed:
+            target.event_subscriptions.append(event)
+
+        # Register the connection
         self.event_connections.append(connection)
         key = (connection.src_comp, connection.src_port)
         self._event_targets_by_source.setdefault(key, []).append(connection.dst_comp)
 
     def get_event_targets(self, source_comp: str, event_name: str) -> list[str]:
+        """Get component names that receive a specific event.
+
+        Args:
+            source_comp: Name of the component emitting the event.
+            event_name: Name of the event indicator.
+
+        Returns:
+            List of component names subscribed to this event.
+            Returns empty list if no subscribers.
+        """
         return self._event_targets_by_source.get((source_comp, event_name), []).copy()
 
     def dispatch_event(self, event: Event, t: float, notify: bool = True) -> list[str]:
-        """
-        Resolve event listeners for a given event and optionally notify them.
+        """Dispatch an event to all subscribed components.
+
+        Resolves event listeners based on registered event connections
+        and optionally notifies them by calling their ``handle_event()``
+        method.
+
+        Args:
+            event: The ``Event`` object containing source and event name.
+            t: Time at which the event occurred.
+            notify: If ``True``, calls ``handle_event()`` on each target.
+                If ``False``, only returns the target list without notifying.
+
+        Returns:
+            List of component names that are subscribed to this event.
+
+        Raises:
+            ValueError: If the event source is not in the system.
+
+        Example:
+            >>> event = Event(name="threshold", source="Sensor")
+            >>> targets = system.dispatch_event(event, t=1.5)
+            >>> print(targets)
+            ['Controller', 'Logger']
         """
         if event.source not in self.components:
             raise ValueError(f"Event source '{event.source}' is not in the system.")
@@ -209,29 +466,76 @@ class System:
     # Graphs
     # ----------------------------------------------------------------------------
     def build_graphs(self) -> None:
-        """
-        Build:
-          - self.graph: all connections (annotated)
-          - self._dag: zero-delay true-direct-feedthrough dependencies only
-          - self.algebraic_loops: SCCs (>1) on self._dag
+        """Build dependency graphs from registered connections.
+
+        Constructs two graph representations:
+
+        1. ``self.graph``: Complete ``MultiDiGraph`` with all connections,
+           including delayed connections (for visualization)
+        2. ``self._dag``: ``DiGraph`` with only zero-delay, direct-feedthrough
+           connections (for execution ordering)
+
+        Also detects algebraic loops as strongly connected components (SCCs)
+        with more than one node on the direct-feedthrough graph.
+
+        Note:
+            Called automatically during ``initialize()``. The detected
+            algebraic loops are stored in ``self.algebraic_loops``.
+
+        See Also:
+            :mod:`syssimx.system.graph`: Graph construction utilities
         """
         graph.build_graphs(self)
 
     def compute_execution_order(self) -> None:
-        """
-        Compute a parallelizable execution order based on zero-delay dependencies.
+        """Compute parallelizable execution order from the dependency graph.
+
+        Performs a topological sort on the zero-delay dependency DAG to
+        produce generations of components. Components within the same
+        generation have no dependencies on each other and can execute
+        in parallel.
+
+        The result is stored in ``self.execution_order`` as a list of
+        lists, where each inner list contains component names in one
+        generation.
+
+        Example:
+            After calling::
+
+                system.execution_order = [
+                    ['Source', 'Reference'],      # Generation 0
+                    ['Controller'],               # Generation 1
+                    ['Plant'],                    # Generation 2
+                    ['Sensor']                    # Generation 3
+                ]
+
+        See Also:
+            :mod:`syssimx.system.graph`: Execution order computation
         """
         graph.compute_execution_order(self)
 
     def classify_components(self) -> dict[str, list[CoSimComponent]]:
-        """
-        Classify components for hybrid co-simulation handling.
+        """Classify components by their hybrid simulation capabilities.
+
+        Categorizes all components based on whether they have event
+        indicators, event subscriptions, or neither. This classification
+        is used to determine if hybrid simulation is needed.
 
         Returns:
-            Dict with keys:
-            - "event_sources": components with indicators (rollback required)
-            - "event_listeners": components subscribed to events only
-            - "continuous_only": components without hybrid capabilities
+            Dictionary with the following keys:
+
+            - ``"event_sources"``: Components with event indicators
+              (require rollback support for bisection)
+            - ``"event_listeners"``: Components subscribed to events
+              (will receive event notifications)
+            - ``"continuous_only"``: Components without any hybrid
+              capabilities (pure continuous dynamics)
+
+        Note:
+            A component can be both an event source and an event listener.
+            The categorization is stored in instance attributes
+            ``self.event_sources``, ``self.event_listeners``, and
+            ``self.continuous_only``.
         """
         self.event_sources: list[CoSimComponent] = []
         self.event_listeners: list[CoSimComponent] = []
@@ -254,10 +558,33 @@ class System:
     # Simulation Lifecycle
     # ----------------------------------------------------------------------------
     def initialize(self, t0: float) -> None:
-        """
-        Initialize all components in the system at start time t0.
-        Also build graphs and compute execution order.
-        Store t_end for reference.
+        """Initialize the system and all components at start time.
+
+        Performs the complete initialization sequence:
+
+        1. Initializes all registered components at time ``t0``
+        2. Classifies components and auto-selects ``HybridAlgorithm``
+           if event sources are detected
+        3. Builds dependency graphs from connections
+        4. Computes execution order via topological sort
+        5. Sets initial inputs and solves algebraic loops
+        6. Performs a zero-step (dt=0) to establish consistent initial state
+
+        Args:
+            t0: Initial simulation time in seconds.
+
+        Example:
+            >>> system.add_component(plant)
+            >>> system.add_component(controller)
+            >>> system.add_connection(connection)
+            >>> system.initialize(t0=0.0)
+            >>> system.is_initialized
+            True
+
+        Note:
+            Must be called after all components and connections are added,
+            but before ``run()``. Calling ``initialize()`` locks the system
+            against further component additions.
         """
         self.t = t0
 
@@ -290,9 +617,19 @@ class System:
         self.is_initialized = True
 
     def _set_inputs_for_generation(self, gen: list[str], t: float) -> None:
-        """
-        For each component in the generation, set its INPUT by scanning connections whose
-        dst_comp is the component, using the current output value from the source.
+        """Set input values for all components in a generation.
+
+        For each component in the generation, retrieves values from
+        connected source ports and sets them as inputs. This propagates
+        signal values through the connection graph.
+
+        Args:
+            gen: List of component names in the current generation.
+            t: Current simulation time for timestamping inputs.
+
+        Note:
+            Only non-None source values are propagated. Components with
+            no incoming connections or all-None sources receive no updates.
         """
         for comp_name in gen:
             comp = self.components[comp_name]
@@ -310,8 +647,27 @@ class System:
     # Run System Simulation
     # ----------------------------------------------------------------------------
     def run(self, t0: float, tf: float, dt: float):
-        """
-        Run the simulation from t0 to tf with step size dt.
+        """Run the simulation from start time to end time.
+
+        Advances the simulation by repeatedly calling the algorithm's
+        ``step()`` method with the specified time step size.
+
+        Args:
+            t0: Start time in seconds (should match ``initialize(t0)``).
+            tf: End time in seconds.
+            dt: Fixed time step size in seconds. The final step may be
+                smaller to land exactly on ``tf``.
+
+        Example:
+            >>> system.initialize(t0=0.0)
+            >>> system.run(t0=0.0, tf=10.0, dt=0.001)
+            >>> # Simulation complete, retrieve history
+            >>> history = system.get_history()
+
+        Note:
+            The algorithm may take sub-steps during event localization
+            (Hybrid algorithm) or iteration (IJCSA for algebraic loops).
+            The ``dt`` parameter controls the macro step size.
         """
         t = t0
         self.t_end = tf
@@ -324,11 +680,27 @@ class System:
     # Get history of all components
     # ----------------------------------------------------------------------------
     def get_history(self) -> dict[str, Any]:
-        """
-        Retrieve the history of all components in the system.
+        """Retrieve time-series history from all components.
+
+        Collects the recorded output history from every component in
+        the system, plus any event history records.
 
         Returns:
-            A dictionary mapping component names to their history dictionaries.
+            Dictionary with the following structure:
+
+            - Keys are component names, values are tuples of
+              ``(time_array, values_dict)`` from ``get_history_arrays()``
+            - Special key ``"Events"`` contains event occurrence records
+
+        Example:
+            >>> history = system.get_history()
+            >>> t, values = history["Pendulum"]
+            >>> plt.plot(t, values["angle"])
+            >>> # Access events
+            >>> events = history["Events"]
+
+        See Also:
+            :meth:`CoSimComponent.get_history_arrays`: Component history format
         """
         history: dict[str, Any] = {}
         for comp_name, comp in self.components.items():

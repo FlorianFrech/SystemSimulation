@@ -1,3 +1,5 @@
+"""Gauss-Seidel execution algorithm for System simulation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,28 +17,26 @@ if TYPE_CHECKING:
 # ----------------------------------------------------------------------------
 @dataclass
 class GaussSeidelAlgorithm(Algorithm):
-    """
-    Gauss-Seidel algorithm for solving systems with algebraic loops.
+    """Advance the system using Gauss-Seidel-style ordering.
 
-    This algorithm processes components in their execution order, solving any
-    algebraic loops within each generation before stepping the components forward
-    in time. Algebraic loops are identified and solved using
-    the IJCSA (Interface Jacobian-base Co-Simulation Algorithm) method.
+    Components are processed generation by generation, with algebraic loops
+    solved inside each generation before stepping components forward.
 
-    The algorithm:
-    1. Iterates through each generation in the system's execution order
-    2. Sets up inputs for the current generation at time t
-    3. Identifies and solves any algebraic loops that are fully contained within
-        the current generation
-    4. Executes the time step for each component in the generation
-
-    This approach allows for efficient handling of systems with feedback loops
-    while maintaining numerical stability through the Gauss-Seidel iteration pattern.
+    This approach accounts for direct-feedthrough components by making their
+    outputs available within the same macro step to downstream components in
+    the current execution order.
     """
 
     name: str = "Gauss-Seidel"
 
     def step(self, system: System, t: float, dt: float) -> None:
+        """Advance the system by one time step using Gauss-Seidel ordering.
+
+        Args:
+            system: System to advance.
+            t: Current simulation time.
+            dt: Step size.
+        """
         for gen in system.execution_order:
             system._set_inputs_for_generation(gen, t)
             gen_set = set(gen)

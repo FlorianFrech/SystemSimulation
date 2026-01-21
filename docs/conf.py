@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
     "sphinx.ext.viewcode",  # Add links to source code
     "sphinx.ext.intersphinx",  # Link to other projects' documentation
+    "myst_nb",  # Render Jupyter notebooks in docs
 ]
 
 # Autodoc settings
@@ -44,6 +45,9 @@ napoleon_include_private_with_doc = False
 
 # Autosummary
 autosummary_generate = True
+
+# Notebook settings
+nb_execution_mode = "off"
 
 # Intersphinx mapping
 intersphinx_mapping = {

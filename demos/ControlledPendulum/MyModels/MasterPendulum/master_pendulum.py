@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 import ipywidgets as widgets
 import numpy as np
@@ -6,7 +6,7 @@ from IPython.display import display
 from ipywidgets import HTML, HBox, Layout, VBox
 from traitlets import Float, HasTraits, Unicode
 
-from MyModels.EQB.hybrid_fmu_pendulum import Pendulum as EQBPendulum
+from MyModels.EQB.hybrid_fmu_pendulum import Pendulum as FMUPendulum
 from MyModels.FEM.fem_pendulum import FEMPendulum
 from MyModels.OpenSim.opensim_pendulum import OpenSimPendulum
 from syssimx.core.base import CoSimComponent
@@ -14,6 +14,10 @@ from syssimx.core.events import Event
 from syssimx.core.multi_comp import Hysteresis, MultiComponent
 from syssimx.core.port import PortType
 
+MODES: Literal["FEM", "OpenSim", "FMU"] = ("FEM", "OpenSim", "FMU")
+
+def is_valid_mode(mode: str) -> bool:
+    return mode in MODES
 
 # ----------------------------------------------------------------------------
 # Pendulum Monitoring State
@@ -44,56 +48,125 @@ class PendulumMonitoringState(HasTraits):
 # Master Pendulum CoSimulation Component
 # ----------------------------------------------------------------------------
 class MasterPendulum(MultiComponent):
-    """
-    Master Pendulum CoSimulation Component.
-    Contains at least one of the following sub-components:
-    - FEM: Continuum mechanics (NGSolve)
-    - OpenSim: Rigid multi-body dynamics (Simbody)
-    - EQB: Equation-based model (Modelica FMU)
-    """
 
     def __init__(
         self,
-        fem_comp: FEMPendulum | None = None,
-        opensim_comp: OpenSimPendulum | None = None,
-        fmu_comp: EQBPendulum | None = None,
-        initial_mode: str = "EQB",
-    ):
-        # Initialize base class
-        super().__init__(name="Pendulum", initial_mode=initial_mode, group="Plant")
-
-        # Store components
-        if fem_comp is None and opensim_comp is None and fmu_comp is None:
-            raise ValueError("At least one pendulum component must be provided.")
-        self._fem_comp = fem_comp
-        self._opensim_comp = opensim_comp
-        self._fmu_comp = fmu_comp
-        self._register_models()
-
-        # Configure mode switching
+        name: str = "MasterPendulum",
+        initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU"):
+        
+        # Check initial mode validity
+        if not is_valid_mode(initial_mode):
+            raise ValueError(f"{name}: Invalid initial mode '{initial_mode}'."
+                             f" Must be one of {MODES}.")
+        
+        super().__init__(name=name, initial_mode=initial_mode, group="Plant")
+        
+        # Instantiate sub-components
+        self.fmu = FMUPendulum(name="FMU_Pendulum")
+        self.fem = FEMPendulum(name="FEM_Pendulum")
+        self.opensim = OpenSimPendulum(name="OpenSim_Pendulum")
+        self.models.update({
+            "FEM": self.fem,
+            "OpenSim": self.opensim,
+            "FMU": self.fmu})
+        self.active_comp = self.models[initial_mode]
+        self._unify_ports()
+        
+        # Aggregate parameters from all sub-components
+        self.parameters.update({
+            "FEM": self.fem.get_parameters(),
+            "OpenSim": self.opensim.get_parameters(),
+            "FMU": self.fmu.get_parameters(),
+        })
+        
+        # Configure mode switching hysteresis
         self.hysteresis = Hysteresis(dwell_time=0.05)
 
-        # Simulation end time (for mode selector)
+        # Simulation parameters (set during initialization)
         self._t_end = 1.0
+        self._with_contact = False
+        self._animate = False
 
-        # Set the active component
-        self.active_comp = self.models[self.active_mode]
-
-        # Unify ports
-        self._unify_ports()
-
-        # Create monitoring state
+        # Monitoring state and widget references
         self.monitoring_state = PendulumMonitoringState()
-
-        # Store widget references
         self._widget_links = []
+    
+    # ----------------------------------------------------------------------------
+    # Initialization Logic (now uses base class with hooks)
+    # ----------------------------------------------------------------------------
+    def _initialize_component(self, t0: float) -> None:
+        """
+        Initialize sub-components with parameter synchronization across models.
 
-    # ----------------------------------------------------------------------------
-    # Model Registration
-    # ----------------------------------------------------------------------------
-    def _register_models(self) -> None:
-        """Register all available pendulum models."""
-        self.models = {"FEM": self._fem_comp, "OpenSim": self._opensim_comp, "EQB": self._fmu_comp}
+        This override handles the special case where FEM must be initialized
+        first to extract geometry-dependent parameters (mass, inertia, length)
+        before synchronizing to other models.
+        """
+        # Initialize FEM first to get computed parameters
+        if self.fem is not None:
+            self.fem.set_parameters(**self.parameters.get("FEM", {}))
+            self.fem.initialize(t0)
+            self._t_end = self.fem.sim_params.t_end
+            self._with_contact = self.fem._with_contact
+            self._animate = self.fem.anim_params.animate
+
+        # Synchronize parameters to other models
+        self._sync_parameters_from_fem()
+
+        # Initialize remaining sub-components
+        for mode_key, comp in self.models.items():
+            if comp is not None and mode_key != "FEM":
+                comp.initialize(t0)
+
+        # Set active component and unify ports
+        self.active_comp = self.models[self.active_mode]
+        self.direct_feedthrough = self.active_comp.direct_feedthrough
+        #self._detect_direct_feedthrough()
+
+        # Post-initialization setup
+        self._post_initialize(t0)
+
+        # Configure mode selector based on simulation type
+        if self._with_contact:
+            self.mode_selector = self._gap_based_mode_selector
+        else:
+            self.mode_selector = self._time_based_mode_selector
+
+        # Setup monitoring interface
+        # self.setup_monitoring()
+        # self.display_monitoring()
+
+    def _sync_parameters_from_fem(self) -> None:
+        """Synchronize parameters from initialized FEM to other models."""
+        if self.fem is None:
+            return
+
+        # Extract computed parameters from FEM
+        q0 = np.deg2rad(self.fem.init_params.angular_position_deg)
+        omega0 = self.fem.init_params.angular_velocity
+        use_gravity = self.fem._use_gravity
+        length = self.fem._equivalent_length
+        inertia = self.fem.inertia
+        mass = self.fem.mass
+
+        # Synchronize to OpenSim
+        if self.opensim is not None:
+            self.opensim.parameters["InitialConditions"]["q0"] = q0
+            self.opensim.parameters["InitialConditions"]["omega0"] = omega0
+            self.opensim.parameters["Model"]["mass"] = mass
+            self.opensim.parameters["Model"]["length"] = length
+            self.opensim.parameters["Model"]["inertia"] = inertia - mass * length**2
+            self.opensim._use_gravity = use_gravity
+            self.opensim._with_contact = self._with_contact
+
+        # Synchronize to FMU
+        if self.fmu is not None:
+            self.fmu.parameters["q0"].start = q0
+            self.fmu.parameters["omega0"].start = omega0
+            self.fmu.parameters["m"].start = mass
+            self.fmu.parameters["L"].start = length
+            self.fmu.parameters["inertia"].start = inertia
+            self.fmu.parameters["g"].start = 9.81 if use_gravity else 0.0
 
     # ----------------------------------------------------------------------------
     # State Adaptation
@@ -108,7 +181,7 @@ class MasterPendulum(MultiComponent):
         FMU format (initial conditions):
             {'q0': {'value': ..., 'unit': 'rad'}, 'omega0': {...}, 'torque': {...}}
         """
-        if target_mode == "EQB":
+        if target_mode == "FMU":
             return {"q0": state["q"], "omega0": state["omega"], "torque": state["torque"]}
         return state
 
@@ -128,17 +201,17 @@ class MasterPendulum(MultiComponent):
         elif cycle_position == 1:
             return "FEM"
         else:
-            return "EQB"
+            return "FMU"
 
     def _gap_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
         # Get current angular position from active component
         current_state = self.get_state()
         q = current_state["q"]["value"]
 
-        # return 'EQB'  # TEMPORARY OVERRIDE FOR TESTING
+        # return 'FMU'  # TEMPORARY OVERRIDE FOR TESTING
 
         if t < 0.7:
-            return "EQB"
+            return "FMU"
 
         # Handle Quantity objects (with units)
         if hasattr(q, "magnitude"):
@@ -152,115 +225,14 @@ class MasterPendulum(MultiComponent):
 
         # Mode selection based on angular position thresholds
         if q_abs > 15:
-            return "EQB"
+            return "FMU"
         elif q_abs > 5:
             return "OpenSim"
         else:
-            return "FEM"
+            return "FMU"
 
     # ----------------------------------------------------------------------------
-    # Initialization Logic
-    # ----------------------------------------------------------------------------
-    def initialize(self, t0: float) -> None:
-        # Call base class initialization (sets active component, unifies ports)
-        """
-        Initialize with parameter synchronization across models.
-
-        Strategy:
-        1. FEM provides master parameters (mass, inertia, geometry)
-        2. Derive equivalent parameters for OpenSim and FMU
-        3. Initialize all models with consistent parameters
-        """
-        # Initialize FEM first (master parameters)
-        if "FEM" in self.models:
-            self.models["FEM"].initialize(t0)
-
-            # Extract master parameters
-            self._t_end = self.models["FEM"].sim_params.t_end
-
-            use_gravity = self.models["FEM"]._use_gravity
-            self._with_contact = self.models["FEM"]._with_contact
-            self._animate = self.models["FEM"].anim_params.animate
-
-            q0 = np.deg2rad(self.models["FEM"].init_params.angular_position_deg)
-            omega0 = self.models["FEM"].init_params.angular_velocity
-
-            length = self.models["FEM"]._equivalent_length
-            inertia = self.models["FEM"].inertia
-            mass = self.models["FEM"].mass
-
-        else:
-            # Default parameters if FEM not available
-            use_gravity = False
-            self._with_contact = False
-            q0 = 0.0
-            omega0 = 0.0
-            mass = 1.0
-            length = 0.4
-            inertia = 0.01
-
-        # Synchronize OpenSim parameters
-        if "OpenSim" in self.models:
-            self.models["OpenSim"].parameters["InitialConditions"]["q0"] = q0
-            self.models["OpenSim"].parameters["InitialConditions"]["omega0"] = omega0
-            self.models["OpenSim"].parameters["Model"]["mass"] = mass
-            self.models["OpenSim"].parameters["Model"]["length"] = length
-            self.models["OpenSim"].parameters["Model"]["inertia"] = inertia - mass * length**2
-            self.models["OpenSim"]._use_gravity = use_gravity
-            self.models["OpenSim"]._with_contact = self._with_contact
-            self.models["OpenSim"].initialize(t0)
-
-        # Synchronize FMU parameters
-        if "EQB" in self.models:
-            self.models["EQB"].parameters["q0"].start = q0
-            self.models["EQB"].parameters["omega0"].start = omega0
-            self.models["EQB"].parameters["m"].start = mass
-            self.models["EQB"].parameters["L"].start = length
-            self.models["EQB"].parameters["inertia"].start = inertia
-            self.models["EQB"].parameters["g"].start = 9.81 if use_gravity else 0.0
-            self.models["EQB"].initialize(t0)
-
-        if self._with_contact:
-            self.mode_selector = self._gap_based_mode_selector
-        else:
-            self.mode_selector = self._time_based_mode_selector
-
-        ### TESTING ONLY ###
-        self.mode_selector = self._gap_based_mode_selector
-
-        self.setup_monitoring()
-
-    # ----------------------------------------------------------------------------
-    # Setup Event Detection
-    # ----------------------------------------------------------------------------
-    def setup_event_detection(self) -> None:
-        """
-        Setup event indicators that work across all models.
-        Call this AFTER initialize().
-        """
-
-        def wall_contact_indicator(comp: CoSimComponent) -> float:
-            """Universal event indicator that works for any sub-component."""
-            # Access through component's outputs (unified interface)
-            q = comp.get_outputs().get("q")
-            if hasattr(q, "magnitude"):
-                q = q.magnitude
-            return q - 0.0  # Wall at q=0
-
-        # Add to all models that support rollback
-        event_name = "wall_hit"
-        direction = -1  # Detect falling edge (approaching from positive q)
-
-        for mode, comp in self.models.items():
-            if comp and comp.supports_rollback:
-                comp.add_event_indicator(event_name, wall_contact_indicator, direction)
-
-        # Subscribe to the event
-        event = Event(name=event_name, source=self.name, direction=direction)
-        self.subscribe_event(event)
-
-    # ----------------------------------------------------------------------------
-    # Time Stepping Logic
+    # Update Output States (override to include monitoring and visualization)
     # ----------------------------------------------------------------------------
     def _update_output_states(
         self, t: float | None = None, event_names: list[str] | None = []
@@ -273,10 +245,10 @@ class MasterPendulum(MultiComponent):
             self._update_monitoring(t, dt)
 
         # 3) Update FEM scene if not active (for visualization consistency)
-        if self.active_mode != "FEM" and self._fem_comp.anim_params.animate:
+        if self.active_mode != "FEM" and self.fem.anim_params.animate:
             q = self.active_comp.get_outputs()["q"]
             if t is not None:
-                self._fem_comp.update_scene(q, t)
+                self.fem.update_scene(q, t)
 
     # ----------------------------------------------------------------------------
     # Monitoring interface methods
@@ -297,13 +269,13 @@ class MasterPendulum(MultiComponent):
         # Additional simulation monitoring widgets
         self.widgets["time"] = widgets.FloatText(
             value=0,
-            description=f"Time: t / {self._fem_comp.sim_params.t_end} s",
+            description=f"Time: t / {self.fem.sim_params.t_end} s",
             step=0.001,
             disabled=True,
         )
 
         self.widgets["dt"] = widgets.FloatText(
-            value=self._fem_comp.sim_params.tau,
+            value=self.fem.sim_params.tau,
             description="Time Step: dt in s",
             step=0.0001,
             disabled=True,
@@ -456,14 +428,14 @@ class MasterPendulum(MultiComponent):
         self.monitoring_state.alpha = state["alpha"]["value"]
 
         if self._with_contact:
-            self.monitoring_state.gap = self._fem_comp._get_contact_gap_distance()
+            self.monitoring_state.gap = self.fem._get_contact_gap_distance()
 
     def display_monitoring(self):
         """Display the monitoring interface."""
         display(self.monitoring_display)
-        if self._fem_comp is not None:
+        if self.fem is not None:
             display(self.scene_header)
-            self._fem_comp.initialize_scene()
+            self.fem.initialize_scene()
 
     def __del__(self):
         for link in self._widget_links:

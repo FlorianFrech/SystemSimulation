@@ -6,10 +6,95 @@ Tests PortSpec, PortState, and port compatibility logic.
 
 import numpy as np
 import pytest
-from pint import DimensionalityError
+from pint import DimensionalityError, UnitRegistry
 
-from syssimx.core.port import PortSpec, PortState, PortType
+from syssimx.core.port import PortSpec, PortState, PortType, _coerce_numpy_scalar
 from syssimx.utilities.units import Quantity, ureg
+
+
+# ============================================================================
+# Test _coerce_numpy_scalar helper function
+# ============================================================================
+class TestCoerceNumpyScalar:
+    """Test the _coerce_numpy_scalar helper function."""
+
+    def test_coerce_np_float32(self):
+        """Test coercing np.float32 to Python float."""
+        result = _coerce_numpy_scalar(np.float32(3.14))
+        assert isinstance(result, float)
+        assert not isinstance(result, np.floating)
+        assert result == pytest.approx(3.14, rel=1e-5)
+
+    def test_coerce_np_float64(self):
+        """Test coercing np.float64 to Python float."""
+        result = _coerce_numpy_scalar(np.float64(2.71828))
+        assert isinstance(result, float)
+        assert not isinstance(result, np.floating)
+        assert result == pytest.approx(2.71828)
+
+    def test_coerce_np_int32(self):
+        """Test coercing np.int32 to Python int."""
+        result = _coerce_numpy_scalar(np.int32(42))
+        assert isinstance(result, int)
+        assert not isinstance(result, np.integer)
+        assert result == 42
+
+    def test_coerce_np_int64(self):
+        """Test coercing np.int64 to Python int."""
+        result = _coerce_numpy_scalar(np.int64(-100))
+        assert isinstance(result, int)
+        assert not isinstance(result, np.integer)
+        assert result == -100
+
+    def test_coerce_np_bool_true(self):
+        """Test coercing np.bool_ True to Python bool."""
+        result = _coerce_numpy_scalar(np.bool_(True))
+        assert isinstance(result, bool)
+        assert not isinstance(result, np.bool_)
+        assert result is True
+
+    def test_coerce_np_bool_false(self):
+        """Test coercing np.bool_ False to Python bool."""
+        result = _coerce_numpy_scalar(np.bool_(False))
+        assert isinstance(result, bool)
+        assert not isinstance(result, np.bool_)
+        assert result is False
+
+    def test_passthrough_native_float(self):
+        """Test that native Python float passes through unchanged."""
+        value = 3.14
+        result = _coerce_numpy_scalar(value)
+        assert result is value
+
+    def test_passthrough_native_int(self):
+        """Test that native Python int passes through unchanged."""
+        value = 42
+        result = _coerce_numpy_scalar(value)
+        assert result is value
+
+    def test_passthrough_native_bool(self):
+        """Test that native Python bool passes through unchanged."""
+        result_true = _coerce_numpy_scalar(True)
+        result_false = _coerce_numpy_scalar(False)
+        assert result_true is True
+        assert result_false is False
+
+    def test_passthrough_string(self):
+        """Test that strings pass through unchanged."""
+        value = "hello"
+        result = _coerce_numpy_scalar(value)
+        assert result is value
+
+    def test_passthrough_none(self):
+        """Test that None passes through unchanged."""
+        result = _coerce_numpy_scalar(None)
+        assert result is None
+
+    def test_passthrough_quantity(self):
+        """Test that Quantity values pass through unchanged."""
+        value = Quantity(10.0, "m/s")
+        result = _coerce_numpy_scalar(value)
+        assert result is value
 
 
 # ============================================================================
@@ -71,6 +156,44 @@ class TestPortSpecCreation:
         with pytest.raises(Exception):
             spec.name = "modified"
 
+    def test_invalid_unit_string_raises_at_construction(self):
+        """Test that invalid unit strings raise ValueError at construction."""
+        with pytest.raises(ValueError, match="Invalid unit string"):
+            PortSpec(name="x", type=PortType.REAL, direction="in", unit="invalid_unit_xyz")
+
+    def test_valid_complex_unit_at_construction(self):
+        """Test that valid complex units are accepted at construction."""
+        spec = PortSpec(name="power", type=PortType.REAL, direction="in", unit="kg*m**2/s**3")
+        assert spec.unit == "kg*m**2/s**3"
+
+    def test_unit_object_at_construction(self):
+        """Test that Unit objects are accepted at construction."""
+        spec = PortSpec(name="length", type=PortType.REAL, direction="in", unit=ureg.meter)
+        assert spec.unit == ureg.meter
+
+    def test_unit_object_wrong_registry_raises_at_construction(self):
+        """Test that Unit objects from another registry are rejected."""
+        other_ureg = UnitRegistry()
+        with pytest.raises(ValueError, match="Unit is not from the framework UnitRegistry"):
+            PortSpec(name="length", type=PortType.REAL, direction="in", unit=other_ureg.meter)
+
+    def test_port_spec_str_with_unit(self):
+        """Test PortSpec __str__ method with unit."""
+        spec = PortSpec(name="velocity", type=PortType.REAL, direction="in", unit="m/s")
+        str_repr = str(spec)
+        assert "velocity" in str_repr
+        assert "real" in str_repr
+        assert "in" in str_repr
+        assert "m/s" in str_repr
+
+    def test_port_spec_str_without_unit(self):
+        """Test PortSpec __str__ method without unit."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="out")
+        str_repr = str(spec)
+        assert "count" in str_repr
+        assert "int" in str_repr
+        assert "out" in str_repr
+
 
 # ============================================================================
 # Test PortSpec Validation
@@ -126,10 +249,9 @@ class TestPortSpecValidation:
             spec.validate_value(True)  # Even though bool is subclass of int in Python
 
     def test_int_port_cannot_have_unit(self):
-        """Test INT port with unit raises validation error."""
-        spec = PortSpec(name="count", type=PortType.INT, direction="in", unit="kg")
+        """Test INT port with unit raises error at construction time."""
         with pytest.raises(ValueError, match="Only REAL ports can have units"):
-            spec.validate_value(5)
+            PortSpec(name="count", type=PortType.INT, direction="in", unit="kg")
 
     # --- BOOL Port Validation ---
     def test_bool_port_accepts_bool(self):
@@ -153,10 +275,9 @@ class TestPortSpecValidation:
             spec.validate_value("true")
 
     def test_bool_port_cannot_have_unit(self):
-        """Test BOOL port with unit raises validation error."""
-        spec = PortSpec(name="flag", type=PortType.BOOL, direction="in", unit="m")
+        """Test BOOL port with unit raises error at construction time."""
         with pytest.raises(ValueError, match="Only REAL ports can have units"):
-            spec.validate_value(True)
+            PortSpec(name="flag", type=PortType.BOOL, direction="in", unit="m")
 
     # --- STRING Port Validation ---
     def test_string_port_accepts_string(self):
@@ -174,10 +295,112 @@ class TestPortSpecValidation:
             spec.validate_value(3.14)
 
     def test_string_port_cannot_have_unit(self):
-        """Test STRING port with unit raises validation error."""
-        spec = PortSpec(name="message", type=PortType.STRING, direction="in", unit="m")
+        """Test STRING port with unit raises error at construction time."""
         with pytest.raises(ValueError, match="Only REAL ports can have units"):
-            spec.validate_value("test")
+            PortSpec(name="message", type=PortType.STRING, direction="in", unit="m")
+
+    # --- EVENT Port Validation ---
+    def test_event_port_accepts_bool(self):
+        """Test EVENT port accepts bool values (events are boolean triggers)."""
+        spec = PortSpec(name="trigger", type=PortType.EVENT, direction="in")
+        spec.validate_value(True)  # Should not raise
+        spec.validate_value(False)  # Should not raise
+
+    def test_event_port_rejects_non_bool(self):
+        """Test EVENT port rejects non-bool values."""
+        spec = PortSpec(name="trigger", type=PortType.EVENT, direction="in")
+        with pytest.raises(TypeError, match="EVENT expects"):
+            spec.validate_value(1)
+        with pytest.raises(TypeError, match="EVENT expects"):
+            spec.validate_value("trigger")
+
+    def test_event_port_cannot_have_unit(self):
+        """Test EVENT port with unit raises error at construction time."""
+        with pytest.raises(ValueError, match="Only REAL ports can have units"):
+            PortSpec(name="trigger", type=PortType.EVENT, direction="in", unit="m")
+
+    # --- REAL Port Edge Cases ---
+    def test_real_port_accepts_zero(self):
+        """Test REAL port accepts zero values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(0.0)
+        spec.validate_value(0)
+        spec.validate_value(Quantity(0.0, "m"))
+
+    def test_real_port_accepts_negative_values(self):
+        """Test REAL port accepts negative values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(-100.0)
+        spec.validate_value(-1)
+        spec.validate_value(Quantity(-50.0, "m"))
+
+    def test_real_port_accepts_large_values(self):
+        """Test REAL port accepts very large values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(1e308)  # Near float max
+        spec.validate_value(-1e308)
+
+    def test_real_port_accepts_small_values(self):
+        """Test REAL port accepts very small values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(1e-308)  # Near float min positive
+        spec.validate_value(-1e-308)
+
+    def test_real_port_accepts_numpy_types(self):
+        """Test REAL port accepts numpy float64 (inherits from Python float).
+
+        Note: Only np.float64 inherits from Python float and is accepted.
+        Other numpy types (np.float32, np.int64, np.int32) do NOT inherit
+        from Python's native types and are rejected.
+        """
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(np.float64(3.14))  # Accepted: inherits from float
+
+    def test_real_port_accepts_numpy_float32(self):
+        """Test REAL port accepts np.float32."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(np.float32(2.71), coerce_numpy=True)  # Coerce to float
+
+    def test_real_port_accepts_numpy_int64(self):
+        """Test REAL port accepts np.int64."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec.validate_value(np.int64(42), coerce_numpy=True)  # Coerce to int
+    
+    def test_real_port_rejects_none(self):
+        """Test REAL port rejects None value."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        with pytest.raises(TypeError):
+            spec.validate_value(None)
+
+    def test_real_port_rejects_string(self):
+        """Test REAL port rejects string values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        with pytest.raises(TypeError, match="REAL expects"):
+            spec.validate_value("3.14")
+
+    def test_real_port_rejects_list(self):
+        """Test REAL port rejects list values."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        with pytest.raises(TypeError, match="REAL expects"):
+            spec.validate_value([1.0, 2.0])
+
+    # --- INT Port Edge Cases ---
+    def test_int_port_accepts_numpy_int(self):
+        """Test INT port accepts numpy int types."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        spec.validate_value(np.int64(42), coerce_numpy=True)  # Coerce to int
+
+    def test_int_port_rejects_none(self):
+        """Test INT port rejects None value."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        with pytest.raises(TypeError):
+            spec.validate_value(None)
+
+    def test_int_port_accepts_large_values(self):
+        """Test INT port accepts large integer values."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        spec.validate_value(10**18)  # Large but valid Python int
+        spec.validate_value(-10**18)
 
 
 # ============================================================================
@@ -247,6 +470,43 @@ class TestPortSpecCompatibility:
         assert not PortSpec.compatible(spec_int, spec_bool)
         assert not PortSpec.compatible(spec_int, spec_string)
         assert not PortSpec.compatible(spec_bool, spec_string)
+
+    def test_compatible_event_ports(self):
+        """Test EVENT ports are compatible with each other."""
+        spec1 = PortSpec(name="e1", type=PortType.EVENT, direction="out")
+        spec2 = PortSpec(name="e2", type=PortType.EVENT, direction="in")
+        assert PortSpec.compatible(spec1, spec2)
+
+    def test_incompatible_event_with_bool(self):
+        """Test EVENT and BOOL ports are incompatible (different types)."""
+        spec_event = PortSpec(name="e", type=PortType.EVENT, direction="out")
+        spec_bool = PortSpec(name="b", type=PortType.BOOL, direction="in")
+        assert not PortSpec.compatible(spec_event, spec_bool)
+
+    def test_compatible_real_both_no_unit(self):
+        """Test REAL ports with both None units are compatible."""
+        spec1 = PortSpec(name="x1", type=PortType.REAL, direction="out", unit=None)
+        spec2 = PortSpec(name="x2", type=PortType.REAL, direction="in", unit=None)
+        assert PortSpec.compatible(spec1, spec2)
+
+    def test_incompatible_real_one_has_unit_other_none(self):
+        """Test REAL ports where one has unit and other has None are incompatible."""
+        spec_with_unit = PortSpec(name="v1", type=PortType.REAL, direction="out", unit="m/s")
+        spec_no_unit = PortSpec(name="v2", type=PortType.REAL, direction="in", unit=None)
+        assert not PortSpec.compatible(spec_with_unit, spec_no_unit)
+        assert not PortSpec.compatible(spec_no_unit, spec_with_unit)
+
+    def test_compatible_real_complex_units(self):
+        """Test REAL ports with complex but compatible units."""
+        spec1 = PortSpec(name="power1", type=PortType.REAL, direction="out", unit="W")
+        spec2 = PortSpec(name="power2", type=PortType.REAL, direction="in", unit="kg*m**2/s**3")
+        assert PortSpec.compatible(spec1, spec2)  # W = kg*m^2/s^3
+
+    def test_compatible_real_angular_units(self):
+        """Test REAL ports with angular velocity units."""
+        spec1 = PortSpec(name="omega1", type=PortType.REAL, direction="out", unit="rad/s")
+        spec2 = PortSpec(name="omega2", type=PortType.REAL, direction="in", unit="rpm")
+        assert PortSpec.compatible(spec1, spec2)
 
 
 # ============================================================================
@@ -413,6 +673,243 @@ class TestPortStateSetGet:
         assert state.get() == 5.0
         assert state.t_last is None
 
+    def test_set_updates_time(self):
+        """Test that set() updates t_last correctly."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(1.0, t=0.0)
+        assert state.t_last == 0.0
+
+        state.set(2.0, t=1.5)
+        assert state.t_last == 1.5
+
+        state.set(3.0, t=0.5)  # Earlier time (valid, e.g., rollback)
+        assert state.t_last == 0.5
+
+    def test_set_negative_time(self):
+        """Test setting value with negative time (valid in some contexts)."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(5.0, t=-1.0)
+
+        assert state.get() == 5.0
+        assert state.t_last == -1.0
+
+    def test_set_real_with_incompatible_quantity_raises(self):
+        """Test setting REAL port with incompatible Quantity raises error."""
+        spec = PortSpec(name="velocity", type=PortType.REAL, direction="in", unit="m/s")
+        state = PortState(spec=spec)
+
+        with pytest.raises(DimensionalityError):
+            state.set(Quantity(10.0, "kg"), t=1.0)
+
+    def test_set_int_with_float_raises(self):
+        """Test setting INT port with float raises error."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        state = PortState(spec=spec)
+
+        with pytest.raises(TypeError, match="INT expects"):
+            state.set(3.14, t=1.0)
+
+    def test_set_bool_with_int_raises(self):
+        """Test setting BOOL port with int raises error."""
+        spec = PortSpec(name="flag", type=PortType.BOOL, direction="in")
+        state = PortState(spec=spec)
+
+        with pytest.raises(TypeError, match="BOOL expects"):
+            state.set(1, t=1.0)
+
+    def test_set_string_with_int_raises(self):
+        """Test setting STRING port with int raises error."""
+        spec = PortSpec(name="msg", type=PortType.STRING, direction="in")
+        state = PortState(spec=spec)
+
+        with pytest.raises(TypeError, match="STRING expects"):
+            state.set(42, t=1.0)
+
+    def test_get_with_as_unit_on_unitless_port(self):
+        """Test get() with as_unit on unitless REAL port."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit=None)
+        state = PortState(spec=spec)
+        state.set(10.0, t=1.0)
+
+        # When port has no unit, as_unit should return raw value
+        result = state.get(as_unit="m")
+        assert result == 10.0  # No conversion applied
+
+    def test_get_with_as_unit_converts_correctly(self):
+        """Test get() with as_unit performs correct unit conversion."""
+        spec = PortSpec(name="length", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+        state.set(1000.0, t=1.0)
+
+        result = state.get(as_unit="km")
+        assert abs(result.magnitude - 1.0) < 1e-9
+        assert result.units == ureg("km")
+
+    def test_set_numpy_float_to_real_port(self):
+        """Test setting numpy float to REAL port."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(np.float64(3.14159), t=1.0)
+
+        result = state.get()
+        assert abs(result.magnitude - 3.14159) < 1e-10
+
+    def test_event_port_state_default_value(self):
+        """Test EVENT port state has correct default value."""
+        spec = PortSpec(name="trigger", type=PortType.EVENT, direction="in")
+        state = PortState(spec=spec)
+
+        assert state.value is False
+        assert state.get() is False
+
+    def test_set_event_port_value(self):
+        """Test setting EVENT port values."""
+        spec = PortSpec(name="trigger", type=PortType.EVENT, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(True, t=1.0)
+        assert state.get() is True
+
+        state.set(False, t=2.0)
+        assert state.get() is False
+
+    def test_set_numpy_float32_coerced(self):
+        """Test that np.float32 is coerced to Python float."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(np.float32(2.71828), t=1.0)
+        result = state.get()
+        assert abs(result.magnitude - 2.71828) < 1e-5
+
+    def test_set_numpy_int64_coerced(self):
+        """Test that np.int64 is coerced to Python int for INT port."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(np.int64(42), t=1.0)
+        assert state.get() == 42
+
+    def test_set_numpy_bool_coerced(self):
+        """Test that np.bool_ is coerced to Python bool."""
+        spec = PortSpec(name="flag", type=PortType.BOOL, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(np.bool_(True), t=1.0)
+        assert state.get() is True
+
+    def test_port_state_str_with_time(self):
+        """Test PortState __str__ method with timestamp."""
+        spec = PortSpec(name="velocity", type=PortType.REAL, direction="in", unit="m/s")
+        state = PortState(spec=spec)
+        state.set(10.5, t=1.5)
+
+        str_repr = str(state)
+        assert "velocity" in str_repr
+        assert "t=1.5" in str_repr
+
+    def test_port_state_str_without_time(self):
+        """Test PortState __str__ method without timestamp."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        state = PortState(spec=spec)
+        state.set(42)
+
+        str_repr = str(state)
+        assert "count" in str_repr
+        assert "42" in str_repr
+
+
+# ============================================================================
+# Test PortState Reset
+# ============================================================================
+class TestPortStateReset:
+    """Test PortState.reset() method."""
+
+    def test_reset_real_port_with_unit(self):
+        """Test reset() on REAL port with unit."""
+        spec = PortSpec(name="velocity", type=PortType.REAL, direction="in", unit="m/s")
+        state = PortState(spec=spec)
+
+        state.set(100.0, t=5.0)
+        assert state.get().magnitude == 100.0
+        assert state.t_last == 5.0
+
+        state.reset()
+        assert state.get().magnitude == 0.0
+        assert state.t_last is None
+
+    def test_reset_real_port_without_unit(self):
+        """Test reset() on REAL port without unit."""
+        spec = PortSpec(name="coefficient", type=PortType.REAL, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(3.14, t=2.0)
+        state.reset()
+
+        assert state.get() == 0.0
+        assert state.t_last is None
+
+    def test_reset_int_port(self):
+        """Test reset() on INT port."""
+        spec = PortSpec(name="count", type=PortType.INT, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(999, t=10.0)
+        state.reset()
+
+        assert state.get() == 0
+        assert state.t_last is None
+
+    def test_reset_bool_port(self):
+        """Test reset() on BOOL port."""
+        spec = PortSpec(name="enabled", type=PortType.BOOL, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(True, t=1.0)
+        state.reset()
+
+        assert state.get() is False
+        assert state.t_last is None
+
+    def test_reset_string_port(self):
+        """Test reset() on STRING port."""
+        spec = PortSpec(name="status", type=PortType.STRING, direction="in")
+        state = PortState(spec=spec)
+
+        state.set("Running", t=1.0)
+        state.reset()
+
+        assert state.get() == ""
+        assert state.t_last is None
+
+    def test_reset_event_port(self):
+        """Test reset() on EVENT port."""
+        spec = PortSpec(name="trigger", type=PortType.EVENT, direction="in")
+        state = PortState(spec=spec)
+
+        state.set(True, t=1.0)
+        state.reset()
+
+        assert state.get() is False
+        assert state.t_last is None
+
+    def test_reset_then_set(self):
+        """Test that port works correctly after reset."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(50.0, t=1.0)
+        state.reset()
+        state.set(25.0, t=2.0)
+
+        assert state.get().magnitude == 25.0
+        assert state.t_last == 2.0
+
 
 # ============================================================================
 # Test PortState Compatibility
@@ -451,6 +948,35 @@ class TestPortStateCompatibility:
         state = PortState(spec=spec_real)
 
         assert not state.compatible_with(spec_int)
+
+    def test_compatible_real_both_no_unit(self):
+        """Test REAL port state compatibility when both have no unit."""
+        spec1 = PortSpec(name="x1", type=PortType.REAL, direction="out", unit=None)
+        spec2 = PortSpec(name="x2", type=PortType.REAL, direction="in", unit=None)
+        state = PortState(spec=spec1)
+
+        assert state.compatible_with(spec2)
+
+    def test_incompatible_real_one_no_unit(self):
+        """Test REAL port state incompatibility when one has no unit."""
+        spec_with_unit = PortSpec(name="v1", type=PortType.REAL, direction="out", unit="m/s")
+        spec_no_unit = PortSpec(name="v2", type=PortType.REAL, direction="in", unit=None)
+
+        state_with_unit = PortState(spec=spec_with_unit)
+        state_no_unit = PortState(spec=spec_no_unit)
+
+        # PortState.compatible_with now delegates to PortSpec.compatible
+        # so behavior is consistent: asymmetric units are incompatible
+        assert not state_with_unit.compatible_with(spec_no_unit)
+        assert not state_no_unit.compatible_with(spec_with_unit)
+
+    def test_compatible_event_port_state(self):
+        """Test EVENT port state compatibility."""
+        spec1 = PortSpec(name="e1", type=PortType.EVENT, direction="out")
+        spec2 = PortSpec(name="e2", type=PortType.EVENT, direction="in")
+        state = PortState(spec=spec1)
+
+        assert state.compatible_with(spec2)
 
 
 # ============================================================================
@@ -552,3 +1078,153 @@ def test_real_port_various_units(unit_str, value, expected_unit):
 
     assert isinstance(result, Quantity)
     assert result.magnitude == value
+
+
+@pytest.mark.parametrize(
+    "port_type,valid_value,invalid_value",
+    [
+        (PortType.REAL, 3.14, "string"),
+        (PortType.INT, 42, 3.14),
+        (PortType.BOOL, True, 1),
+        (PortType.STRING, "hello", 42),
+    ],
+)
+def test_port_type_validation_parametrized(port_type, valid_value, invalid_value):
+    """Parametrized test for port type validation."""
+    spec = PortSpec(name="test", type=port_type, direction="in")
+
+    # Valid value should not raise
+    spec.validate_value(valid_value)
+
+    # Invalid value should raise TypeError
+    with pytest.raises(TypeError):
+        spec.validate_value(invalid_value)
+
+
+@pytest.mark.parametrize(
+    "src_unit,dst_unit,is_compatible",
+    [
+        ("m/s", "km/h", True),
+        ("m/s", "kg", False),
+        ("N*m", "J", True),  # Newton-meter equals Joule
+        ("rad/s", "deg/s", True),
+        ("W", "J/s", True),  # Watt equals Joule per second
+        ("m", "ft", True),  # Meters to feet
+        ("kg", "lb", True),  # Kilograms to pounds
+        ("Pa", "bar", True),  # Pascal to bar
+        ("Pa", "m", False),  # Pressure vs length
+    ],
+)
+def test_unit_compatibility_parametrized(src_unit, dst_unit, is_compatible):
+    """Parametrized test for unit compatibility checking."""
+    spec1 = PortSpec(name="out", type=PortType.REAL, direction="out", unit=src_unit)
+    spec2 = PortSpec(name="in", type=PortType.REAL, direction="in", unit=dst_unit)
+
+    assert PortSpec.compatible(spec1, spec2) == is_compatible
+
+
+# ============================================================================
+# Edge Cases and Error Handling
+# ============================================================================
+class TestPortEdgeCases:
+    """Test edge cases and error conditions."""
+
+    def test_port_spec_equality(self):
+        """Test PortSpec equality comparison."""
+        spec1 = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec2 = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec3 = PortSpec(name="y", type=PortType.REAL, direction="in", unit="m")
+
+        assert spec1 == spec2
+        assert spec1 != spec3
+
+    def test_port_spec_hash(self):
+        """Test PortSpec can be used in sets/dicts (frozen dataclass)."""
+        spec1 = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        spec2 = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+
+        port_set = {spec1}
+        assert spec2 in port_set
+
+        port_dict = {spec1: "value"}
+        assert port_dict[spec2] == "value"
+
+    def test_port_state_multiple_updates(self):
+        """Test PortState handles multiple sequential updates correctly."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        for i in range(100):
+            state.set(float(i), t=float(i) * 0.01)
+
+        assert state.get().magnitude == 99.0
+        assert abs(state.t_last - 0.99) < 1e-10
+
+    def test_port_state_set_same_value_twice(self):
+        """Test setting same value twice doesn't cause issues."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(5.0, t=1.0)
+        state.set(5.0, t=2.0)
+
+        assert state.get().magnitude == 5.0
+        assert state.t_last == 2.0
+
+    def test_quantity_with_zero_value(self):
+        """Test Quantity with zero value is handled correctly."""
+        spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        state.set(Quantity(0.0, "m"), t=1.0)
+
+        result = state.get()
+        assert result.magnitude == 0.0
+        assert result.units == ureg("m")
+
+    def test_quantity_unit_conversion_precision(self):
+        """Test unit conversion maintains numerical precision."""
+        spec = PortSpec(name="length", type=PortType.REAL, direction="in", unit="m")
+        state = PortState(spec=spec)
+
+        # Set 1 km, should convert to 1000 m
+        state.set(Quantity(1.0, "km"), t=1.0)
+
+        result = state.get()
+        assert abs(result.magnitude - 1000.0) < 1e-10
+        assert result.units == ureg("m")
+
+    def test_dimensionless_quantity(self):
+        """Test handling of dimensionless quantities."""
+        spec = PortSpec(name="ratio", type=PortType.REAL, direction="in", unit="dimensionless")
+        state = PortState(spec=spec)
+
+        state.set(0.5, t=1.0)
+        result = state.get()
+
+        assert abs(result.magnitude - 0.5) < 1e-10
+
+    def test_port_type_enum_values(self):
+        """Test PortType enum has expected string values."""
+        assert PortType.REAL.value == "real"
+        assert PortType.INT.value == "int"
+        assert PortType.BOOL.value == "bool"
+        assert PortType.STRING.value == "string"
+        assert PortType.EVENT.value == "event"
+
+    def test_port_spec_repr(self):
+        """Test PortSpec has meaningful string representation."""
+        spec = PortSpec(name="velocity", type=PortType.REAL, direction="in", unit="m/s")
+        repr_str = repr(spec)
+
+        assert "velocity" in repr_str
+        assert "REAL" in repr_str or "real" in repr_str
+
+    def test_direction_literal_values(self):
+        """Test direction accepts only 'in' or 'out'."""
+        # Valid directions
+        PortSpec(name="x", type=PortType.REAL, direction="in")
+        PortSpec(name="y", type=PortType.REAL, direction="out")
+
+        # Note: Invalid directions may not raise at construction time
+        # due to Python's type hint system not enforcing at runtime

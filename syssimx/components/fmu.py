@@ -481,11 +481,10 @@ class FMUComponent(CoSimComponent):
             finally:
                 self._instance = None
 
-        # Clear runtime state
-        self.history.clear()
+        # Clear runtime state (including _is_initialized via super)
+        super().reset()
         self.inputs.clear()
         self.outputs.clear()
-        self.t = 0.0
 
     def soft_reset(self, t0: float = 0.0) -> None:
         """

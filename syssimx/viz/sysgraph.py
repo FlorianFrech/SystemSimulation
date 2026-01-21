@@ -152,7 +152,7 @@ def _edge_unit_label(sys: System, conn: Connection) -> str | None:
         return None
     dst_ps = dst_comp.input_specs.get(conn.dst_port)
     if dst_ps and dst_ps.unit:
-        return f"[{dst_ps.unit}]"
+        return f"{dst_ps.unit}"
     return None
 
 

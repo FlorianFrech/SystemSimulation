@@ -9,11 +9,13 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <script src="../_static/documentation_options.js?v=01f34227"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contributing" href="../contributing.html" />
     <link rel="prev" title="syssimx.system" href="system.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -51,13 +53,14 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="syssimx.utilities.to_pint_unit">
 <span class="sig-prename descclassname"><span class="pre">syssimx.utilities.</span></span><span class="sig-name descname"><span class="pre">to_pint_unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unit_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/utilities/units.html#to_pint_unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.utilities.to_pint_unit" title="Link to this definition">¶</a></dt>
-<dd><p>Convert a unit string to a pint Unit object.</p>
+<dd><p>Convert a unit string to a Pint Unit object.
+:param unit_str: The unit string to convert.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>unit_str</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The unit string to convert.</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pint Unit object corresponding to the input string.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A pint Unit object.</p>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>unit_str</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>Unit</em><em> | </em><em>None</em>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -100,7 +103,11 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="syssimx.html">syssimx package</a></li>
@@ -111,6 +118,11 @@
 </ul>
 </li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
@@ -118,6 +130,7 @@
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">API Reference</a><ul>
       <li>Previous: <a href="system.html" title="previous chapter">syssimx.system</a></li>
+      <li>Next: <a href="../contributing.html" title="next chapter">Contributing</a></li>
   </ul></li>
   </ul></li>
 </ul>

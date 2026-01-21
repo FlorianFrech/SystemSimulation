@@ -66,6 +66,7 @@ dev = [
     "jupyterlab>=4.0.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=2.0.0",
+    "myst-nb>=1.1.0",
 ]
 
 # Complete installation with all features

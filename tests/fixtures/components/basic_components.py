@@ -143,6 +143,92 @@ class GainComponent(CoSimComponent):
         y = self.k * u
         self.outputs["y"].set(y, t)
 
+# ============================================================================
+# Test Component: Constant Source
+# ============================================================================
+class ConstantSource(CoSimComponent):
+    """A source component that outputs a constant value."""
+
+    def __init__(self, name: str, value: float = 1.0):
+        super().__init__(name)
+        self.value = value
+        self.output_specs.update(
+            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
+        )
+        self.direct_feedthrough = {}  # No inputs, no feedthrough
+
+    def _initialize_component(self, t0: float) -> None:
+        pass
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
+        self.outputs["y"].set(self.value, t)
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        pass
+
+    def get_state(self) -> dict[str, Any]:
+        return {"value": self.value}
+    
+class SineSource(CoSimComponent):
+    """A source component that outputs a sine wave: y(t) = amplitude * sin(omega * t)."""
+
+    def __init__(self, name: str, amplitude: float = 1.0, omega: float = 1.0):
+        super().__init__(name)
+        self.amplitude = amplitude
+        self.omega = omega
+        self.output_specs.update(
+            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
+        )
+        self.direct_feedthrough = {}
+
+    def _initialize_component(self, t0: float) -> None:
+        pass
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
+        y = self.amplitude * np.sin(self.omega * self.t)
+        self.outputs["y"].set(y, t)
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        pass
+
+    def get_state(self) -> dict[str, Any]:
+        return {}
+
+
+class LinearSource(CoSimComponent):
+    """A source component that outputs a linear ramp: y(t) = slope * t + offset."""
+
+    def __init__(self, name: str, slope: float = 1.0, offset: float = 0.0):
+        super().__init__(name)
+        self.slope = slope
+        self.offset = offset
+        self.output_specs.update(
+            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
+        )
+        self.direct_feedthrough = {}
+
+    def _initialize_component(self, t0: float) -> None:
+        pass
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
+        y = self.slope * self.t + self.offset
+        self.outputs["y"].set(y, t)
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        pass
+
+    def get_state(self) -> dict[str, Any]:
+        return {}
+
 
 class Source(CoSimComponent):
     """

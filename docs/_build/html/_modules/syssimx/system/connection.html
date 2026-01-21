@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <script src="../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
@@ -31,7 +32,17 @@
           <div class="body" role="main">
             
   <h1>Source code for syssimx.system.connection</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span></span><span class="sd">&quot;&quot;&quot;Connection definitions for co-simulation components.</span>
+
+<span class="sd">This module defines data classes for representing connections between</span>
+<span class="sd">components in a co-simulation environment.</span>
+
+<span class="sd">Classes:</span>
+<span class="sd">    - Connection: Standard data connection between two components.</span>
+<span class="sd">    - EventConnection: Event-based connection for event handling.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 
 
 <span class="c1"># ----------------------------------------------------------------------------</span>
@@ -41,10 +52,13 @@
 <a class="viewcode-back" href="../../../api/system.html#syssimx.Connection">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Connection</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Defines a connection between two components in a co-simulation environment.</span>
-<span class="sd">     - src_comp, dst_comp: NAMES (str) of source and destination components</span>
-<span class="sd">     - src_port, dst_port: port NAMES (str) of source and destination ports</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Defines a connection between two components in a co-simulation environment.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        src_comp (str): Name of the source component.</span>
+<span class="sd">        src_port (str): Name of the output port on the source component.</span>
+<span class="sd">        dst_comp (str): Name of the destination component.</span>
+<span class="sd">        dst_port (str): Name of the input port on the destination component.  </span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">src_comp</span><span class="p">:</span> <span class="nb">str</span>
@@ -70,18 +84,43 @@
 <a class="viewcode-back" href="../../../api/system.html#syssimx.EventConnection">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">EventConnection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Defines an event connection between a source (event producer) and target (event listener).</span>
+
+<span class="sd">    When added to a System via add_event_connection():</span>
+<span class="sd">    - The system automatically subscribes the target to the event</span>
+<span class="sd">    - No manual Event object creation or subscribe_event() call required</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        src_comp: Name of the component that produces the event (has event indicator)</span>
+<span class="sd">        src_port: Name of the event (must match event indicator name on source)</span>
+<span class="sd">        dst_comp: Name of the component that handles the event</span>
+<span class="sd">        dst_port: Name of the event input port on the target (for visualization)</span>
+<span class="sd">        direction: Zero-crossing direction (-1: falling, 0: both, +1: rising)</span>
+<span class="sd">                   If None, uses the direction from the source&#39;s event indicator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">src_comp</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">src_port</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">dst_comp</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">dst_port</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">direction</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># If None, inherit from event indicator</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">event_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Name of the event (same as src_port).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_port</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">target_comp</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dst_comp</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Name of the target component.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dst_comp</span>
+
+<div class="viewcode-block" id="EventConnection.key">
+<a class="viewcode-back" href="../../../api/system.html#syssimx.EventConnection.key">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Unique key for duplicate detection.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_comp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_port</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dst_comp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dst_port</span><span class="p">)</span></div>
+</div>
 
 </pre></div>
 
@@ -119,9 +158,18 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/index.html">User Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
 </ul>
 
 <div class="relations">

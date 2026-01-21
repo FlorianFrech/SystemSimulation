@@ -5,7 +5,7 @@ Tests the unit handling utilities using Pint.
 """
 
 import pytest
-from pint import DimensionalityError
+from pint import DimensionalityError, UnitRegistry
 
 from syssimx.utilities.units import Quantity, fix_exponent, to_pint_unit, ureg
 
@@ -95,6 +95,17 @@ class TestToPintUnit:
         """Test None input returns dimensionless."""
         unit = to_pint_unit(None)
         assert unit == ureg.dimensionless
+
+    def test_unit_object_input(self):
+        """Test Unit object input returns the same unit."""
+        unit = to_pint_unit(ureg.meter)
+        assert unit == ureg.meter
+
+    def test_unit_object_wrong_registry_raises_error(self):
+        """Test Unit object from another registry raises ValueError."""
+        other_ureg = UnitRegistry()
+        with pytest.raises(ValueError, match="Unit is not from the framework UnitRegistry"):
+            to_pint_unit(other_ureg.meter)
 
     def test_invalid_unit_raises_error(self):
         """Test invalid unit string raises ValueError."""

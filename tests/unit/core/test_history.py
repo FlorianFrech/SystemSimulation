@@ -110,6 +110,42 @@ class TestPortHistory:
         assert np.array_equal(values_array, np.array([5.0, 10.0]))
         assert unit == "m"
 
+    def test_to_tuple_with_unit_conversion(self):
+        """Test to_tuple method with unit conversion."""
+        port_history = PortHistory(port_name="PortL", unit="m")
+        port_history.append(t=0.0, value=1000.0)
+        port_history.append(t=1.0, value=2000.0)
+        time_array, values_array, unit = port_history.to_tuple(as_unit="km")
+        assert np.array_equal(time_array, np.array([0.0, 1.0]))
+        assert np.allclose(values_array, np.array([1.0, 2.0]))
+        assert unit == "km"
+
+    def test_len_empty(self):
+        """Test __len__ for empty PortHistory."""
+        port_history = PortHistory(port_name="PortM", unit="m")
+        assert len(port_history) == 0
+
+    def test_len_with_entries(self):
+        """Test __len__ for PortHistory with entries."""
+        port_history = PortHistory(port_name="PortN", unit="m")
+        port_history.append(t=0.0, value=1.0)
+        port_history.append(t=1.0, value=2.0)
+        port_history.append(t=2.0, value=3.0)
+        assert len(port_history) == 3
+
+    def test_bool_empty_is_falsy(self):
+        """Test empty PortHistory is falsy."""
+        port_history = PortHistory(port_name="PortO", unit="m")
+        assert not port_history
+        assert bool(port_history) is False
+
+    def test_bool_with_entries_is_truthy(self):
+        """Test PortHistory with entries is truthy."""
+        port_history = PortHistory(port_name="PortP", unit="m")
+        port_history.append(t=0.0, value=1.0)
+        assert port_history
+        assert bool(port_history) is True
+
 
 # ============================================================================
 # Test Component History Creation and Validation
@@ -151,6 +187,122 @@ class TestComponentHistory:
         comp_history = ComponentHistory(component_name="CompE")
         with pytest.raises(KeyError):
             comp_history.append("Port4", t=0.0, value=100.0)
+
+    def test_get_port_history(self):
+        """Test retrieving a registered port history."""
+        comp_history = ComponentHistory(component_name="CompF")
+        comp_history.add_port("Port5", unit="m/s")
+        comp_history.append("Port5", t=0.0, value=10.0)
+        port_hist = comp_history.get_port_history("Port5")
+        assert port_hist.port_name == "Port5"
+        assert port_hist.unit == "m/s"
+        assert len(port_hist) == 1
+
+    def test_get_port_history_unregistered_raises(self):
+        """Test get_port_history for non-existent port raises KeyError."""
+        comp_history = ComponentHistory(component_name="CompG")
+        with pytest.raises(KeyError, match="No history for port"):
+            comp_history.get_port_history("nonexistent")
+
+    def test_get_all_histories(self):
+        """Test get_all_histories returns all port histories."""
+        comp_history = ComponentHistory(component_name="CompH")
+        comp_history.add_port("Port6", unit="m")
+        comp_history.add_port("Port7", unit="s")
+        all_hist = comp_history.get_all_histories()
+        assert "Port6" in all_hist
+        assert "Port7" in all_hist
+        assert len(all_hist) == 2
+
+    def test_to_dict(self):
+        """Test to_dict method of ComponentHistory."""
+        comp_history = ComponentHistory(component_name="CompI")
+        comp_history.add_port("position", unit="m")
+        comp_history.add_port("velocity", unit="m/s")
+        comp_history.append("position", t=0.0, value=0.0)
+        comp_history.append("position", t=1.0, value=5.0)
+        comp_history.append("velocity", t=0.0, value=0.0)
+        comp_history.append("velocity", t=1.0, value=10.0)
+
+        result = comp_history.to_dict()
+        assert "position" in result
+        assert "velocity" in result
+        assert np.array_equal(result["position"]["values"], np.array([0.0, 5.0]))
+        assert result["position"]["unit"] == "m"
+
+    def test_to_dict_with_port_filter(self):
+        """Test to_dict with specific port names."""
+        comp_history = ComponentHistory(component_name="CompJ")
+        comp_history.add_port("a", unit="m")
+        comp_history.add_port("b", unit="s")
+        comp_history.append("a", t=0.0, value=1.0)
+        comp_history.append("b", t=0.0, value=2.0)
+
+        result = comp_history.to_dict(port_names=["a"])
+        assert "a" in result
+        assert "b" not in result
+
+    def test_to_arrays(self):
+        """Test to_arrays method of ComponentHistory."""
+        comp_history = ComponentHistory(component_name="CompK")
+        comp_history.add_port("x", unit="m")
+        comp_history.add_port("y", unit="m")
+        comp_history.append("x", t=0.0, value=1.0)
+        comp_history.append("x", t=1.0, value=2.0)
+        comp_history.append("y", t=0.0, value=10.0)
+        comp_history.append("y", t=1.0, value=20.0)
+
+        time_arr, values_dict = comp_history.to_arrays()
+        assert np.array_equal(time_arr, np.array([0.0, 1.0]))
+        assert np.array_equal(values_dict["x"], np.array([1.0, 2.0]))
+        assert np.array_equal(values_dict["y"], np.array([10.0, 20.0]))
+
+    def test_to_arrays_empty(self):
+        """Test to_arrays with no ports returns empty arrays."""
+        comp_history = ComponentHistory(component_name="CompL")
+        time_arr, values_dict = comp_history.to_arrays()
+        assert len(time_arr) == 0
+        assert values_dict == {}
+
+    def test_clear_all_ports(self):
+        """Test clearing all port histories."""
+        comp_history = ComponentHistory(component_name="CompM")
+        comp_history.add_port("p1", unit="m")
+        comp_history.add_port("p2", unit="s")
+        comp_history.append("p1", t=0.0, value=1.0)
+        comp_history.append("p2", t=0.0, value=2.0)
+
+        comp_history.clear()
+        assert len(comp_history.get_port_history("p1")) == 0
+        assert len(comp_history.get_port_history("p2")) == 0
+
+    def test_clear_specific_ports(self):
+        """Test clearing specific port histories."""
+        comp_history = ComponentHistory(component_name="CompN")
+        comp_history.add_port("p1", unit="m")
+        comp_history.add_port("p2", unit="s")
+        comp_history.append("p1", t=0.0, value=1.0)
+        comp_history.append("p2", t=0.0, value=2.0)
+
+        comp_history.clear(port_names=["p1"])
+        assert len(comp_history.get_port_history("p1")) == 0
+        assert len(comp_history.get_port_history("p2")) == 1
+
+    def test_len(self):
+        """Test __len__ returns number of registered ports."""
+        comp_history = ComponentHistory(component_name="CompO")
+        assert len(comp_history) == 0
+        comp_history.add_port("p1", unit="m")
+        assert len(comp_history) == 1
+        comp_history.add_port("p2", unit="s")
+        assert len(comp_history) == 2
+
+    def test_contains(self):
+        """Test __contains__ checks for port existence."""
+        comp_history = ComponentHistory(component_name="CompP")
+        comp_history.add_port("present", unit="m")
+        assert "present" in comp_history
+        assert "absent" not in comp_history
 
 
 # ============================================================================
@@ -200,3 +352,190 @@ class TestSystemHistory:
         sys_history.record_event(comp_name, event_name, event_time_3)
         event_history = sys_history.get_event_history(comp_name, event_name)
         assert event_history == [event_time_1, event_time_2, event_time_3]
+
+    def test_get_component_history_nonexistent_raises(self):
+        """Test get_component_history for non-existent component raises KeyError."""
+        sys_history = SystemHistory("System")
+        with pytest.raises(KeyError, match="No history for component"):
+            sys_history.get_component_history("nonexistent")
+
+    def test_get_all_histories(self):
+        """Test get_all_histories returns all component histories."""
+        sys_history = SystemHistory("System")
+        comp_a = ComponentHistory(component_name="CompA")
+        comp_b = ComponentHistory(component_name="CompB")
+        sys_history.add_component("CompA", comp_a)
+        sys_history.add_component("CompB", comp_b)
+
+        all_hist = sys_history.get_all_histories()
+        assert "CompA" in all_hist
+        assert "CompB" in all_hist
+        assert len(all_hist) == 2
+
+    def test_get_event_history_nonexistent_returns_empty(self):
+        """Test get_event_history for non-recorded event returns empty list."""
+        sys_history = SystemHistory("System")
+        result = sys_history.get_event_history("comp", "event")
+        assert result == []
+
+    def test_get_all_event_histories(self):
+        """Test get_all_event_histories returns all event histories."""
+        sys_history = SystemHistory("System")
+        sys_history.record_event("comp1", "evt1", DenseTime(1.0))
+        sys_history.record_event("comp2", "evt2", DenseTime(2.0))
+
+        all_events = sys_history.get_all_event_histories()
+        assert ("comp1", "evt1") in all_events
+        assert ("comp2", "evt2") in all_events
+
+    def test_to_dict_nested_format(self):
+        """Test to_dict with nested format."""
+        sys_history = SystemHistory("System")
+        comp = ComponentHistory(component_name="motor")
+        comp.add_port("speed", unit="rad/s")
+        comp.append("speed", t=0.0, value=0.0)
+        comp.append("speed", t=1.0, value=10.0)
+        sys_history.add_component("motor", comp)
+
+        result = sys_history.to_dict(format="nested")
+        assert "motor" in result
+        assert "speed" in result["motor"]
+        assert np.array_equal(result["motor"]["speed"]["values"], np.array([0.0, 10.0]))
+
+    def test_to_dict_flat_format(self):
+        """Test to_dict with flat format."""
+        sys_history = SystemHistory("System")
+        comp = ComponentHistory(component_name="motor")
+        comp.add_port("speed", unit="rad/s")
+        comp.append("speed", t=0.0, value=0.0)
+        comp.append("speed", t=1.0, value=10.0)
+        sys_history.add_component("motor", comp)
+
+        result = sys_history.to_dict(format="flat")
+        assert "motor.speed" in result
+        assert np.array_equal(result["motor.speed"]["values"], np.array([0.0, 10.0]))
+
+    def test_to_dict_invalid_format_raises(self):
+        """Test to_dict with invalid format raises ValueError."""
+        sys_history = SystemHistory("System")
+        with pytest.raises(ValueError, match="Unknown format"):
+            sys_history.to_dict(format="invalid")
+
+    def test_get_port_trajectory(self):
+        """Test get_port_trajectory convenience method."""
+        sys_history = SystemHistory("System")
+        comp = ComponentHistory(component_name="pendulum")
+        comp.add_port("angle", unit="rad")
+        comp.append("angle", t=0.0, value=0.0)
+        comp.append("angle", t=0.5, value=0.5)
+        comp.append("angle", t=1.0, value=1.0)
+        sys_history.add_component("pendulum", comp)
+
+        time_arr, values_arr = sys_history.get_port_trajectory("pendulum", "angle")
+        assert np.array_equal(time_arr, np.array([0.0, 0.5, 1.0]))
+        assert np.array_equal(values_arr, np.array([0.0, 0.5, 1.0]))
+
+    def test_get_port_trajectory_with_unit_conversion(self):
+        """Test get_port_trajectory with unit conversion."""
+        sys_history = SystemHistory("System")
+        comp = ComponentHistory(component_name="sensor")
+        comp.add_port("distance", unit="m")
+        comp.append("distance", t=0.0, value=1000.0)
+        comp.append("distance", t=1.0, value=2000.0)
+        sys_history.add_component("sensor", comp)
+
+        time_arr, values_arr = sys_history.get_port_trajectory("sensor", "distance", as_unit="km")
+        assert np.allclose(values_arr, np.array([1.0, 2.0]))
+
+    def test_get_port_trajectory_nonexistent_component_raises(self):
+        """Test get_port_trajectory for non-existent component raises KeyError."""
+        sys_history = SystemHistory("System")
+        with pytest.raises(KeyError, match="Component .* not found"):
+            sys_history.get_port_trajectory("nonexistent", "port")
+
+    def test_clear_all_components(self):
+        """Test clearing all component histories."""
+        sys_history = SystemHistory("System")
+        comp1 = ComponentHistory(component_name="c1")
+        comp1.add_port("p", unit="m")
+        comp1.append("p", t=0.0, value=1.0)
+        comp2 = ComponentHistory(component_name="c2")
+        comp2.add_port("q", unit="s")
+        comp2.append("q", t=0.0, value=2.0)
+        sys_history.add_component("c1", comp1)
+        sys_history.add_component("c2", comp2)
+
+        sys_history.clear()
+        assert len(comp1.get_port_history("p")) == 0
+        assert len(comp2.get_port_history("q")) == 0
+
+    def test_to_arrays(self):
+        """Test to_arrays method of SystemHistory."""
+        sys_history = SystemHistory("System")
+        comp = ComponentHistory(component_name="motor")
+        comp.add_port("speed", unit="rad/s")
+        comp.add_port("torque", unit="N*m")
+        comp.append("speed", t=0.0, value=0.0)
+        comp.append("speed", t=1.0, value=10.0)
+        comp.append("torque", t=0.0, value=5.0)
+        comp.append("torque", t=1.0, value=15.0)
+        sys_history.add_component("motor", comp)
+
+        result = sys_history.to_arrays()
+        assert "motor" in result
+        time_arr, values_dict = result["motor"]
+        assert np.array_equal(time_arr, np.array([0.0, 1.0]))
+        assert np.array_equal(values_dict["speed"], np.array([0.0, 10.0]))
+        assert np.array_equal(values_dict["torque"], np.array([5.0, 15.0]))
+
+
+# ============================================================================
+# Test SystemHistory CSV Persistence
+# ============================================================================
+class TestSystemHistoryCSV:
+    """Test SystemHistory save/load CSV functionality."""
+
+    def test_save_and_load_csv(self, tmp_path):
+        """Test round-trip save and load of CSV file."""
+        # Create and populate history
+        sys_history = SystemHistory("TestSystem")
+        comp = ComponentHistory(component_name="sensor")
+        comp.add_port("temperature", unit="K")
+        comp.add_port("pressure", unit="Pa")
+        comp.append("temperature", t=0.0, value=300.0)
+        comp.append("temperature", t=1.0, value=310.0)
+        comp.append("pressure", t=0.0, value=101325.0)
+        comp.append("pressure", t=1.0, value=102000.0)
+        sys_history.add_component("sensor", comp)
+
+        # Save to CSV
+        csv_path = tmp_path / "test_history.csv"
+        sys_history.save_csv(csv_path)
+
+        # Verify file exists
+        assert csv_path.exists()
+
+        # Load and verify
+        loaded = SystemHistory.load_csv(csv_path)
+        assert "sensor" in loaded
+        assert "temperature" in loaded["sensor"]
+        assert "pressure" in loaded["sensor"]
+        assert np.allclose(loaded["sensor"]["temperature"]["values"], np.array([300.0, 310.0]))
+        assert loaded["sensor"]["temperature"]["unit"] == "K"
+
+    def test_load_csv_file_not_found_raises(self, tmp_path):
+        """Test load_csv raises FileNotFoundError for missing file."""
+        with pytest.raises(FileNotFoundError):
+            SystemHistory.load_csv(tmp_path / "nonexistent.csv")
+
+    def test_save_csv_creates_parent_directories(self, tmp_path):
+        """Test save_csv creates parent directories if needed."""
+        sys_history = SystemHistory("TestSystem")
+        comp = ComponentHistory(component_name="comp")
+        comp.add_port("x", unit="m")
+        comp.append("x", t=0.0, value=1.0)
+        sys_history.add_component("comp", comp)
+
+        nested_path = tmp_path / "subdir1" / "subdir2" / "output.csv"
+        sys_history.save_csv(nested_path)
+        assert nested_path.exists()

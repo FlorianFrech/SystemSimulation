@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <script src="../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
@@ -31,13 +32,27 @@
           <div class="body" role="main">
             
   <h1>Source code for syssimx.core.port</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span></span><span class="sd">&quot;&quot;&quot; Port specification and port state management for co-simulation components.</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="sd">This module defines the PortType enum, PortSpec class for immutable port</span>
+<span class="sd">specifications, and PortState class for mutable port state with type-safe</span>
+<span class="sd">get/set operations including unit handling.</span>
+
+<span class="sd">Overview of classes:</span>
+<span class="sd">- PortType: Enum of supported port data types (REAL, INT, BOOL, STRING, EVENT)</span>
+<span class="sd">- PortSpec: Immutable specification of a port (name, type, direction, unit, description)</span>
+<span class="sd">- PortState: Mutable state of a port (spec, current value, last update time)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">cast</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..utilities.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">QuantityClass</span><span class="p">,</span> <span class="n">QuantityType</span><span class="p">,</span> <span class="n">ureg</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..utilities.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">QuantityClass</span><span class="p">,</span> <span class="n">QuantityType</span><span class="p">,</span> <span class="n">UnitType</span><span class="p">,</span> <span class="n">ureg</span><span class="p">,</span> <span class="n">fix_exponent</span><span class="p">,</span> <span class="n">to_pint_unit</span>
 
 
 <span class="c1"># -------------------------------------------------------------------</span>
@@ -46,11 +61,21 @@
 <div class="viewcode-block" id="PortType">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortType">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PortType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Supported port data types for co-simulation components.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        REAL: Floating-point values, optionally with physical units.</span>
+<span class="sd">        INT: Integer values.</span>
+<span class="sd">        BOOL: Boolean values (True/False).</span>
+<span class="sd">        STRING: String values.</span>
+<span class="sd">        EVENT: Boolean trigger for discrete events.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">REAL</span> <span class="o">=</span> <span class="s2">&quot;real&quot;</span>
     <span class="n">INT</span> <span class="o">=</span> <span class="s2">&quot;int&quot;</span>
     <span class="n">BOOL</span> <span class="o">=</span> <span class="s2">&quot;bool&quot;</span>
     <span class="n">STRING</span> <span class="o">=</span> <span class="s2">&quot;string&quot;</span>
-    <span class="n">EVENT</span> <span class="o">=</span> <span class="s2">&quot;event&quot;</span>  <span class="c1"># Special type for event ports (boolean)</span></div>
+    <span class="n">EVENT</span> <span class="o">=</span> <span class="s2">&quot;event&quot;</span>  <span class="c1"># Boolean trigger for discrete events</span></div>
 
 
 
@@ -58,68 +83,200 @@
 <span class="n">PortValue</span> <span class="o">=</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">QuantityType</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">UnitType</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">port_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that a unit string or Unit is recognized by the framework registry.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">to_pint_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="n">port_name</span><span class="si">}</span><span class="s2">&#39;: Invalid unit &#39;</span><span class="si">{</span><span class="n">unit</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_coerce_numpy_scalar</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert numpy scalar types to Python native types.</span>
+
+<span class="sd">    This allows seamless use of numpy arrays in port operations.</span>
+<span class="sd">    Returns the original value if not a numpy scalar.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
 <div class="viewcode-block" id="PortSpec">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortSpec">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PortSpec</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Specification of a port in a CoSimComponent (unmutable).</span>
+<span class="sd">    Specification of a port in a CoSimComponent (immutable).</span>
+
 <span class="sd">    Defines the name, type, direction, optional unit, and description of the port.</span>
+<span class="sd">    Units are validated at construction time to catch errors early.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name: Unique identifier for the port within a component.</span>
+<span class="sd">        type: Data type of the port (REAL, INT, BOOL, STRING, EVENT).</span>
+<span class="sd">        direction: Whether this is an input (&quot;in&quot;) or output (&quot;out&quot;) port.</span>
+<span class="sd">        unit: Physical unit string or Unit for REAL ports (e.g., &quot;m/s&quot;, &quot;N*m&quot;).</span>
+<span class="sd">        description: Human-readable description of the port&#39;s purpose.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="nb">type</span><span class="p">:</span> <span class="n">PortType</span>
     <span class="n">direction</span><span class="p">:</span> <span class="n">Direction</span>
-    <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">UnitType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate port specification at construction time.&quot;&quot;&quot;</span>
+        <span class="c1"># Only REAL ports can have units</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: Only REAL ports can have units, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2"> with unit &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Validate unit string is recognized by pint</span>
+        <span class="n">_validate_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Human-readable string representation.&quot;&quot;&quot;</span>
+        <span class="n">unit_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; [</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s2">)</span><span class="si">{</span><span class="n">unit_str</span><span class="si">}</span><span class="s2">&quot;</span>
 
 <div class="viewcode-block" id="PortSpec.validate_value">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortSpec.validate_value">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">validate_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">coerce_numpy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Validate that the given value matches the port&#39;s type and unit (if applicable).</span>
+<span class="sd">        Validate that the given value matches the port&#39;s type and unit.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value: The value to validate.</span>
+<span class="sd">            coerce_numpy: If True, convert numpy scalars to Python native types.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The (possibly coerced) value if valid.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TypeError: If value type doesn&#39;t match port type.</span>
+<span class="sd">            ValueError: If unit validation fails.</span>
+<span class="sd">            DimensionalityError: If Quantity has incompatible dimensions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Unit presence only allowed for REAL ports</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: Only REAL ports can have units, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2"> with unit </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">coerce_numpy</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_coerce_numpy_scalar</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
-        <span class="c1"># Data Type Checks</span>
+        <span class="c1"># Type-specific validation</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">)):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: REAL expects float/int/Quantity, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: BOOL expects bool, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_real</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">INT</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">int</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: INT expects int, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_bool</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">STRING</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: STRING expects str, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_string</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">EVENT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_event</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown port type: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
-        <span class="c1"># Unit Checks for REAL ports</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
-            <span class="n">_</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>  <span class="c1"># Raises if incompatible</span></div>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_real</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">QuantityType</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate REAL port value.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: REAL expects float, int, or Quantity, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Unit compatibility check for Quantity</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
+            <span class="n">_</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>  <span class="c1"># Raises DimensionalityError if incompatible</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate INT port value.&quot;&quot;&quot;</span>
+        <span class="c1"># Use &#39;type(value) is int&#39; to reject bool (which is subclass of int)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: INT expects int, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_bool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate BOOL port value.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: BOOL expects bool, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate STRING port value.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: STRING expects str, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate EVENT port value (boolean trigger).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Port &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: EVENT expects bool, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
 
 <div class="viewcode-block" id="PortSpec.compatible">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortSpec.compatible">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">compatible</span><span class="p">(</span><span class="n">spec1</span><span class="p">:</span> <span class="n">PortSpec</span><span class="p">,</span> <span class="n">spec2</span><span class="p">:</span> <span class="n">PortSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Check if two PortSpecs are compatible (same type and compatible units if REAL).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if two PortSpecs are compatible for connection.</span>
+
+<span class="sd">        Compatibility rules:</span>
+<span class="sd">        - Types must match exactly (REAL-REAL, INT-INT, etc.)</span>
+<span class="sd">        - For REAL ports: both must have units, and units must be dimensionally compatible</span>
+<span class="sd">        - For REAL ports: both having no unit is also compatible</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            spec1: Source port specification (typically output).</span>
+<span class="sd">            spec2: Destination port specification (typically input).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True if ports can be connected, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Type must match exactly</span>
         <span class="k">if</span> <span class="n">spec1</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">spec2</span><span class="o">.</span><span class="n">type</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="n">spec1</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="p">(</span><span class="n">spec1</span><span class="o">.</span><span class="n">unit</span> <span class="ow">or</span> <span class="n">spec2</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spec1</span><span class="o">.</span><span class="n">unit</span><span class="p">)))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spec2</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">True</span></div>
-</div>
+
+        <span class="c1"># For non-REAL types, type match is sufficient</span>
+        <span class="k">if</span> <span class="n">spec1</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="c1"># REAL type: check unit compatibility</span>
+        <span class="k">return</span> <span class="n">PortSpec</span><span class="o">.</span><span class="n">_check_unit_compatibility</span><span class="p">(</span><span class="n">spec1</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span> <span class="n">spec2</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_unit_compatibility</span><span class="p">(</span><span class="n">unit1</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unit2</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Check if two unit specifications are compatible.</span>
+
+<span class="sd">        Rules:</span>
+<span class="sd">        - Both None: compatible (dimensionless)</span>
+<span class="sd">        - One None, one has unit: incompatible (ambiguous)</span>
+<span class="sd">        - Both have units: check dimensional compatibility</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">unit1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">unit2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">unit1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">unit2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># Asymmetric: one has unit, other doesn&#39;t</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="n">unit1</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">unit2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
 
 
 
@@ -130,99 +287,135 @@
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortState">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PortState</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    State of a port in a CoSimComponent (mutable).</span>
-<span class="sd">    Holds the specification, current value, last update time, and history of values.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mutable state of a port in a CoSimComponent.</span>
+
+<span class="sd">    Holds the specification, current value, and last update time.</span>
+<span class="sd">    Provides type-safe get/set operations with automatic unit conversion.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        spec: Immutable specification defining port properties.</span>
+<span class="sd">        value: Current value of the port.</span>
+<span class="sd">        t_last: Simulation time of last value update.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">spec</span><span class="p">:</span> <span class="n">PortSpec</span>
-    <span class="n">value</span><span class="p">:</span> <span class="n">PortValue</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">t_last</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">PortValue</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">t_last</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="c1"># TODO:</span>
-    <span class="c1"># Add sample time and variablility (continuous / discrete / parameter) to support event handling</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Inititialize with type-appropriate default value if None.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize with type-appropriate default value if None.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_default_value</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PortValue</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Human-readable string representation.&quot;&quot;&quot;</span>
+        <span class="n">time_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; @ t=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">t_last</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_last</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="si">}{</span><span class="n">time_str</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PortValue</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get default value based on port type.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span>
-            <span class="k">return</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">INT</span><span class="p">:</span>
-            <span class="k">return</span> <span class="mi">0</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">STRING</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">EVENT</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">PortType</span><span class="p">,</span> <span class="n">PortValue</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">)),</span>
+            <span class="n">PortType</span><span class="o">.</span><span class="n">INT</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">PortType</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">PortType</span><span class="o">.</span><span class="n">STRING</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="n">PortType</span><span class="o">.</span><span class="n">EVENT</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">defaults</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span><span class="p">]</span>
 
 <div class="viewcode-block" id="PortState.set">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortState.set">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">PortValue</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set the port&#39;s value, validating against its specification.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the port&#39;s value with validation and unit conversion.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value: New value to set. For REAL ports with units, Quantities</span>
+<span class="sd">                   are automatically converted to the port&#39;s unit.</span>
+<span class="sd">            t: Simulation time of this update (optional).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TypeError: If value type doesn&#39;t match port type.</span>
+<span class="sd">            DimensionalityError: If Quantity has incompatible dimensions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validate_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="c1"># Validate and potentially coerce numpy types</span>
+        <span class="n">validated_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validate_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">coerce_numpy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Handle REAL port unit conversion</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span>
-            <span class="n">vq</span><span class="p">:</span> <span class="n">QuantityType</span> <span class="o">|</span> <span class="nb">float</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
-                <span class="n">vq</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">value</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span>
-                    <span class="k">else</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">real_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">vq</span> <span class="o">=</span> <span class="n">real_value</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">vq</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="p">(</span><span class="n">real_value</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">vq</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_real_value</span><span class="p">(</span><span class="n">validated_value</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>  <span class="c1"># INT, BOOL, STRING</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">validated_value</span>
+
         <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">t_last</span> <span class="o">=</span> <span class="n">t</span></div>
 
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_convert_real_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">QuantityType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">QuantityType</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert and store REAL value with proper unit handling.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">real_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">real_value</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="n">real_value</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">)))</span>
+
 <div class="viewcode-block" id="PortState.get">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortState.get">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PortValue</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the current value of the port.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current value of the port.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            as_unit: For REAL ports, convert to this unit before returning.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Current port value, possibly converted to requested unit.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="n">as_unit</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">as_unit</span><span class="p">))</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">cast</span><span class="p">(</span>
-                    <span class="n">QuantityType</span><span class="p">,</span>
-                    <span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">as_unit</span><span class="p">),</span>
-                <span class="p">)</span>
-            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="n">as_unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_with_unit_conversion</span><span class="p">(</span><span class="n">as_unit</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_with_unit_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PortValue</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get REAL value converted to target unit.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">QuantityClass</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">QuantityType</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">target_unit</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span>
+                <span class="n">QuantityType</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">target_unit</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="c1"># No unit on port, return raw value</span>
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
 
 <div class="viewcode-block" id="PortState.compatible_with">
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortState.compatible_with">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">compatible_with</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">PortSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Check if this port&#39;s specification is compatible with another port&#39;s (other) specification.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if this port&#39;s state can connect to another port specification.</span>
+
+<span class="sd">        Uses the same compatibility rules as PortSpec.compatible().</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            other: Target port specification to check compatibility with.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True if connection is valid, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">type</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PortType</span><span class="o">.</span><span class="n">REAL</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">unit</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="p">(</span><span class="mi">0</span> <span class="o">*</span> <span class="n">ureg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">True</span></div>
+        <span class="k">return</span> <span class="n">PortSpec</span><span class="o">.</span><span class="n">compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PortState.reset">
+<a class="viewcode-back" href="../../../api/core.html#syssimx.core.port.PortState.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset port to default value and clear timestamp.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_default_value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_last</span> <span class="o">=</span> <span class="kc">None</span></div>
 </div>
 
 </pre></div>
@@ -261,9 +454,18 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/index.html">User Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
 </ul>
 
 <div class="relations">

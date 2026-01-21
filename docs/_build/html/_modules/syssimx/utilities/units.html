@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <script src="../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
@@ -31,26 +32,52 @@
           <div class="body" role="main">
             
   <h1>Source code for syssimx.utilities.units</h1><div class="highlight"><pre>
-<span></span><span class="c1"># units.py</span>
-<span class="c1"># --------------------------------------------------------------------------</span>
+<span></span><span class="sd">&quot;&quot;&quot;Utilities for handling physical units using Pint.</span>
+
+<span class="sd">This module provides functions and types for working with physical units</span>
+<span class="sd">and quantities using the Pint library. It includes functionality to parse</span>
+<span class="sd">unit strings commonly found in FMU models and convert them to Pint units.</span>
+
+<span class="sd">Classes:</span>
+<span class="sd">    - QuantityType: Type alias for Pint Quantity.</span>
+<span class="sd">    - QuantityClass: The Pint Quantity class.</span>
+
+<span class="sd">Functions:</span>
+<span class="sd">    - to_pint_unit(unit_str: str) -&gt; Unit: Convert a unit string to a Pint Unit object.</span>
+<span class="sd">    - fix_exponent(unit_str: str) -&gt; str: Fix unit strings with exponents for Pint parsing.</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAlias</span>
-
+<span class="kn">from</span><span class="w"> </span><span class="nn">pint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Unit</span> <span class="k">as</span> <span class="n">PintUnit</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Quantity</span> <span class="k">as</span> <span class="n">PintQuantity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pint</span><span class="w"> </span><span class="kn">import</span> <span class="n">UnitRegistry</span>
 
 <span class="n">ureg</span> <span class="o">=</span> <span class="n">UnitRegistry</span><span class="p">()</span>
 <span class="n">ureg</span><span class="o">.</span><span class="n">formatter</span><span class="o">.</span><span class="n">default_format</span> <span class="o">=</span> <span class="s2">&quot;~P&quot;</span>
 <span class="n">ureg</span><span class="o">.</span><span class="n">autoconvert_offset_to_baseunit</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">Unit</span> <span class="o">=</span> <span class="n">ureg</span><span class="o">.</span><span class="n">Unit</span>
+<span class="sd">&quot;&quot;&quot;Unit of the default Pint UnitRegistry.&quot;&quot;&quot;</span>
+<span class="n">UnitType</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">PintUnit</span>
+<span class="sd">&quot;&quot;&quot;The Pint Unit class.&quot;&quot;&quot;</span>
+<span class="n">UnitClass</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">PintUnit</span><span class="p">]</span> <span class="o">=</span> <span class="n">PintUnit</span>
+<span class="sd">&quot;&quot;&quot;The Pint Unit class.&quot;&quot;&quot;</span>
+
 <span class="n">Quantity</span> <span class="o">=</span> <span class="n">ureg</span><span class="o">.</span><span class="n">Quantity</span>
+<span class="sd">&quot;&quot;&quot;Quantity of the default Pint UnitRegistry.&quot;&quot;&quot;</span>
 <span class="n">QuantityType</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">PintQuantity</span>
+<span class="sd">&quot;&quot;&quot;The Pint Quantity class.&quot;&quot;&quot;</span>
 <span class="n">QuantityClass</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">PintQuantity</span><span class="p">]</span> <span class="o">=</span> <span class="n">PintQuantity</span>
+<span class="sd">&quot;&quot;&quot;The Pint Quantity class.&quot;&quot;&quot;</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">fix_exponent</span><span class="p">(</span><span class="n">unit_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fixes exponent notation in unit strings for Pint parsing.</span>
+
 <span class="sd">    FMU unit strings may be in the form &quot;s-2&quot; or &quot;s2&quot; and are not recognized by pint.</span>
 <span class="sd">    Adds &quot;^&quot; between any character and a number to allow parsing by pint.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        unit_str: The unit string to fix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">fixed_str</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([a-zA-Z])(-?\d+)&quot;</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;\1^\2&quot;</span><span class="p">,</span> <span class="n">unit_str</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">fixed_str</span>
@@ -58,15 +85,19 @@
 
 <div class="viewcode-block" id="to_pint_unit">
 <a class="viewcode-back" href="../../../api/utilities.html#syssimx.utilities.to_pint_unit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">to_pint_unit</span><span class="p">(</span><span class="n">unit_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert a unit string to a pint Unit object.</span>
-
-<span class="sd">    :param unit_str: The unit string to convert.</span>
-<span class="sd">    :return: A pint Unit object.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_pint_unit</span><span class="p">(</span><span class="n">unit_str</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PintUnit</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a unit string to a Pint Unit object.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        unit_str: The unit string to convert.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Pint Unit object corresponding to the input string.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">unit_str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">unit_str</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">unit_str</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">ureg</span><span class="o">.</span><span class="n">dimensionless</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">unit_str</span><span class="p">,</span> <span class="n">PintUnit</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">unit_str</span><span class="o">.</span><span class="n">_REGISTRY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">ureg</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unit is not from the framework UnitRegistry&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">unit_str</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">unit_str</span> <span class="o">=</span> <span class="n">fix_exponent</span><span class="p">(</span><span class="n">unit_str</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">ureg</span><span class="o">.</span><span class="n">Unit</span><span class="p">(</span><span class="n">unit_str</span><span class="p">)</span>
@@ -109,9 +140,18 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/index.html">User Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
 </ul>
 
 <div class="relations">

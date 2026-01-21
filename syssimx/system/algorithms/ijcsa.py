@@ -1,3 +1,16 @@
+"""Interface Jacobian-based Co-Simulation Algorithm (IJCSA).
+
+References: Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
+
+This module implements the IJCSA algorithm for solving algebraic loops
+in co-simulated systems using a a local and global Newton iteration on interface variables.
+
+Overview:
+- IJCSAAlgorithm: Main algorithm class implementing the step() method.
+- solve_algebraic_scc_ijcsa: Function to solve algebraic loops in
+    strongly coupled components (SCCs) using IJCSA.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,7 +37,7 @@ class IJCSAAlgorithm(Algorithm):
     using a global Newton iteration on the interface variables.
 
     References:
-    - Sicklinger
+    - Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
     """
 
     name: str = "IJCSA"
@@ -55,8 +68,7 @@ def solve_algebraic_scc_ijcsa(
     tol: float = 1e-6,
     verbose: bool = False,
 ) -> None:
-    """
-    Solve algebraic loop for a strongly coupled SCC using an interface
+    """ Solve algebraic loop for a strongly coupled SCC using an interface
     Jacobian-based Newton iteration, following Sicklinger et al.
 
     Unknowns: interface inputs on zero-delay internal connections:
@@ -133,8 +145,7 @@ def solve_algebraic_scc_ijcsa(
 
     # 5) Residual Evaluation F(U)
     def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
-        """
-        Given interface input values u_vec, evaluate residual F(U) = U - Y(U).
+        """Given interface input values u_vec, evaluate residual F(U) = U - Y(U).
 
         Uses comp._evaluate_outputs(in_vals) to keep FMU state unchanged.
         """
@@ -180,9 +191,9 @@ def solve_algebraic_scc_ijcsa(
 
     # 6) Interface Jacobian by finite differences
     def compute_interface_jacobian(u_vec: np.ndarray, r_vec: np.ndarray) -> np.ndarray:
-        """
-        Approximate J = dF/dU by finite differences:
-            J[:, j] ≈ ( F(U + eps e_j) - F(U) ) / eps
+        """Approximate J = dF/dU by finite differences:
+        
+        J[:, j] ≈ ( F(U + eps e_j) - F(U) ) / eps
         """
         J = np.zeros((n, n), dtype=float)
         eps = 1e-6

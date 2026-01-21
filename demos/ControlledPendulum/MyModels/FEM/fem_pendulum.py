@@ -49,7 +49,6 @@ class FEMPendulum(FEMComponent):
         # Define input and output specifications
         self.input_specs = INPUT_SPECS
         self.output_specs = OUTPUT_SPECS
-        self._initialize_ports_from_specs()
 
         # Pendulum configuration parameters
         self.geom_params = GeometryParameters()
@@ -61,13 +60,13 @@ class FEMPendulum(FEMComponent):
         self.anim_params = AnimationParameters()
 
         self.parameters = {
-            "Geometry": self.geom_params,
-            "Material": self.mat_params,
-            "Mesh": self.mesh_params,
-            "Initial Conditions": self.init_params,
-            "Contact": self.contact_params,
-            "Simulation": self.sim_params,
-            "Animation": self.anim_params,
+            "geom_params": self.geom_params,
+            "mat_params": self.mat_params,
+            "mesh_params": self.mesh_params,
+            "init_params": self.init_params,
+            "contact_params": self.contact_params,
+            "sim_params": self.sim_params,
+            "anim_params": self.anim_params,
         }
         self._equivalent_length = 0.0
 
@@ -681,12 +680,20 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
-    def set_inputs(self, signals: dict[str, Any], t: float | None) -> None:
+    def set_inputs(self, signals: dict[str, Any], t: float | None = None) -> None:
         for name, value in signals.items():
             if name in self.inputs:
                 self.inputs[name].set(value, t=t)
                 if name == "torque":
                     self.set_drive_torque(value)
+        
+        # Update acting torque
+        drive_torque = self._get_applied_drive_torque()
+        gravity_torque = self._compute_fem_gravity_torque()
+        total_torque = drive_torque - gravity_torque
+        alpha = total_torque / self.inertia
+        self.outputs["alpha"].set(alpha, t=t)
+
 
     def set_drive_torque(self, torque):
         """

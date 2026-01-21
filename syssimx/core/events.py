@@ -1,7 +1,21 @@
-"""
-This module define the hybrid event handling capabilities for SySSimX CoSimComponents.
-Dense Time: Supports the resolution of events that occur at the same time instant (t_real: float, t_disc: int).
-Event Indicator: Used to check for zero-crossings that trigger events.
+"""Hybrid functionalities for event handling in syssimx.
+
+This module provides classes and functions to manage events in a
+co-simulation environment.
+
+Overview Functions:
+- _sign(value: float, tol: float = 1e-10) -> int:
+    Returns the sign of a value with a tolerance.
+
+Dataclasses:
+- DenseTime:
+    Represents a dense time instant with real and discrete values.
+- Event:
+    Represents an event with name, source, time, and direction.
+- EventIndicator:
+    Represents an event indicator for zero-crossing detection.
+- InternalEventInfo:
+    Information about an event detected during internal micro-stepping.
 """
 
 from collections.abc import Callable
@@ -29,7 +43,15 @@ def _sign(value: float, tol: float = 1e-10) -> int:
 # -------------------------------------------------------------------
 @dataclass(order=True, frozen=True)
 class DenseTime:
-    """Represents a dense time instant with real and discrete values."""
+    """Represents a dense time instant with real and discrete values.
+
+    Dense time allows distinguishing multiple events occurring at the same real
+    time instant by using a discrete micro-step counter.
+
+    Attributes:
+        t: Real-valued time component
+        micro: Discrete micro-step component within the real time instant
+    """
 
     t: float
     micro: int = 0
@@ -51,6 +73,18 @@ class DenseTime:
 # -------------------------------------------------------------------
 @dataclass(frozen=True)
 class Event:
+    """Represents an event in the co-simulation environment.
+    
+    Events are used for signaling discrete occurrences that may affect
+    the simulation flow, such as instantaneous state changes.
+
+    Attributes:
+        name: Name of the event
+        source: Name of the component that produces the event
+        time: Time instant when the event occurs (DenseTime)
+        direction: Direction of zero-crossing to trigger the event
+                   (-1: falling, 0: both, +1: rising)
+    """
     name: str
     source: str
     time: DenseTime | None = None
@@ -61,7 +95,28 @@ class Event:
 # Event Indicator
 # -------------------------------------------------------------------
 class EventIndicator:
-    """Represents an event indicator for zero-crossing detection."""
+    """Represents an event indicator for zero-crossing detection.
+    
+    Event indicators are functions that evaluate to a float value.
+    When the value crosses zero, an event is triggered. The direction
+    of the crossing can be specified to filter which crossings trigger events.
+
+    Attributes:
+        name: Name of the event indicator
+        function: Callable that takes a CoSimComponent and returns a float
+        direction: Direction of zero-crossing to trigger events
+                   (-1: falling, 0: both, +1: rising)
+    
+    Example:
+        >>> def temp_indicator(component):
+        >>>     return component.get_temperature() - component.threshold
+        >>> event_indicator = EventIndicator(
+        >>>     name="high_temp",
+        >>>     function=temp_indicator,
+        >>>     direction=1
+        >>> )
+    
+    """
 
     def __init__(
         self, name: str, function: Callable[["CoSimComponent"], float], direction: int = 0
@@ -82,8 +137,7 @@ class EventIndicator:
 # -------------------------------------------------------------------
 @dataclass
 class InternalEventInfo:
-    """
-    Information about an event detected during internal micro-stepping.
+    """Information about an event detected during internal micro-stepping.
 
     Components that use internal micro-stepping (e.g., FEM models) can detect
     events more precisely than the master algorithm. This class allows them
@@ -97,9 +151,14 @@ class InternalEventInfo:
         indicator_before: Indicator value at t_before (optional, for verification)
         indicator_after: Indicator value at t_after (optional, for verification)
 
-    Usage:
-        The master algorithm can use [t_before, t_after] as an initial narrow
-        interval for bisection, rather than searching the full macro-step.
+    Example:
+        >>> internal_event = InternalEventInfo(
+        >>>     event_name="high_temp",
+        >>>     t_before=1.234,
+        >>>     t_after=1.235,
+        >>>     indicator_before=0.5,
+        >>>     indicator_after=-0.3
+        >>> )
     """
 
     event_name: str

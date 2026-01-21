@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <script src="../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
@@ -31,7 +32,20 @@
           <div class="body" role="main">
             
   <h1>Source code for syssimx.core.history</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span></span><span class="sd">&quot;&quot;&quot;History management for ports, components, and systems.</span>
+
+<span class="sd">This module provides classes to store, retrieve, and manage</span>
+<span class="sd">history data for port variables, components, and entire systems</span>
+<span class="sd">during co-simulation runs.</span>
+
+<span class="sd">Overview of Classes:</span>
+<span class="sd">- PortHistory: Stores time series data for a single port variable.</span>
+<span class="sd">- ComponentHistory: Manages PortHistory instances for all ports of a component.</span>
+<span class="sd">- SystemHistory: Manages ComponentHistory instances for all components in a system,</span>
+<span class="sd">  along with event recording.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -51,8 +65,7 @@
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.PortHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PortHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class for storing and managing time-series history of a port&#39;s values.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores and manages time-series history of a port&#39;s values.</span>
 
 <span class="sd">    This class maintains a chronological record of values associated with timestamps,</span>
 <span class="sd">    with optional unit support and conversion capabilities. It provides efficient</span>
@@ -155,8 +168,7 @@
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.ComponentHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ComponentHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Manages the collection of port histories for a single component.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages the collection of port histories for a single component.</span>
 
 <span class="sd">    This class provides convenient access patterns for retrieving and</span>
 <span class="sd">    manipulating trajectory data across all ports of a component.</span>
@@ -213,8 +225,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">port_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Export histories as nested dictionary.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export histories as nested dictionary.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            port_names: List of ports to export. If None, exports all.</span>
@@ -240,8 +251,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">to_arrays</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">port_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Export as common time array and dict of value arrays.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export as common time array and dict of value arrays.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            port_names: List of ports to export. If None, exports all.</span>
@@ -295,8 +305,7 @@
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SystemHistory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Manages simulation history data for an entire system.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages simulation history data for an entire system.</span>
 
 <span class="sd">    This class serves as a container for component-level histories and event recordings</span>
 <span class="sd">    in a system simulation. It provides methods for storing, retrieving, and persisting</span>
@@ -387,8 +396,7 @@
         <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;nested&quot;</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Retrieve histories from components in the system.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve histories from components in the system.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            component_names: List of components to retrieve. If None, retrieves all.</span>
@@ -446,8 +454,7 @@
         <span class="n">port_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get histories as numpy arrays per component.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get histories as numpy arrays per component.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            component_names: List of components to retrieve. If None, retrieves all.</span>
@@ -478,8 +485,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">get_port_trajectory</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">as_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get time and value arrays for a specific port (convenience method).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get time and value arrays for a specific port (convenience method).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            component: Component name</span>
@@ -530,8 +536,7 @@
         <span class="n">units</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">long_format</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Save as single CSV file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save as single CSV file.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            filepath: Output CSV file path</span>
@@ -594,8 +599,7 @@
 <a class="viewcode-back" href="../../../api/core.html#syssimx.core.history.SystemHistory.load_csv">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_csv</span><span class="p">(</span><span class="n">filepath</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load CSV file (auto-detects wide or long format).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load CSV file (auto-detects wide or long format).</span>
 
 <span class="sd">        Args</span>
 <span class="sd">            filepath: Path to CSV file</span>
@@ -675,9 +679,18 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/index.html">User Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
 </ul>
 
 <div class="relations">

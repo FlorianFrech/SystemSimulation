@@ -11,7 +11,7 @@ from syssimx.utilities.units import Quantity, ureg
 # Port specifications
 # ----------------------------------------------------------------------------
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N*m").units),
+    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N.m").units),
     "omega_invert": PortSpec("omega_invert", PortType.EVENT, direction="in"),
 }
 
@@ -72,12 +72,11 @@ class OpenSimPendulum(OpenSimComponent):
         super().__init__(name=name, osim_model_path="", group=group)
 
         # Define input and output specifications
-        self.input_specs = INPUT_SPECS
-        self.output_specs = OUTPUT_SPECS
-        self._initialize_ports_from_specs()
+        self.input_specs.update(INPUT_SPECS)
+        self.output_specs.update(OUTPUT_SPECS)
 
         # Model parameters
-        self.parameters = PARAMETERS
+        self.parameters.update(PARAMETERS)
 
         # Configure base class integrator settings
         self.internal_dt = self.parameters["Solver"]["internal_dt"]
@@ -364,7 +363,7 @@ class OpenSimPendulum(OpenSimComponent):
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
-    def set_inputs(self, signals: dict[str, Any], t: float | None) -> None:
+    def set_inputs(self, signals: dict[str, Any], t: float | None = None) -> None:
         super().set_inputs(signals, t)  # Update port states
 
         if "torque" in signals:
@@ -408,6 +407,7 @@ class OpenSimPendulum(OpenSimComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
+        super().reset()
         self.model = None
         self.state = None
         self.coord = None

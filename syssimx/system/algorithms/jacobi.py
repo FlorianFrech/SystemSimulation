@@ -1,3 +1,5 @@
+"""Jacobi-based execution algorithm for System simulation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,23 +14,26 @@ if TYPE_CHECKING:
 
 @dataclass
 class JacobiAlgorithm(Algorithm):
-    """
-    Execute one simulation step using the Jacobi algorithm.
+    """Advance the system using a Jacobi-style execution order.
 
-    The Jacobi algorithm processes the system in two phases:
-    1. Input setting phase: For each generation in the execution order, set inputs
-        and solve any algebraic loops that are completely contained within that generation.
-    2. Step execution phase: Execute the do_step method for all components in order.
+    The algorithm sets all inputs for a generation before any component in that
+    generation advances, then solves any algebraic loops contained in that
+    generation, and finally advances component state.
 
-    Note:
-        This algorithm uses the Jacobi method where all components read their inputs
-        based on the previous time step's outputs before updating their own states.
-        Algebraic loops within each generation are solved using the IJCSA method.
+    This approach does not handle direct-feedthrough components whose outputs
+    could become available within the same macro step to downstream components.
     """
 
     name: str = "Jacobi"
 
     def step(self, system: System, t: float, dt: float) -> None:
+        """Advance the system by one time step using Jacobi ordering.
+
+        Args:
+            system: System to advance.
+            t: Current simulation time.
+            dt: Step size.
+        """
         for gen in system.execution_order:
             system._set_inputs_for_generation(gen, t)
 

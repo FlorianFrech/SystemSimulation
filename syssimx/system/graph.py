@@ -1,3 +1,26 @@
+"""Graph construction and execution ordering helpers for System.
+
+This module builds annotated connection graphs for a System, detects algebraic
+loops based on zero-delay direct-feedthrough dependencies, and computes a
+parallelizable execution order. It also provides utilities for identifying
+delayed producers and collecting zero-delay interface unknowns.
+
+The helpers in this module mutate the following System fields:
+    - graph: full connection graph with edge port annotations.
+    - _dag: zero-delay direct-feedthrough dependency graph (directed acyclic graph).
+    - algebraic_loops: list of strongly connected components in _dag.
+    - _scc_index: component name to SCC id mapping for the _dag condensation.
+    - _incoming_by_dst: incoming connection list keyed by destination component.
+    - _input_sources: mapping of destination ports to their driving connections.
+    - execution_order: list of component generations for execution.
+    - execution_idx: component name to generation index mapping.
+
+Typical usage:
+    build_graphs(system)
+    compute_execution_order(system)
+    interface_inputs, driver_map = collect_global_interface_unknowns(system)
+"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -10,6 +33,15 @@ if TYPE_CHECKING:
 
 
 def collect_active_outputs(system: System) -> dict[str, set[str]]:
+    """Collect output ports that are used by outgoing connections.
+
+    Args:
+        system: System whose connections are inspected.
+
+    Returns:
+        Mapping of component name to the set of output port names that are
+        referenced by connections.
+    """
     used = defaultdict(set)
     for c in system.connections:
         used[c.src_comp].add(c.src_port)
@@ -17,11 +49,16 @@ def collect_active_outputs(system: System) -> dict[str, set[str]]:
 
 
 def build_graphs(system: System) -> None:
-    """
-    Build:
-      - system.graph: all connections (annotated)
-      - system._dag: zero-delay true-direct-feedthrough dependencies only
-      - system.algebraic_loops: SCCs (>1) on system._dag
+    """Build annotated connection graphs and detect algebraic loops.
+
+    Populates full-connection and zero-delay dependency graphs, then computes
+    algebraic loops (SCCs) on the zero-delay dependency graph.
+
+    Args:
+        system: System to populate with graph structures.
+
+    Raises:
+        RuntimeError: If multiple connections drive the same input port.
     """
     # 1) Clear existing gaph data
     system.graph.clear()
@@ -79,8 +116,13 @@ def build_graphs(system: System) -> None:
 
 
 def compute_execution_order(system: System) -> None:
-    """
-    Compute a parallelizable execution order based on zero-delay dependencies.
+    """Compute a parallelizable execution order from zero-delay dependencies.
+
+    Condenses the zero-delay graph into SCCs, orders those SCCs in topological
+    generations, and then expands each generation back to component names.
+
+    Args:
+        system: System to populate with execution ordering data.
     """
     # 1) Ensure graphs are built
     if system._dag.number_of_nodes() == 0:
@@ -123,13 +165,19 @@ def compute_execution_order(system: System) -> None:
 
 
 def is_delayed_producer(system: System, name: str) -> bool:
-    """
-    Heuristic: detect components that
-      - have no zero-delay (direct-feedthrough) incident edges in system._dag
-      - but DO eventually feed into components that participate in zero-delay structure.
+    """Check whether a component is a delayed producer.
 
-    These are typically actuator-like components: their outputs influence the
-    closed loop, but only via *state* of downstream FMUs/controllers.
+    A delayed producer has no zero-delay incident edges in the _dag, but still
+    feeds into at least one component that participates in zero-delay structure.
+    These are often actuator-like components whose outputs influence the closed
+    loop only through downstream state.
+
+    Args:
+        system: System containing the graph data.
+        name: Component name to evaluate.
+
+    Returns:
+        True if the component is considered a delayed producer.
     """
     # 1) Must NOT be involved in any zero-delay edges
     if system._dag.in_degree(name) > 0 or system._dag.out_degree(name) > 0:
@@ -154,11 +202,13 @@ def is_delayed_producer(system: System, name: str) -> bool:
 
 
 def move_delayed_producers_to_last_generation(system: System) -> None:
-    """
-    Post-process system.execution_order:
-      - Find all 'delayed producers' (see is_delayed_producer).
-      - Remove them from their current generations.
-      - Append them as a new last generation (sorted).
+    """Move delayed producers to a final execution generation.
+
+    Removes delayed producers from their current generations and appends them as
+    a final, sorted generation in the execution order.
+
+    Args:
+        system: System whose execution order is modified.
     """
     if not system.execution_order:
         return
@@ -192,12 +242,15 @@ def move_delayed_producers_to_last_generation(system: System) -> None:
 def collect_global_interface_unknowns(
     system: System,
 ) -> tuple[list[tuple[str, str]], dict[tuple[str, str], tuple[str, str]]]:
-    """
-    Collect all interface inputs that participate in zero-delay couplings.
+    """Collect interface inputs that participate in zero-delay couplings.
+
+    Args:
+        system: System containing the zero-delay dependency graph.
 
     Returns:
-    interface_inputs: list of (dst_comp_name, dst_port_name)
-    driver_map: mapping (dst_comp, dst_port) -> (src_comp, src_port)
+        A tuple containing:
+        - interface_inputs: list of (dst_comp_name, dst_port_name).
+        - driver_map: mapping (dst_comp, dst_port) -> (src_comp, src_port).
     """
     interface_inputs: list[tuple[str, str]] = []
     driver_map: dict[tuple[str, str], tuple[str, str]] = {}

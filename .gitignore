@@ -19,8 +19,13 @@ VenvSysSimX/
 # FMU logs
 *_log.txt
 
+# Test Documentation
+docs/_build/*
+*.html
+
 *.vtu
 .covergage
 htmlcov/
 examples/FMI/FMUs
 syssimx.egg-info/
+*.html
