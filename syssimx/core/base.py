@@ -414,7 +414,7 @@ class CoSimComponent(ABC):
         self._record_outputs(t0)
 
         # Detect direct feedthrough after initialization
-        #self._detect_direct_feedthrough()
+        # self._detect_direct_feedthrough()
 
         self._is_initialized = True
 
@@ -1379,7 +1379,7 @@ class CoSimComponent(ABC):
             :meth:`reset`: Reset for re-initialization without freeing
         """
         pass
-    
+
     # -------------------------------------------------------------------
     # Detect Direct Feedthrough
     # -------------------------------------------------------------------
@@ -1406,7 +1406,9 @@ class CoSimComponent(ABC):
             - May be overridden in subclasses for efficiency
         """
         feedthrough_map: dict[str, set[str]] = {
-            out_name: set() for out_name, spec in self.output_specs.items() if spec.type == PortType.REAL
+            out_name: set()
+            for out_name, spec in self.output_specs.items()
+            if spec.type == PortType.REAL
         }
 
         print("Detecting direct feedthrough for component:", self.name)
@@ -1420,7 +1422,7 @@ class CoSimComponent(ABC):
         original_inputs = {}
         for inp_name in inputs:
             value = self.inputs[inp_name].get()
-            value = value.magnitude if hasattr(value, 'magnitude') else value
+            value = value.magnitude if hasattr(value, "magnitude") else value
             original_inputs[inp_name] = value
 
         # Store original output values
@@ -1430,7 +1432,7 @@ class CoSimComponent(ABC):
         perturbed_inputs = original_inputs.copy()
         for inp_name in inputs:
             # Perturb input
-            perturbed_inputs[inp_name] += delta 
+            perturbed_inputs[inp_name] += delta
 
             # Evaluate outputs with perturbed input
             perturbed_outputs = self.evaluate_outputs(perturbed_inputs)
@@ -1445,7 +1447,6 @@ class CoSimComponent(ABC):
             perturbed_inputs[inp_name] = original_inputs[inp_name]
 
         self.direct_feedthrough = feedthrough_map
-
 
     # -------------------------------------------------------------------
     # Properties

@@ -16,13 +16,13 @@ from dataclasses import dataclass
 # ----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Connection:
-    """ Defines a connection between two components in a co-simulation environment.
+    """Defines a connection between two components in a co-simulation environment.
 
     Attributes:
         src_comp (str): Name of the source component.
         src_port (str): Name of the output port on the source component.
         dst_comp (str): Name of the destination component.
-        dst_port (str): Name of the input port on the destination component.  
+        dst_port (str): Name of the input port on the destination component.
     """
 
     src_comp: str

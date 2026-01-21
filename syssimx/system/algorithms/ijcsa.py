@@ -68,7 +68,7 @@ def solve_algebraic_scc_ijcsa(
     tol: float = 1e-6,
     verbose: bool = False,
 ) -> None:
-    """ Solve algebraic loop for a strongly coupled SCC using an interface
+    """Solve algebraic loop for a strongly coupled SCC using an interface
     Jacobian-based Newton iteration, following Sicklinger et al.
 
     Unknowns: interface inputs on zero-delay internal connections:
@@ -192,7 +192,7 @@ def solve_algebraic_scc_ijcsa(
     # 6) Interface Jacobian by finite differences
     def compute_interface_jacobian(u_vec: np.ndarray, r_vec: np.ndarray) -> np.ndarray:
         """Approximate J = dF/dU by finite differences:
-        
+
         J[:, j] ≈ ( F(U + eps e_j) - F(U) ) / eps
         """
         J = np.zeros((n, n), dtype=float)

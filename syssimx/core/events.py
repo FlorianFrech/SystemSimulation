@@ -74,7 +74,7 @@ class DenseTime:
 @dataclass(frozen=True)
 class Event:
     """Represents an event in the co-simulation environment.
-    
+
     Events are used for signaling discrete occurrences that may affect
     the simulation flow, such as instantaneous state changes.
 
@@ -85,6 +85,7 @@ class Event:
         direction: Direction of zero-crossing to trigger the event
                    (-1: falling, 0: both, +1: rising)
     """
+
     name: str
     source: str
     time: DenseTime | None = None
@@ -96,7 +97,7 @@ class Event:
 # -------------------------------------------------------------------
 class EventIndicator:
     """Represents an event indicator for zero-crossing detection.
-    
+
     Event indicators are functions that evaluate to a float value.
     When the value crosses zero, an event is triggered. The direction
     of the crossing can be specified to filter which crossings trigger events.
@@ -106,7 +107,7 @@ class EventIndicator:
         function: Callable that takes a CoSimComponent and returns a float
         direction: Direction of zero-crossing to trigger events
                    (-1: falling, 0: both, +1: rising)
-    
+
     Example:
         >>> def temp_indicator(component):
         >>>     return component.get_temperature() - component.threshold
@@ -115,7 +116,7 @@ class EventIndicator:
         >>>     function=temp_indicator,
         >>>     direction=1
         >>> )
-    
+
     """
 
     def __init__(

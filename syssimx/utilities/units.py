@@ -12,10 +12,12 @@ Functions:
     - to_pint_unit(unit_str: str) -> Unit: Convert a unit string to a Pint Unit object.
     - fix_exponent(unit_str: str) -> str: Fix unit strings with exponents for Pint parsing.
 """
+
 import re
 from typing import TypeAlias
-from pint import Unit as PintUnit
+
 from pint import Quantity as PintQuantity
+from pint import Unit as PintUnit
 from pint import UnitRegistry
 
 ureg = UnitRegistry()

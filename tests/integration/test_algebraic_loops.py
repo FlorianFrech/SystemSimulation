@@ -5,18 +5,17 @@ Tests algorithm correctness against analytical solutions and compares
 algorithm behavior on systems with algebraic loops.
 """
 
-from typing import Any
-
 import numpy as np
 import pytest
 
-from syssimx.core.base import CoSimComponent
-from syssimx.core.port import PortSpec, PortType
 from syssimx.system import Connection, System
 from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
 from syssimx.system.algorithms.ijcsa import IJCSAAlgorithm
-from syssimx.system.algorithms.jacobi import JacobiAlgorithm
-from tests.fixtures.components import IntegratorComponent, SimpleGain, SineSource, ConstantSource, LinearSource
+from tests.fixtures.components import (
+    ConstantSource,
+    SimpleGain,
+)
+
 
 # ============================================================================
 # Test Algebraic Loop Convergence

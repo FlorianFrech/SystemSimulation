@@ -365,7 +365,7 @@ class TestPortSpecValidation:
         """Test REAL port accepts np.int64."""
         spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
         spec.validate_value(np.int64(42), coerce_numpy=True)  # Coerce to int
-    
+
     def test_real_port_rejects_none(self):
         """Test REAL port rejects None value."""
         spec = PortSpec(name="x", type=PortType.REAL, direction="in", unit="m")
@@ -400,7 +400,7 @@ class TestPortSpecValidation:
         """Test INT port accepts large integer values."""
         spec = PortSpec(name="count", type=PortType.INT, direction="in")
         spec.validate_value(10**18)  # Large but valid Python int
-        spec.validate_value(-10**18)
+        spec.validate_value(-(10**18))
 
 
 # ============================================================================

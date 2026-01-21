@@ -8,7 +8,6 @@ import pytest
 
 from syssimx.core.events import Event
 from syssimx.system import Connection, System
-from syssimx.system.algorithms.base import Algorithm
 from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
 from syssimx.system.algorithms.jacobi import JacobiAlgorithm
 from syssimx.system.connection import EventConnection
@@ -18,7 +17,6 @@ from syssimx.system.graph import (
     is_delayed_producer,
 )
 from tests.fixtures.components import (
-    HybridCombi,
     HybridListener,
     HybridSource,
     IntegratorComponent,
@@ -1016,12 +1014,8 @@ class TestEventDispatch:
         sys.add_component(listener1)
         sys.add_component(listener2)
 
-        sys.add_event_connection(
-            EventConnection("Source", "trigger", "Listener1", "v_invert")
-        )
-        sys.add_event_connection(
-            EventConnection("Source", "trigger", "Listener2", "v_invert")
-        )
+        sys.add_event_connection(EventConnection("Source", "trigger", "Listener1", "v_invert"))
+        sys.add_event_connection(EventConnection("Source", "trigger", "Listener2", "v_invert"))
 
         targets = sys.get_event_targets("Source", "trigger")
 
@@ -1038,9 +1032,7 @@ class TestEventDispatch:
 
         sys.add_component(source)
         sys.add_component(listener)
-        sys.add_event_connection(
-            EventConnection("Source", "trigger", "Listener", "v_invert")
-        )
+        sys.add_event_connection(EventConnection("Source", "trigger", "Listener", "v_invert"))
 
         targets = sys.get_event_targets("Source", "trigger")
         targets.append("Hacker")  # Modify returned list
@@ -1075,9 +1067,7 @@ class TestConnectionPortCompatibility:
         class BoolSource(SimpleGain):
             def __init__(self, name):
                 super().__init__(name)
-                self.output_specs["y"] = PortSpec(
-                    name="y", type=PortType.BOOL, direction="out"
-                )
+                self.output_specs["y"] = PortSpec(name="y", type=PortType.BOOL, direction="out")
 
         # Create component with REAL input
         bool_source = BoolSource(name="BoolSource")
@@ -1095,4 +1085,3 @@ class TestConnectionPortCompatibility:
 
         with pytest.raises(TypeError, match="Port incompatibility"):
             sys.add_connection(conn)
-

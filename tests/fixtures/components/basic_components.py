@@ -1,5 +1,7 @@
 from typing import Any
 
+import numpy as np
+
 from syssimx.core.base import CoSimComponent
 from syssimx.core.port import PortSpec, PortType, ureg
 from syssimx.utilities.units import Quantity, to_pint_unit
@@ -143,6 +145,7 @@ class GainComponent(CoSimComponent):
         y = self.k * u
         self.outputs["y"].set(y, t)
 
+
 # ============================================================================
 # Test Component: Constant Source
 # ============================================================================
@@ -152,9 +155,7 @@ class ConstantSource(CoSimComponent):
     def __init__(self, name: str, value: float = 1.0):
         super().__init__(name)
         self.value = value
-        self.output_specs.update(
-            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
-        )
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
         self.direct_feedthrough = {}  # No inputs, no feedthrough
 
     def _initialize_component(self, t0: float) -> None:
@@ -171,7 +172,8 @@ class ConstantSource(CoSimComponent):
 
     def get_state(self) -> dict[str, Any]:
         return {"value": self.value}
-    
+
+
 class SineSource(CoSimComponent):
     """A source component that outputs a sine wave: y(t) = amplitude * sin(omega * t)."""
 
@@ -179,9 +181,7 @@ class SineSource(CoSimComponent):
         super().__init__(name)
         self.amplitude = amplitude
         self.omega = omega
-        self.output_specs.update(
-            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
-        )
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
         self.direct_feedthrough = {}
 
     def _initialize_component(self, t0: float) -> None:
@@ -208,9 +208,7 @@ class LinearSource(CoSimComponent):
         super().__init__(name)
         self.slope = slope
         self.offset = offset
-        self.output_specs.update(
-            {"y": PortSpec(name="y", type=PortType.REAL, direction="out")}
-        )
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
         self.direct_feedthrough = {}
 
     def _initialize_component(self, t0: float) -> None:

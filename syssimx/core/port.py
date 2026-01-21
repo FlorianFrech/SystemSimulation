@@ -1,4 +1,4 @@
-""" Port specification and port state management for co-simulation components.
+"""Port specification and port state management for co-simulation components.
 
 This module defines the PortType enum, PortSpec class for immutable port
 specifications, and PortState class for mutable port state with type-safe
@@ -18,7 +18,13 @@ from typing import Any, Literal, cast
 
 import numpy as np
 
-from ..utilities.units import QuantityClass, QuantityType, UnitType, ureg, fix_exponent, to_pint_unit
+from ..utilities.units import (
+    QuantityClass,
+    QuantityType,
+    UnitType,
+    to_pint_unit,
+    ureg,
+)
 
 
 # -------------------------------------------------------------------
@@ -26,7 +32,7 @@ from ..utilities.units import QuantityClass, QuantityType, UnitType, ureg, fix_e
 # -------------------------------------------------------------------
 class PortType(str, Enum):
     """Supported port data types for co-simulation components.
-    
+
     Attributes:
         REAL: Floating-point values, optionally with physical units.
         INT: Integer values.
@@ -158,33 +164,25 @@ class PortSpec:
         """Validate INT port value."""
         # Use 'type(value) is int' to reject bool (which is subclass of int)
         if type(value) is not int:
-            raise TypeError(
-                f"Port '{self.name}': INT expects int, got {type(value).__name__}"
-            )
+            raise TypeError(f"Port '{self.name}': INT expects int, got {type(value).__name__}")
         return value
 
     def _validate_bool(self, value: Any) -> bool:
         """Validate BOOL port value."""
         if not isinstance(value, bool):
-            raise TypeError(
-                f"Port '{self.name}': BOOL expects bool, got {type(value).__name__}"
-            )
+            raise TypeError(f"Port '{self.name}': BOOL expects bool, got {type(value).__name__}")
         return value
 
     def _validate_string(self, value: Any) -> str:
         """Validate STRING port value."""
         if not isinstance(value, str):
-            raise TypeError(
-                f"Port '{self.name}': STRING expects str, got {type(value).__name__}"
-            )
+            raise TypeError(f"Port '{self.name}': STRING expects str, got {type(value).__name__}")
         return value
 
     def _validate_event(self, value: Any) -> bool:
         """Validate EVENT port value (boolean trigger)."""
         if not isinstance(value, bool):
-            raise TypeError(
-                f"Port '{self.name}': EVENT expects bool, got {type(value).__name__}"
-            )
+            raise TypeError(f"Port '{self.name}': EVENT expects bool, got {type(value).__name__}")
         return value
 
     @staticmethod
@@ -216,7 +214,7 @@ class PortSpec:
 
     @staticmethod
     def _check_unit_compatibility(unit1: str | None, unit2: str | None) -> bool:
-        """ Check if two unit specifications are compatible.
+        """Check if two unit specifications are compatible.
 
         Rules:
         - Both None: compatible (dimensionless)

@@ -17,8 +17,8 @@ from tests.fixtures.components import (
     HybridListener,
     HybridSource,
     IntegratorComponent,
+    NoRollbackComponent,
     SimpleGain,
-    NoRollbackComponent
 )
 
 
@@ -97,7 +97,6 @@ class TestCoSimComponentBasics:
         comp.initialize(t0=0.0)
 
         # Modify state after initialization
-        original_x = comp.x
         comp.x = 999.0
 
         # Second initialize should be a no-op

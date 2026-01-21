@@ -5,18 +5,19 @@ Tests algorithm correctness against analytical solutions and compares
 algorithm behavior on systems with algebraic loops.
 """
 
-from typing import Any
-
 import numpy as np
 import pytest
 
-from syssimx.core.base import CoSimComponent
-from syssimx.core.port import PortSpec, PortType
 from syssimx.system import Connection, System
 from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
 from syssimx.system.algorithms.ijcsa import IJCSAAlgorithm
 from syssimx.system.algorithms.jacobi import JacobiAlgorithm
-from tests.fixtures.components import IntegratorComponent, SimpleGain, SineSource, ConstantSource, LinearSource
+from tests.fixtures.components import (
+    ConstantSource,
+    IntegratorComponent,
+    LinearSource,
+    SimpleGain,
+)
 
 
 # ============================================================================
@@ -235,9 +236,7 @@ class TestAlgorithmComparisonDynamic:
         # All algorithms should produce similar results
         y_ref = results["GaussSeidel"]
         for name, y in results.items():
-            assert np.isclose(y, y_ref, rtol=0.01), (
-                f"{name} produced y={y}, reference {y_ref}"
-            )
+            assert np.isclose(y, y_ref, rtol=0.01), f"{name} produced y={y}, reference {y_ref}"
 
 
 # ============================================================================

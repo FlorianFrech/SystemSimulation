@@ -479,12 +479,12 @@ class MultiComponent(CoSimComponent):
         if self._allow_mode_switching and self.mode_selector is not None:
             state = self.get_state()
             proposed_mode = self.mode_selector(t, state)
-            
+
             # a) Apply hysteresis if configured
             if self.hysteresis is not None:
                 if not self.hysteresis.can_switch(t, proposed_mode):
                     proposed_mode = self.active_mode
-            
+
             # b) Perform switch if mode changed
             if proposed_mode != self.active_mode:
                 self._switch_mode(proposed_mode, t)
@@ -523,7 +523,7 @@ class MultiComponent(CoSimComponent):
         """
         if new_mode not in self.models:
             raise ValueError(f"{self.name}: Unknown mode '{new_mode}'")
-        
+
         # Store synchronization event
         synch_event: dict[str, Any] = {}
         synch_event["time"] = t
@@ -806,7 +806,9 @@ class MultiComponent(CoSimComponent):
             if comp is None:
                 continue
             if self.direct_feedthrough is None:
-                print(f"{self.name}: Detected direct_feedthrough={comp.direct_feedthrough} from model '{mode_key}'")
+                print(
+                    f"{self.name}: Detected direct_feedthrough={comp.direct_feedthrough} from model '{mode_key}'"
+                )
                 self.direct_feedthrough = comp.direct_feedthrough
             elif self.direct_feedthrough != comp.direct_feedthrough:
                 raise ValueError(
@@ -814,7 +816,7 @@ class MultiComponent(CoSimComponent):
                     f"Model '{mode_key}' has direct_feedthrough={comp.direct_feedthrough}, "
                     f"expected {self.direct_feedthrough}."
                 )
-    
+
     # -------------------------------------------------------------------
     # Reset Logic
     # -------------------------------------------------------------------

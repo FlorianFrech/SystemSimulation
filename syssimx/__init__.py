@@ -45,18 +45,21 @@ __all__ = [
 # Optional imports - only available if dependencies are installed
 try:
     from syssimx.components import FMUComponent
+
     __all__.append("FMUComponent")
 except ImportError:
     FMUComponent = None  # fmpy not installed
 
 try:
     from syssimx.components import FEMComponent
+
     __all__.append("FEMComponent")
 except ImportError:
     FEMComponent = None  # ngsolve not installed
 
 try:
     from syssimx.components import OpenSimComponent
+
     __all__.append("OpenSimComponent")
 except ImportError:
     OpenSimComponent = None  # opensim not installed

@@ -5,19 +5,16 @@ Tests the co-simulation algorithms (Jacobi, Gauss-Seidel, IJCSA) in isolation
 using simple component configurations.
 """
 
-from typing import Any
-
 import numpy as np
 import pytest
 
-from syssimx.core.base import CoSimComponent
-from syssimx.core.port import PortSpec, PortType
 from syssimx.system import Connection, System
 from syssimx.system.algorithms.base import Algorithm
 from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
 from syssimx.system.algorithms.ijcsa import IJCSAAlgorithm
 from syssimx.system.algorithms.jacobi import JacobiAlgorithm
-from tests.fixtures.components import IntegratorComponent, SimpleGain, ConstantSource
+from tests.fixtures.components import ConstantSource, IntegratorComponent, SimpleGain
+
 
 # ============================================================================
 # Test Algorithm Base Class and Interface
@@ -111,7 +108,9 @@ class TestAlgorithmsSingleComponent:
         [JacobiAlgorithm(), GaussSeidelAlgorithm(), IJCSAAlgorithm()],
         ids=["Jacobi", "GaussSeidel", "IJCSA"],
     )
-    def test_single_integrator_multiple_steps(self, single_integrator_system: System, algorithm: Algorithm):
+    def test_single_integrator_multiple_steps(
+        self, single_integrator_system: System, algorithm: Algorithm
+    ):
         """Test multiple steps with all algorithms."""
         sys, integrator = single_integrator_system
         sys.set_algorithm(algorithm)

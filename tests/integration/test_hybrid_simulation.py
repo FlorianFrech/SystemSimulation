@@ -15,7 +15,6 @@ Test scenarios based on:
 import numpy as np
 import pytest
 
-from syssimx.core.events import Event
 from syssimx.system.algorithms.hybrid import HybridAlgorithm
 from syssimx.system.connection import EventConnection
 from syssimx.system.system import System
@@ -23,7 +22,7 @@ from tests.fixtures.components.hybrid_components import (
     HybridCombi,
     HybridListener,
     HybridSource,
-    NoRollbackComponent
+    NoRollbackComponent,
 )
 
 
@@ -250,7 +249,6 @@ class TestEventDetection:
         system.initialize(t0=0.0)
         system.algorithm.verbose = False
 
-
         # Use large step size to test localization
         system.run(t0=0.0, tf=1.0, dt=0.5)
 
@@ -372,8 +370,8 @@ class TestNonSimultaneousEvents:
         event_history = system.history.get_all_event_histories()
         trigger1_times = event_history.get(("Source_1", "Trigger_1"), [])
         trigger2_times = event_history.get(("Source_2", "Trigger_2"), [])
-        
-        #After first event, velocity should be inverted
+
+        # After first event, velocity should be inverted
         assert len(trigger1_times) == 1
         assert len(trigger2_times) == 0
         assert np.isclose(listener.v, -initial_v, atol=1e-10)
@@ -397,7 +395,7 @@ class TestEventChains:
     - Listener receives the chained event
 
     Superdense time semantics: (t*, 0) -> (t*, 1)
-    
+
     Note: Event chains are complex to test because the second event must be
     detected by the hybrid algorithm after handling the first event. This
     requires careful indicator design where the indicator value changes
@@ -448,14 +446,14 @@ class TestEventChains:
     def test_combi_as_event_source_and_listener(self, hybrid_algorithm):
         """Combi can act as both event source and listener."""
         # Source: x(t) = -2/3 + 2t, crosses zero at t=0.3333
-        source = HybridSource(name="Source", x0=-2/3, v=2.0)
+        source = HybridSource(name="Source", x0=-2 / 3, v=2.0)
         # Combi: acts as both listener (for v_double) and source (position crosses)
-        combi = HybridCombi(name="Combi", x0=2/3, v=-1)
+        combi = HybridCombi(name="Combi", x0=2 / 3, v=-1)
         listener = HybridListener(name="Listener", x0=0.0, v=3.0)
 
         def zero_crossing_indicator(comp: HybridSource) -> float:
             return comp.x
-        
+
         def v_change_indicator(comp: HybridCombi) -> float:
             return 0.0 if comp.v_curr != comp.v_prev else 1.0
 
@@ -489,18 +487,18 @@ class TestEventChains:
 
         # Classify components
         classification = system.classify_components()
-        
+
         # Combi should be both source and listener
         source_names = [c.name for c in classification["event_sources"]]
         listener_names = [c.name for c in classification["event_listeners"]]
-        
+
         assert "Combi" in source_names
         assert "Combi" in listener_names
 
         system.run(t0=0.0, tf=1.0, dt=0.1)
 
         event_history = system.history.get_all_event_histories()
-        
+
         # Both events should be recorded
         source_events = event_history.get(("Source", "v_double"), [])
         combi_events = event_history.get(("Combi", "v_change"), [])
@@ -510,14 +508,14 @@ class TestEventChains:
 
         # Evaluate microstep increments
         assert source_events[0].micro == 0  # First event: source causes combi component to double v
-        assert combi_events[0].micro == 1   # Second event at same t: combi notifies listener
+        assert combi_events[0].micro == 1  # Second event at same t: combi notifies listener
 
     def test_superdense_time_microstep_increment(self, hybrid_algorithm):
         """Verify microstep increments when events trigger other events."""
         # Use two sources that cross at same time, targeting Listener with annotations
         # Source1 crosses at t=0.5 (rising)
         source1 = HybridSource(name="Source_1", x0=-0.5, v=1.0)
-        # Source2 also crosses at t=0.5 (rising) 
+        # Source2 also crosses at t=0.5 (rising)
         source2 = HybridSource(name="Source_2", x0=-0.5, v=1.0)
         # Use dynamic verification for simultaneous events
         listener = HybridListener(name="Listener", x0=0.0, v=1.0, use_event_annotations=False)
@@ -585,9 +583,7 @@ class TestSimultaneousEvents:
         # Source 2: x(t) = -2/3 + t, crosses at t=2/3 (rising)
         source2 = HybridSource(name="Source_2", x0=-2 / 3, v=1.0)
         # Use annotations to declare commutativity
-        listener = HybridListener(
-            name="Listener", x0=0.0, v=3.0, use_event_annotations=True
-        )
+        listener = HybridListener(name="Listener", x0=0.0, v=3.0, use_event_annotations=True)
 
         def indicator(comp):
             return comp.x
@@ -657,9 +653,6 @@ class TestStateRollback:
         )
         system.add_event_connection(conn)
         system.initialize(t0=0.0)
-
-        # Record initial state
-        initial_x = source.x
 
         # Single step that crosses the event
         system.algorithm.step(system, 0.0, 1.0)

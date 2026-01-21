@@ -186,10 +186,10 @@ class TestTimestepping:
         multi_comp.hysteresis = Hysteresis(dwell_time=0.05)
 
         multi_comp.do_step(t=0.0, dt=0.01)
-        assert multi_comp.active_mode == "A" # Switch to B not allowed yet
+        assert multi_comp.active_mode == "A"  # Switch to B not allowed yet
 
         multi_comp.do_step(t=0.05, dt=0.01)
-        assert multi_comp.active_mode == "B" # Switch to B allowed 
+        assert multi_comp.active_mode == "B"  # Switch to B allowed
 
 
 # ============================================================================

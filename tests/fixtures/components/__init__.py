@@ -2,22 +2,17 @@
 Shared test components for unit and integration tests.
 """
 
-from .basic_components import (GainComponent,
-                               SimpleGain,
-                               Source,
-                               Subtractor,
-                               ConstantSource,
-                               SineSource,
-                               LinearSource)
-
+from .basic_components import (
+    ConstantSource,
+    GainComponent,
+    LinearSource,
+    SimpleGain,
+    SineSource,
+    Source,
+    Subtractor,
+)
 from .dynamic_components import IntegratorComponent
-
-from .hybrid_components import (
-    HybridCombi,
-    HybridListener,
-    HybridSource, 
-    NoRollbackComponent)
-
+from .hybrid_components import HybridCombi, HybridListener, HybridSource, NoRollbackComponent
 from .multi_components import (
     EmptyMultiComponent,
     IncompatibleMultiComponent,
