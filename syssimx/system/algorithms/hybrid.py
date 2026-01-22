@@ -67,7 +67,7 @@ class HybridAlgorithm(Algorithm):
         t_right = t + dt
         eps = 1e-12
         if self.verbose:
-            print(f"Time: {t:.4f} s", end="\r")
+            print(f"Time: {t_right:.4f} s", end="\r")
 
         # Track all events handled in this macro-step (to avoid duplicates at boundaries)
         handled_events_this_step: set[tuple[str, str, float]] = set()

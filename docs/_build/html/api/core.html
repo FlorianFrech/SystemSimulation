@@ -1,44 +1,457 @@
+
 <!DOCTYPE html>
 
-<html lang="en" data-content_root="../">
+
+<html lang="en" data-content_root="../" >
+
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>syssimx.core &#8212; SysSimX 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
-    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
-    <script src="../_static/documentation_options.js?v=01f34227"></script>
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=a1637f0b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/core';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="syssimx.components" href="components.html" />
     <link rel="prev" title="syssimx package" href="syssimx.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
   
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
   
   
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
 
-  </head><body>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
 
-          <div class="body" role="main">
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SysSimX 0.1.0 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="syssimx.html">syssimx package</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">syssimx.core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="components.html">syssimx.components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="system.html">syssimx.system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html">syssimx.utilities</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/01_first_example.html">Tutorial 1: Implementing a Simple Pendulum as Co-Simulation Component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/02_system.html">Tutorial 2: Importing and Using FMUs for Co-Simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/03_data_collection.html">Tutorial 3:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/04_fmu_co_simulation.html">Tutorial 4:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/05_event_handling.html">Tutorial 5: Hybrid Systems and Event-Driven Simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/06_hybrid_systems.html">Tutorial 6:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/07_algebraic_loops.html">Tutorial 7:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/08_algebraic_loops.html">Tutorial 8:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/09_integrating_opensim.html">Tutorial 9:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/10_integrating_fem_ngsolve.html">Tutorial 10:</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/api/core.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>syssimx.core</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-syssimx.core.base">Base Classes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent"><code class="docutils literal notranslate"><span class="pre">CoSimComponent</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.name"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.label"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.label</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.group"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.group</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.t"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.input_specs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.input_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.output_specs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.output_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.outputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.history"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.history</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.parameters</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.direct_feedthrough"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.direct_feedthrough</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.model_structure"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.model_structure</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_indicators"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_indicators</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.internal_event_hints"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.internal_event_hints</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_subscriptions"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_annotations"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_annotations</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_commutativity"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_commutativity</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.__init__"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.__init__()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id2"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.label</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id3"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.group</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id4"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.input_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id5"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.output_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id6"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id7"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.outputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id8"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.parameters</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id9"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.direct_feedthrough</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id10"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.model_structure</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id11"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_indicators</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id12"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.internal_event_hints</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id13"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id14"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_annotations</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id15"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_commutativity</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.initialize"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.initialize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_inputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.evaluate_outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.evaluate_outputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_outputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.do_step"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.do_step()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.snapshot_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.snapshot_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.restore_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.restore_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.supports_rollback"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.supports_rollback</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_history"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_history()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_history_arrays"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_history_arrays()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.add_event_indicator"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.add_event_indicator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_state_events"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_state_events</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.evaluate_event_indicators"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.evaluate_event_indicators()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.detect_event_crossings"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.detect_event_crossings()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.report_internal_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.report_internal_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_internal_event_hints"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_internal_event_hints()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.subscribe_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.subscribe_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_event_subscriptions"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.handle_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.handle_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.reset"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.reset()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.free"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.free()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.reactive_inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.reactive_inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_direct_feedthrough"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_direct_feedthrough</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-syssimx.core.port">Ports</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType"><code class="docutils literal notranslate"><span class="pre">PortType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.REAL"><code class="docutils literal notranslate"><span class="pre">PortType.REAL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.INT"><code class="docutils literal notranslate"><span class="pre">PortType.INT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.BOOL"><code class="docutils literal notranslate"><span class="pre">PortType.BOOL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.STRING"><code class="docutils literal notranslate"><span class="pre">PortType.STRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.EVENT"><code class="docutils literal notranslate"><span class="pre">PortType.EVENT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id16"><code class="docutils literal notranslate"><span class="pre">PortType.REAL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id17"><code class="docutils literal notranslate"><span class="pre">PortType.INT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id18"><code class="docutils literal notranslate"><span class="pre">PortType.BOOL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id19"><code class="docutils literal notranslate"><span class="pre">PortType.STRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id20"><code class="docutils literal notranslate"><span class="pre">PortType.EVENT</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec"><code class="docutils literal notranslate"><span class="pre">PortSpec</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.name"><code class="docutils literal notranslate"><span class="pre">PortSpec.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.type"><code class="docutils literal notranslate"><span class="pre">PortSpec.type</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.direction"><code class="docutils literal notranslate"><span class="pre">PortSpec.direction</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.unit"><code class="docutils literal notranslate"><span class="pre">PortSpec.unit</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.description"><code class="docutils literal notranslate"><span class="pre">PortSpec.description</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id21"><code class="docutils literal notranslate"><span class="pre">PortSpec.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id22"><code class="docutils literal notranslate"><span class="pre">PortSpec.type</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id23"><code class="docutils literal notranslate"><span class="pre">PortSpec.direction</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id24"><code class="docutils literal notranslate"><span class="pre">PortSpec.unit</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id25"><code class="docutils literal notranslate"><span class="pre">PortSpec.description</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.validate_value"><code class="docutils literal notranslate"><span class="pre">PortSpec.validate_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.compatible"><code class="docutils literal notranslate"><span class="pre">PortSpec.compatible()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState"><code class="docutils literal notranslate"><span class="pre">PortState</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.spec"><code class="docutils literal notranslate"><span class="pre">PortState.spec</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.value"><code class="docutils literal notranslate"><span class="pre">PortState.value</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.t_last"><code class="docutils literal notranslate"><span class="pre">PortState.t_last</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id26"><code class="docutils literal notranslate"><span class="pre">PortState.spec</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id27"><code class="docutils literal notranslate"><span class="pre">PortState.value</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id28"><code class="docutils literal notranslate"><span class="pre">PortState.t_last</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.set"><code class="docutils literal notranslate"><span class="pre">PortState.set()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.get"><code class="docutils literal notranslate"><span class="pre">PortState.get()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.compatible_with"><code class="docutils literal notranslate"><span class="pre">PortState.compatible_with()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.reset"><code class="docutils literal notranslate"><span class="pre">PortState.reset()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#events">Events</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#history">History</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
   <section id="syssimx-core">
-<h1>syssimx.core<a class="headerlink" href="#syssimx-core" title="Link to this heading">¶</a></h1>
+<h1>syssimx.core<a class="headerlink" href="#syssimx-core" title="Link to this heading">#</a></h1>
 <p>This module contains the core classes for co-simulation components.</p>
 <section id="module-syssimx.core.base">
-<span id="base-classes"></span><span id="module-syssimx.core"></span><h2>Base Classes<a class="headerlink" href="#module-syssimx.core.base" title="Link to this heading">¶</a></h2>
+<span id="base-classes"></span><span id="module-syssimx.core"></span><h2>Base Classes<a class="headerlink" href="#module-syssimx.core.base" title="Link to this heading">#</a></h2>
 <p>Co-simulation component base classes and interfaces.</p>
 <p>This module defines the abstract base class <code class="docutils literal notranslate"><span class="pre">CoSimComponent</span></code> that all
 co-simulation components must inherit from. It provides a unified interface
@@ -110,7 +523,7 @@ component instance.</p>
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.base.</span></span><span class="sig-name descname"><span class="pre">CoSimComponent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.base.</span></span><span class="sig-name descname"><span class="pre">CoSimComponent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
 <p>Abstract base class for all co-simulation components.</p>
 <p>This class defines the unified interface that all simulation components
@@ -138,7 +551,7 @@ hooks for hybrid event detection.</p>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.name">
-<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.name" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.name" title="Link to this definition">#</a></dt>
 <dd><p>Unique identifier for the component within a system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -149,7 +562,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.label">
-<span class="sig-name descname"><span class="pre">label</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.label" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">label</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.label" title="Link to this definition">#</a></dt>
 <dd><p>Human-readable display name (defaults to name).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -160,7 +573,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.group">
-<span class="sig-name descname"><span class="pre">group</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.group" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">group</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.group" title="Link to this definition">#</a></dt>
 <dd><p>Optional grouping category for organization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -171,7 +584,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.t">
-<span class="sig-name descname"><span class="pre">t</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.t" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">t</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.t" title="Link to this definition">#</a></dt>
 <dd><p>Current simulation time in seconds.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -182,7 +595,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.input_specs">
-<span class="sig-name descname"><span class="pre">input_specs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.input_specs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">input_specs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.input_specs" title="Link to this definition">#</a></dt>
 <dd><p>Input port specifications (immutable).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -193,7 +606,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.output_specs">
-<span class="sig-name descname"><span class="pre">output_specs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.output_specs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">output_specs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.output_specs" title="Link to this definition">#</a></dt>
 <dd><p>Output port specifications (immutable).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -204,7 +617,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.inputs">
-<span class="sig-name descname"><span class="pre">inputs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.inputs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">inputs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.inputs" title="Link to this definition">#</a></dt>
 <dd><p>Current input port states (mutable).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -215,7 +628,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.outputs">
-<span class="sig-name descname"><span class="pre">outputs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.outputs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">outputs</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.outputs" title="Link to this definition">#</a></dt>
 <dd><p>Current output port states (mutable).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -226,7 +639,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.history">
-<span class="sig-name descname"><span class="pre">history</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.history" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">history</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.history" title="Link to this definition">#</a></dt>
 <dd><p>Time-series recorder for output values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -237,7 +650,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.parameters">
-<span class="sig-name descname"><span class="pre">parameters</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.parameters" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parameters</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.parameters" title="Link to this definition">#</a></dt>
 <dd><p>Configurable component parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -248,7 +661,7 @@ hooks for hybrid event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.direct_feedthrough">
-<span class="sig-name descname"><span class="pre">direct_feedthrough</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.direct_feedthrough" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">direct_feedthrough</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.direct_feedthrough" title="Link to this definition">#</a></dt>
 <dd><p>Maps outputs to inputs with
 algebraic dependency (no state dynamics between them).</p>
 <dl class="field-list simple">
@@ -260,7 +673,7 @@ algebraic dependency (no state dynamics between them).</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.model_structure">
-<span class="sig-name descname"><span class="pre">model_structure</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.model_structure" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">model_structure</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.model_structure" title="Link to this definition">#</a></dt>
 <dd><p>FMI-style dependency
 structure for outputs, derivatives, and initial unknowns.</p>
 <dl class="field-list simple">
@@ -272,7 +685,7 @@ structure for outputs, derivatives, and initial unknowns.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.event_indicators">
-<span class="sig-name descname"><span class="pre">event_indicators</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_indicators" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_indicators</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_indicators" title="Link to this definition">#</a></dt>
 <dd><p>Registered zero-crossing
 functions for state event detection.</p>
 <dl class="field-list simple">
@@ -284,7 +697,7 @@ functions for state event detection.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.internal_event_hints">
-<span class="sig-name descname"><span class="pre">internal_event_hints</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.internal_event_hints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">internal_event_hints</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.internal_event_hints" title="Link to this definition">#</a></dt>
 <dd><p>Timing hints from
 micro-stepping components to improve event localization.</p>
 <dl class="field-list simple">
@@ -296,7 +709,7 @@ micro-stepping components to improve event localization.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.event_subscriptions">
-<span class="sig-name descname"><span class="pre">event_subscriptions</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_subscriptions" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_subscriptions</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_subscriptions" title="Link to this definition">#</a></dt>
 <dd><p>External events this component
 subscribes to.</p>
 <dl class="field-list simple">
@@ -308,7 +721,7 @@ subscribes to.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.event_annotations">
-<span class="sig-name descname"><span class="pre">event_annotations</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_annotations" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_annotations</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_annotations" title="Link to this definition">#</a></dt>
 <dd><p>Metadata for events.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -319,7 +732,7 @@ subscribes to.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.event_commutativity">
-<span class="sig-name descname"><span class="pre">event_commutativity</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_commutativity" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_commutativity</span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.event_commutativity" title="Link to this definition">#</a></dt>
 <dd><p>Whether event pairs
 can be handled in any order.</p>
 <dl class="field-list simple">
@@ -364,12 +777,12 @@ can be handled in any order.</p>
 </div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id0">
-<span class="sig-name descname"><span class="pre">t</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></span><a class="headerlink" href="#id0" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">t</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></span><a class="headerlink" href="#id0" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.__init__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.__init__" title="Link to this definition">#</a></dt>
 <dd><p>Initialize a new co-simulation component.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -397,82 +810,82 @@ and organization in large systems.</p></li>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id1">
-<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id1" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id1" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id2">
-<span class="sig-name descname"><span class="pre">label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id2" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id2" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id3">
-<span class="sig-name descname"><span class="pre">group</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id3" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">group</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id3" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id4">
-<span class="sig-name descname"><span class="pre">input_specs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id4" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">input_specs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id4" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id5">
-<span class="sig-name descname"><span class="pre">output_specs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id5" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">output_specs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id5" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id6">
-<span class="sig-name descname"><span class="pre">inputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortState" title="syssimx.core.port.PortState"><span class="pre">PortState</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id6" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">inputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortState" title="syssimx.core.port.PortState"><span class="pre">PortState</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id6" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id7">
-<span class="sig-name descname"><span class="pre">outputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortState" title="syssimx.core.port.PortState"><span class="pre">PortState</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id7" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">outputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortState" title="syssimx.core.port.PortState"><span class="pre">PortState</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id7" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id8">
-<span class="sig-name descname"><span class="pre">parameters</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id8" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parameters</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id8" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id9">
-<span class="sig-name descname"><span class="pre">direct_feedthrough</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id9" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">direct_feedthrough</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id9" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id10">
-<span class="sig-name descname"><span class="pre">model_structure</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id10" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">model_structure</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id10" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id11">
-<span class="sig-name descname"><span class="pre">event_indicators</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EventIndicator</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id11" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_indicators</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">EventIndicator</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id11" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id12">
-<span class="sig-name descname"><span class="pre">internal_event_hints</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">InternalEventInfo</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id12" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">internal_event_hints</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">InternalEventInfo</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id12" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id13">
-<span class="sig-name descname"><span class="pre">event_subscriptions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Event</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id13" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_subscriptions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Event</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id13" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id14">
-<span class="sig-name descname"><span class="pre">event_annotations</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id14" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_annotations</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id14" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id15">
-<span class="sig-name descname"><span class="pre">event_commutativity</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id15" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">event_commutativity</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id15" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.set_parameters">
-<span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_parameters" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_parameters" title="Link to this definition">#</a></dt>
 <dd><p>Set one or more component parameters before initialization.</p>
 <p>Parameters control component behavior and must be set before
 calling <code class="docutils literal notranslate"><span class="pre">initialize()</span></code>. Available parameters are defined in
@@ -514,7 +927,7 @@ custom validation logic (e.g., range checking).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_parameters">
-<span class="sig-name descname"><span class="pre">get_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_parameters" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_parameters" title="Link to this definition">#</a></dt>
 <dd><p>Retrieve one or more parameter values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -547,7 +960,7 @@ Returns a copy to prevent external modification.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.initialize">
-<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.initialize" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.initialize" title="Link to this definition">#</a></dt>
 <dd><p>Initialize the component at the specified start time.</p>
 <p>Prepares the component for simulation by setting up ports, event
 indicators, and internal state. This method must be called once
@@ -592,7 +1005,7 @@ parameters or initial time.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.set_inputs">
-<span class="sig-name descname"><span class="pre">set_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_inputs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_inputs" title="Link to this definition">#</a></dt>
 <dd><p>Set input port values from a dictionary of signals.</p>
 <p>This method updates the component’s input ports with new values.
 Override in subclasses for type conversions, unit handling, or
@@ -629,7 +1042,7 @@ before calling this method.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.evaluate_outputs">
-<span class="sig-name descname"><span class="pre">evaluate_outputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.evaluate_outputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.evaluate_outputs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">evaluate_outputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.evaluate_outputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.evaluate_outputs" title="Link to this definition">#</a></dt>
 <dd><p>Evaluate outputs for given inputs without advancing time.</p>
 <p>This method computes outputs based on the provided inputs at the
 current time, without performing a time step. Essential for solving
@@ -674,7 +1087,7 @@ where outputs must be recomputed based on new inputs.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_outputs">
-<span class="sig-name descname"><span class="pre">get_outputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_outputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_outputs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_outputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_outputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_outputs" title="Link to this definition">#</a></dt>
 <dd><p>Return current output values as a dictionary.</p>
 <p>Retrieves the current value of all output ports that have been set.
 Ports with <code class="docutils literal notranslate"><span class="pre">None</span></code> values are excluded from the result.</p>
@@ -703,7 +1116,7 @@ directly on the PortState object.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.do_step">
-<span class="sig-name descname"><span class="pre">do_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.do_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.do_step" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">do_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.do_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.do_step" title="Link to this definition">#</a></dt>
 <dd><p>Execute a single simulation time step.</p>
 <p>Advances the component’s simulation from time <code class="docutils literal notranslate"><span class="pre">t</span></code> to <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">+</span> <span class="pre">dt</span></code>.
 This is the main simulation interface called by the master
@@ -748,7 +1161,7 @@ Should match <code class="docutils literal notranslate"><span class="pre">self.t
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.set_state">
-<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">set_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_state" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.set_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.set_state" title="Link to this definition">#</a></dt>
 <dd><p>Set physical state from human-readable format.</p>
 <p>Initializes the component from physical variables exported by
 <code class="docutils literal notranslate"><span class="pre">get_state()</span></code>. Used for mode switching in <code class="docutils literal notranslate"><span class="pre">MultiComponent</span></code>
@@ -797,7 +1210,7 @@ internal time should be updated to this value.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_state">
-<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_state" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_state" title="Link to this definition">#</a></dt>
 <dd><p>Export current physical state in human-readable format.</p>
 <p>Returns the component’s physical state variables (positions,
 velocities, etc.) in a format suitable for inspection, debugging,
@@ -838,7 +1251,7 @@ enabling state round-tripping and model switching.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.snapshot_state">
-<span class="sig-name descname"><span class="pre">snapshot_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.snapshot_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.snapshot_state" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">snapshot_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.snapshot_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.snapshot_state" title="Link to this definition">#</a></dt>
 <dd><p>Capture complete internal state for time rollback.</p>
 <p>Creates an opaque snapshot preserving ALL solver state needed
 to restore the component to its exact condition at the current
@@ -886,7 +1299,7 @@ should be treated as a black box.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.restore_state">
-<span class="sig-name descname"><span class="pre">restore_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.restore_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.restore_state" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">restore_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.restore_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.restore_state" title="Link to this definition">#</a></dt>
 <dd><p>Restore component to exact state from a snapshot.</p>
 <p>Reverses time by restoring the component to the state captured
 by <code class="docutils literal notranslate"><span class="pre">snapshot_state()</span></code>. After restoration, subsequent
@@ -942,7 +1355,7 @@ Component’s internal time will be reset to this value.</p></li>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.supports_rollback">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">supports_rollback</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.supports_rollback" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">supports_rollback</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.supports_rollback" title="Link to this definition">#</a></dt>
 <dd><p>Check if the component supports state snapshot and restore.</p>
 <p>Components that support rollback can participate in hybrid
 co-simulation with event detection. The hybrid master algorithm
@@ -976,7 +1389,7 @@ No manual flag setting required.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_history">
-<span class="sig-name descname"><span class="pre">get_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_history" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_history" title="Link to this definition">#</a></dt>
 <dd><p>Retrieve time-series history of output port values.</p>
 <p>Returns the recorded history from simulation as a dictionary
 structure. Optionally filter by port names and convert units.</p>
@@ -1022,7 +1435,7 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_history_arrays">
-<span class="sig-name descname"><span class="pre">get_history_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_history_arrays"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_history_arrays" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_history_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_history_arrays"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_history_arrays" title="Link to this definition">#</a></dt>
 <dd><p>Retrieve time-series history as NumPy arrays.</p>
 <p>Returns the recorded history optimized for numerical analysis
 and plotting. More efficient than <code class="docutils literal notranslate"><span class="pre">get_history()</span></code> for large
@@ -1061,7 +1474,7 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.add_event_indicator">
-<span class="sig-name descname"><span class="pre">add_event_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.add_event_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.add_event_indicator" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_event_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.add_event_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.add_event_indicator" title="Link to this definition">#</a></dt>
 <dd><p>Register an event indicator function for zero-crossing detection.</p>
 <p>Event indicators are scalar functions of component state that trigger
 events when they cross zero. The hybrid master algorithm monitors
@@ -1113,7 +1526,7 @@ a float. The event triggers when this value crosses zero.</p></li>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.has_state_events">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_state_events</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_state_events" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_state_events</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_state_events" title="Link to this definition">#</a></dt>
 <dd><p>Check if state event indicators are registered.</p>
 <p>State events are triggered by zero-crossings of indicator functions
 during simulation. Components with state events require the hybrid
@@ -1139,7 +1552,7 @@ master algorithm for proper event detection and handling.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.evaluate_event_indicators">
-<span class="sig-name descname"><span class="pre">evaluate_event_indicators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.evaluate_event_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.evaluate_event_indicators" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">evaluate_event_indicators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.evaluate_event_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.evaluate_event_indicators" title="Link to this definition">#</a></dt>
 <dd><p>Evaluate all registered event indicators at the current state.</p>
 <p>Computes the current value of each event indicator function.
 These values are compared between time steps to detect zero
@@ -1170,7 +1583,7 @@ macro step to detect state events.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.detect_event_crossings">
-<span class="sig-name descname"><span class="pre">detect_event_crossings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">previous</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sign_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.detect_event_crossings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.detect_event_crossings" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">detect_event_crossings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">previous</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sign_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.detect_event_crossings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.detect_event_crossings" title="Link to this definition">#</a></dt>
 <dd><p>Detect zero-crossings between previous and current indicator values.</p>
 <p>Compares indicator values before and after a time step to identify
 which indicators have crossed zero. Respects the direction setting
@@ -1213,7 +1626,7 @@ the interval. Use bisection search to locate the precise time.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.report_internal_event">
-<span class="sig-name descname"><span class="pre">report_internal_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_after</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indicator_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indicator_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.report_internal_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.report_internal_event" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">report_internal_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_after</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indicator_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indicator_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.report_internal_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.report_internal_event" title="Link to this definition">#</a></dt>
 <dd><p>Report an event detected during internal micro-stepping.</p>
 <p>Call this from <code class="docutils literal notranslate"><span class="pre">_do_step_internal()</span></code> when an event is detected
 during internal sub-stepping. The master algorithm uses these
@@ -1265,7 +1678,7 @@ after retrieval. Multiple hints can be reported per step.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.get_internal_event_hints">
-<span class="sig-name descname"><span class="pre">get_internal_event_hints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_internal_event_hints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_internal_event_hints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_internal_event_hints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.get_internal_event_hints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.get_internal_event_hints" title="Link to this definition">#</a></dt>
 <dd><p>Retrieve and clear internal event timing hints.</p>
 <p>Returns event hints reported by the component during micro-stepping
 and clears the internal buffer. Called by the master algorithm
@@ -1301,7 +1714,7 @@ to avoid losing information.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.subscribe_event">
-<span class="sig-name descname"><span class="pre">subscribe_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.subscribe_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.subscribe_event" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">subscribe_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.subscribe_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.subscribe_event" title="Link to this definition">#</a></dt>
 <dd><p>Register a subscription to an external event.</p>
 <p>Allows this component to receive notifications when another
 component emits a named event. The subscription is pattern-based:
@@ -1343,7 +1756,7 @@ with the event name in the <code class="docutils literal notranslate"><span clas
 
 <dl class="py property">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.has_event_subscriptions">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_event_subscriptions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_event_subscriptions" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_event_subscriptions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_event_subscriptions" title="Link to this definition">#</a></dt>
 <dd><p>Check if this component subscribes to external events.</p>
 <p>Event subscriptions allow a component to receive and react to
 events emitted by other components in the system.</p>
@@ -1362,7 +1775,7 @@ events emitted by other components in the system.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.handle_event">
-<span class="sig-name descname"><span class="pre">handle_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.handle_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.handle_event" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">handle_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.handle_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.handle_event" title="Link to this definition">#</a></dt>
 <dd><p>Process detected events and update component state.</p>
 <p>Called by the master algorithm when events are detected and
 localized. Invokes the subclass event handler, updates outputs,
@@ -1403,7 +1816,7 @@ are properly updated and recorded after event handling.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.reset">
-<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.reset" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.reset" title="Link to this definition">#</a></dt>
 <dd><p>Reset component to clean state for re-initialization.</p>
 <p>Clears the simulation time, history buffer, and initialization flag.
 After calling <code class="docutils literal notranslate"><span class="pre">reset()</span></code>, the component can be re-initialized with
@@ -1436,7 +1849,7 @@ component remains usable after reset.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.free">
-<span class="sig-name descname"><span class="pre">free</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.free" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">free</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/base.html#CoSimComponent.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.base.CoSimComponent.free" title="Link to this definition">#</a></dt>
 <dd><p>Release component resources permanently.</p>
 <p>Override this method in subclasses to clean up external resources
 such as FMU instances, file handles, network connections, or
@@ -1465,7 +1878,7 @@ For reuse, call <code class="docutils literal notranslate"><span class="pre">res
 
 <dl class="py property">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.reactive_inputs">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">reactive_inputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.reactive_inputs" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">reactive_inputs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.reactive_inputs" title="Link to this definition">#</a></dt>
 <dd><p>Input port names with direct algebraic feedthrough to outputs.</p>
 <p>An input is “reactive” if changing its value immediately affects
 at least one output without requiring a time step. This information
@@ -1491,7 +1904,7 @@ output. Empty set if no feedthrough exists.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="syssimx.core.base.CoSimComponent.has_direct_feedthrough">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_direct_feedthrough</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_direct_feedthrough" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_direct_feedthrough</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#syssimx.core.base.CoSimComponent.has_direct_feedthrough" title="Link to this definition">#</a></dt>
 <dd><p>Check if any output depends algebraically on any input.</p>
 <p>Direct feedthrough occurs when an output depends directly on an
 input in the same time step, without intermediate state dynamics.
@@ -1523,7 +1936,7 @@ False if all outputs depend only on internal state.</p>
 
 </section>
 <section id="module-syssimx.core.port">
-<span id="ports"></span><h2>Ports<a class="headerlink" href="#module-syssimx.core.port" title="Link to this heading">¶</a></h2>
+<span id="ports"></span><h2>Ports<a class="headerlink" href="#module-syssimx.core.port" title="Link to this heading">#</a></h2>
 <p>Port specification and port state management for co-simulation components.</p>
 <p>This module defines the PortType enum, PortSpec class for immutable port
 specifications, and PortState class for mutable port state with type-safe
@@ -1534,69 +1947,69 @@ get/set operations including unit handling.</p>
 - PortState: Mutable state of a port (spec, current value, last update time)</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortType" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortType" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
 <p>Supported port data types for co-simulation components.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType.REAL">
-<span class="sig-name descname"><span class="pre">REAL</span></span><a class="headerlink" href="#syssimx.core.port.PortType.REAL" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">REAL</span></span><a class="headerlink" href="#syssimx.core.port.PortType.REAL" title="Link to this definition">#</a></dt>
 <dd><p>Floating-point values, optionally with physical units.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType.INT">
-<span class="sig-name descname"><span class="pre">INT</span></span><a class="headerlink" href="#syssimx.core.port.PortType.INT" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">INT</span></span><a class="headerlink" href="#syssimx.core.port.PortType.INT" title="Link to this definition">#</a></dt>
 <dd><p>Integer values.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType.BOOL">
-<span class="sig-name descname"><span class="pre">BOOL</span></span><a class="headerlink" href="#syssimx.core.port.PortType.BOOL" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">BOOL</span></span><a class="headerlink" href="#syssimx.core.port.PortType.BOOL" title="Link to this definition">#</a></dt>
 <dd><p>Boolean values (True/False).</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType.STRING">
-<span class="sig-name descname"><span class="pre">STRING</span></span><a class="headerlink" href="#syssimx.core.port.PortType.STRING" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">STRING</span></span><a class="headerlink" href="#syssimx.core.port.PortType.STRING" title="Link to this definition">#</a></dt>
 <dd><p>String values.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortType.EVENT">
-<span class="sig-name descname"><span class="pre">EVENT</span></span><a class="headerlink" href="#syssimx.core.port.PortType.EVENT" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">EVENT</span></span><a class="headerlink" href="#syssimx.core.port.PortType.EVENT" title="Link to this definition">#</a></dt>
 <dd><p>Boolean trigger for discrete events.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id16">
-<span class="sig-name descname"><span class="pre">REAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'real'</span></span><a class="headerlink" href="#id16" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">REAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'real'</span></span><a class="headerlink" href="#id16" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id17">
-<span class="sig-name descname"><span class="pre">INT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'int'</span></span><a class="headerlink" href="#id17" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">INT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'int'</span></span><a class="headerlink" href="#id17" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id18">
-<span class="sig-name descname"><span class="pre">BOOL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bool'</span></span><a class="headerlink" href="#id18" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">BOOL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bool'</span></span><a class="headerlink" href="#id18" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id19">
-<span class="sig-name descname"><span class="pre">STRING</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'string'</span></span><a class="headerlink" href="#id19" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">STRING</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'string'</span></span><a class="headerlink" href="#id19" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id20">
-<span class="sig-name descname"><span class="pre">EVENT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'event'</span></span><a class="headerlink" href="#id20" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">EVENT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'event'</span></span><a class="headerlink" href="#id20" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Specification of a port in a CoSimComponent (immutable).</p>
 <p>Defines the name, type, direction, optional unit, and description of the port.
@@ -1614,7 +2027,7 @@ Units are validated at construction time to catch errors early.</p>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.name">
-<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.name" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.name" title="Link to this definition">#</a></dt>
 <dd><p>Unique identifier for the port within a component.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1625,7 +2038,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.type">
-<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.type" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.type" title="Link to this definition">#</a></dt>
 <dd><p>Data type of the port (REAL, INT, BOOL, STRING, EVENT).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1636,7 +2049,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.direction">
-<span class="sig-name descname"><span class="pre">direction</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.direction" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">direction</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.direction" title="Link to this definition">#</a></dt>
 <dd><p>Whether this is an input (“in”) or output (“out”) port.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1647,7 +2060,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.unit">
-<span class="sig-name descname"><span class="pre">unit</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.unit" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">unit</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.unit" title="Link to this definition">#</a></dt>
 <dd><p>Physical unit string or Unit for REAL ports (e.g., “m/s”, “N*m”).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1658,7 +2071,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.description">
-<span class="sig-name descname"><span class="pre">description</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.description" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">description</span></span><a class="headerlink" href="#syssimx.core.port.PortSpec.description" title="Link to this definition">#</a></dt>
 <dd><p>Human-readable description of the port’s purpose.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1669,32 +2082,32 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id21">
-<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id21" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#id21" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id22">
-<span class="sig-name descname"><span class="pre">type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortType" title="syssimx.core.port.PortType"><span class="pre">PortType</span></a></span><a class="headerlink" href="#id22" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortType" title="syssimx.core.port.PortType"><span class="pre">PortType</span></a></span><a class="headerlink" href="#id22" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id23">
-<span class="sig-name descname"><span class="pre">direction</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'in'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'out'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id23" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">direction</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'in'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'out'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#id23" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id24">
-<span class="sig-name descname"><span class="pre">unit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Unit</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id24" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">unit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Unit</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id24" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id25">
-<span class="sig-name descname"><span class="pre">description</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id25" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">description</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id25" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.validate_value">
-<span class="sig-name descname"><span class="pre">validate_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">coerce_numpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec.validate_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec.validate_value" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">validate_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">coerce_numpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec.validate_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec.validate_value" title="Link to this definition">#</a></dt>
 <dd><p>Validate that the given value matches the port’s type and unit.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1721,7 +2134,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortSpec.compatible">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">compatible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec.compatible"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec.compatible" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">compatible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortSpec.compatible"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortSpec.compatible" title="Link to this definition">#</a></dt>
 <dd><p>Check if two PortSpecs are compatible for connection.</p>
 <p>Compatibility rules:
 - Types must match exactly (REAL-REAL, INT-INT, etc.)
@@ -1747,7 +2160,7 @@ Units are validated at construction time to catch errors early.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_last</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">syssimx.core.port.</span></span><span class="sig-name descname"><span class="pre">PortState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_last</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Mutable state of a port in a CoSimComponent.</p>
 <p>Holds the specification, current value, and last update time.
@@ -1763,7 +2176,7 @@ Provides type-safe get/set operations with automatic unit conversion.</p>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.spec">
-<span class="sig-name descname"><span class="pre">spec</span></span><a class="headerlink" href="#syssimx.core.port.PortState.spec" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">spec</span></span><a class="headerlink" href="#syssimx.core.port.PortState.spec" title="Link to this definition">#</a></dt>
 <dd><p>Immutable specification defining port properties.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1774,7 +2187,7 @@ Provides type-safe get/set operations with automatic unit conversion.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.value">
-<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#syssimx.core.port.PortState.value" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#syssimx.core.port.PortState.value" title="Link to this definition">#</a></dt>
 <dd><p>Current value of the port.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1785,7 +2198,7 @@ Provides type-safe get/set operations with automatic unit conversion.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.t_last">
-<span class="sig-name descname"><span class="pre">t_last</span></span><a class="headerlink" href="#syssimx.core.port.PortState.t_last" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">t_last</span></span><a class="headerlink" href="#syssimx.core.port.PortState.t_last" title="Link to this definition">#</a></dt>
 <dd><p>Simulation time of last value update.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1796,22 +2209,22 @@ Provides type-safe get/set operations with automatic unit conversion.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id26">
-<span class="sig-name descname"><span class="pre">spec</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a></span><a class="headerlink" href="#id26" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">spec</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#syssimx.core.port.PortSpec" title="syssimx.core.port.PortSpec"><span class="pre">PortSpec</span></a></span><a class="headerlink" href="#id26" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id27">
-<span class="sig-name descname"><span class="pre">value</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Quantity</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id27" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">value</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Quantity</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id27" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="id28">
-<span class="sig-name descname"><span class="pre">t_last</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id28" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">t_last</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id28" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.set">
-<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.set" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.set" title="Link to this definition">#</a></dt>
 <dd><p>Set the port’s value with validation and unit conversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1835,7 +2248,7 @@ are automatically converted to the port’s unit.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.get">
-<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">as_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.get" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">as_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.get" title="Link to this definition">#</a></dt>
 <dd><p>Get the current value of the port.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1852,7 +2265,7 @@ are automatically converted to the port’s unit.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.compatible_with">
-<span class="sig-name descname"><span class="pre">compatible_with</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.compatible_with"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.compatible_with" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">compatible_with</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.compatible_with"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.compatible_with" title="Link to this definition">#</a></dt>
 <dd><p>Check if this port’s state can connect to another port specification.</p>
 <p>Uses the same compatibility rules as PortSpec.compatible().</p>
 <dl class="field-list simple">
@@ -1870,7 +2283,7 @@ are automatically converted to the port’s unit.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="syssimx.core.port.PortState.reset">
-<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.reset" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/syssimx/core/port.html#PortState.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#syssimx.core.port.PortState.reset" title="Link to this definition">#</a></dt>
 <dd><p>Reset port to default value and clear timestamp.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -1883,7 +2296,7 @@ are automatically converted to the port’s unit.</p></li>
 
 </section>
 <section id="events">
-<h2>Events<a class="headerlink" href="#events" title="Link to this heading">¶</a></h2>
+<h2>Events<a class="headerlink" href="#events" title="Link to this heading">#</a></h2>
 <p>Hybrid functionalities for event handling in syssimx.</p>
 <p>This module provides classes and functions to manage events in a
 co-simulation environment.</p>
@@ -2251,7 +2664,7 @@ event localization.</p>
 
 </section>
 <section id="history">
-<h2>History<a class="headerlink" href="#history" title="Link to this heading">¶</a></h2>
+<h2>History<a class="headerlink" href="#history" title="Link to this heading">#</a></h2>
 <p>History management for ports, components, and systems.</p>
 <p>This module provides classes to store, retrieve, and manage
 history data for port variables, components, and entire systems
@@ -2837,98 +3250,215 @@ If False, uses wide format (time, comp1.port1, comp1.port2, …).</p></li>
 </section>
 
 
-          </div>
-          
-        </div>
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="syssimx.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">syssimx package</p>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">SysSimX</a></h1>
+    </a>
+    <a class="right-next"
+       href="components.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">syssimx.components</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
-
-<p class="blurb">A Python framework for heterogeneous system co-simulation</p>
-
-
-
-
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=FlorianFrech&repo=SystemSimulation&type=watch&count=true&size=large&v=2"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="syssimx.html">syssimx package</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">syssimx.core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="components.html">syssimx.components</a></li>
-<li class="toctree-l2"><a class="reference internal" href="system.html">syssimx.system</a></li>
-<li class="toctree-l2"><a class="reference internal" href="utilities.html">syssimx.utilities</a></li>
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-syssimx.core.base">Base Classes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent"><code class="docutils literal notranslate"><span class="pre">CoSimComponent</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.name"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.label"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.label</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.group"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.group</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.t"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.input_specs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.input_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.output_specs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.output_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.outputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.history"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.history</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.parameters</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.direct_feedthrough"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.direct_feedthrough</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.model_structure"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.model_structure</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_indicators"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_indicators</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.internal_event_hints"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.internal_event_hints</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_subscriptions"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_annotations"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_annotations</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.event_commutativity"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_commutativity</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.__init__"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.__init__()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id2"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.label</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id3"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.group</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id4"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.input_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id5"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.output_specs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id6"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id7"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.outputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id8"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.parameters</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id9"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.direct_feedthrough</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id10"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.model_structure</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id11"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_indicators</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id12"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.internal_event_hints</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id13"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id14"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_annotations</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id15"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.event_commutativity</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_parameters"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.initialize"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.initialize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_inputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.evaluate_outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.evaluate_outputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_outputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_outputs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.do_step"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.do_step()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.set_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.set_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.snapshot_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.snapshot_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.restore_state"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.restore_state()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.supports_rollback"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.supports_rollback</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_history"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_history()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_history_arrays"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_history_arrays()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.add_event_indicator"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.add_event_indicator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_state_events"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_state_events</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.evaluate_event_indicators"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.evaluate_event_indicators()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.detect_event_crossings"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.detect_event_crossings()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.report_internal_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.report_internal_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.get_internal_event_hints"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.get_internal_event_hints()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.subscribe_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.subscribe_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_event_subscriptions"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_event_subscriptions</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.handle_event"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.handle_event()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.reset"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.reset()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.free"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.free()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.reactive_inputs"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.reactive_inputs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.base.CoSimComponent.has_direct_feedthrough"><code class="docutils literal notranslate"><span class="pre">CoSimComponent.has_direct_feedthrough</span></code></a></li>
 </ul>
 </li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-syssimx.core.port">Ports</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType"><code class="docutils literal notranslate"><span class="pre">PortType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.REAL"><code class="docutils literal notranslate"><span class="pre">PortType.REAL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.INT"><code class="docutils literal notranslate"><span class="pre">PortType.INT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.BOOL"><code class="docutils literal notranslate"><span class="pre">PortType.BOOL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.STRING"><code class="docutils literal notranslate"><span class="pre">PortType.STRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortType.EVENT"><code class="docutils literal notranslate"><span class="pre">PortType.EVENT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id16"><code class="docutils literal notranslate"><span class="pre">PortType.REAL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id17"><code class="docutils literal notranslate"><span class="pre">PortType.INT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id18"><code class="docutils literal notranslate"><span class="pre">PortType.BOOL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id19"><code class="docutils literal notranslate"><span class="pre">PortType.STRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id20"><code class="docutils literal notranslate"><span class="pre">PortType.EVENT</span></code></a></li>
 </ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec"><code class="docutils literal notranslate"><span class="pre">PortSpec</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.name"><code class="docutils literal notranslate"><span class="pre">PortSpec.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.type"><code class="docutils literal notranslate"><span class="pre">PortSpec.type</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.direction"><code class="docutils literal notranslate"><span class="pre">PortSpec.direction</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.unit"><code class="docutils literal notranslate"><span class="pre">PortSpec.unit</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.description"><code class="docutils literal notranslate"><span class="pre">PortSpec.description</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id21"><code class="docutils literal notranslate"><span class="pre">PortSpec.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id22"><code class="docutils literal notranslate"><span class="pre">PortSpec.type</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id23"><code class="docutils literal notranslate"><span class="pre">PortSpec.direction</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id24"><code class="docutils literal notranslate"><span class="pre">PortSpec.unit</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id25"><code class="docutils literal notranslate"><span class="pre">PortSpec.description</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.validate_value"><code class="docutils literal notranslate"><span class="pre">PortSpec.validate_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortSpec.compatible"><code class="docutils literal notranslate"><span class="pre">PortSpec.compatible()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState"><code class="docutils literal notranslate"><span class="pre">PortState</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.spec"><code class="docutils literal notranslate"><span class="pre">PortState.spec</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.value"><code class="docutils literal notranslate"><span class="pre">PortState.value</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.t_last"><code class="docutils literal notranslate"><span class="pre">PortState.t_last</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id26"><code class="docutils literal notranslate"><span class="pre">PortState.spec</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id27"><code class="docutils literal notranslate"><span class="pre">PortState.value</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id28"><code class="docutils literal notranslate"><span class="pre">PortState.t_last</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.set"><code class="docutils literal notranslate"><span class="pre">PortState.set()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.get"><code class="docutils literal notranslate"><span class="pre">PortState.get()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.compatible_with"><code class="docutils literal notranslate"><span class="pre">PortState.compatible_with()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#syssimx.core.port.PortState.reset"><code class="docutils literal notranslate"><span class="pre">PortState.reset()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#events">Events</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#history">History</a></li>
+</ul>
+  </nav></div>
 
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">API Reference</a><ul>
-      <li>Previous: <a href="syssimx.html" title="previous chapter">syssimx package</a></li>
-      <li>Next: <a href="components.html" title="next chapter">syssimx.components</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Florian Frech
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Florian Frech.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
 </div>
+          </footer>
+        
 
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
+      </main>
     </div>
-    <div class="footer">
-      &#169;2026, Florian Frech.
-      
-      |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
-      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
-      
-      |
-      <a href="../_sources/api/core.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    
-
-    
+  <footer class="bd-footer">
+  </footer>
   </body>
 </html>

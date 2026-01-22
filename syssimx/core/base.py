@@ -413,9 +413,6 @@ class CoSimComponent(ABC):
         self._update_output_states(t0)
         self._record_outputs(t0)
 
-        # Detect direct feedthrough after initialization
-        # self._detect_direct_feedthrough()
-
         self._is_initialized = True
 
     def _initialize_event_ports(self) -> None:
@@ -675,7 +672,6 @@ class CoSimComponent(ABC):
     # -------------------------------------------------------------------
     # State Management
     # -------------------------------------------------------------------
-    @abstractmethod
     def set_state(self, state: dict[str, Any], t: float) -> None:
         """Set physical state from human-readable format.
 
@@ -712,9 +708,8 @@ class CoSimComponent(ABC):
             :meth:`get_state`: Export state in matching format
             :meth:`restore_state`: Opaque state for rollback (different use)
         """
-        ...
+        raise NotImplementedError(f"[{self.name}] set_state() not implemented for this component.")
 
-    @abstractmethod
     def get_state(self) -> dict[str, dict[str, Any]]:
         """Export current physical state in human-readable format.
 
@@ -746,7 +741,7 @@ class CoSimComponent(ABC):
             :meth:`set_state`: Import state in matching format
             :meth:`snapshot_state`: Opaque state for rollback
         """
-        ...
+        raise NotImplementedError(f"[{self.name}] get_state() not implemented for this component.")
 
     def snapshot_state(self) -> Any:
         """Capture complete internal state for time rollback.

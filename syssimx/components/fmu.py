@@ -268,6 +268,20 @@ class FMUComponent(CoSimComponent):
                 raise KeyError(f"{self.name}: Unknown parameter '{name}'")
             var.start = val
 
+    def get_parameters(self, *names: str) -> dict[str, Any]:
+        if not names:
+            return self.parameters.copy()
+
+        result = {}
+        for name in names:
+            if name not in self.parameters:
+                raise KeyError(
+                    f"Unknown parameter '{name}' for component '{self.name}'. "
+                    f"Available parameters: {list(self.parameters.keys())}"
+                )
+            result[name] = self.parameters[name]
+        return result
+
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------

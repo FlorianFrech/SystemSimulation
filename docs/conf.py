@@ -21,8 +21,28 @@ extensions = [
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
     "sphinx.ext.viewcode",  # Add links to source code
     "sphinx.ext.intersphinx",  # Link to other projects' documentation
-    "myst_nb",  # Render Jupyter notebooks in docs
+    'sphinx.ext.mathjax',  # Render math in docs
+    
+    # Add these explicitly:
+    "myst_nb",
 ]
+
+# Ensure Sphinx knows which source types you use
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+    ".ipynb": "myst-nb",
+}
+
+# Enable MyST math features
+myst_enable_extensions = [
+    "dollarmath",  # enables $...$ and $$...$$
+    "amsmath",     # enables \begin{align}...\end{align} style environments
+    "colon_fence", # generally useful for fenced directives in Markdown
+]
+
+# Optional: allow $$...$$ inside text without extra blank lines
+myst_dmath_double_inline = True  # optional, only if you need it
 
 # Autodoc settings
 autodoc_default_options = {
@@ -47,7 +67,7 @@ napoleon_include_private_with_doc = False
 autosummary_generate = True
 
 # Notebook settings
-nb_execution_mode = "off"
+nb_execution_mode = "auto"
 
 # Intersphinx mapping
 intersphinx_mapping = {
@@ -60,7 +80,7 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
-html_theme = "alabaster"
+html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 
 # Theme options
