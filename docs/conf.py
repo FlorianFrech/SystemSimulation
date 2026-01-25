@@ -3,6 +3,9 @@
 
 import os
 import sys
+import warnings
+
+from sphinx.deprecation import RemovedInSphinx10Warning
 
 # Add the project root to the path so autodoc can find the modules
 sys.path.insert(0, os.path.abspath(".."))
@@ -48,6 +51,7 @@ myst_dmath_double_inline = True  # optional, only if you need it
 autodoc_default_options = {
     "members": True,
     "undoc-members": True,
+    "private-members": True,
     "show-inheritance": True,
     "member-order": "bysource",
 }
@@ -55,19 +59,26 @@ autodoc_typehints = "description"
 autodoc_mock_imports = ["fmpy", "ngsolve", "netgen", "opensim", "OMPython"]
 
 # Suppress ambiguous cross-reference warnings for re-exported classes
-suppress_warnings = ["ref.python"]
+suppress_warnings = ["ref.python", "myst.header"]
+
+# Silence MyST-NB deprecation warnings until upstream updates their parser API.
+warnings.filterwarnings(
+    "ignore",
+    category=RemovedInSphinx10Warning,
+    module=r"myst_nb\.sphinx_",
+)
 
 # Napoleon settings (for NumPy/Google docstrings)
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
-napoleon_include_private_with_doc = False
+napoleon_include_private_with_doc = True
 
 # Autosummary
 autosummary_generate = True
 
 # Notebook settings
-nb_execution_mode = "auto"
+nb_execution_mode = "off"  # Do not execute notebooks during build else use "auto" or "force"
 
 # Intersphinx mapping
 intersphinx_mapping = {
@@ -85,7 +96,7 @@ html_static_path = ["_static"]
 
 # Theme options
 html_theme_options = {
-    "github_user": "FlorianFrech",
-    "github_repo": "SystemSimulation",
-    "description": "A Python framework for heterogeneous system co-simulation",
+    "repository_url": "https://github.com/FlorianFrech/SystemSimulation",
+    "use_repository_button": True,
+    "use_issues_button": True,
 }

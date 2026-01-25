@@ -299,7 +299,7 @@ class CoSimComponent(ABC):
             result[name] = self.parameters[name]
         return result
 
-    def _validate_parameter(self, name: str, value: Any) -> None:
+    def _validate_parameter(self, name: str, value: Any) -> Any:
         """Subclass hook for custom parameter validation.
 
         Override this method to add validation logic such as range
@@ -315,18 +315,18 @@ class CoSimComponent(ABC):
                 message explaining the constraint.
 
         Example:
-            >>> def _validate_parameter(self, name: str, value: Any) -> None:
+            >>> def _validate_parameter(self, name: str, value: Any) -> Any:
             ...     if name == 'mass' and value <= 0:
             ...         raise ValueError("Mass must be positive")
             ...     if name == 'damping' and not (0 <= value <= 1):
             ...         raise ValueError("Damping must be in [0, 1]")
-            ...     super()._validate_parameter(name, value)
+            ...     return super()._validate_parameter(name, value)
 
         Note:
             Always call ``super()._validate_parameter(name, value)`` at
             the end to allow parent class validation.
         """
-        pass  # Base implementation does nothing
+        return value  # Base implementation performs no validation
 
     # -------------------------------------------------------------------
     # Port specification and initialization
@@ -353,7 +353,8 @@ class CoSimComponent(ABC):
             self.inputs[spec.name] = PortState(spec)
         for spec in self.output_specs.values():
             self.outputs[spec.name] = PortState(spec)
-            self.history.add_port(spec.name, spec.unit)
+            unit = str(spec.unit) if spec.unit is not None else None
+            self.history.add_port(spec.name, unit)
 
     # -------------------------------------------------------------------
     # Initialization
@@ -1412,13 +1413,19 @@ class CoSimComponent(ABC):
         # Small perturbation value
         delta = 1e-3
 
+        def _as_float(value: Any) -> float:
+            if value is None:
+                return 0.0
+            if hasattr(value, "magnitude"):
+                return float(value.magnitude)
+            return float(value)
+
         # Store original input values
         inputs = [name for name, spec in self.input_specs.items() if spec.type == PortType.REAL]
         original_inputs = {}
         for inp_name in inputs:
             value = self.inputs[inp_name].get()
-            value = value.magnitude if hasattr(value, "magnitude") else value
-            original_inputs[inp_name] = value
+            original_inputs[inp_name] = _as_float(value)
 
         # Store original output values
         original_outputs = self.evaluate_outputs(original_inputs)
@@ -1427,7 +1434,7 @@ class CoSimComponent(ABC):
         perturbed_inputs = original_inputs.copy()
         for inp_name in inputs:
             # Perturb input
-            perturbed_inputs[inp_name] += delta
+            perturbed_inputs[inp_name] = _as_float(perturbed_inputs[inp_name]) + delta
 
             # Evaluate outputs with perturbed input
             perturbed_outputs = self.evaluate_outputs(perturbed_inputs)
@@ -1435,13 +1442,16 @@ class CoSimComponent(ABC):
             # Check which outputs changed
             for out_name, orig_value in original_outputs.items():
                 pert_value = perturbed_outputs[out_name]
-                if not np.isclose(orig_value, pert_value, rtol=1e-5, atol=1e-5):
+                if not np.isclose(
+                    _as_float(orig_value), _as_float(pert_value), rtol=1e-5, atol=1e-5
+                ):
                     feedthrough_map[out_name].add(inp_name)
 
             # Reset input
             perturbed_inputs[inp_name] = original_inputs[inp_name]
 
         self.direct_feedthrough = feedthrough_map
+        return feedthrough_map
 
     # -------------------------------------------------------------------
     # Properties

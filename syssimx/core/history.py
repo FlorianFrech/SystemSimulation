@@ -5,10 +5,11 @@ history data for port variables, components, and entire systems
 during co-simulation runs.
 
 Overview of Classes:
-- PortHistory: Stores time series data for a single port variable.
-- ComponentHistory: Manages PortHistory instances for all ports of a component.
-- SystemHistory: Manages ComponentHistory instances for all components in a system,
-  along with event recording.
+
+- ``PortHistory``: Stores time series data for a single port variable.
+- ``ComponentHistory``: Manages PortHistory instances for all ports of a component.
+- ``SystemHistory``: Manages ComponentHistory instances for all components in a
+  system, along with event recording.
 """
 
 from __future__ import annotations

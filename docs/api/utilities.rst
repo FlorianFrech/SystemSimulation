@@ -1,10 +1,10 @@
-syssimx.utilities
+Utilities
 =================
 
-Utilities Package
+Units
 -----------------
 
-.. automodule:: syssimx.utilities
+.. automodule:: syssimx.utilities.units
    :members:
    :undoc-members:
    :show-inheritance:

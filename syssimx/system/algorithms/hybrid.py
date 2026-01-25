@@ -1,3 +1,33 @@
+"""
+Hybrid Co-Simulation Algorithm with Event Detection and Handling.
+
+This module provides an implementation of a hybrid co-simulation algorithm
+that combines continuous integration with event detection and handling.
+The algorithm supports superdense time semantics, event time localization,
+and iterative event handling to ensure accurate and consistent simulation
+results in the presence of discrete events.
+
+Classes:
+    HybridAlgorithm: Implements the hybrid co-simulation algorithm with
+        event detection and handling.
+
+Functions:
+    _prepare_inputs: Prepares inputs for all generations and solves algebraic loops.
+    _detect_crossings: Detects event crossings in a given time interval.
+
+Usage:
+    The `HybridAlgorithm` class is designed to be used as part of the system
+    simulation framework. It extends the Gauss-Seidel algorithm by adding
+    support for event detection and handling.
+
+Example:
+    .. code-block:: python
+        from syssimx.system.algorithms.hybrid import HybridAlgorithm
+
+        algorithm = HybridAlgorithm()
+        algorithm.step(system, t, dt)
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -19,13 +49,26 @@ if TYPE_CHECKING:
 # --------------------------------------------------------------------------
 class HybridAlgorithm(Algorithm):
     """
-    Hybrid co-simulation algorithm which supports
-        - event detection via evaluation of event indicators
-        - event time localization using bisection
-        - iterative event handling at superdense time points
-        - checking for commutativity of event handlers to ensure consistent results
+    Hybrid co-simulation algorithm with event detection and handling.
 
-    In absence of events, falls back to Gauss-Seidel algorithm for continuous integration.
+    This algorithm combines continuous integration with event detection and
+    handling. It supports superdense time semantics, event time localization,
+    and iterative event handling to ensure accurate and consistent simulation
+    results in the presence of discrete events.
+
+    Attributes:
+        name (str): Name of the algorithm.
+        tol_value (float): Tolerance for numerical computations.
+        max_iter (int): Maximum number of iterations for convergence.
+        sign_tolerance (float): Tolerance for detecting sign changes in event indicators.
+        tol_time (float): Tolerance for time comparisons.
+        max_microsteps (int): Maximum number of microsteps for event handling.
+        gauss_seidel_algorithm (GaussSeidelAlgorithm): Fallback algorithm for
+            continuous integration in the absence of events.
+        verbose (bool): If True, enables detailed logging of the algorithm's
+            execution.
+        record_internal_steps (bool): If True, records internal steps during
+            event handling.
     """
 
     def __init__(self):
@@ -44,22 +87,20 @@ class HybridAlgorithm(Algorithm):
     # --------------------------------------------------------------------------
     def step(self, system: System, t: float, dt: float) -> None:
         """
-        Hybrid co-simulation step with superdense time support.
+        Perform a hybrid co-simulation step with event detection and handling.
 
-        Event Handling:
-        ---------------
-        When events are detected at time t_event:
-        1. All components step to t_event (real time)
-        2. Events handled iteratively at microsteps (t_event, 0), (t_event, 1), ...
-        3. Loop continues until no new events triggered or max_microsteps reached
+        This method advances the simulation by one macro-step, handling events
+        at superdense time points and falling back to the Gauss-Seidel
+        algorithm for continuous integration when no events are detected.
 
-        Microstep Semantics:
-        --------------------
-        - (t, 0): Initial event from zero-crossing detection
-        - (t, 1): Events triggered by handlers at (t, 0)
-        - (t, n): Events triggered by handlers at (t, n-1)
+        Args:
+            system (System): The system to simulate.
+            t (float): The current simulation time.
+            dt (float): The time step size.
 
-        Causality: Events at (t, n) can only affect components at (t, n+1) or later.
+        Raises:
+            RuntimeError: If the maximum number of microsteps is reached during
+                event handling.
         """
         event_sources = system.event_sources
 
@@ -198,7 +239,14 @@ class HybridAlgorithm(Algorithm):
     # --------------------------------------------------------------------------
     def _prepare_inputs(self, system: System, t: float) -> None:
         """
-        Set inputs for all generations and solve algebraic loops.
+        Prepare inputs for all generations and solve algebraic loops.
+
+        This method sets the inputs for all generations in the system and
+        resolves any algebraic loops within each generation.
+
+        Args:
+            system (System): The system containing the components and connections.
+            t (float): The current simulation time.
         """
         for gen in system.execution_order:
             system._set_inputs_for_generation(gen, t)
@@ -213,21 +261,34 @@ class HybridAlgorithm(Algorithm):
     def _detect_crossings(
         self, event_sources: list[CoSimComponent], t_left: float, t_right: float
     ) -> tuple[
-        dict[str, Any],  # snapshots
-        dict[str, dict[str, Any]],  # input_cache
-        dict[str, dict[str, float]],  # indicators_left
-        list[tuple[str, str]],  # crossings
+        dict[str, Any],
+        dict[str, dict[str, Any]],
+        dict[str, dict[str, float]],
+        list[tuple[str, str]],
         dict[str, list[InternalEventInfo]],
-    ]:  # internal_hints
+    ]:
         """
-        Detect event crossings in the interval [t_left, t_right] for the given event source components.
+        Detect event crossings in a given time interval.
+
+        This method identifies events that occur within the specified time
+        interval by evaluating event indicators and collecting internal hints
+        from components with micro-stepping capabilities.
+
+        Args:
+            event_sources (list[CoSimComponent]): List of components that can
+                generate events.
+            t_left (float): Start of the time interval.
+            t_right (float): End of the time interval.
 
         Returns:
-            - snapshots: state snapshots of components at t_left
-            - input_cache: cached inputs of components at t_left
-            - indicators_left: event indicator values at t_left
-            - crossings: list of (component name, event name) tuples where crossings were detected
-            - internal_hints: dict mapping component names to lists of InternalEventInfo
+            tuple: A tuple containing the following elements:
+                - snapshots (dict[str, Any]): State snapshots of components at t_left.
+                - input_cache (dict[str, dict[str, Any]]): Cached inputs of components at t_left.
+                - indicators_left (dict[str, dict[str, float]]): Event indicator values at t_left.
+                - crossings (list[tuple[str, str]]): List of (component name, event name) tuples
+                  where crossings were detected.
+                - internal_hints (dict[str, list[InternalEventInfo]]): Mapping of component names
+                  to lists of InternalEventInfo.
         """
         snapshots: dict[str, Any] = {}
         input_cache: dict[str, dict[str, Any]] = {}
@@ -543,6 +604,18 @@ class HybridAlgorithm(Algorithm):
         """
         Evaluate event indicators for all event source components at t_target
         starting from snapshots and input caches at t_left.
+
+        Args:
+            event_sources (list[CoSimComponent]): List of components that can
+                generate events.
+            snapshots (dict[str, Any]): State snapshots of components at t_left.
+            input_cache (dict[str, dict[str, Any]]): Cached inputs of components at t_left.
+            t_left (float): The left endpoint of the interval.
+            t_target (float): The target time for event detection.
+
+        Returns:
+            dict[str, dict[str, float]]: A dictionary mapping component names to
+            dictionaries of event indicator values at t_target.
         """
         indicators: dict[str, dict[str, float]] = {}
         for comp in event_sources:
@@ -562,6 +635,16 @@ class HybridAlgorithm(Algorithm):
         """
         Evaluate event indicators for a single component at t_target
         starting from snapshot and input cache at t_left.
+
+        Args:
+            comp (CoSimComponent): The component to evaluate indicators for.
+            snapshot (Any): The state snapshot of the component at t_left.
+            inputs (dict[str, Any]): The inputs to set for the component.
+            t_left (float): The left endpoint of the interval.
+            t_target (float): The target time for event detection.
+
+        Returns:
+            dict[str, float]: A dictionary of event indicator values at t_target.
         """
         if hasattr(comp, "_allow_mode_switching"):
             original_flag = comp._allow_mode_switching
@@ -624,6 +707,16 @@ class HybridAlgorithm(Algorithm):
         Handles the event_pairs that occur at current_time in the given system.
         If multiple events occur simultaneously, checks for conflicts based on event annotations.
         Ensures that the result is indepnedent of the order of event handling when possible.
+
+        Args:
+            system (System): The system in which to handle the events.
+            event_pairs (list[tuple[str, str]]): The pairs of (component name, event name)
+                representing the events to handle.
+            current_time (DenseTime): The current time at which the events occur.
+
+        Raises:
+            RuntimeError: If non-commutative events are detected that cannot be
+                handled simultaneously.
         """
         # 1) Group for each listener component the events to be handled
         events_by_component: dict[str, list[str]] = {
@@ -657,6 +750,13 @@ class HybridAlgorithm(Algorithm):
         Methods:
         1. Check annotations that specify which states/outputs are modified by each event.
         2. Run all permutations and compare results dynamically (requires state rollback).
+
+        Args:
+            comp (CoSimComponent): The component to check commutativity for.
+            event_names (list[str]): The list of event names to check.
+
+        Returns:
+            bool: True if the event handlers commute, False otherwise.
         """
         if self.verbose:
             print(f"\nChecking commutativity for events {event_names} on component {comp.name}...")
@@ -682,6 +782,13 @@ class HybridAlgorithm(Algorithm):
         """
         Executes all permutations of event handling and checks if the final state is the same.
         This requires the component to support state snapshotting and restoration.
+
+        Args:
+            comp (CoSimComponent): The component to verify commutativity for.
+            event_names (list[str]): The list of event names to test in permutations.
+
+        Returns:
+            bool: True if all permutations result in the same final state, False otherwise.
         """
         from itertools import permutations
 
@@ -724,6 +831,13 @@ class HybridAlgorithm(Algorithm):
         """
         Compares two component states for equality.
         This method may need to be customized based on the component's state structure.
+
+        Args:
+            state1 (dict): The first state to compare.
+            state2 (dict): The second state to compare.
+
+        Returns:
+            bool: True if the states are equal, False otherwise.
         """
         if state1.keys() != state2.keys():
             return False

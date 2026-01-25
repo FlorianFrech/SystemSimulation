@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # FMI/Modelica support
-fmi = [
+fmu = [
     "fmpy>=0.3.0",
     "OMPython>=3.4.0",          # For OMPython examples
 ]

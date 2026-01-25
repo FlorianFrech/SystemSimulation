@@ -4,18 +4,17 @@ This module provides classes and functions to manage events in a
 co-simulation environment.
 
 Overview Functions:
-- _sign(value: float, tol: float = 1e-10) -> int:
-    Returns the sign of a value with a tolerance.
+
+- ``_sign(value: float, tol: float = 1e-10) -> int``: Returns the sign of a value
+  with a tolerance.
 
 Dataclasses:
-- DenseTime:
-    Represents a dense time instant with real and discrete values.
-- Event:
-    Represents an event with name, source, time, and direction.
-- EventIndicator:
-    Represents an event indicator for zero-crossing detection.
-- InternalEventInfo:
-    Information about an event detected during internal micro-stepping.
+
+- ``DenseTime``: Represents a dense time instant with real and discrete values.
+- ``Event``: Represents an event with name, source, time, and direction.
+- ``EventIndicator``: Represents an event indicator for zero-crossing detection.
+- ``InternalEventInfo``: Information about an event detected during internal
+  micro-stepping.
 """
 
 from collections.abc import Callable

@@ -1,4 +1,24 @@
-"""Jacobi-based execution algorithm for System simulation."""
+"""Jacobi-based execution algorithm for system simulation.
+
+This module provides an implementation of the Jacobi algorithm, which is used to advance a system simulation by processing components in a parallelized order. The algorithm sets all inputs for a generation before advancing any component in that generation, solving algebraic loops within the generation, and then advancing the component states.
+
+Classes:
+    JacobiAlgorithm: Implements the Jacobi algorithm for advancing a system simulation.
+
+Usage:
+    The `JacobiAlgorithm` class is designed to be used as part of the system simulation framework. It processes components in a parallelized manner, which does not handle direct-feedthrough components whose outputs could become available within the same macro step to downstream components.
+
+Dependencies:
+    - `Algorithm`: Base class for all algorithms.
+    - `solve_algebraic_scc_ijcsa`: Function to solve algebraic strongly connected components.
+
+Example:
+    .. code-block:: python
+        from syssimx.system.algorithms.jacobi import JacobiAlgorithm
+
+        algorithm = JacobiAlgorithm()
+        algorithm.step(system, t, dt)
+"""
 
 from __future__ import annotations
 

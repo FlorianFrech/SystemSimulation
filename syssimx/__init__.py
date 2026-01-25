@@ -43,23 +43,30 @@ __all__ = [
 ]
 
 # Optional imports - only available if dependencies are installed
+from typing import TYPE_CHECKING
+
 try:
     from syssimx.components import FMUComponent
 
     __all__.append("FMUComponent")
 except ImportError:
-    FMUComponent = None  # fmpy not installed
+    FMUComponent = None  # type: ignore[misc,assignment]  # fmpy not installed
 
 try:
     from syssimx.components import FEMComponent
 
     __all__.append("FEMComponent")
 except ImportError:
-    FEMComponent = None  # ngsolve not installed
+    FEMComponent = None  # type: ignore[misc,assignment]  # ngsolve not installed
 
 try:
     from syssimx.components import OpenSimComponent
 
     __all__.append("OpenSimComponent")
 except ImportError:
-    OpenSimComponent = None  # opensim not installed
+    OpenSimComponent = None  # type: ignore[misc,assignment]  # opensim not installed
+
+if TYPE_CHECKING:
+    from syssimx.components import FEMComponent as FEMComponent
+    from syssimx.components import FMUComponent as FMUComponent
+    from syssimx.components import OpenSimComponent as OpenSimComponent

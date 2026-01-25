@@ -1,15 +1,10 @@
-syssimx.core
+Core Modules
 ============
 
 This module contains the core classes for co-simulation components.
 
-.. automodule:: syssimx.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Base Classes
-------------
+CoSimComponent Base Class
+--------------------------
 
 .. automodule:: syssimx.core.base
    :members:
@@ -31,7 +26,6 @@ Events
    :members:
    :undoc-members:
    :show-inheritance:
-   :no-index:
 
 History
 -------
@@ -40,4 +34,11 @@ History
    :members:
    :undoc-members:
    :show-inheritance:
-   :no-index:
+
+Multi-Component
+-------------------
+
+.. automodule:: syssimx.core.multi_comp
+   :members:
+   :undoc-members:
+   :show-inheritance:

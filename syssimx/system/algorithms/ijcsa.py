@@ -1,14 +1,29 @@
 """Interface Jacobian-based Co-Simulation Algorithm (IJCSA).
 
-References: Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
-
 This module implements the IJCSA algorithm for solving algebraic loops
-in co-simulated systems using a a local and global Newton iteration on interface variables.
+in co-simulated systems using a local and global Newton iteration on interface variables.
 
-Overview:
-- IJCSAAlgorithm: Main algorithm class implementing the step() method.
-- solve_algebraic_scc_ijcsa: Function to solve algebraic loops in
-    strongly coupled components (SCCs) using IJCSA.
+References:
+    Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
+
+Classes:
+    IJCSAAlgorithm: Main algorithm class implementing the step() method.
+
+Functions:
+    solve_algebraic_scc_ijcsa: Solves algebraic loops in strongly coupled components (SCCs) using IJCSA.
+    solve_global_interface_ijcsa: Solves global interface equations using the IJCSA algorithm.
+    compute_interface_residual_global: Computes the residual for all zero-delay connections in the system.
+    compute_interface_jacobian_global: Computes the Jacobian matrix for the global interface system using finite differences.
+
+Usage:
+    The `IJCSAAlgorithm` class and its associated functions are designed to be used as part of the system simulation framework. The algorithm solves algebraic loops in co-simulated systems by iteratively refining interface variables until convergence.
+
+Example:
+    .. code-block:: python
+        from syssimx.system.algorithms.ijcsa import IJCSAAlgorithm
+
+        algorithm = IJCSAAlgorithm(max_iter=100, tol=1e-8)
+        algorithm.step(system, t, dt)
 """
 
 from __future__ import annotations
@@ -33,11 +48,17 @@ if TYPE_CHECKING:
 class IJCSAAlgorithm(Algorithm):
     """
     Interface Jacobian-based Co-Simulation Algorithm (IJCSA).
+
     This algorithm solves all algebraic loops in the system simultaneously
     using a global Newton iteration on the interface variables.
 
+    Attributes:
+        name (str): Name of the algorithm.
+        max_iter (int): Maximum number of iterations for convergence.
+        tol (float): Tolerance for convergence.
+
     References:
-    - Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
+        Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
     """
 
     name: str = "IJCSA"
@@ -48,6 +69,21 @@ class IJCSAAlgorithm(Algorithm):
     # Global IJCSA Step
     # ----------------------------------------------------------------------------
     def step(self, system: System, t: float, dt: float) -> None:
+        """
+        Advance the system by one time step using the IJCSA algorithm.
+
+        This method solves all algebraic loops in the system using a global
+        Newton iteration on the interface variables, ensuring consistency
+        across all components.
+
+        Args:
+            system (System): The system to advance.
+            t (float): Current simulation time.
+            dt (float): Time step size.
+
+        Raises:
+            RuntimeError: If the global IJCSA algorithm fails to converge.
+        """
         solve_global_interface_ijcsa(system, t, max_iter=self.max_iter, tol=self.tol)
 
         for gen in system.execution_order:
@@ -68,16 +104,23 @@ def solve_algebraic_scc_ijcsa(
     tol: float = 1e-6,
     verbose: bool = False,
 ) -> None:
-    """Solve algebraic loop for a strongly coupled SCC using an interface
+    """
+    Solve algebraic loop for a strongly coupled SCC using an interface
     Jacobian-based Newton iteration, following Sicklinger et al.
 
-    Unknowns: interface inputs on zero-delay internal connections:
-      U = [ (dst_comp, dst_port) ... ]
+    Args:
+        system (System): The system containing the strongly coupled components.
+        scc (list[str]): List of component names in the strongly coupled component (SCC).
+        t (float): Current simulation time.
+        max_iter (int, optional): Maximum number of iterations for convergence. Defaults to 50.
+        tol (float, optional): Tolerance for convergence. Defaults to 1e-6.
+        verbose (bool, optional): If True, prints detailed debug information. Defaults to False.
 
-    Residual for each interface input u_i:
-      r_i(U) = u_i - y_i(U)
-    where y_i(U) is the output on the driving side of that connection
-    evaluated with frozen internal states.
+    Raises:
+        RuntimeError: If the algorithm fails to converge within the maximum number of iterations.
+
+    References:
+        Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
     """
     scc_set = set(scc)
     if verbose:
@@ -145,9 +188,10 @@ def solve_algebraic_scc_ijcsa(
 
     # 5) Residual Evaluation F(U)
     def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
-        """Given interface input values u_vec, evaluate residual F(U) = U - Y(U).
+        """Computes the interface residual R(U) = U - Y(U).
+        Given interface input values u_vec, evaluate residual F(U) = U - Y(U).
 
-        Uses comp._evaluate_outputs(in_vals) to keep FMU state unchanged.
+        Uses comp._evaluate_outputs(in_vals) to keep component state unchanged.
         """
         # Build per-component input values
         comp_inputs: dict[str, dict[str, Any]] = {name: {} for name in scc}
@@ -191,7 +235,8 @@ def solve_algebraic_scc_ijcsa(
 
     # 6) Interface Jacobian by finite differences
     def compute_interface_jacobian(u_vec: np.ndarray, r_vec: np.ndarray) -> np.ndarray:
-        """Approximate J = dF/dU by finite differences:
+        """Computes the interface Jacobian J = dF/dU by finite differences.
+        Approximate J = dF/dU by:
 
         J[:, j] ≈ ( F(U + eps e_j) - F(U) ) / eps
         """
@@ -260,10 +305,17 @@ def compute_interface_residual_global(
     t: float,
 ) -> np.ndarray:
     """
-    Compute R(U) = U - Y(U) for ALL zero-delay connections in the system
-    with frozen component states at time t.
+    Compute the residual R(U) = U - Y(U) for all zero-delay connections in the system.
 
-    U: vector of size n, ordered like interface_inputs.
+    Args:
+        system (System): The system containing the components and connections.
+        U (np.ndarray): Vector of interface input values.
+        interface_inputs (list[tuple[str, str]]): List of interface input identifiers (component, port).
+        driver_map (dict[tuple[str, str], tuple[str, str]]): Mapping from interface inputs to their drivers.
+        t (float): Current simulation time.
+
+    Returns:
+        np.ndarray: Residual vector R(U).
     """
     # Map from input (dst_comp, dst_port) -> scalar value
     input_values: dict[tuple[str, str], float] = {}
@@ -303,7 +355,18 @@ def compute_interface_jacobian_global(
     eps: float = 1e-6,
 ) -> np.ndarray:
     """
-    Finite-difference Jacobian J ≈ ∂R/∂U for the global interface system.
+    Compute the Jacobian matrix J ≈ ∂R/∂U for the global interface system using finite differences.
+
+    Args:
+        system (System): The system containing the components and connections.
+        U (np.ndarray): Vector of interface input values.
+        interface_inputs (list[tuple[str, str]]): List of interface input identifiers (component, port).
+        driver_map (dict[tuple[str, str], tuple[str, str]]): Mapping from interface inputs to their drivers.
+        t (float): Current simulation time.
+        eps (float, optional): Perturbation size for finite difference approximation. Defaults to 1e-6.
+
+    Returns:
+        np.ndarray: Jacobian matrix J.
     """
     n = len(U)
     J = np.zeros((n, n), dtype=float)
@@ -329,11 +392,20 @@ def solve_global_interface_ijcsa(
     tol: float = 1e-6,
 ) -> None:
     """
-    Global Interface-Newton (IJCSA) at time t:
+    Solve global interface equations using the IJCSA algorithm.
 
-    - Unknowns: all zero-delay interface inputs in the system.
-    - States are frozen at t (no progression of time).
-    - After convergence, component input and output PortStates are consistent.
+    This method solves all zero-delay interface inputs in the system using
+    a global Newton iteration. States are frozen at the current time, and
+    after convergence, component input and output port states are consistent.
+
+    Args:
+        system (System): The system containing the components and connections.
+        t (float): Current simulation time.
+        max_iter (int, optional): Maximum number of iterations for convergence. Defaults to 50.
+        tol (float, optional): Tolerance for convergence. Defaults to 1e-6.
+
+    Raises:
+        RuntimeError: If the algorithm fails to converge within the maximum number of iterations.
     """
     interface_inputs, driver_map = collect_global_interface_unknowns(system)
     n = len(interface_inputs)

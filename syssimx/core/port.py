@@ -158,7 +158,9 @@ class PortSpec:
         # Unit compatibility check for Quantity
         if self.unit and isinstance(value, QuantityClass):
             _ = value.to(self.unit)  # Raises DimensionalityError if incompatible
-        return value
+        if isinstance(value, QuantityClass):
+            return cast(QuantityType, value)
+        return float(value)
 
     def _validate_int(self, value: Any) -> int:
         """Validate INT port value."""
@@ -213,7 +215,9 @@ class PortSpec:
         return PortSpec._check_unit_compatibility(spec1.unit, spec2.unit)
 
     @staticmethod
-    def _check_unit_compatibility(unit1: str | None, unit2: str | None) -> bool:
+    def _check_unit_compatibility(
+        unit1: str | UnitType | None, unit2: str | UnitType | None
+    ) -> bool:
         """Check if two unit specifications are compatible.
 
         Rules:
@@ -226,7 +230,9 @@ class PortSpec:
         if unit1 is None or unit2 is None:
             return False  # Asymmetric: one has unit, other doesn't
         try:
-            (1 * ureg(unit1)).to(unit2)
+            u1 = to_pint_unit(unit1)
+            u2 = to_pint_unit(unit2)
+            (1 * u1).to(u2)
             return True
         except Exception:
             return False
@@ -331,10 +337,8 @@ class PortState:
         if isinstance(self.value, QuantityClass):
             return cast(QuantityType, self.value.to(target_unit))
         if self.spec.unit is not None:
-            return cast(
-                QuantityType,
-                (cast(float, self.value) * ureg(self.spec.unit)).to(target_unit),
-            )
+            unit = to_pint_unit(self.spec.unit)
+            return cast(QuantityType, (cast(float, self.value) * unit).to(target_unit))
         # No unit on port, return raw value
         return cast(float, self.value)
 

@@ -1,13 +1,5 @@
-syssimx.system
+System
 ==============
-
-System Module
--------------
-
-.. automodule:: syssimx.system
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Connection
 ----------
@@ -16,6 +8,7 @@ Connection
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 System Class
 ------------

@@ -1,13 +1,5 @@
-syssimx.components
-==================
-
-Components Package
-------------------
-
-.. automodule:: syssimx.components
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Co-Simulation Components
+===================================
 
 FMU Component
 -------------

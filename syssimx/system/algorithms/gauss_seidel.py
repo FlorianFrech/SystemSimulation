@@ -1,4 +1,26 @@
-"""Gauss-Seidel execution algorithm for System simulation."""
+"""Gauss-Seidel execution algorithm for system simulation.
+
+This module provides an implementation of the Gauss-Seidel algorithm, which is used to advance a system simulation by processing components in a specific order. The algorithm ensures that direct-feedthrough components are handled correctly by making their outputs available within the same macro step to downstream components in the current execution order.
+
+Classes:
+    GaussSeidelAlgorithm: Implements the Gauss-Seidel algorithm for advancing a system simulation.
+
+Usage:
+    The `GaussSeidelAlgorithm` class is designed to be used as part of the system simulation framework. It processes components generation by generation, solving algebraic loops within each generation before stepping components forward.
+
+Dependencies:
+    - `Algorithm`: Base class for all algorithms.
+    - `solve_algebraic_scc_ijcsa`: Function to solve algebraic strongly connected components.
+
+Example:
+    .. code-block:: python
+
+        from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
+
+        algorithm = GaussSeidelAlgorithm()
+        algorithm.step(system, t, dt)
+
+"""
 
 from __future__ import annotations
 

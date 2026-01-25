@@ -1,7 +1,16 @@
+"""FMI 2.0 Co-Simulation FMU wrapper.
+
+This module exposes :class:`FMUComponent`, a :class:`~syssimx.core.base.CoSimComponent`
+implementation backed by an FMI 2.0 co-simulation FMU via ``fmpy``. The component
+derives input/output ports from the FMU model description, handles units for REAL
+signals, applies parameter starts during initialization, and supports direct
+feedthrough evaluation.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fmpy import extract, read_model_description
 from fmpy.fmi2 import FMU2Slave
@@ -12,21 +21,17 @@ from fmpy.model_description import (
 
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec, PortType
-from ..utilities.units import QuantityClass, to_pint_unit, ureg
+from ..utilities.units import QuantityClass, QuantityType, to_pint_unit
 
 
 # ----------------------------------------------------------------------------
 # FMU Component Class
 # ----------------------------------------------------------------------------
 class FMUComponent(CoSimComponent):
-    """
-    FMU Co-Simulation Wrapper implementing the CoSimComponent interface.
+    """FMU co-simulation wrapper implementing the CoSimComponent interface.
 
-    Supports:
-
-    - FMI 2.0 CS-FMUs
-    - REAL/INT/BOOL/STRING input and output ports
-    - Units for REAL ports
+    Supports FMI 2.0 co-simulation FMUs, typed input/output ports (REAL, INT,
+    BOOL, STRING), and unit-aware REAL ports via ``pint``.
     """
 
     # State of all FMU variables
@@ -54,6 +59,17 @@ class FMUComponent(CoSimComponent):
     _vrs_out_bytes: dict[str, int]
 
     def __init__(self, name: str, fmu_path: str, group: str | None = None):
+        """Create the FMU component and derive port specifications.
+
+        Args:
+            name: Component name.
+            fmu_path: Path to the FMU file.
+            group: Optional component group for organization.
+
+        Raises:
+            RuntimeError: If the FMU is not a co-simulation FMU.
+            NotImplementedError: If the FMU uses an unsupported FMI version.
+        """
         super().__init__(name=name, group=group)
         self._path = str(Path(fmu_path).resolve())
         self._md = read_model_description(self._path)
@@ -89,18 +105,21 @@ class FMUComponent(CoSimComponent):
         self._build_value_reference_map()
 
         # Parameters dictionary
-        self.parameters: dict[str, ModelVariable] = {
-            var.name: var
-            for var in self._md.modelVariables
-            if var.causality == "parameter"
-            or var.causality == "calculatedParameter"
-            or var.causality == "structuralParameter"
-        }
+        self.parameters: dict[str, Any] = {}
+        for var in self._md.modelVariables:
+            if var.causality not in ("parameter", "calculatedParameter", "structuralParameter"):
+                continue
+            name = var.name
+            unit = to_pint_unit(var.unit) if var.unit else None
+            type = _port_type_from_var(var)
+            value = _convert_start_value(var.start, type, unit)
+            self.parameters[name] = value
 
     # ----------------------------------------------------------------------------
     # Build helper for port specifications and value reference maps
     # ----------------------------------------------------------------------------
     def _build_port_specs(self) -> None:
+        """Build input/output PortSpec objects from the model description."""
         for var in self._md.modelVariables:
             if var.causality not in ("input", "output"):
                 continue
@@ -125,6 +144,7 @@ class FMUComponent(CoSimComponent):
                 self.output_specs.update({var.name: spec})
 
     def _build_value_reference_map(self) -> None:
+        """Cache value references for fast typed access."""
         for var in self._md.modelVariables:
             causality = var.causality
             if causality not in ("input", "output"):
@@ -152,6 +172,7 @@ class FMUComponent(CoSimComponent):
                     self._vrs_out_str[var.name] = value_reference
 
     def _analyze_model_structure(self) -> None:
+        """Populate model structure dependencies for outputs/derivatives/initials."""
         for output in self._md.outputs:
             out_var = output.variable.name
             deps = []
@@ -173,15 +194,19 @@ class FMUComponent(CoSimComponent):
                 deps.append(dep.name)
             self.model_structure["initialUnknowns"][init_var] = deps
 
-    def _detect_direct_feedthrough(self) -> None:
+    def _detect_direct_feedthrough(self) -> dict[str, set[str]]:
+        """Detect direct feedthrough dependencies for FMU outputs."""
+        feedthrough: dict[str, set[str]] = {}
         for unknown in self._md.outputs:
-            self.direct_feedthrough[unknown.variable.name] = set()
+            feedthrough[unknown.variable.name] = set()
             for dep in unknown.dependencies:
                 if dep.causality == "input":
-                    self.direct_feedthrough[unknown.variable.name].add(dep.name)
+                    feedthrough[unknown.variable.name].add(dep.name)
+        self.direct_feedthrough = feedthrough
+        return feedthrough
 
     def _require_instance(self) -> FMU2Slave:
-        """Return FMU instance or raise if not initialized."""
+        """Return the FMU instance or raise if not initialized."""
         if self._instance is None:
             raise RuntimeError(f"{self.name}: FMU instance not initialized")
         return self._instance
@@ -190,10 +215,19 @@ class FMUComponent(CoSimComponent):
     # Initialization
     # ----------------------------------------------------------------------------
     def _initialize_component(self, t0: float) -> None:
+        """Initialize and instantiate the FMU for simulation.
+
+        1. Extracts the FMU archive.
+        2. Creates the FMU2Slave instance.
+        3. Sets up the experiment with the start time.
+        4. Enters initialization mode.
+        5. Applies parameter start values.
+        6. Applies input start values from PortStates.
+        7. Exits initialization mode.
+
+        Args:
+            t0: Simulation start time.
         """
-        FMU-specific initialization (called by base-class).
-        """
-        self._initialize_ports_from_specs()
         self._unzipdir = extract(self._path)
         self._instance = FMU2Slave(
             instanceName=self.name,
@@ -212,6 +246,7 @@ class FMUComponent(CoSimComponent):
     # Initialization helpers
     # ----------------------------------------------------------------------------
     def _apply_parameters_starts(self) -> None:
+        """Apply parameter start values to the FMU instance."""
         instance = self._require_instance()
         # batch parameters by base type
         real_vrs: list[int] = []
@@ -223,21 +258,25 @@ class FMUComponent(CoSimComponent):
         str_vrs: list[int] = []
         str_vals: list[str] = []
 
-        for name, param in self.parameters.items():
-            if param.start is None:
+        for name, value in self.parameters.items():
+            if value is None:
                 continue
-            if param._python_type is float:
-                real_vrs.append(param.valueReference)
-                real_vals.append(float(param.start))
-            elif param._python_type is int:
-                int_vrs.append(param.valueReference)
-                int_vals.append(int(param.start))
-            elif param._python_type is bool:
-                bool_vrs.append(param.valueReference)
-                bool_vals.append(1 if bool(param.start) else 0)
-            elif param._python_type is str:
-                str_vrs.append(param.valueReference)
-                str_vals.append(str(param.start))
+            var = self._md_vars.get(name)
+            if var is None:
+                continue
+            if var._python_type is float:
+                real_vrs.append(var.valueReference)
+                value = value.magnitude if isinstance(value, QuantityClass) else value
+                real_vals.append(float(value))
+            elif var._python_type is int:
+                int_vrs.append(var.valueReference)
+                int_vals.append(int(value))
+            elif var._python_type is bool:
+                bool_vrs.append(var.valueReference)
+                bool_vals.append(1 if bool(value) else 0)
+            elif var._python_type is str:
+                str_vrs.append(var.valueReference)
+                str_vals.append(str(value))
 
         if real_vrs:
             instance.setReal(real_vrs, real_vals)
@@ -249,6 +288,7 @@ class FMUComponent(CoSimComponent):
             instance.setString(str_vrs, str_vals)
 
     def _apply_input_starts(self) -> None:
+        """Push initial input values from PortStates into the FMU."""
         # If PortStates contain initial values (via specs or pre-set), push them into the FMU
         init_vals = {
             name: in_port.get()
@@ -262,13 +302,32 @@ class FMUComponent(CoSimComponent):
     # Parameter and Initial Condition Handling
     # ----------------------------------------------------------------------------
     def set_parameters(self, **parameters) -> None:
-        for name, val in parameters.items():
-            var = self.parameters.get(name)
-            if not var:
-                raise KeyError(f"{self.name}: Unknown parameter '{name}'")
-            var.start = val
+        """Set parameter values with validation and unit handling.
+
+        Args:
+            **parameters: Parameter name/value pairs.
+
+        Raises:
+            KeyError: If a parameter name is unknown.
+            TypeError: If a value does not match the parameter type or unit.
+        """
+        for name, value in parameters.items():
+            if name not in self.parameters:
+                raise KeyError(
+                    f"Unknown parameter '{name}' for component '{self.name}'. "
+                    f"Available parameters: {list(self.parameters.keys())}"
+                )
+            self.parameters[name] = self._validate_parameter(name, value)
 
     def get_parameters(self, *names: str) -> dict[str, Any]:
+        """Return parameter values, optionally limited to specific names.
+
+        Args:
+            *names: Optional parameter names to fetch.
+
+        Raises:
+            KeyError: If a requested parameter name is unknown.
+        """
         if not names:
             return self.parameters.copy()
 
@@ -286,6 +345,17 @@ class FMUComponent(CoSimComponent):
     # Input/output methods
     # ----------------------------------------------------------------------------
     def set_inputs(self, signals: dict[str, Any], t: float | None = None) -> None:
+        """Set input port values and push them to the FMU.
+
+        Args:
+            signals: Mapping of input names to values.
+            t: Optional timestamp to record with inputs.
+
+        Raises:
+            KeyError: If an input name is unknown.
+            TypeError: If a value type does not match the port type.
+            ValueError: If a REAL input is missing a value after unit conversion.
+        """
         if not signals:
             return
         instance = self._require_instance()
@@ -313,7 +383,8 @@ class FMUComponent(CoSimComponent):
 
             # Convert to raw value
             if spec.type == PortType.REAL:
-                q = port_state.get(as_unit=spec.unit)
+                unit_str = str(spec.unit) if spec.unit is not None else None
+                q = port_state.get(as_unit=unit_str)
                 if q is None:
                     raise ValueError(f"{self.name}: REAL input '{name}' has no value")
                 mag = float(q.magnitude) if isinstance(q, QuantityClass) else float(q)
@@ -350,6 +421,7 @@ class FMUComponent(CoSimComponent):
         self._update_output_states(t=None)
 
     def get_outputs(self) -> dict[str, Any]:
+        """Return current output values as a dict of name to value."""
         return {
             name: out_port.get()
             for name, out_port in self.outputs.items()
@@ -359,6 +431,12 @@ class FMUComponent(CoSimComponent):
     def _update_output_states(
         self, t: float | None = None, event_names: list[str] | None = None
     ) -> None:
+        """Refresh output PortStates from the FMU instance.
+
+        Args:
+            t: Optional timestamp to record with outputs.
+            event_names: Reserved for event-based updates (unused).
+        """
         instance = self._require_instance()
         # For each base type, batch get and set into PortStates as Quantities (REAL) or raw types
         if self._vrs_out_real:
@@ -366,7 +444,7 @@ class FMUComponent(CoSimComponent):
             vals = instance.getReal(vrs)
             for name, val in zip(self._vrs_out_real.keys(), vals):
                 spec = self.output_specs[name]
-                q = (val * ureg(spec.unit)) if spec.unit else val
+                q = (val * to_pint_unit(spec.unit)) if spec.unit else val
                 self.outputs[name].set(q, t=t)
 
         if self._vrs_out_int:
@@ -391,8 +469,11 @@ class FMUComponent(CoSimComponent):
     # Time stepping method
     # ----------------------------------------------------------------------------
     def _do_step_internal(self, t: float, dt: float) -> None:
-        """
-        Perform a single time step in the FMU.
+        """Perform a single time step in the FMU.
+
+        Args:
+            t: Current communication point.
+            dt: Communication step size.
         """
         self._require_instance().doStep(currentCommunicationPoint=t, communicationStepSize=dt)
 
@@ -400,6 +481,12 @@ class FMUComponent(CoSimComponent):
     # State methods for setting and getting simulation state
     # ----------------------------------------------------------------------------
     def set_state(self, state: dict[str, Any], t: float) -> None:
+        """Restore FMU state from a serialized variable dictionary.
+
+        Args:
+            state: Mapping of variable names to stored attributes/values.
+            t: Time to reinitialize the FMU at.
+        """
         instance = self._require_instance()
         instance.instantiate()
         instance.setupExperiment(startTime=t)
@@ -421,17 +508,17 @@ class FMUComponent(CoSimComponent):
 
         self._update_output_states(t)
 
-    def get_state(self):
-        """
-        Return all FMU variables as a dictionary.
-        1. Get all model variable names with variability not 'fixed'.
-        2. For each variable, determine its type (REAL, INT, BOOL, STRING), causality, variability and unit.
-        3. Use the appropriate get method from the FMU instance to retrieve the value based on its type.
-        4. Store the variable name and its attributes and retrieved value in a dictionary.
-        5. Return the dictionary containing all variable names and their attributes with values.
+    def get_state(self) -> dict[str, dict[str, Any]]:
+        """Return FMU variables as a serialized dictionary.
+
+        The dictionary includes variables that are not fixed and not local,
+        along with their units and current values pulled from the FMU instance.
+
+        Returns:
+            Dict mapping variable names to unit/value attributes.
         """
         instance = self._require_instance()
-        state = {}
+        state: dict[str, dict[str, Any]] = {}
         for var in self._md.modelVariables:
             if var.variability == "fixed" or var.causality == "local":
                 continue
@@ -460,6 +547,15 @@ class FMUComponent(CoSimComponent):
     # Evaluate outputs without time step for direct feedthrough
     # ----------------------------------------------------------------------------
     def evaluate_outputs(self, inputs: dict[str, Any], t: float | None = None) -> dict[str, Any]:
+        """Evaluate outputs for a given input set without advancing time.
+
+        Args:
+            inputs: Input values to apply.
+            t: Optional time to use for evaluation.
+
+        Returns:
+            Mapping of output names to raw (unitless) values.
+        """
         # 1) Apply inputs without touching histories
         self.set_inputs(inputs, t=None)
 
@@ -481,10 +577,9 @@ class FMUComponent(CoSimComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
-        """
-        Reset the FMU component, releasing the FMU instance.
-        After reset(), the component can be re-initialized by calling initialize().
-        This properly terminates the FMU and frees resources.
+        """Reset the component and release the FMU instance.
+
+        After reset, the component can be reinitialized via ``initialize()``.
         """
         if self._instance is not None:
             try:
@@ -501,10 +596,11 @@ class FMUComponent(CoSimComponent):
         self.outputs.clear()
 
     def soft_reset(self, t0: float = 0.0) -> None:
-        """
-        Soft reset the FMU to initial state without releasing the instance.
-        This uses FMI's reset() to return to post-instantiate state, then
-        re-initializes. Useful for repeated simulations without FMU reload overhead.
+        """Reset the FMU to initial state without releasing the instance.
+
+        Uses FMI ``reset()`` to return to the instantiated state, then
+        reinitializes with parameter and input starts.
+
         Args:
             t0: New start time for the simulation.
         """
@@ -527,11 +623,70 @@ class FMUComponent(CoSimComponent):
         self._update_output_states(t=t0)
         self._record_outputs(t0)
 
+    def _validate_parameter(self, name: str, value: Any) -> QuantityType | float | int | bool | str:
+        """Validate and normalize a parameter value.
+
+        Args:
+            name: Parameter name.
+            value: Proposed parameter value.
+
+        Returns:
+            Validated value, converted to the expected type/unit.
+
+        Raises:
+            TypeError: If the value is incompatible with the parameter type or unit.
+        """
+        model_var = self._md_vars.get(name)
+        if model_var is None:
+            raise KeyError(f"{self.name}: Unknown parameter '{name}'")
+        type = _port_type_from_var(model_var)
+        unit = model_var.unit
+        if type == PortType.REAL:
+            if not isinstance(value, (float, int, QuantityClass)):
+                raise TypeError(f"{self.name}: Parameter '{name}' must be float.")
+            if unit:
+                if isinstance(value, QuantityClass):
+                    unit = to_pint_unit(unit)
+                    if value.is_compatible_with(unit):
+                        return cast(QuantityType, value.to(unit))
+                    else:
+                        raise TypeError(
+                            f"{self.name}: Parameter '{name}' must have unit compatible with '{unit}'."
+                        )
+                else:
+                    q = float(value) * to_pint_unit(unit)
+                    return cast(QuantityType, q)
+            return float(value)
+        elif type == PortType.INT:
+            if not isinstance(value, int):
+                raise TypeError(f"{self.name}: Parameter '{name}' must be int.")
+            return int(value)
+        elif type == PortType.BOOL:
+            if not isinstance(value, bool):
+                raise TypeError(f"{self.name}: Parameter '{name}' must be bool.")
+            return bool(value)
+        elif type == PortType.STRING:
+            if not isinstance(value, str):
+                raise TypeError(f"{self.name}: Parameter '{name}' must be str.")
+            return str(value)
+        raise NotImplementedError(f"{self.name}: Unsupported parameter type for '{name}'.")
+
 
 # ----------------------------------------------------------------------------
 # Helper functions
 # ----------------------------------------------------------------------------
 def _port_type_from_var(var: ModelVariable) -> PortType:
+    """Determine PortType from ModelVariable type.
+
+    Args:
+        var (ModelVariable): The model variable to determine the port type for.
+
+    Returns:
+        PortType: The corresponding PortType.
+
+    Raises:
+        NotImplementedError: If the variable type is unsupported.
+    """
     if var._python_type is float:
         return PortType.REAL
     elif var._python_type is int:
@@ -546,7 +701,38 @@ def _port_type_from_var(var: ModelVariable) -> PortType:
         )
 
 
+def _convert_start_value(
+    start: str | None, port_type: PortType, unit: str | None
+) -> QuantityType | float | int | bool | str | None:
+    """Convert start value string to appropriate type based on PortType and unit.
+
+    Args:
+        start (str | None): The start value as a string.
+        port_type (PortType): The type of the port.
+        unit (str | None): The unit of the port, if applicable.
+
+    Returns:
+        Union[float, int, bool, str, None]: The converted start value in the appropriate type.
+    """
+    if start is None:
+        return None
+    if port_type == PortType.REAL:
+        val = float(start)
+        if unit:
+            val = val * to_pint_unit(unit)
+        return val
+    elif port_type == PortType.INT:
+        return int(start)
+    elif port_type == PortType.BOOL:
+        return start.lower() in ("true", "1")
+    elif port_type == PortType.STRING:
+        return str(start)
+    else:
+        return None
+
+
 def _in_vr_map_for_type(comp: FMUComponent, pt: PortType) -> dict[str, int]:
+    """Return the input value-reference map for a port type."""
     return (
         comp._vrs_in_real
         if pt == PortType.REAL

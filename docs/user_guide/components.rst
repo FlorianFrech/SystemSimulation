@@ -8,6 +8,12 @@ FMUComponent
 
 Wraps FMI 2.0 Co-Simulation FMUs for integration with other models.
 
+.. seealso::
+
+   - :class:`syssimx.components.fmu.FMUComponent`
+   - :mod:`syssimx.components.fmu`
+   - :doc:`/api/components`
+
 Basic Usage
 ^^^^^^^^^^^
 
