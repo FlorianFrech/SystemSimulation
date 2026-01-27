@@ -123,9 +123,6 @@ class MasterPendulum(MultiComponent):
         self.direct_feedthrough = self.active_comp.direct_feedthrough
         #self._detect_direct_feedthrough()
 
-        # Post-initialization setup
-        self._post_initialize(t0)
-
         # Configure mode selector based on simulation type
         if self._with_contact:
             self.mode_selector = self._gap_based_mode_selector

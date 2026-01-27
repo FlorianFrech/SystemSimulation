@@ -83,6 +83,23 @@ class HybridAlgorithm(Algorithm):
         self.record_internal_steps: bool = False
 
     # --------------------------------------------------------------------------
+    # Logging Helpers
+    # --------------------------------------------------------------------------
+    def _log(self, message: str, *, end: str = "\n") -> None:
+        if self.verbose:
+            print(f"[Hybrid] {message}", end=end)
+
+    def _log_section(self, title: str) -> None:
+        if self.verbose:
+            print("\n" + "=" * 72)
+            print(f"[Hybrid] {title}")
+            print("=" * 72)
+
+    def _log_progress(self, t: float) -> None:
+        if self.verbose:
+            print(f"[Hybrid] Time: {t:.4f} s", end="\r")
+
+    # --------------------------------------------------------------------------
     # Global Step Method
     # --------------------------------------------------------------------------
     def step(self, system: System, t: float, dt: float) -> None:
@@ -107,8 +124,7 @@ class HybridAlgorithm(Algorithm):
         t_left = t
         t_right = t + dt
         eps = 1e-12
-        if self.verbose:
-            print(f"Time: {t_right:.4f} s", end="\r")
+        self._log_progress(t_right)
 
         # Track all events handled in this macro-step (to avoid duplicates at boundaries)
         handled_events_this_step: set[tuple[str, str, float]] = set()
@@ -128,13 +144,11 @@ class HybridAlgorithm(Algorithm):
                 return
 
             if self.verbose:
-                print(f"\n{80 * '='}")
-                print(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
-                print(f"Crossings: {crossings}")
+                self._log_section(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
+                self._log(f"Crossings: {crossings}")
                 if internal_hints:
-                    print(
-                        f"Internal hints: {[(c, [h.event_name for h in hs]) for c, hs in internal_hints.items()]}"
-                    )
+                    hints = [(c, [h.event_name for h in hs]) for c, hs in internal_hints.items()]
+                    self._log(f"Internal hints: {hints}")
 
             # 4) Locate event time (using internal hints if available)
             dense_time, initial_events = self._locate_event_time(
@@ -147,9 +161,8 @@ class HybridAlgorithm(Algorithm):
                 internal_hints,
             )
 
-            if self.verbose:
-                print(f"Initial events to handle: {initial_events}")
-                print(f"Located at t={dense_time}")
+            self._log(f"Initial events to handle: {initial_events}")
+            self._log(f"Located at t={dense_time}")
 
             # 5) Filter out events that were already handled at this time
             t_event_rounded = np.round(dense_time.t, decimals=6)
@@ -159,13 +172,13 @@ class HybridAlgorithm(Algorithm):
                 if event_key not in handled_events_this_step:
                     new_events.append((comp_name, event_name))
                 elif self.verbose:
-                    print(
-                        f"  Skipping already-handled event: {comp_name}.{event_name} at t≈{t_event_rounded:.8f}"
+                    self._log(
+                        f"Skipping already-handled event: {comp_name}.{event_name} at "
+                        f"t≈{t_event_rounded:.8f}"
                     )
 
             initial_events = new_events
-            if self.verbose:
-                print(f"Events to handle at t={dense_time}: {initial_events}")
+            self._log(f"Events to handle at t={dense_time}: {initial_events}")
             # 6) Step all components to event time
             self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
 
@@ -175,8 +188,8 @@ class HybridAlgorithm(Algorithm):
             current_time = dense_time
             while event_pairs and current_time.micro < self.max_microsteps:
                 if self.verbose:
-                    print(f"Already handled events: {handled_events_this_step}")
-                    print(f"\nHandling events at {current_time}: {event_pairs}")
+                    self._log(f"Already handled events: {handled_events_this_step}")
+                    self._log(f"Handling events at {current_time}: {event_pairs}")
 
                 # a) Record events with microstep and mark as handled
                 for comp_name, event_name in event_pairs:
@@ -214,7 +227,7 @@ class HybridAlgorithm(Algorithm):
                         if event_pair not in all_handled_events and event_pair not in new_events:
                             new_events.append(event_pair)
                 if new_events and self.verbose:
-                    print(f"\nNew events detected after handling: {new_events}")
+                    self._log(f"New events detected after handling: {new_events}")
 
                 # g) Advance microstep if new events detected
                 if new_events:
@@ -232,7 +245,7 @@ class HybridAlgorithm(Algorithm):
             # 9) Update left time
             t_left = dense_time.t + self.tol_time
             if self.verbose:
-                print(f"{80 * '='}\n")
+                self._log_section("End of event window")
 
     # --------------------------------------------------------------------------
     # Helper - Input Preparation and Algebraic Loop Solving
@@ -324,8 +337,8 @@ class HybridAlgorithm(Algorithm):
                         if hint.t_after > t_left + self.tol_time and hint.t_before < t_right:
                             filtered_hints.append(hint)
                             if self.verbose:
-                                print(
-                                    f"  Internal hint from {comp.name}: {hint.event_name} "
+                                self._log(
+                                    f"Internal hint from {comp.name}: {hint.event_name} "
                                     f"in [{hint.t_before:.8f}, {hint.t_after:.8f}]"
                                 )
 
@@ -427,11 +440,10 @@ class HybridAlgorithm(Algorithm):
                 hint_left = max(t_left, earliest_hint.t_before)
                 hint_right = min(t_right, earliest_hint.t_after)
 
-                if self.verbose:
-                    print(
-                        f"  Using internal hint to narrow interval: "
-                        f"[{left:.8f}, {right:.8f}] -> [{hint_left:.8f}, {hint_right:.8f}]"
-                    )
+                self._log(
+                    f"Using internal hint to narrow interval: "
+                    f"[{left:.8f}, {right:.8f}] -> [{hint_left:.8f}, {hint_right:.8f}]"
+                )
 
                 # Update boundaries
                 left = hint_left
@@ -585,7 +597,7 @@ class HybridAlgorithm(Algorithm):
             indicators = comp.evaluate_event_indicators()
             for event_name, value in indicators.items():
                 if self.verbose:
-                    print(f"  Indicator for {comp.name}.{event_name} = {value:.8e}")
+                    self._log(f"Indicator for {comp.name}.{event_name} = {value:.8e}")
                 if abs(value) <= self.tol_value:
                     all_events.append((comp.name, event_name))
         return all_events
@@ -726,8 +738,7 @@ class HybridAlgorithm(Algorithm):
             for event_pair in event_pairs:
                 if listener_name in system._event_targets_by_source.get(event_pair, []):
                     events_by_component.setdefault(listener_name, []).append(event_pair[1])
-        if self.verbose:
-            print(f"\nEvents grouped by component for handling: {events_by_component}")
+        self._log(f"Events grouped by component for handling: {events_by_component}")
 
         # 2) Check for conflicts in each component
         for comp_name, event_names in events_by_component.items():
@@ -758,22 +769,21 @@ class HybridAlgorithm(Algorithm):
         Returns:
             bool: True if the event handlers commute, False otherwise.
         """
-        if self.verbose:
-            print(f"\nChecking commutativity for events {event_names} on component {comp.name}...")
+        self._log(f"Checking commutativity for events {event_names} on component {comp.name}...")
         # Method 1) Annotation-based check
         if comp.event_commutativity:
             for i, event1 in enumerate(event_names):
                 for event2 in event_names[i + 1 :]:
                     if not comp.event_commutativity.get((event1, event2), False):
                         return False
-            if self.verbose:
-                print(
-                    f"Event handlers {event_names} on component {comp.name} verified as commutative via annotations."
-                )
+            self._log(
+                f"Event handlers {event_names} on component {comp.name} "
+                f"verified as commutative via annotations."
+            )
             return True
 
         # Method 2) Dynamic check via permutations
-        print("Verifying dynamically ...")
+        self._log("Verifying dynamically ...")
         return self._verify_event_commutativity_dynamically(comp, event_names)
 
     def _verify_event_commutativity_dynamically(
@@ -815,16 +825,16 @@ class HybridAlgorithm(Algorithm):
         comp.restore_state(initial_snapshot, t=t)  # Restore to initial state
         first_result = results[0]
         if all(self._states_equal(first_result, other) for other in results[1:]):
-            if self.verbose:
-                print(
-                    f"Event handlers {event_names} on component {comp.name} verified as commutative via dynamic check."
-                )
+            self._log(
+                f"Event handlers {event_names} on component {comp.name} "
+                f"verified as commutative via dynamic check."
+            )
             return True
         else:
-            if self.verbose:
-                print(
-                    f"Event handlers {event_names} on component {comp.name} are non-commutative (dynamic check)."
-                )
+            self._log(
+                f"Event handlers {event_names} on component {comp.name} "
+                f"are non-commutative (dynamic check)."
+            )
             return False
 
     def _states_equal(self, state1: dict, state2: dict) -> bool:

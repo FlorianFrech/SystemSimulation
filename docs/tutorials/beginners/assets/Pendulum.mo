@@ -1,4 +1,4 @@
-model SimplePendulum  
+model Pendulum  
   // Imports
   import Modelica.Constants.pi;
 
@@ -24,4 +24,4 @@ initial equation
 equation
   der(q)    = omega;
   der(omega) = -(m * g * L / inertia) * sin(q) + torque / inertia;
-end SimplePendulum;
+end Pendulum;

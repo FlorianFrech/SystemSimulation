@@ -456,7 +456,6 @@ class System:
             raise ValueError(f"Event source '{event.source}' is not in the system.")
 
         targets = self.get_event_targets(event.source, event.name)
-        print(f"\nDispatching event '{event.name}' from '{event.source}' to targets: {targets}")
         if notify:
             for comp_name in targets:
                 self.components[comp_name].handle_event([event.name], t)
@@ -707,3 +706,25 @@ class System:
             history[comp_name] = comp.get_history_arrays()
         history["Events"] = self.history.get_all_event_histories()
         return history
+
+    # ----------------------------------------------------------------------------
+    # Reset System
+    # ----------------------------------------------------------------------------
+    def reset(self) -> None:
+        """Reset the system and all components to uninitialized state.
+
+        Clears all component states, histories, and internal flags,
+        allowing the system to be re-initialized from scratch.
+
+        Example:
+            >>> system.initialize(t0=0.0)
+            >>> system.run(t0=0.0, tf=10.0, dt=0.01)
+            >>> system.reset()
+            >>> system.is_initialized
+            False
+        """
+        for comp in self.components.values():
+            comp.reset()
+        self.history.clear()
+        self.is_initialized = False
+        self.t = 0.0

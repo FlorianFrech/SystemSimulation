@@ -124,6 +124,7 @@ class GainComponent(CoSimComponent):
         if name == "k":
             if not isinstance(value, (float, int)):
                 raise TypeError(f"Parameter 'k' must be a float or int, got {type(value)}.")
+        return value
 
     def evaluate_outputs(self, inputs, t=None):
         self.set_inputs(inputs, t=None)

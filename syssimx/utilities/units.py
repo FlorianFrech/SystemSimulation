@@ -23,6 +23,17 @@ from pint import UnitRegistry
 ureg = UnitRegistry()
 ureg.formatter.default_format = "~P"
 ureg.autoconvert_offset_to_baseunit = True
+ureg.case_sensitive = True
+
+# FMUs sometimes use capitalized unit names like "Ohm". Pint defines
+# "ohm" by default, but with case-sensitive parsing enabled we need
+# explicit aliases for these variants.
+try:
+    ureg.define("Ohm = ohm")
+except Exception:
+    # If already defined (e.g., during reloads), ignore.
+    pass
+
 Unit = ureg.Unit
 """Unit of the default Pint UnitRegistry."""
 UnitType: TypeAlias = PintUnit

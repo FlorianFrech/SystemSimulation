@@ -7,8 +7,8 @@ SysSimX Documentation
 .. image:: https://img.shields.io/badge/license-MIT-green.svg
    :alt: MIT License
 
-**SysSimX** is a free and open-source Python library for heterogeneous system co-simulation, 
-enabling seamless integration of diverse simulation models including:
+**SysSimX** is a free and open-source Python library for heterogeneous system co-simulation.
+It lets you build multi-physics systems by connecting models from different environments, including:
 
 - **FMU Components** - `Functional Mock-up Units (FMI 2.0 Co-Simulation) <https://fmi-standard.org/>`_
 - **FEM Components** - `Finite Element Method solvers (NGSolve) <https://ngsolve.org/>`_
@@ -17,9 +17,17 @@ enabling seamless integration of diverse simulation models including:
 
 .. note::
 
-   SysSimX is designed for researchers and engineers who need to couple
-   multi-physics models from different simulation environments especially in
-   the domains of mechanical, electrical, and biomechanical systems.
+   SysSimX targets researchers and engineers who need to couple multi-physics
+   models across simulation environments, especially in mechanical, electrical,
+   and biomechanical systems.
+
+Start Here
+----------
+
+- New to SysSimX? Read the :doc:`getting_started/quickstart` and
+  :doc:`getting_started/concepts`.
+- Want hands-on learning? Go to :doc:`tutorials/beginners/index`.
+- Looking for APIs? Jump to the :doc:`api/syssimx`.
 
 Quick Example
 -------------
@@ -68,6 +76,9 @@ Key Features
 **Unit-Aware Connections**
    Automatic unit conversion between ports using Pint.
 
+**Extensible Components**
+   Implement custom components in Python or wrap external tools and FMUs.
+
 Contents
 --------
 
@@ -84,14 +95,15 @@ Contents
    :maxdepth: 2
    :caption: Theory and Background
    :numbered:
-
-   user_guide/components
-   user_guide/systems
-   user_guide/hybrid
-   theory_background/introduction
-   theory_background/components
-   theory_background/systems
-   theory_background/hybrid
+   
+   theory_background/01_introduction
+   theory_background/02_systems_and_models
+   theory_background/03_time_stepping_and_integration
+   theory_background/04_dependency_graphs_and_ordering
+   theory_background/05_algebraic_loops
+   theory_background/06_co_simulation_algorithms
+   theory_background/07_hybrid_and_events
+   theory_background/08_units_and_interfaces
 
 .. toctree::
    :maxdepth: 2
@@ -112,6 +124,7 @@ Contents
    tutorials/intermediate/index
    tutorials/advanced/index
    tutorials/tool_integration/index
+   tutorials/case_study/index
 
 .. toctree::
    :maxdepth: 1

@@ -105,7 +105,18 @@ class FMUComponent(CoSimComponent):
         self._build_value_reference_map()
 
         # Parameters dictionary
-        self.parameters: dict[str, Any] = {}
+        self.parameters: dict[str, Any] = self.get_default_parameters()
+
+    # ----------------------------------------------------------------------------
+    # Get default parameters from model description
+    # ----------------------------------------------------------------------------
+    def get_default_parameters(self) -> dict[str, Any]:
+        """Return default parameter values from the FMU model description.
+
+        Returns:
+            Dict of parameter names to default values.
+        """
+        defaults: dict[str, Any] = {}
         for var in self._md.modelVariables:
             if var.causality not in ("parameter", "calculatedParameter", "structuralParameter"):
                 continue
@@ -113,7 +124,8 @@ class FMUComponent(CoSimComponent):
             unit = to_pint_unit(var.unit) if var.unit else None
             type = _port_type_from_var(var)
             value = _convert_start_value(var.start, type, unit)
-            self.parameters[name] = value
+            defaults[name] = value
+        return defaults
 
     # ----------------------------------------------------------------------------
     # Build helper for port specifications and value reference maps
@@ -594,6 +606,8 @@ class FMUComponent(CoSimComponent):
         super().reset()
         self.inputs.clear()
         self.outputs.clear()
+        self.parameters.clear()
+        self.parameters = self.get_default_parameters()
 
     def soft_reset(self, t0: float = 0.0) -> None:
         """Reset the FMU to initial state without releasing the instance.

@@ -12,174 +12,94 @@ skinparam defaultFontSize 9
 skinparam classFontSize 10
 skinparam nodesep 30
 skinparam ranksep 30
-
-' Color scheme - clean white background
 skinparam backgroundColor white
-
-' Remove yellow/red default colors
 skinparam shadowing false
-
-' Hide empty members
 hide empty members
 
-' Package colors - pastel/decent backgrounds
 skinparam package {
     BackgroundColor<<core>> #E6F3FF
     BorderColor<<core>> #4A90E2
-    
+
     BackgroundColor<<components>> #E8F5E9
     BorderColor<<components>> #66BB6A
-    
-    BackgroundColor<<models>> #FFF3E0
-    BorderColor<<models>> #FFA726
-    
+
     BackgroundColor<<system>> #F3E5F5
     BorderColor<<system>> #AB47BC
+
+    BackgroundColor<<algorithms>> #FFF3E0
+    BorderColor<<algorithms>> #FFA726
+
+    BackgroundColor<<viz>> #E0F7FA
+    BorderColor<<viz>> #26C6DA
 }
 
 left to right direction
 
 ' ============================================================================
-' SIMPLIFIED VIEW - CORE CONCEPTS
+' CORE CONCEPTS
 ' ============================================================================
 
-package "Core Abstractions" <<core>> {
+package "Core" <<core>> {
+    class PortSpec {
+        + name: str
+        + type: PortType
+        + direction: in|out
+        + unit: Optional[str]
+    }
+
+    class PortState {
+        + spec: PortSpec
+        + value: Any
+        + t_last: Optional[float]
+        --
+        + set(value, t)
+        + get(as_unit=None)
+    }
+
     ABSTRACT_CLASS CoSimComponent <<abstract>> {
         + name: str
         + inputs: Dict[str, PortState]
         + outputs: Dict[str, PortState]
         + parameters: Dict[str, Any]
         --
-        + initialize(t0: float)
-        + do_step(t: float, dt: float)
-        + set_inputs(signals: Dict)
-        + get_outputs(): Dict
-        + set_state(state: Dict, t: float)
-        + get_state(): Dict
+        + initialize(t0)
+        + do_step(t, dt)
+        + set_inputs(signals, t=None)
+        + get_outputs()
+        + get_history()
     }
-    
+
     ABSTRACT_CLASS MultiComponent <<abstract>> {
         + models: Dict[str, CoSimComponent]
         + active_mode: str
-        + mode_selector: Callable
         --
-        + _register_models()
-        + _adapt_state(state, target): Dict
+        + switch_mode(name, t)
+        + _adapt_state(state, target)
     }
-    
+
     MultiComponent -down-|> CoSimComponent
+    CoSimComponent o-- "many" PortState
+    PortState o-- PortSpec
 }
 
 package "Component Types" <<components>> {
     class FMUComponent {
-        + _path: str
-        + _md: ModelDescription
-        + _instance: FMU2Slave
-        + _vrs_in/out: Dict[str, int]
+        + fmu_path: str
+        + model_description: Any
         --
-        + __init__(name, fmu_path, group)
-        .. FMI 2.0 CS ..
-        - _build_port_specs()
         + set_parameters(**params)
         + _do_step_internal(t, dt)
-        .. Batch I/O ..
-        + setReal/Integer/Boolean/String()
-        + getReal/Integer/Boolean/String()
     }
-    
-    class FEMComponent {
-        + geometry, mesh: Optional[Any]
-        + spaces: Dict[str, Any]
-        + gfs: Dict[str, Any]
-        + bfa, lf: Optional[Any]
-        + solver: Optional[Any]
-        --
-        + __init__(name, label, group)
-        .. FEM Backend ..
-        {abstract} + _initialize_component(t0)
-        {abstract} + _do_step_internal(t, dt)
-        .. Optional ..
-        + load_mesh_from_file(path)
-        + export_results(path, format)
-        + visualize_state()
-    }
-    
-    class OpenSimComponent {
-        + model: osim.Model
-        + manager: osim.Manager
-        + state: osim.State
-        --
-        + integrator_method: IntegratorMethod
-        + integrator_accuracy: float
-        + internal_dt: float
-        --
-        + __init__(name, osim_model_path, group)
-        .. Initialization ..
-        + _finalize_model(t0)
-        + realize()
-        .. Coordinate Helpers ..
-        + get/set_coordinate_value(name)
-        + get/set_coordinate_speed(name)
-        + get_coordinate_acceleration(name)
-    }
+
+    class FEMComponent
+    class OpenSimComponent
 
     FMUComponent -down-|> CoSimComponent
     FEMComponent -down-|> CoSimComponent
     OpenSimComponent -down-|> CoSimComponent
 }
 
-package "Concrete Models" <<models>> {
-    class FEMPendulum {
-        + config: 7 dataclasses
-        + mass, inertia: float
-        --
-        - _mesh, _fes: NGSolve
-        - _gf_u/v/a: GridFunction
-        - _material: NeoHookean
-        - _contact: ContactBoundary
-        - _torque_drive: Parameter
-        --
-        .. NGSolve Implementation ..
-        - _build()
-        - _initialize_torque_control()
-        + set_drive_torque(torque)
-    }
-    
-    class OpenSimPendulum {
-        + parameters: Dict[str, Any]
-        --
-        + coord: osim.Coordinate
-        + actuator: osim.CoordinateActuator
-        --
-        - _with_contact: bool
-        - _use_gravity: bool
-        --
-        .. Model Building ..
-        - _build()
-        + save_model(file_path)
-    }
-    
-    class PendulumMultiComp {
-        + models: {"FEM", "OpenSim", "FMU"}
-        + active_mode: ModeKey
-        + mode_selector: Callable
-        + hysteresis: Hysteresis
-        --
-        .. Mode Switching ..
-        + _register_models()
-        + _adapt_state(state, target): Dict
-        - _switch_mode(new_mode, t)
-    }
-
-    FEMPendulum -down-|> FEMComponent
-    OpenSimPendulum -down-|> OpenSimComponent
-    PendulumMultiComp -down-|> MultiComponent
-    PendulumMultiComp o- FEMPendulum
-    PendulumMultiComp o- OpenSimPendulum
-    PendulumMultiComp o- FMUComponent
-}
-
-package "System Integration" <<system>> {
+package "System" <<system>> {
     class Connection <<dataclass>> {
         + src_comp: str
         + src_port: str
@@ -188,29 +108,52 @@ package "System Integration" <<system>> {
         + delay: int = 0
         + unit: Optional[str]
     }
-    
+
     class System {
         + components: Dict[str, CoSimComponent]
         + connections: List[Connection]
-        + graph: nx.MultiDiGraph
         + execution_order: List[List[str]]
+        + algebraic_loops: List[List[str]]
         --
         + add_component(comp)
         + add_connection(conn)
-        + build_graphs()
-        + compute_execution_order()
         + initialize(t0)
-        + step(t, dt)
         + run(t0, tf, dt)
     }
-    
+
     System o-right- "many" CoSimComponent
     System o- "many" Connection
 }
 
+package "Algorithms" <<algorithms>> {
+    ABSTRACT_CLASS Algorithm <<abstract>> {
+        + name: str
+        --
+        + step(system, t, dt)
+    }
+
+    class JacobiAlgorithm
+    class GaussSeidelAlgorithm
+    class HybridAlgorithm
+
+    JacobiAlgorithm -down-|> Algorithm
+    GaussSeidelAlgorithm -down-|> Algorithm
+    HybridAlgorithm -down-|> Algorithm
+}
+
+package "Visualization" <<viz>> {
+    class SystemGraphVisualizer {
+        + visualize()
+    }
+}
+
+System --> Algorithm : uses
+SystemGraphVisualizer ..> System : renders
+
 ' Force left-to-right layout
-"Concrete Models" -[hidden]down- "Component Types"
-"Component Types" -[hidden]down- "Core Abstractions"
-"Core Abstractions" -[hidden]right- "System Integration"
+"Component Types" -[hidden]down- "Core"
+"System" -[hidden]down- "Component Types"
+"Algorithms" -[hidden]right- "System"
+"Visualization" -[hidden]right- "Algorithms"
 
 @enduml

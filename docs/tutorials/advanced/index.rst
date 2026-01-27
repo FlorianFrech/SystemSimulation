@@ -5,6 +5,6 @@ Advanced
    :maxdepth: 1
    :numbered:
 
-   06_hybrid_systems
-   07_algebraic_loops
-   08_algebraic_loops
+   hybrid_event_chain
+   hybrid_strong_simultaneity
+   hybrid_internal_reporting

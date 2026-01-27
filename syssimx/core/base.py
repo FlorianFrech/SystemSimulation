@@ -71,6 +71,7 @@ from typing import Any
 
 import numpy as np
 
+from ..utilities.units import Quantity
 from .events import Event, EventIndicator, InternalEventInfo, _sign
 from .history import ComponentHistory
 from .port import PortSpec, PortState, PortType
@@ -260,7 +261,7 @@ class CoSimComponent(ABC):
                     f"Unknown parameter '{name}' for component '{self.name}'. "
                     f"Available parameters: {list(self.parameters.keys())}"
                 )
-            self._validate_parameter(name, value)  # Hook for subclasses
+            value = self._validate_parameter(name, value)
             self.parameters[name] = value
 
     def get_parameters(self, *names: str) -> dict[str, Any]:
@@ -326,7 +327,26 @@ class CoSimComponent(ABC):
             Always call ``super()._validate_parameter(name, value)`` at
             the end to allow parent class validation.
         """
-        return value  # Base implementation performs no validation
+        existing_param = self.parameters.get(name)
+        if existing_param is None:
+            raise KeyError(f"Parameter '{name}' not found for validation.")
+
+        # 1) Check if value is a compatible Quantity
+        if isinstance(value, Quantity):
+            if not value.is_compatible_with(existing_param.units):
+                raise ValueError(
+                    f"Parameter '{name}' expects units compatible with "
+                    f"'{existing_param.units}', got '{value.units}'."
+                )
+            return value.to(existing_param.units)
+
+        # 2) Convert raw numeric values to Quantity with correct units
+        elif isinstance(value, (int, float)) and hasattr(existing_param, "units"):
+            return Quantity(value, existing_param.units)
+
+        # 3) Otherwise, accept the value as-is (e.g., strings, bools)
+        else:
+            return value
 
     # -------------------------------------------------------------------
     # Port specification and initialization
@@ -409,6 +429,9 @@ class CoSimComponent(ABC):
 
         # Hook for subclass-specific initialization
         self._initialize_component(t0)
+
+        # Detect direct feedthrough based on input-output dependencies
+        self._detect_direct_feedthrough()
 
         # Standard output state and recording after initialization
         self._update_output_states(t0)
@@ -1407,9 +1430,6 @@ class CoSimComponent(ABC):
             if spec.type == PortType.REAL
         }
 
-        print("Detecting direct feedthrough for component:", self.name)
-        print("Feedthrough map initialized:", feedthrough_map)
-
         # Small perturbation value
         delta = 1e-3
 
@@ -1438,7 +1458,6 @@ class CoSimComponent(ABC):
 
             # Evaluate outputs with perturbed input
             perturbed_outputs = self.evaluate_outputs(perturbed_inputs)
-
             # Check which outputs changed
             for out_name, orig_value in original_outputs.items():
                 pert_value = perturbed_outputs[out_name]
@@ -1449,6 +1468,11 @@ class CoSimComponent(ABC):
 
             # Reset input
             perturbed_inputs[inp_name] = original_inputs[inp_name]
+
+        # Restore original inputs on the component to avoid leaving
+        # perturbed values behind after detection.
+        if original_inputs:
+            self.set_inputs(original_inputs)
 
         self.direct_feedthrough = feedthrough_map
         return feedthrough_map
