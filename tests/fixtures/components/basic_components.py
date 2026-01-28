@@ -1,3 +1,5 @@
+"""Basic test components for unit tests."""
+
 from typing import Any
 
 import numpy as np
@@ -8,7 +10,7 @@ from syssimx.utilities.units import Quantity, to_pint_unit
 
 
 # ============================================================================
-# Basic Components for Unit Tests
+# Test Component: Simple Gain
 # ============================================================================
 class SimpleGain(CoSimComponent):
     """
@@ -76,6 +78,9 @@ class SimpleGain(CoSimComponent):
             self.outputs["y"].set(y, t)
 
 
+# ============================================================================
+# Gain Component with Units
+# ============================================================================
 class GainComponent(CoSimComponent):
     """
     Simple gain component for testing purposes.
@@ -175,6 +180,47 @@ class ConstantSource(CoSimComponent):
         return {"value": self.value}
 
 
+# ============================================================================
+# Test Component: Torque Source (unitful constant)
+# ============================================================================
+class TorqueSource(CoSimComponent):
+    """A unit-aware source component that outputs a constant torque (N*m)."""
+
+    def __init__(self, name: str, torque: float = 1.0):
+        super().__init__(name)
+        self.torque = torque
+        self.output_specs.update(
+            {
+                "y": PortSpec(
+                    name="y",
+                    type=PortType.REAL,
+                    direction="out",
+                    unit="N*m",
+                    description="Torque output",
+                )
+            }
+        )
+        self.direct_feedthrough = {}
+
+    def _initialize_component(self, t0: float) -> None:
+        pass
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
+        self.outputs["y"].set(self.torque, t)
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        pass
+
+    def get_state(self) -> dict[str, Any]:
+        return {"torque": self.torque}
+
+
+# ============================================================================
+# Test Component: Sine Source
+# ============================================================================
 class SineSource(CoSimComponent):
     """A source component that outputs a sine wave: y(t) = amplitude * sin(omega * t)."""
 
@@ -202,6 +248,9 @@ class SineSource(CoSimComponent):
         return {}
 
 
+# ============================================================================
+# Test Component: Linear Source
+# ============================================================================
 class LinearSource(CoSimComponent):
     """A source component that outputs a linear ramp: y(t) = slope * t + offset."""
 
@@ -229,48 +278,9 @@ class LinearSource(CoSimComponent):
         return {}
 
 
-class Source(CoSimComponent):
-    """
-    A source component that provides a constant output signal.
-    """
-
-    def __init__(self, name="Source", output_value=1.0):
-        super().__init__(name)
-
-        # Define ports
-        self.output_specs.update({"u(t)=1": PortSpec("u(t)=1", PortType.REAL, direction="out")})
-
-        # Direct feedthrough information
-        self.direct_feedthrough = {}  # No direct feedthrough
-
-    def _initialize_component(self, t0: float) -> None:
-        """
-        Initialize the source component.
-        """
-        self.state = 1
-
-    def _do_step_internal(self, t: float, dt: float) -> None:
-        """
-        Perform a simulation step by setting the output signal.
-        """
-        self.state = 1
-
-    def _update_output_states(self, t):
-        """
-        Update the output port states.
-        """
-        self.outputs["u(t)=1"].set(self.state, t)
-
-    def set_state(self, state, t):
-        pass
-
-    def get_state(self):
-        return self.state
-
-    def reset(self):
-        pass
-
-
+# ============================================================================
+# Test Component: Subtractor
+# ============================================================================
 class Subtractor(CoSimComponent):
     """
     A subtractor component that subtracts its two input signals.
@@ -343,3 +353,94 @@ class Subtractor(CoSimComponent):
             i2 = i2.magnitude
         self.outputs["diff"].set(i1 - i2, None)
         return {"diff": i1 - i2}
+
+
+# ============================================================================
+# Test Component: Integrator
+# ============================================================================
+class Integrator(CoSimComponent):
+    """
+    An integrator component that integrates its input signal u over time.
+    x(t) = x0 + ∫ u dt
+    Uses unitless ports for flexible testing.
+    """
+
+    def __init__(self, name="Integrator", x0=0.0):
+        super().__init__(name)
+
+        self.input_specs.update(
+            {
+                "u": PortSpec(
+                    name="u",
+                    type=PortType.REAL,
+                    direction="in",
+                    unit=None,
+                    description="Input signal (rate of change)",
+                )
+            }
+        )
+        self.output_specs.update(
+            {
+                "y": PortSpec(
+                    name="y",
+                    type=PortType.REAL,
+                    direction="out",
+                    unit=None,
+                    description="Integrated output",
+                )
+            }
+        )
+        self.x0 = x0
+
+    def _initialize_component(self, t0: float) -> None:
+        """
+        Initialize the integrator state.
+        """
+        self.x = self.x0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        """
+        Perform a simulation step by integrating the input signal.
+        """
+        u = self.inputs["u"].get()
+        if u is not None:
+            u_val = u.magnitude if hasattr(u, "magnitude") else u
+            self.x += u_val * dt
+
+    def _update_output_states(self, t):
+        """
+        Update the output port states.
+        """
+        self.outputs["y"].set(self.x, t)
+
+    def set_state(self, state, t):
+        """
+        Set the integrator state.
+        """
+        if isinstance(state, dict):
+            self.x = state.get("x", self.x)
+        else:
+            self.x = state
+        self._update_output_states(t)
+
+    def get_state(self):
+        """
+        Get the current integrator state.
+        """
+        return {"x": self.x}
+
+    def reset(self, t):
+        """
+        Reset the integrator state to zero.
+        """
+        self.x = self.x0
+        self._update_output_states(t)
+
+
+# ============================================================================
+# Test Component: Integrator (compatibility alias)
+# ============================================================================
+class IntegratorComponent(Integrator):
+    """Backward-compatible alias for Integrator used in legacy tests."""
+
+    pass

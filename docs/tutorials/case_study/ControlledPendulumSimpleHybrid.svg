@@ -12,8 +12,8 @@
 <text text-anchor="middle" x="351" y="-507.07" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="18.00">Simple Coupled Pendulum Hybrid</text>
 <g id="clust1" class="cluster">
 <title>cluster_legend</title>
-<path fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5" d="M20,-131.47C20,-131.47 124,-131.47 124,-131.47 130,-131.47 136,-137.47 136,-143.47 136,-143.47 136,-256.47 136,-256.47 136,-262.47 130,-268.47 124,-268.47 124,-268.47 20,-268.47 20,-268.47 14,-268.47 8,-262.47 8,-256.47 8,-256.47 8,-143.47 8,-143.47 8,-137.47 14,-131.47 20,-131.47"/>
-<text text-anchor="middle" x="72" y="-256.47" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00">Legend</text>
+<path fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5" d="M20,-124.47C20,-124.47 124,-124.47 124,-124.47 130,-124.47 136,-130.47 136,-136.47 136,-136.47 136,-265.47 136,-265.47 136,-271.47 130,-277.47 124,-277.47 124,-277.47 20,-277.47 20,-277.47 14,-277.47 8,-271.47 8,-265.47 8,-265.47 8,-136.47 8,-136.47 8,-130.47 14,-124.47 20,-124.47"/>
+<text text-anchor="middle" x="72" y="-265.47" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00">Legend</text>
 </g>
 <g id="clust2" class="cluster">
 <title>cluster_Reference</title>
@@ -43,14 +43,15 @@
 <!-- legend_node -->
 <g id="node1" class="node">
 <title>legend_node</title>
-<text text-anchor="start" x="24" y="-227.27" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="9.00">Edges:</text>
-<text text-anchor="start" x="24" y="-211.07" font-family="Helvetica,sans-Serif" font-size="8.00">───&gt; Data flow</text>
-<text text-anchor="start" x="24" y="-196.07" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#0b84ff">┄┄┄o Event connection</text>
-<text text-anchor="start" x="24" y="-181.27" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="9.00">Ports:</text>
-<text text-anchor="start" x="24" y="-166.07" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="8.00" fill="#ef4444">red</text>
-<text text-anchor="start" x="40" y="-166.07" font-family="Helvetica,sans-Serif" font-size="8.00"> Direct feedthrough</text>
-<text text-anchor="start" x="24" y="-151.07" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="8.00" fill="#0b84ff">blue</text>
-<text text-anchor="start" x="45" y="-151.07" font-family="Helvetica,sans-Serif" font-size="8.00"> Event port</text>
+<text text-anchor="start" x="24" y="-235.27" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="9.00">Edges:</text>
+<text text-anchor="start" x="24" y="-219.07" font-family="Helvetica,sans-Serif" font-size="8.00">───&gt; Data flow</text>
+<text text-anchor="start" x="24" y="-204.07" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#ef4444">───&gt; Algebraic loop</text>
+<text text-anchor="start" x="24" y="-189.07" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#0b84ff">┄┄┄o Event connection</text>
+<text text-anchor="start" x="24" y="-174.27" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="9.00">Ports:</text>
+<text text-anchor="start" x="24" y="-159.07" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="8.00" fill="#ef4444">red</text>
+<text text-anchor="start" x="40" y="-159.07" font-family="Helvetica,sans-Serif" font-size="8.00"> Direct feedthrough</text>
+<text text-anchor="start" x="24" y="-144.07" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="8.00" fill="#0b84ff">blue</text>
+<text text-anchor="start" x="45" y="-144.07" font-family="Helvetica,sans-Serif" font-size="8.00"> Event port</text>
 </g>
 <!-- ref -->
 <g id="node2" class="node">

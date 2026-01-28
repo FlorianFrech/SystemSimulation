@@ -10,7 +10,7 @@ import pytest
 from tests.fixtures.components import (
     GainComponent,
     HybridSource,
-    IntegratorComponent,
+    Integrator,
     MockSubComponent,
     SimpleMultiComponent,
 )
@@ -40,15 +40,15 @@ def gain_component_initialized() -> GainComponent:
 
 
 @pytest.fixture
-def integrator_component() -> IntegratorComponent:
-    """Create a fresh IntegratorComponent instance."""
-    return IntegratorComponent(name="TestIntegrator", x0=0.0)
+def integrator_component() -> Integrator:
+    """Create a fresh Integrator instance."""
+    return Integrator(name="TestIntegrator", x0=0.0)
 
 
 @pytest.fixture
-def integrator_component_initialized() -> IntegratorComponent:
-    """Create and initialize an IntegratorComponent."""
-    comp = IntegratorComponent(name="TestIntegrator", x0=0.0)
+def integrator_component_initialized() -> Integrator:
+    """Create and initialize an Integrator."""
+    comp = Integrator(name="TestIntegrator", x0=0.0)
     comp.initialize(t0=0.0)
     return comp
 

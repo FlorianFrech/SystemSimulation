@@ -19,9 +19,13 @@ VenvSysSimX/
 # FMU logs
 *_log.txt
 
-# Test Documentation
+# Documentation
 docs/_build/*
 *.html
+
+# Artifacts of Controlled Pendulum Demo
+demos/ControlledPendulum/artifacts/
+
 
 *.vtu
 .covergage

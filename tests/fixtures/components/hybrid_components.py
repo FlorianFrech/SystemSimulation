@@ -1,3 +1,5 @@
+"""Hybrid test components for unit tests."""
+
 from typing import Any
 
 from syssimx.core.base import CoSimComponent

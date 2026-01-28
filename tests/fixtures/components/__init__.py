@@ -5,13 +5,14 @@ Shared test components for unit and integration tests.
 from .basic_components import (
     ConstantSource,
     GainComponent,
+    Integrator,
+    IntegratorComponent,
     LinearSource,
     SimpleGain,
     SineSource,
-    Source,
     Subtractor,
+    TorqueSource,
 )
-from .dynamic_components import IntegratorComponent
 from .hybrid_components import HybridCombi, HybridListener, HybridSource, NoRollbackComponent
 from .multi_components import (
     EmptyMultiComponent,
@@ -25,12 +26,13 @@ from .multi_components import (
 __all__ = [
     "GainComponent",
     "SimpleGain",
-    "Source",
     "Subtractor",
     "ConstantSource",
     "SineSource",
     "LinearSource",
+    "Integrator",
     "IntegratorComponent",
+    "TorqueSource",
     "HybridSource",
     "HybridCombi",
     "HybridListener",

@@ -1,11 +1,11 @@
 SysSimX Documentation
 =====================
 
-.. image:: https://img.shields.io/badge/python-3.10+-blue.svg
-   :alt: Python 3.10+
+.. .. image:: https://img.shields.io/badge/python-3.10+-blue.svg
+..    :alt: Python 3.10+
 
-.. image:: https://img.shields.io/badge/license-MIT-green.svg
-   :alt: MIT License
+.. .. image:: https://img.shields.io/badge/license-MIT-green.svg
+..    :alt: MIT License
 
 **SysSimX** is a free and open-source Python library for heterogeneous system co-simulation.
 It lets you build multi-physics systems by connecting models from different environments, including:
@@ -115,6 +115,7 @@ Contents
    api/system
    api/algorithms
    api/utilities
+   api/viz
 
 .. toctree::
    :maxdepth: 2

@@ -22,5 +22,6 @@ tbd
    :numbered:
 
    simple_coupled
+   strongly_coupled
    simple_coupled_hybrid
 

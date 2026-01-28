@@ -1,7 +1,4 @@
-"""
-Test components for MultiComponent unit tests.
-Simple mock components that implement the CoSimComponent interface.
-"""
+"""Test components for MultiComponent unit tests."""
 
 from typing import Any
 

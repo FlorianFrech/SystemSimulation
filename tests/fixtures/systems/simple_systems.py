@@ -3,7 +3,14 @@ Factory functions for creating test systems with mock components.
 """
 
 from syssimx.system import Connection, System
-from tests.fixtures.components import IntegratorComponent, SimpleGain
+from tests.fixtures.components import (
+    ConstantSource,
+    GainComponent,
+    IntegratorComponent,
+    SimpleGain,
+    Subtractor,
+    TorqueSource,
+)
 
 
 def create_two_component_system(
@@ -143,3 +150,61 @@ def create_algebraic_loop_system() -> tuple[System, SimpleGain, SimpleGain]:
     sys.add_connection(conn2)
 
     return sys, gain_a, gain_b
+
+
+def create_visualizer_continuous_system() -> tuple[System, dict[str, object]]:
+    """
+    Create a continuous system with grouped components, direct feedthrough,
+    multi-input ports, and a unit-labeled edge (no algebraic loops).
+
+    Structure:
+        Reference sources -> Subtractor -> Gain -> Integrator (ungrouped)
+        TorqueSource -> GainComponent (unitful edge)
+
+    Returns:
+        Tuple of (system, components dict)
+    """
+    sys = System(name="VisualizerContinuous")
+
+    # Grouped reference sources
+    ref = ConstantSource(name="Ref", value=1.0)
+    ref.group = "Reference"
+    bias = ConstantSource(name="Bias", value=-0.2)
+    bias.group = "Reference"
+
+    # Control path with direct feedthrough and multiple inputs
+    error = Subtractor(name="Error")
+    error.group = "Control"
+    gain = SimpleGain(name="Gain", gain=2.0)
+    gain.group = "Control"
+
+    # Plant component left ungrouped to exercise ungrouped rendering
+    plant = IntegratorComponent(name="Plant", x0=0.0)
+
+    # Unitful edge for label rendering
+    torque = TorqueSource(name="Torque", torque=1.0)
+    torque.group = "Actuator"
+    torque_gain = GainComponent(name="TorqueToSpeed", gain=1.0)
+    torque_gain.group = "Plant"
+
+    for comp in (ref, bias, error, gain, plant, torque, torque_gain):
+        sys.add_component(comp)
+
+    # Reference path
+    sys.add_connection(Connection("Ref", "y", "Error", "pos"))
+    sys.add_connection(Connection("Bias", "y", "Error", "neg"))
+    sys.add_connection(Connection("Error", "diff", "Gain", "u"))
+    sys.add_connection(Connection("Gain", "y", "Plant", "u"))
+
+    # Unitful edge
+    sys.add_connection(Connection("Torque", "y", "TorqueToSpeed", "u"))
+
+    return sys, {
+        "ref": ref,
+        "bias": bias,
+        "error": error,
+        "gain": gain,
+        "plant": plant,
+        "torque": torque,
+        "torque_gain": torque_gain,
+    }
