@@ -91,6 +91,12 @@ class OpenSimPendulum(OpenSimComponent):
         self.coord: osim.Coordinate | None = None
         self.actuator: osim.CoordinateActuator | None = None
 
+        # Macro step history for state synchronization
+        self._curr_macro_state = None
+        self._prev_macro_state = None
+        self._prev_macro_dt = None
+        self._prev_macro_t = None
+
     # ----------------------------------------------------------------------------
     # Initialization method
     # ----------------------------------------------------------------------------
@@ -108,6 +114,13 @@ class OpenSimPendulum(OpenSimComponent):
 
         self.realize()
         self._update_output_states(None)
+    
+    def initialize(self, t0: float):
+        super().initialize(t0)
+        self._curr_macro_state = self.get_state()
+        self._prev_macro_state = None
+        self._prev_macro_dt = None
+        self._prev_macro_t = t0
 
     # ----------------------------------------------------------------------------
     # Initialization helper - build the OpenSim model
@@ -359,6 +372,14 @@ class OpenSimPendulum(OpenSimComponent):
             # Realize after integration
             self.realize()
             t_current = next_t
+    
+    def do_step(self, t, dt):
+        super().do_step(t, dt)
+
+        self._prev_macro_state = self._curr_macro_state
+        self._curr_macro_state = self.get_state()
+        self._prev_macro_dt = dt
+        self._prev_macro_t = t
 
     # ----------------------------------------------------------------------------
     # Input/output methods
@@ -402,6 +423,14 @@ class OpenSimPendulum(OpenSimComponent):
             for out_port in self.outputs.values():
                 if out_port.spec.type == PortType.EVENT:
                     out_port.set(False, t=t)
+    
+    def get_macro_history(self) -> dict[str, Any]:
+        return {
+            "current": self._curr_macro_state or self.get_state(),
+            "previous": self._prev_macro_state,
+            "dt": self._prev_macro_dt,
+            "t": self._prev_macro_t,
+        }
 
     # ----------------------------------------------------------------------------
     # Reset method

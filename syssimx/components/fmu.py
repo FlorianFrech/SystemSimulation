@@ -12,16 +12,31 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from fmpy import extract, read_model_description
-from fmpy.fmi2 import FMU2Slave
-from fmpy.model_description import (
-    ModelDescription,
-    ModelVariable,
-)  # ScalarVariable is ModelVariable in newer fmpy versions
-
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec, PortType
 from ..utilities.units import QuantityClass, QuantityType, to_pint_unit
+
+_FMPY_IMPORT_ERROR: ModuleNotFoundError | None = None
+
+try:
+    from fmpy import extract, read_model_description
+    from fmpy.fmi2 import FMU2Slave
+    from fmpy.model_description import ModelDescription, ModelVariable
+except ModuleNotFoundError as e:
+    extract = None  # type: ignore[assignment]
+    read_model_description = None  # type: ignore[assignment]
+    FMU2Slave = None  # type: ignore[assignment]
+    ModelDescription = None  # type: ignore[assignment]
+    ModelVariable = None  # type: ignore[assignment]
+    _FMPY_IMPORT_ERROR = e
+
+
+def _require_fmpy() -> None:
+    if _FMPY_IMPORT_ERROR is not None:
+        raise ModuleNotFoundError(
+            "Optional dependency 'fmpy' is required for FMUComponent. "
+            "Install with: pip install syssimx[fmu] (or pip install fmpy)."
+        ) from _FMPY_IMPORT_ERROR
 
 
 # ----------------------------------------------------------------------------
@@ -70,6 +85,7 @@ class FMUComponent(CoSimComponent):
             RuntimeError: If the FMU is not a co-simulation FMU.
             NotImplementedError: If the FMU uses an unsupported FMI version.
         """
+        _require_fmpy()
         super().__init__(name=name, group=group)
         self._path = str(Path(fmu_path).resolve())
         self._md = read_model_description(self._path)

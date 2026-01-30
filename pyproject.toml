@@ -71,7 +71,7 @@ dev = [
 
 # Complete installation with all features
 all = [
-    "syssimx[fmi,fem,opensim,viz]",
+    "syssimx[fmu,fem,opensim,viz]",
 ]
 
 # Complete development environment
@@ -115,6 +115,7 @@ markers = [
     "fmu: Tests requiring FMU files",
     "fem: Tests requiring NGSolve/FEM",
     "opensim: Tests requiring OpenSim",
+    "requires_fmi: tests that require fmpy / FMI stack",
 ]
 filterwarnings = [
     "error",

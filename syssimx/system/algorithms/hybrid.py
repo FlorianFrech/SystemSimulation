@@ -76,7 +76,7 @@ class HybridAlgorithm(Algorithm):
         self.tol_value: float = 1e-6
         self.max_iter: int = 50
         self.sign_tolerance: float = 1e-10
-        self.tol_time: float = 1e-6
+        self.tol_time: float = 1e-8
         self.max_microsteps: int = 100
         self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
         self.verbose: bool = True
@@ -417,6 +417,7 @@ class HybridAlgorithm(Algorithm):
 
         Returns the located event time and the list of (component name, event name) tuples.
         """
+        self._log("Starting Event Localization ...")
         # 1) Initialize bisection boundaries
         left = t_left
         right = t_right
@@ -479,6 +480,14 @@ class HybridAlgorithm(Algorithm):
                 event_sources, snapshots_left, input_cache, t_left, left
             )
             t_left_ref = left
+            self._log(f"Updated left indicators at t_left = {left:.8f} after narrowing with hints.")
+
+        indicators_right_vals = self._evaluate_indicators_at(
+            event_sources, snapshots_left, input_cache, t_left, right
+        )
+
+        self._log(f"Initial Indicators at Left (t={left:.8f}): {indicators_left_vals}")
+        self._log(f"Initial Indicators at Right (t={right:.8f}): {indicators_right_vals}")
 
         # 6) Working snapshots - start from t_left_ref
         working_snapshots = {}
@@ -491,6 +500,7 @@ class HybridAlgorithm(Algorithm):
                 comp._update_output_states()
             working_snapshots[comp.name] = comp.snapshot_state()
 
+        self._log("Entering Bisection Loop ...")
         # 7) Bisection loop
         for iteration in range(self.max_iter):
             # a) Check termination: interval width
@@ -500,16 +510,23 @@ class HybridAlgorithm(Algorithm):
 
             # b) Bisect the interval
             mid = 0.5 * (left + right)
+            self._log(
+                f"Iteration {iteration + 1}: "
+                f"Interval = [{left:.8f}, {right:.8f}], Mid = {mid:.8f}\n"
+            )
 
             # c) Evaluate indicators at midpoint (with frozen inputs from t_left_ref)
             indicators_mid = self._evaluate_indicators_at(
                 event_sources, working_snapshots, input_cache, t_left_ref, mid
             )
+            self._log(f"Indicators at Mid (t={mid:.8f}): {indicators_mid}")
 
             # d) Detect crossings in [left, mid]
             events_left_interval = self._detect_crossing_between(
                 event_sources, indicators_left_vals, indicators_mid
             )
+
+            self._log(f"Events in [left, mid]: {events_left_interval}")
 
             # e) Check if we found exact crossing at midpoint
             if len(events_left_interval) == 1:

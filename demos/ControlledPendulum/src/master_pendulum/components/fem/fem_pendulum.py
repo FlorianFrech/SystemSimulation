@@ -411,6 +411,53 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     # State methods for setting and getting simulation state
     # ----------------------------------------------------------------------------
+    def _apply_rigid_state_to_fields(self, state: dict[str, Any], target: str) -> None:
+        # target: "current" or "old"
+        theta = state.get("q", {}).get("value", 0.0)
+        omega = state.get("omega", {}).get("value", 0.0)
+        alpha = state.get("alpha", {}).get("value", None)
+
+        c, s = np.cos(theta), np.sin(theta)
+        r0 = CF((c * self._X_rel[0] - s * self._X_rel[1], s * self._X_rel[0] + c * self._X_rel[1]))
+        u0 = CF((r0[0] - self._X_rel[0], r0[1] - self._X_rel[1]))
+        v0 = CF((-omega * r0[1], omega * r0[0]))
+
+        if alpha is None:
+            torque_drive = self._get_applied_drive_torque() if "torque" in state else 0.0
+            torque_gravity = self._gravity_torque(theta)
+            alpha = (torque_drive - torque_gravity) / self.inertia
+
+        a0 = CF((-alpha * r0[1], alpha * r0[0]))
+
+        if target == "current":
+            self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
+        else:
+            self._gf_uold.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_vold.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
+            self._gf_aold.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
+
+    def set_state_with_history(
+        self,
+        current_state: dict[str, Any],
+        previous_state: dict[str, Any] | None,
+        dt: float | None,
+        t: float,
+    ) -> None:
+        self.set_state(current_state, t)
+
+        if previous_state is not None:
+            self._apply_rigid_state_to_fields(previous_state, target="old")
+        else:
+            # fallback: old == current
+            self._gf_uold.vec[:] = self._gf_u.vec
+            self._gf_vold.vec[:] = self._gf_v.vec
+            self._gf_aold.vec[:] = self._gf_a.vec
+
+        if dt is not None:
+            self.tau.Set(dt)
+
     def set_state(self, state: dict[str, Any], t: float):
         """
         Reset and initialize the FEM pendulum state from a reference rigid-body state.
@@ -422,10 +469,6 @@ class FEMPendulum(FEMComponent):
             if hasattr(theta, "magnitude"):
                 theta = theta.magnitude
             c, s = np.cos(theta), np.sin(theta)
-            # rotated radius r0 = R(theta) * (X - P)
-            r0 = CF(
-                (c * self._X_rel[0] - s * self._X_rel[1], s * self._X_rel[0] + c * self._X_rel[1])
-            )
             # rotated radius r0 = R(theta) * (X - P)
             r0 = CF(
                 (c * self._X_rel[0] - s * self._X_rel[1], s * self._X_rel[0] + c * self._X_rel[1])
@@ -593,6 +636,7 @@ class FEMPendulum(FEMComponent):
         with TaskManager():
             while t_current < t_end - 1e-12:
                 tau = min(effective_dt, t_end - t_current)
+                self.tau.Set(tau)
 
                 # Time step update
                 self._gf_uold.vec[:] = self._gf_u.vec
@@ -672,9 +716,9 @@ class FEMPendulum(FEMComponent):
 
                 if self.anim_params.animate:
                     self.scene.Redraw()
-                self._update_output_states(t)
+                self._update_output_states(t_current)
 
-                # self._record_outputs(t)
+                self._record_outputs(t_current)
                 self.update_monitoring()
 
     # ----------------------------------------------------------------------------

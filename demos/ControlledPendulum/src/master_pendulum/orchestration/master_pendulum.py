@@ -118,17 +118,12 @@ class MasterPendulum(MultiComponent):
         # Set active component and unify ports
         self.active_comp = self.models[self.active_mode]
         self.direct_feedthrough = self.active_comp.direct_feedthrough
-        #self._detect_direct_feedthrough()
 
         # Configure mode selector based on simulation type
         if self._with_contact:
             self.mode_selector = self._gap_based_mode_selector
         else:
             self.mode_selector = self._time_based_mode_selector
-
-        # Setup monitoring interface
-        # self.setup_monitoring()
-        # self.display_monitoring()
 
     def _sync_parameters_from_fem(self) -> None:
         """Synchronize parameters from initialized FEM to other models."""
@@ -138,7 +133,7 @@ class MasterPendulum(MultiComponent):
         # Extract computed parameters from FEM
         q0 = np.deg2rad(self.fem.init_params.angular_position_deg)
         omega0 = self.fem.init_params.angular_velocity
-        use_gravity = self.fem._use_gravity
+        self.use_gravity = self.fem._use_gravity
         length = self.fem._equivalent_length
         inertia = self.fem.inertia
         mass = self.fem.mass
@@ -150,17 +145,20 @@ class MasterPendulum(MultiComponent):
             self.opensim.parameters["Model"]["mass"] = mass
             self.opensim.parameters["Model"]["length"] = length
             self.opensim.parameters["Model"]["inertia"] = inertia - mass * length**2
-            self.opensim._use_gravity = use_gravity
+            self.opensim._use_gravity = self.use_gravity
             self.opensim._with_contact = self._with_contact
 
         # Synchronize to FMU
         if self.fmu is not None:
-            self.fmu.parameters["q0"].start = q0
-            self.fmu.parameters["omega0"].start = omega0
-            self.fmu.parameters["m"].start = mass
-            self.fmu.parameters["L"].start = length
-            self.fmu.parameters["inertia"].start = inertia
-            self.fmu.parameters["g"].start = 9.81 if use_gravity else 0.0
+            parameters = {
+                "q0": q0,
+                "omega0": omega0,
+                "m": mass,
+                "L": length,
+                "inertia": inertia,
+                "g": 9.81 if self.use_gravity else 0.0,
+            }
+            self.fmu.set_parameters(**parameters)
 
     # ----------------------------------------------------------------------------
     # State Adaptation
@@ -178,6 +176,27 @@ class MasterPendulum(MultiComponent):
         if target_mode == "FMU":
             return {"q0": state["q"], "omega0": state["omega"], "torque": state["torque"]}
         return state
+    
+        # support both plain state and macro-history dicts
+        if "current" in state_or_hist:
+            current = state_or_hist["current"]
+            previous = state_or_hist.get("previous")
+            dt = state_or_hist.get("dt")
+        else:
+            current, previous, dt = state_or_hist, None, None
+
+        def adapt_one(s: dict[str, Any] | None):
+            if s is None:
+                return None
+            if target_mode == "FMU":
+                return {"q0": s["q"], "omega0": s["omega"], "torque": s["torque"]}
+            return s
+
+        return {
+            "current": adapt_one(current),
+            "previous": adapt_one(previous),
+            "dt": dt,
+        }
 
     # ----------------------------------------------------------------------------
     # Mode Selection Logic
@@ -202,11 +221,6 @@ class MasterPendulum(MultiComponent):
         current_state = self.get_state()
         q = current_state["q"]["value"]
 
-        # return 'FMU'  # TEMPORARY OVERRIDE FOR TESTING
-
-        if t < 0.7:
-            return "FMU"
-
         # Handle Quantity objects (with units)
         if hasattr(q, "magnitude"):
             q = q.magnitude
@@ -223,7 +237,7 @@ class MasterPendulum(MultiComponent):
         elif q_abs > 5:
             return "OpenSim"
         else:
-            return "FMU"
+            return "FEM"
 
     # ----------------------------------------------------------------------------
     # Update Output States (override to include monitoring and visualization)

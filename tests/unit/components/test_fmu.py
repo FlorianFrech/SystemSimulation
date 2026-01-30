@@ -11,14 +11,17 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from syssimx.components.fmu import (
+pytestmark = pytest.mark.requires_fmi
+fmpy = pytest.importorskip("fmpy")
+
+from syssimx.components.fmu import (  # noqa: E402
     FMUComponent,
     _convert_start_value,
     _in_vr_map_for_type,
     _port_type_from_var,
 )
-from syssimx.core.port import PortType
-from syssimx.utilities.units import Quantity, ureg
+from syssimx.core.port import PortType  # noqa: E402
+from syssimx.utilities.units import Quantity, ureg  # noqa: E402
 
 # ============================================================================
 # Fixtures

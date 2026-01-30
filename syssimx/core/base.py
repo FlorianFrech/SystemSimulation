@@ -1461,9 +1461,10 @@ class CoSimComponent(ABC):
             # Check which outputs changed
             for out_name, orig_value in original_outputs.items():
                 pert_value = perturbed_outputs[out_name]
-                if not np.isclose(
-                    _as_float(orig_value), _as_float(pert_value), rtol=1e-5, atol=1e-5
-                ):
+                if _as_float(orig_value) != _as_float(pert_value):
+                    # not np.isclose(
+                    #     _as_float(orig_value), _as_float(pert_value), rtol=1e-3#, atol=1e-8
+                    # ):
                     feedthrough_map[out_name].add(inp_name)
 
             # Reset input
