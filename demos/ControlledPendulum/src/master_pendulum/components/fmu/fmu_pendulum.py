@@ -1,3 +1,6 @@
+import sys
+PLATFORM = sys.platform
+
 from typing import Any
 
 from pathlib import Path
@@ -16,9 +19,9 @@ class FMUPendulum(FMUComponent):
     def __init__(self, name, group="Pendulum", solver: str = "Euler"):
         # Select FMU based on solver choice
         if solver == "Euler":
-            fmu_path = Path(__file__).parents[4]/ "artifacts/fmus" / "Pendulum_Euler.fmu"
+            fmu_path = Path(__file__).parents[4]/ f"artifacts/fmus/{PLATFORM}" / "Pendulum_Euler.fmu"
         elif solver == "Cvode":
-            fmu_path = Path(__file__).parents[4] / "artifacts/fmus" / "Pendulum_Cvode.fmu"
+            fmu_path = Path(__file__).parents[4] / f"artifacts/fmus/{PLATFORM}" / "Pendulum_Cvode.fmu"
         self.solver = solver
 
         # Initialize base class

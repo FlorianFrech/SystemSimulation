@@ -59,7 +59,7 @@ class MasterPendulum(MultiComponent):
         super().__init__(name=name, initial_mode=initial_mode, group="Plant")
         
         # Instantiate sub-components
-        self.fmu = FMUPendulum(name="FMU_Pendulum")
+        self.fmu = FMUPendulum(name="FMU_Pendulum", solver="Cvode")
         self.fem = FEMPendulum(name="FEM_Pendulum")
         self.opensim = OpenSimPendulum(name="OpenSim_Pendulum")
         self.models.update({
