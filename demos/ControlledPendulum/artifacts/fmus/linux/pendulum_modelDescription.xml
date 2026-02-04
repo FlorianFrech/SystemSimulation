@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+  fmiVersion="2.0"
+  modelName="ControlledPendulum.Pendulum"
+  guid="{c05ccbf6-ca8c-433e-bb3e-029d245768dd}"
+  description=""
+  version=""
+  generationTool="OpenModelica Compiler OpenModelica 1.25.1~2-g175c5c9"
+  generationDateAndTime="2025-11-17T13:55:24Z"
+  variableNamingConvention="structured"
+  numberOfEventIndicators="0">
+  <CoSimulation
+    modelIdentifier="ControlledPendulum_Pendulum"
+    needsExecutionTool="false"
+    canHandleVariableCommunicationStepSize="true"
+    canInterpolateInputs="true"
+    maxOutputDerivativeOrder="1"
+    canRunAsynchronuously = "false"
+    canBeInstantiatedOnlyOncePerProcess="false"
+    canNotUseMemoryManagementFunctions="false"
+    canGetAndSetFMUstate="false"
+    canSerializeFMUstate="false"
+    providesDirectionalDerivative="false">
+    <SourceFiles>
+      <File name="ControlledPendulum_Pendulum.c" />
+      <File name="ControlledPendulum_Pendulum_functions.c" />
+      <File name="ControlledPendulum_Pendulum_records.c" />
+      <File name="ControlledPendulum_Pendulum_01exo.c" />
+      <File name="ControlledPendulum_Pendulum_02nls.c" />
+      <File name="ControlledPendulum_Pendulum_03lsy.c" />
+      <File name="ControlledPendulum_Pendulum_04set.c" />
+      <File name="ControlledPendulum_Pendulum_05evt.c" />
+      <File name="ControlledPendulum_Pendulum_06inz.c" />
+      <File name="ControlledPendulum_Pendulum_07dly.c" />
+      <File name="ControlledPendulum_Pendulum_08bnd.c" />
+      <File name="ControlledPendulum_Pendulum_09alg.c" />
+      <File name="ControlledPendulum_Pendulum_10asr.c" />
+      <File name="ControlledPendulum_Pendulum_11mix.c" />
+      <File name="ControlledPendulum_Pendulum_12jac.c" />
+      <File name="ControlledPendulum_Pendulum_13opt.c" />
+      <File name="ControlledPendulum_Pendulum_14lnz.c" />
+      <File name="ControlledPendulum_Pendulum_15syn.c" />
+      <File name="ControlledPendulum_Pendulum_16dae.c" />
+      <File name="ControlledPendulum_Pendulum_17inl.c" />
+      <File name="ControlledPendulum_Pendulum_18spd.c" />
+      <File name="ControlledPendulum_Pendulum_init_fmu.c" />
+      <File name="ControlledPendulum_Pendulum_FMU.c" />
+      <File name="./gc/memory_pool.c" />
+      <File name="./gc/omc_gc.c" />
+      <File name="./util/base_array.c" />
+      <File name="./util/boolean_array.c" />
+      <File name="./util/context.c" />
+      <File name="./util/division.c" />
+      <File name="./util/doubleEndedList.c" />
+      <File name="./util/generic_array.c" />
+      <File name="./util/index_spec.c" />
+      <File name="./util/integer_array.c" />
+      <File name="./util/list.c" />
+      <File name="./util/modelica_string_lit.c" />
+      <File name="./util/modelica_string.c" />
+      <File name="./util/ModelicaUtilities.c" />
+      <File name="./util/omc_error.c" />
+      <File name="./util/omc_file.c" />
+      <File name="./util/omc_init.c" />
+      <File name="./util/omc_mmap.c" />
+      <File name="./util/omc_msvc.c" />
+      <File name="./util/omc_numbers.c" />
+      <File name="./util/parallel_helper.c" />
+      <File name="./util/rational.c" />
+      <File name="./util/real_array.c" />
+      <File name="./util/ringbuffer.c" />
+      <File name="./util/simulation_options.c" />
+      <File name="./util/string_array.c" />
+      <File name="./util/utility.c" />
+      <File name="./util/varinfo.c" />
+      <File name="./math-support/pivot.c" />
+      <File name="./simulation/jacobian_util.c" />
+      <File name="./simulation/omc_simulation_util.c" />
+      <File name="./simulation/options.c" />
+      <File name="./simulation/simulation_info_json.c" />
+      <File name="./simulation/simulation_omc_assert.c" />
+      <File name="./simulation/solver/delay.c" />
+      <File name="./simulation/solver/fmi_events.c" />
+      <File name="./simulation/solver/model_help.c" />
+      <File name="./simulation/solver/omc_math.c" />
+      <File name="./simulation/solver/spatialDistribution.c" />
+      <File name="./simulation/solver/stateset.c" />
+      <File name="./simulation/solver/synchronous.c" />
+      <File name="./simulation/solver/initialization/initialization.c" />
+      <File name="./meta/meta_modelica_catch.c" />
+      <File name="simulation/solver/cvode_solver.c" />
+      <File name="simulation/solver/sundials_error.c" />
+    </SourceFiles>
+  </CoSimulation>
+  <UnitDefinitions>
+    <Unit name="kg">
+      <BaseUnit kg="1" />
+    </Unit>
+    <Unit name="kg.m2">
+      <BaseUnit m="2" kg="1" />
+    </Unit>
+    <Unit name="m/s2">
+      <BaseUnit m="1" s="-2" />
+    </Unit>
+    <Unit name="m">
+      <BaseUnit m="1" />
+    </Unit>
+    <Unit name="N.m">
+      <BaseUnit m="2" s="-2" kg="1" />
+    </Unit>
+    <Unit name="rad/s2">
+      <BaseUnit s="-2" />
+    </Unit>
+    <Unit name="Hz">
+      <BaseUnit s="-1" />
+    </Unit>
+    <Unit name="s-2">
+      <BaseUnit s="-2" />
+    </Unit>
+    <Unit name="rad">
+      <BaseUnit />
+    </Unit>
+    <Unit name="rad/s">
+      <BaseUnit s="-1" />
+    </Unit>
+  </UnitDefinitions>
+  <LogCategories>
+    <Category name="logEvents" />
+    <Category name="logSingularLinearSystems" />
+    <Category name="logNonlinearSystems" />
+    <Category name="logDynamicStateSelection" />
+    <Category name="logStatusWarning" />
+    <Category name="logStatusDiscard" />
+    <Category name="logStatusError" />
+    <Category name="logStatusFatal" />
+    <Category name="logStatusPending" />
+    <Category name="logAll" />
+    <Category name="logFmi2Call" />
+  </LogCategories>
+  <DefaultExperiment startTime="0.0" stopTime="1.0" tolerance="1e-6" stepSize="0.002"/>
+  <ModelVariables>
+  <!-- Index of variable = "1" -->
+  <ScalarVariable
+    name="_D_outputAlias_omega"
+    valueReference="0"
+    >
+    <Real unit="rad/s"/>
+  </ScalarVariable>
+  <!-- Index of variable = "2" -->
+  <ScalarVariable
+    name="_D_outputAlias_q"
+    valueReference="1"
+    >
+    <Real unit="rad"/>
+  </ScalarVariable>
+  <!-- Index of variable = "3" -->
+  <ScalarVariable
+    name="der(_D_outputAlias_omega)"
+    valueReference="2"
+    >
+    <Real derivative="1" unit="s-2"/>
+  </ScalarVariable>
+  <!-- Index of variable = "4" -->
+  <ScalarVariable
+    name="der(_D_outputAlias_q)"
+    valueReference="3"
+    >
+    <Real derivative="2" unit="Hz"/>
+  </ScalarVariable>
+  <!-- Index of variable = "5" -->
+  <ScalarVariable
+    name="der(_D_outputAlias_alpha)"
+    valueReference="4"
+    >
+    <Real/>
+  </ScalarVariable>
+  <!-- Index of variable = "6" -->
+  <ScalarVariable
+    name="alpha"
+    valueReference="9"
+    causality="output"
+    >
+    <Real unit="rad/s2"/>
+  </ScalarVariable>
+  <!-- Index of variable = "7" -->
+  <ScalarVariable
+    name="omega"
+    valueReference="10"
+    causality="output"
+    >
+    <Real unit="rad/s"/>
+  </ScalarVariable>
+  <!-- Index of variable = "8" -->
+  <ScalarVariable
+    name="q"
+    valueReference="11"
+    causality="output"
+    >
+    <Real unit="rad"/>
+  </ScalarVariable>
+  <!-- Index of variable = "9" -->
+  <ScalarVariable
+    name="torque"
+    valueReference="12"
+    causality="input"
+    >
+    <Real start="0.0" unit="N.m"/>
+  </ScalarVariable>
+  <!-- Index of variable = "10" -->
+  <ScalarVariable
+    name="L"
+    valueReference="13"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="0.6055028481722639" unit="m"/>
+  </ScalarVariable>
+  <!-- Index of variable = "11" -->
+  <ScalarVariable
+    name="g"
+    valueReference="14"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="9.81" unit="m/s2"/>
+  </ScalarVariable>
+  <!-- Index of variable = "12" -->
+  <ScalarVariable
+    name="inertia"
+    valueReference="15"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="18.90035177381065" unit="kg.m2"/>
+  </ScalarVariable>
+  <!-- Index of variable = "13" -->
+  <ScalarVariable
+    name="m"
+    valueReference="16"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="41.70369562497543" unit="kg"/>
+  </ScalarVariable>
+  <!-- Index of variable = "14" -->
+  <ScalarVariable
+    name="omega0"
+    valueReference="17"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="0.0" unit="rad/s"/>
+  </ScalarVariable>
+  <!-- Index of variable = "15" -->
+  <ScalarVariable
+    name="q0"
+    valueReference="18"
+    variability="fixed"
+    causality="parameter"
+    >
+    <Real start="0.0" unit="rad"/>
+  </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="6" dependencies="2 9" dependenciesKind="dependent dependent" />
+      <Unknown index="7" dependencies="1" dependenciesKind="dependent" />
+      <Unknown index="8" dependencies="2" dependenciesKind="dependent" />
+    </Outputs>
+    <Derivatives>
+      <Unknown index="3" dependencies="2 9" dependenciesKind="dependent dependent" />
+      <Unknown index="4" dependencies="1" dependenciesKind="dependent" />
+    </Derivatives>
+    <InitialUnknowns>
+      <Unknown index="1" dependencies="14" dependenciesKind="dependent" />
+      <Unknown index="2" dependencies="15" dependenciesKind="dependent" />
+      <Unknown index="3" dependencies="9 10 11 12 15" dependenciesKind="dependent dependent dependent dependent dependent" />
+      <Unknown index="4" dependencies="14" dependenciesKind="dependent" />
+      <Unknown index="6" dependencies="9 10 11 12 15" dependenciesKind="dependent dependent dependent dependent dependent" />
+      <Unknown index="7" dependencies="14" dependenciesKind="dependent" />
+      <Unknown index="8" dependencies="15" dependenciesKind="dependent" />
+    </InitialUnknowns>
+  </ModelStructure>
+</fmiModelDescription>

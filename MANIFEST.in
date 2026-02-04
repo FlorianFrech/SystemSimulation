@@ -1,0 +1,10 @@
+include LICENSE
+include NOTICE
+include LICENSES.md
+include THIRD_PARTY_LICENSES.MD
+recursive-include LICENSES *.txt
+
+# Avoid shipping build outputs / local artifacts in sdists.
+prune docs/_build
+prune dist
+recursive-exclude syssimx.egg-info *

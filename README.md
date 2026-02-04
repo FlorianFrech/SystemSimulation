@@ -26,26 +26,9 @@ parallel co-simulation.
 - Comprehensive documentation and examples
 - Unit tests to ensure reliability and correctness
 
-## Structure
+## Licensing
 
-```
-SysSimX/
-├── __init__.py
-├── components/             # Component implementations
-│   ├── fmu_comp.py         # FMU co-simulation wrapper
-│   ├── fem_comp.py         # FEM component base class
-│   └── opensim_comp.py     # OpenSim component wrapper
-├── core/                   # Core abstractions and interfaces
-│   ├── base.py             # CoSimComponent abstract base class
-│   ├── port.py             # PortSpec and PortState definitions
-│   └── multi_comp.py       # MultiComponent for hybrid simulations
-├── system/                 # System-level orchestration
-│   ├── system.py           # System class for component integration
-│   ├── connection.py       # Connection dataclass
-├── ui/                     # User interface components
-├── utilities/              # Helper functions and tools
-│   ├── units.py            # Unit handling with Pint
-│   ├── update_fmus.py      # FMU generation utilities
-│   └── results_opensim.py  # OpenSim result export
-└── viz/                    # Visualization tools
-    └── sysgraph.py         # System graph visualizer
+- **Code and notebooks (primary):** MPL-2.0 (`LICENSE`)
+- **Documentation and media:** CC BY 4.0 (`LICENSES/CC-BY-4.0.txt`)
+- **Third-party files:** See `THIRD_PARTY_LICENSES.MD` (notably `examples/opensim/*` contains Apache-2.0
+  material with license headers)

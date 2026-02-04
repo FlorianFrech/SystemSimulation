@@ -21,13 +21,13 @@ _FMPY_IMPORT_ERROR: ModuleNotFoundError | None = None
 try:
     from fmpy import extract, read_model_description
     from fmpy.fmi2 import FMU2Slave
-    from fmpy.model_description import ModelDescription, ModelVariable
+    from fmpy.model_description import ModelDescription, ScalarVariable
 except ModuleNotFoundError as e:
     extract = None  # type: ignore[assignment]
     read_model_description = None  # type: ignore[assignment]
     FMU2Slave = None  # type: ignore[assignment]
     ModelDescription = None  # type: ignore[assignment]
-    ModelVariable = None  # type: ignore[assignment]
+    ScalarVariable = None  # type: ignore[assignment]
     _FMPY_IMPORT_ERROR = e
 
 
@@ -53,7 +53,7 @@ class FMUComponent(CoSimComponent):
     state: dict[str, Any]
 
     _md: ModelDescription
-    _md_vars: dict[str, ModelVariable]
+    _md_vars: dict[str, ScalarVariable]
     _instance: FMU2Slave | None
     _unzipdir: str | None
 
@@ -705,11 +705,11 @@ class FMUComponent(CoSimComponent):
 # ----------------------------------------------------------------------------
 # Helper functions
 # ----------------------------------------------------------------------------
-def _port_type_from_var(var: ModelVariable) -> PortType:
-    """Determine PortType from ModelVariable type.
+def _port_type_from_var(var: ScalarVariable) -> PortType:
+    """Determine PortType from ScalarVariable type.
 
     Args:
-        var (ModelVariable): The model variable to determine the port type for.
+        var (ScalarVariable): The model variable to determine the port type for.
 
     Returns:
         PortType: The corresponding PortType.

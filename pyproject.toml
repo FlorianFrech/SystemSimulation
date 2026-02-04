@@ -4,13 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syssimx"
-version = "0.1.0"
-description = "A Python framework for heterogeneous system co-simulation (Modelica FMUs, OpenSim, FEM)."
-readme = "README.md"
+version = "0.0.1"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pint",
+    "networkx",
+    "matplotlib",        # Used in demos and plotting
+    "ipywidgets",        # Used in UI components
+    "traitlets",         # Used in PendulumMonitoringState
+]
 requires-python = ">=3.11"
-license = "MIT"
 authors = [
     { name = "Florian Frech", email = "florianfrech@outlook.de" }
+]
+description = "A Python framework for heterogeneous system co-simulation (Modelica FMUs, OpenSim, FEM)."
+readme = "README.md"
+license = "MPL-2.0"
+license-files = [
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_LICENSES.MD",
+    "LICENSES/*.txt",
 ]
 keywords = ["simulation", "co-simulation", "FMU", "FEM", "OpenSim", "Modelica"]
 classifiers = [
@@ -21,38 +36,23 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 
-dependencies = [
-    "numpy>=1.24.0",
-    "scipy>=1.10.0",
-    "pint>=0.20.0",
-    "networkx>=3.0",
-    "matplotlib>=3.7.0",        # Used in demos and plotting
-    "ipywidgets>=8.0.0",        # Used in UI components
-    "traitlets>=5.9.0",         # Used in PendulumMonitoringState
-]
-
 [project.optional-dependencies]
 # FMI/Modelica support
 fmu = [
-    "fmpy>=0.3.0",
-    "OMPython>=3.4.0",          # For OMPython examples
+    "fmpy",
+    "OMPython",          # For OMPython examples
 ]
 
 # FEM support (NGSolve)
 fem = [
-    "ngsolve>=6.2.0",
-    "netgen>=6.2.0",            # NGSolve dependency
-]
-
-# OpenSim support
-opensim = [
-    "opensim==4.5.0",           # Exact version pin for compatibility
+    "ngsolve",
+    "webgui_jupyter_widgets",
 ]
 
 # Visualization
 viz = [
-    "graphviz>=0.20.0",         # For system graph visualization
-    "pydot>=1.4.0",             # Alternative graph rendering
+    "graphviz",         # For system graph visualization
+    "pydot",            # Alternative graph rendering
 ]
 
 # Development tools
@@ -62,16 +62,18 @@ dev = [
     "mypy>=1.5.0",
     "ruff>=0.1.0",
     "ipython>=8.12.0",
+    "ipykernel>=6.25.0",
     "jupyter>=1.0.0",
     "jupyterlab>=4.0.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=2.0.0",
+    "sphinx-book-theme>=1.1.0",
     "myst-nb>=1.1.0",
 ]
 
 # Complete installation with all features
 all = [
-    "syssimx[fmu,fem,opensim,viz]",
+    "syssimx[fmu,fem,viz]",
 ]
 
 # Complete development environment
@@ -89,6 +91,8 @@ Issues = "https://github.com/FlorianFrech/SystemSimulation/issues"
 where = ["."]
 include = ["syssimx*"]  # Match actual package name (lowercase)
 exclude = ["tests*", "demos*", "examples*", "docs*"]
+
+[tool.setuptools]
 
 [tool.setuptools.package-data]
 syssimx = [

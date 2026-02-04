@@ -42,6 +42,7 @@ myst_enable_extensions = [
     "dollarmath",  # enables $...$ and $$...$$
     "amsmath",     # enables \begin{align}...\end{align} style environments
     "colon_fence", # generally useful for fenced directives in Markdown
+    "deflist",     # enables definition lists
 ]
 
 # Optional: allow $$...$$ inside text without extra blank lines
@@ -56,6 +57,7 @@ autodoc_default_options = {
     "member-order": "bysource",
 }
 autodoc_typehints = "description"
+autodoc_class_signature = "separated"
 autodoc_mock_imports = ["fmpy", "ngsolve", "netgen", "opensim", "OMPython"]
 
 # Suppress ambiguous cross-reference warnings for re-exported classes
