@@ -177,7 +177,8 @@ class SimulationParameters:
         max_it (int): Maximum number of solver iterations.
         use_gravity (bool): Whether to include gravity in the simulation.
         with_contact (bool): Whether to enable contact modeling.
-        torque_traction_distribution (str): Distribution type for torque traction ('linear', 'bipolar').
+        torque_traction_distribution (str): Distribution type for torque traction
+            ('linear', 'bipolar' aka 'dipole').
     """
 
     def __init__(

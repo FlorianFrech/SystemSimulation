@@ -11,3 +11,4 @@ FEM
    :numbered:
 
    fem/01_fem_pendulum_basics
+   fem/02_fem_pendulum_torque

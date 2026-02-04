@@ -292,32 +292,42 @@ class FEMPendulum(FEMComponent):
         Initialize torque control system using distributed traction on rotation boundary.
         """
         # --- Geometric quantities ---
-        reference_normal = specialcf.normal(2)  # Normal vector in reference configuration
-        radius_vector = self._X_rel  # Position vector from pivot to boundary points
+        N_ref = specialcf.normal(2)  # outward unit normal in reference configuration (on 'rotation')
+        r_ref = self._X_rel  # position vector from pivot to boundary points (reference)
 
-        # Deformation gradient and surface jacobian for current configuration
-        deformation_gradient = Id(2) + Grad(self._u).Trace()
-        cofactor_matrix = Cof(deformation_gradient)
+        # Deformation gradient restricted to the boundary.
+        # NOTE: In NGSolve, `.Trace()` here means "restrict to the boundary", not the matrix trace.
+        F = Id(2) + Grad(self._u).Trace()
 
-        # Current surface normal (unnormalized)
-        current_normal_unnorm = cofactor_matrix * reference_normal
-        surface_jacobian = Norm(current_normal_unnorm)
-        current_normal_unit = current_normal_unnorm / IfPos(surface_jacobian, surface_jacobian, 1)
+        # Cofactor (adjugate) matrix: cof(F) = det(F) * F^{-T}.
+        # Used for the surface Piola transform: n * J_s = cof(F) * N.
+        cofF = Cof(F)
+
+        # Current surface normal (unnormalized): n * J_s
+        nJ_s = cofF * N_ref
+        J_s = Norm(nJ_s)
+        n_cur = nJ_s / IfPos(J_s, J_s, 1)
 
         # Cross product for torque calculation: r × n (2D cross product gives scalar)
-        self._torque_moment_arm = -(
-            radius_vector[0] * reference_normal[1] - radius_vector[1] * reference_normal[0]
-        )
+        self._torque_moment_arm = -(r_ref[0] * N_ref[1] - r_ref[1] * N_ref[0])
 
         self._torque_drive_parameter = Parameter(0.0)
 
         distribution = self.sim_params.torque_traction_distribution
 
-        if distribution == "linear":
-            # Linear weight
-            self._weight = x
+        rotation_edge_length = Integrate(1, self._mesh, definedon=self._mesh.Boundaries("rotation"))
 
-        if distribution == "bipolar":
+        if distribution == "linear":
+            # Linear weight (robustly enforced to be zero-mean -> pure torque, no net force)
+            hinge_radius = max(1e-12, float(self.geom_params.r_rod))
+            weight_raw = x / hinge_radius
+            weight_mean = (
+                Integrate(weight_raw, self._mesh, definedon=self._mesh.Boundaries("rotation"))
+                / rotation_edge_length
+            )
+            self._weight = weight_raw - weight_mean
+
+        elif distribution in ("bipolar", "dipole", "antisymmetric"):
             # Create localized weight function near the rotation axis
             hinge_radius = self.geom_params.r_rod
             smoothing_width = max(1e-9, 0.5 * hinge_radius)
@@ -337,9 +347,6 @@ class FEMPendulum(FEMComponent):
             weight_difference = weight_positive_side - weight_negative_side
 
             # Remove mean to ensure ∫ w dA = 0 (no net force)
-            rotation_edge_length = Integrate(
-                1, self._mesh, definedon=self._mesh.Boundaries("rotation")
-            )
             weight_mean = (
                 Integrate(
                     weight_difference, self._mesh, definedon=self._mesh.Boundaries("rotation")
@@ -347,12 +354,17 @@ class FEMPendulum(FEMComponent):
                 / rotation_edge_length
             )
             self._weight = weight_difference - weight_mean
+        else:
+            raise ValueError(
+                f"Unknown torque traction distribution: {distribution!r}. "
+                "Expected 'linear' or 'bipolar' (aka 'dipole')."
+            )
 
         # Traction amplitude scaled by zero-mean weight distribution
         self._traction_amplitude = self._torque_drive_parameter * self._weight
 
         # Applied traction in current configuration (includes surface jacobian)
-        self._applied_traction = self._traction_amplitude * current_normal_unit * surface_jacobian
+        self._applied_traction = self._traction_amplitude * n_cur * J_s
 
         # --- Effective moment arm calculation ---
         # Compute the effective lever arm for torque-to-parameter conversion
