@@ -29,3 +29,5 @@ htmlcov/
 examples/FMI/FMUs
 syssimx.egg-info/
 *.html
+
+*.ipynb_checkpoints/
