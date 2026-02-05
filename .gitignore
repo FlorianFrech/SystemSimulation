@@ -23,6 +23,9 @@ VenvSysSimX/
 docs/_build/*
 *.html
 
+# Result Artifacts 
+demos/ControlledPendulum/artifacts/results/*
+
 *.vtu
 .covergage
 htmlcov/
