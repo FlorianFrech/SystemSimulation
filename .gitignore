@@ -34,3 +34,4 @@ syssimx.egg-info/
 *.html
 
 *.ipynb_checkpoints/
+*.log

@@ -19,3 +19,15 @@ FEM
    fem/01_fem_pendulum_basics
    fem/02_fem_pendulum_torque
    fem/03_fem_pendulum_contact
+
+
+OpenSim
+--------
+
+.. toctree::
+   :maxdepth: 1
+   :numbered:
+
+   opensim/01_opensim_pendulum_basics
+   opensim/02_opensim_pendulum_torque
+   opensim/03_opensim_pendulum_contact
