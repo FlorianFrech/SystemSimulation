@@ -1,2 +1,0 @@
-package ElectricFilterSystem
-end ElectricFilterSystem;
