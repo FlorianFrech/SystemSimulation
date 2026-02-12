@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syssimx"
-version = "0.0.1"
+dynamic = ["version"]
 dependencies = [
     "numpy",
     "scipy",
@@ -21,7 +21,7 @@ authors = [
 ]
 description = "A Python framework for heterogeneous system co-simulation (Modelica FMUs, OpenSim, FEM)."
 readme = "README.md"
-license = "MPL-2.0"
+license = "MIT"
 license-files = [
     "LICENSE",
     "NOTICE",
@@ -94,6 +94,9 @@ include = ["syssimx*"]  # Match actual package name (lowercase)
 exclude = ["tests*", "demos*", "examples*", "docs*"]
 
 [tool.setuptools]
+
+[tool.setuptools.dynamic]
+version = { attr = "syssimx.__version__.__version__" }
 
 [tool.setuptools.package-data]
 syssimx = [

@@ -1,34 +1,154 @@
-# SysSimX: A Framework for System Simulation
+# SysSimX
 
-This repository contains a framework for simulating dynamic systems using Python. It provides tools for defining system components, configuring simulations, and running experiments.
+SysSimX is an open-source Python library for heterogeneous co-simulation.
+It lets you build coupled systems from components with different model representations and simulation backends, then execute them with consistent orchestration logic.
 
-## Main Functionality
+## What SysSimX Provides
 
-1. A graph-based execution engine that exploits FMI 2.0 model structure to derive execution orders, detect algebraic loops, and build SCC-based generations fo
-parallel co-simulation.
+- Graph-based system orchestration with dependency analysis and execution ordering
+- Algebraic loop detection and iterative handling (IJCSA-style workflow)
+- Multiple master algorithms:
+  - Jacobi (parallel-style updates)
+  - Gauss-Seidel (sequential updates with fresh values)
+  - Hybrid (event-aware stepping with zero-crossing support)
+- Unit-aware port interfaces and conversion via Pint
+- Reusable component abstractions for:
+  - FMI 2.0 Co-Simulation FMUs
+  - NGSolve-based FEM models
+  - OpenSim models
+  - Custom Python components
 
-2. Adaptations of Jacobi, Gauss-Seidel and interface-Jacobian co-simulation under FMI 2.0 co-simulation constraints (no rollback, step-mode APIs).
+## Installation
 
-3. A multi-representation master model concept (FEM, OpenSim, equation-based) with parameter and state synchronization to validate heterogeneous integration.
+### Basic install
 
-4. A Python framework (SysSimX) with reusable component abstractions for FMUs, OpenSim models, and FEM models.
+```bash
+pip install syssimx
+```
+
+### Optional extras
+
+```bash
+pip install "syssimx[fmu]"
+pip install "syssimx[fem]"
+pip install "syssimx[viz]"
+pip install "syssimx[dev]"
+pip install "syssimx[all]"
+pip install "syssimx[full]"
+```
+
+### OpenSim note (important)
+
+OpenSim is conda-only and ABI-coupled to specific NumPy/SciPy builds. Recommended order:
+
+1. Install `syssimx` with `pip`.
+2. Install OpenSim with `conda` using ABI-compatible NumPy/SciPy pins.
+
+See the full installation guide:
+- `docs/getting_started/installation.ipynb`
+
+## Quickstart Example
+
+The example below creates a simple linear source feeding an integrator.
+
+```python
+import matplotlib.pyplot as plt
+
+from syssimx import CoSimComponent, Connection, System
+from syssimx.core import PortSpec, PortType
 
 
-## Features
-- Modular component design
-- Configuration management using YAML files
-- Support for various numerical integration methods
-- Logging and visualization of simulation results
-- Integration with external simulation tools (e.g., OpenSim, FMUs)
-- Example demos for controlled pendulum systems
-- Hybrid simulation capabilities combining different modeling approaches
-- Easy-to-use API for setting up and running simulations
-- Comprehensive documentation and examples
-- Unit tests to ensure reliability and correctness
+class LinearSource(CoSimComponent):
+    def __init__(self, name: str, a: float = 1.0, b: float = 0.0):
+        super().__init__(name, group="Source")
+        self.a = a
+        self.b = b
+        self.output_specs.update({
+            "y": PortSpec(name="y", type=PortType.REAL, direction="out")
+        })
 
-## Licensing
+    def _initialize_component(self, t0: float) -> None:
+        pass
 
-- **Code and notebooks (primary):** MPL-2.0 (`LICENSE`)
-- **Documentation and media:** CC BY 4.0 (`LICENSES/CC-BY-4.0.txt`)
-- **Third-party files:** See `THIRD_PARTY_LICENSES.MD` (notably `examples/opensim/*` contains Apache-2.0
-  material with license headers)
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        pass
+
+    def _update_output_states(self, t: float | None = None, event_names=None):
+        t_now = 0.0 if t is None else t
+        self.outputs["y"].set(self.a * t_now + self.b, t)
+
+
+class Integrator(CoSimComponent):
+    def __init__(self, name: str, x0: float = 0.0):
+        super().__init__(name, group="Integrator")
+        self.x0 = x0
+        self.input_specs.update({
+            "u": PortSpec(name="u", type=PortType.REAL, direction="in")
+        })
+        self.output_specs.update({
+            "y": PortSpec(name="y", type=PortType.REAL, direction="out")
+        })
+
+    def _initialize_component(self, t0: float) -> None:
+        self.x = self.x0
+        self.outputs["y"].set(self.x, t0)
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        u = self.inputs["u"].get()
+        self.x = self.x + dt * float(u)
+
+    def _update_output_states(self, t: float | None = None, event_names=None):
+        self.outputs["y"].set(self.x, t)
+
+
+source = LinearSource(name="LinearSource", a=1.0, b=0.0)
+integrator = Integrator(name="Integrator", x0=0.0)
+
+system = System(name="QuickstartSystem")
+system.add_component(source)
+system.add_component(integrator)
+system.add_connection(Connection(
+    src_comp="LinearSource", src_port="y",
+    dst_comp="Integrator", dst_port="u",
+))
+
+system.initialize(t0=0.0)
+system.run(t0=0.0, tf=5.0, dt=0.1)
+
+history = system.get_history()
+t_vals, data = history["Integrator"]
+y_vals = data["y"]
+
+plt.plot(t_vals, y_vals)
+plt.xlabel("Time (s)")
+plt.ylabel("Integrator output")
+plt.title("SysSimX Quickstart")
+plt.grid(True)
+plt.show()
+```
+
+For the complete walkthrough, see:
+- `docs/getting_started/quickstart.ipynb`
+
+## Documentation
+
+- Documentation entry: `docs/index.rst`
+- Installation guide: `docs/getting_started/installation.ipynb`
+- Core concepts: `docs/getting_started/concepts.ipynb`
+- Quickstart tutorial: `docs/getting_started/quickstart.ipynb`
+- API docs: `docs/api/`
+- Tutorials:
+  - `docs/tutorials/beginners/`
+  - `docs/tutorials/intermediate/`
+  - `docs/tutorials/advanced/`
+  - `docs/tutorials/tool_integration/`
+  - `docs/tutorials/case_study/`
+
+## Project Status
+
+SysSimX is under active development. APIs and behavior may evolve as algorithms and component integrations are extended.
+
+## License
+
+- Project license: MIT (`LICENSE`)
+- Third-party dependencies and attributions: `THIRD_PARTY_LICENSES.MD`

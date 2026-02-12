@@ -1,46 +1,59 @@
+# Workspace / editor
 SysSimX.code-workspace
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# Virtual Environment
-VenvSysSimX/
-
-# Visual Studio Code
 .vscode/
+.idea/
 
-# Pytest Cache
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+VenvSysSimX/
+EnvSysSimX/
+
+# Tooling caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# FMU logs
+# Coverage / test reports
+.coverage
+.coverage.*
+htmlcov/
+
+# Build / packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Logs / runtime outputs
+*.log
 *_log.txt
 
-# Documentation
-docs/_build/*
-*.html
-
-# Result Artifacts 
-demos/ControlledPendulum/artifacts/results/*
-
-*.vtu
-.covergage
-htmlcov/
-examples/FMI/FMUs
-syssimx.egg-info/
-*.html
-
+# Jupyter
 *.ipynb_checkpoints/
-*.log
+
+# Sphinx documentation build artifacts
+docs/_build/
+
+# Project-specific generated artifacts
+demos/ControlledPendulum/artifacts/results/
 docs/tutorials/tool_integration/modelica/cvode_new/
 docs/tutorials/tool_integration/modelica/euler_new/
 docs/tutorials/tool_integration/modelica/cvode_old/
 docs/tutorials/tool_integration/modelica/euler_old/
-system_graph
-system_graph.svg
 docs/tutorials/tool_integration/modelica/*.fmu
 docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.mp4
 docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.gif
+system_graph
+system_graph.svg
+*.vtu

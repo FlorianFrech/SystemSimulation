@@ -5,12 +5,7 @@ Thanks for considering a contribution!
 ## License for contributions
 
 By submitting a pull request, you agree that your contribution is licensed under the same terms as
-the part of the repository you are modifying (see `LICENSES.md`).
-
-In practice:
-
-- Contributions to original **source code / notebooks** are under **MPL-2.0**.
-- Contributions to original **documentation / media** are under **CC BY 4.0**.
+this repository's license (**MIT**, see `LICENSE`).
 
 ## Jupyter Widget State For Docs (JupyterLab Required)
 

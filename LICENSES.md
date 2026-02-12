@@ -1,21 +1,10 @@
 # Licensing (overview)
 
-This is a **mixed-license** repository.
+This repository is licensed under the **MIT License**. See `LICENSE`.
 
-## Primary license for original software
+## Third-party software
 
-The **source code** under the directory `syssimx` and **notebooks** in this
-repository are licensed under the **Mozilla Public License 2.0 (MPL-2.0)**. See `LICENSE`.
+This project depends on third-party libraries with their own licenses.
+See `THIRD_PARTY_LICENSES.MD` for attribution and dependency license notes.
 
-This is the license used for the main `syssimx` pip distribution.
-
-## Documentation and media
-
-Original documentation prose and media (e.g., `*.md`, `*.rst`, `*.svg`, `*.pdf`, `*.png`) are licensed
-under **Creative Commons Attribution 4.0 International (CC BY 4.0)**. See `LICENSES/CC-BY-4.0.txt`.
-
-## Third-party files and dependencies
-
-Some files under `examples/opensim/` are Apache-2.0 licensed and include their own headers. See
-`THIRD_PARTY_LICENSES.MD` for details.
-
+The `LICENSES/` directory contains license texts for third-party software.

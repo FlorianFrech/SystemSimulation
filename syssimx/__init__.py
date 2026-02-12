@@ -31,42 +31,43 @@ See Also:
     - Repository: https://github.com/FlorianFrech/SystemSimulation
 """
 
-from syssimx.__version__ import __version__
-from syssimx.core.base import CoSimComponent
-from syssimx.system import Connection, System
+from .__version__ import __version__, __version_info__
+from .core.base import CoSimComponent
+from .system import Connection, System
 
 __all__ = [
     "CoSimComponent",
     "System",
     "Connection",
     "__version__",
+    "__version_info__",
 ]
 
 # Optional imports - only available if dependencies are installed
 from typing import TYPE_CHECKING
 
 try:
-    from syssimx.components import FMUComponent
+    from .components import FMUComponent
 
     __all__.append("FMUComponent")
 except ImportError:
     FMUComponent = None  # type: ignore[misc,assignment]  # fmpy not installed
 
 try:
-    from syssimx.components import FEMComponent
+    from .components import FEMComponent
 
     __all__.append("FEMComponent")
 except ImportError:
     FEMComponent = None  # type: ignore[misc,assignment]  # ngsolve not installed
 
 try:
-    from syssimx.components import OpenSimComponent
+    from .components import OpenSimComponent
 
     __all__.append("OpenSimComponent")
 except ImportError:
     OpenSimComponent = None  # type: ignore[misc,assignment]  # opensim not installed
 
 if TYPE_CHECKING:
-    from syssimx.components import FEMComponent as FEMComponent
-    from syssimx.components import FMUComponent as FMUComponent
-    from syssimx.components import OpenSimComponent as OpenSimComponent
+    from .components import FEMComponent as FEMComponent
+    from .components import FMUComponent as FMUComponent
+    from .components import OpenSimComponent as OpenSimComponent

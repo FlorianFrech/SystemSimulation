@@ -7,4 +7,5 @@ recursive-include LICENSES *.txt
 # Avoid shipping build outputs / local artifacts in sdists.
 prune docs/_build
 prune dist
+prune thesis
 recursive-exclude syssimx.egg-info *
