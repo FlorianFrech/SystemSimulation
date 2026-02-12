@@ -13,7 +13,7 @@ Overview of classes:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -30,7 +30,7 @@ from ..utilities.units import (
 # -------------------------------------------------------------------
 # Port Types and Specifications - immutable port definitions
 # -------------------------------------------------------------------
-class PortType(str, Enum):
+class PortType(StrEnum):
     """Supported port data types for co-simulation components.
 
     Attributes:

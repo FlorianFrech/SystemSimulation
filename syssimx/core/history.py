@@ -416,6 +416,9 @@ class SystemHistory:
             ports = port_names.get(comp_name) if port_names else None
             comp_hist.clear(port_names=ports)
 
+        # Clear event histories if component is specified
+        self._event_histories.clear()
+
     # -------------------------------------------------------------------
     # Persistence Methods
     # -------------------------------------------------------------------

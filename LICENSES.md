@@ -4,7 +4,7 @@ This is a **mixed-license** repository.
 
 ## Primary license for original software
 
-Unless stated otherwise in a file header, original **source code** and **notebooks** in this
+The **source code** under the directory `syssimx` and **notebooks** in this
 repository are licensed under the **Mozilla Public License 2.0 (MPL-2.0)**. See `LICENSE`.
 
 This is the license used for the main `syssimx` pip distribution.

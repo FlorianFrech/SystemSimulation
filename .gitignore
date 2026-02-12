@@ -35,3 +35,12 @@ syssimx.egg-info/
 
 *.ipynb_checkpoints/
 *.log
+docs/tutorials/tool_integration/modelica/cvode_new/
+docs/tutorials/tool_integration/modelica/euler_new/
+docs/tutorials/tool_integration/modelica/cvode_old/
+docs/tutorials/tool_integration/modelica/euler_old/
+system_graph
+system_graph.svg
+docs/tutorials/tool_integration/modelica/*.fmu
+docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.mp4
+docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.gif

@@ -118,7 +118,7 @@ Contents
    api/viz
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Tutorials
 
    tutorials/beginners/index

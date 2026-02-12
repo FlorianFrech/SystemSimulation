@@ -10,6 +10,7 @@ dependencies = [
     "scipy",
     "pint",
     "networkx",
+    "pandas",
     "matplotlib",        # Used in demos and plotting
     "ipywidgets",        # Used in UI components
     "traitlets",         # Used in PendulumMonitoringState
