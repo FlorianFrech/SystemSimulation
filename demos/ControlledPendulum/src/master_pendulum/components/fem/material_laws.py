@@ -1,4 +1,4 @@
-from ngsolve import Det, Grad, Id, Trace
+from ngsolve import Det, Grad, Id, Trace, Inv
 
 
 class NeoHookeanMaterial:
@@ -12,16 +12,26 @@ class NeoHookeanMaterial:
         F = Id(u.dim) + Grad(u)
         return F.trans * F
 
-    def energy_density(self, C, u):
+    def psi(self, C, u):
         return (
             0.5
             * self.mu
             * (
                 Trace(C - Id(u.dim))
-                + 2 * self.mu / self.lmbda * Det(C) ** (-self.lmbda / 2 / self.mu)
+                + (2 * self.mu / self.lmbda) * Det(C) ** (-self.lmbda / 2 / self.mu)
                 - 1
             )
         )
 
-    def sigma(self, C, u):
-        return 2 * self.mu * (C - Id(u.dim)) + self.lmbda * Trace(C - Id(u.dim)) * Id(2)
+    def PK2_neo_hookean(self, u):
+        """2nd Piola-Kirchhoff stress for the Neo-Hookean model.
+        
+        S = mu * (I - det(C)^(-lam/(2*mu)) * C^{-1})
+        """
+        CC = self.C(u)
+        return self.mu * (Id(2) - Det(CC)**(-self.lmbda / (2 * self.mu)) * Inv(CC))
+
+    def PK1_neo_hookean(self, u):
+        """1st Piola-Kirchhoff stress: P = F * S."""
+        F = Id(2) + Grad(u)
+        return F * self.PK2_neo_hookean(u)

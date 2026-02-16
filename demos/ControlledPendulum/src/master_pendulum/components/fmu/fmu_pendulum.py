@@ -22,6 +22,8 @@ class FMUPendulum(FMUComponent):
             fmu_path = Path(__file__).parents[4]/ f"artifacts/fmus/{PLATFORM}" / "Pendulum_Euler.fmu"
         elif solver == "Cvode":
             fmu_path = Path(__file__).parents[4] / f"artifacts/fmus/{PLATFORM}" / "Pendulum_Cvode.fmu"
+        else:
+            raise ValueError(f"Unsupported solver '{solver}'. Choose 'Euler' or 'Cvode'.")
         self.solver = solver
 
         # Initialize base class

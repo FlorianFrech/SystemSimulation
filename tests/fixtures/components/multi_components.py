@@ -162,3 +162,56 @@ class EmptyMultiComponent(MultiComponent):
 
     def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
         return state.copy()
+
+
+class UnitMismatchComponent(CoSimComponent):
+    """
+    Component with specific unit requirements for testing unit mismatch handling in MultiComponent.
+    """
+
+    def __init__(self, name: str, unit: str):
+        super().__init__(name, label=name)
+        self.input_specs = {
+            "u": PortSpec(name="u", type=PortType.REAL, unit=unit, direction="in"),
+        }
+        self.output_specs = {
+            "y": PortSpec(name="y", type=PortType.REAL, unit="m", direction="out"),
+        }
+
+    def _initialize_component(self, t0: float) -> None:
+        return None
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        return None
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        return None
+
+    def get_state(self) -> dict[str, Any]:
+        return {}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        return None
+
+
+class UnitMismatchMultiComponent(MultiComponent):
+    """
+    MultiComponent with sub-components that have incompatible units for testing unit mismatch handling.
+    """
+
+    def __init__(self, name: str):
+        super().__init__(name, initial_mode="A")
+        self._register_models()
+        self.active_comp = self.models["A"]
+        self._unify_ports()
+
+    def _register_models(self) -> None:
+        self.models = {
+            "A": UnitMismatchComponent(f"{self.name}_A", unit="N"),
+            "B": UnitMismatchComponent(f"{self.name}_B", unit="N*m"),
+        }
+
+    def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
+        return state.copy()

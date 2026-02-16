@@ -29,7 +29,7 @@ MODEL_PARAMETERS = {
     "r_head": 0.025,  # Radius of the pendulum head (m)
     "length": 0.4,  # Length of the pendulum rod (m)
     "inertia": 0.01,  # Moment of inertia of the pendulum head (kg.m^2)
-    "use_gravity": False,  # Enable/disable gravity
+    "use_gravity": True,  # Enable/disable gravity
 }
 
 CONTACT_PARAMETERS = {

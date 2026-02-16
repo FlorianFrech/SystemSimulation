@@ -19,3 +19,4 @@ the `demos/ControlledPendulum/src/master_pendulum` directory of the
    modelica/index
    opensim/index
    fem/index
+   master_pendulum/index

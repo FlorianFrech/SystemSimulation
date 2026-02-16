@@ -16,6 +16,7 @@ from tests.fixtures.components import (
     EmptyMultiComponent,
     MockSubComponent,
     SimpleMultiComponent,
+    UnitMismatchMultiComponent,
 )
 
 
@@ -89,6 +90,10 @@ class TestMultiComponentInitialization:
         mc = EmptyMultiComponent(name="EmptyMulti")
         with pytest.raises(RuntimeError):
             mc.initialize(t0=0.0)
+
+    def test_initialize_incompatible_ports_unit_mismatch(self):
+        with pytest.raises(ValueError):
+            UnitMismatchMultiComponent(name="UnitMismatch")
 
 
 # ============================================================================

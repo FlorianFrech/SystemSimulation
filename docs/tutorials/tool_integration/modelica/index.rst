@@ -1,6 +1,7 @@
 Modelica / FMU
 ==============
 
+
 .. figure:: pendulum_animation.png
    :width: 60%
    :figclass: caption

@@ -64,7 +64,7 @@ from typing import Any, Protocol
 
 from .base import CoSimComponent
 from .events import InternalEventInfo
-from .port import PortType
+from .port import PortSpec, PortType
 
 # -------------------------------------------------------------------
 # Type Aliases
@@ -417,6 +417,32 @@ class MultiComponent(CoSimComponent):
     # -------------------------------------------------------------------
     # Port Unification and Validation
     # -------------------------------------------------------------------
+    @staticmethod
+    def _validate_port_compatibility(
+        ref_spec: PortSpec, spec: PortSpec, model_name: str, port_name: str
+    ) -> None:
+        """Validate that two PortSpecs are compatible for MultiComponent use."""
+        if ref_spec.name != port_name or spec.name != port_name:
+            raise ValueError(
+                f"Port name mismatch for '{port_name}' in model '{model_name}': "
+                f"got '{spec.name}', expected '{port_name}'."
+            )
+        if ref_spec.direction != spec.direction:
+            raise ValueError(
+                f"Port direction mismatch for '{port_name}' in model '{model_name}': "
+                f"{ref_spec.direction} vs {spec.direction}."
+            )
+        if ref_spec.type != spec.type:
+            raise ValueError(
+                f"Port type mismatch for '{port_name}' in model '{model_name}': "
+                f"{ref_spec.type} vs {spec.type}."
+            )
+        if not PortSpec.compatible(ref_spec, spec):
+            raise ValueError(
+                f"Port unit/type incompatibility for '{port_name}' in model '{model_name}': "
+                f"{ref_spec} vs {spec}."
+            )
+
     def _unify_ports(self) -> None:
         """Adopt port specifications from active component and validate compatibility.
 
@@ -447,6 +473,7 @@ class MultiComponent(CoSimComponent):
             for name, spec in self.input_specs.items():
                 if name not in comp.input_specs:
                     raise ValueError(f"{self.name}: Model '{mode_key}' missing input port '{name}'")
+                self._validate_port_compatibility(spec, comp.input_specs[name], mode_key, name)
 
             # Check outputs
             for name, spec in self.output_specs.items():
@@ -454,6 +481,7 @@ class MultiComponent(CoSimComponent):
                     raise ValueError(
                         f"{self.name}: Model '{mode_key}' missing output port '{name}'"
                     )
+                self._validate_port_compatibility(spec, comp.output_specs[name], mode_key, name)
 
     # -------------------------------------------------------------------
     # Time Stepping with Mode Switching

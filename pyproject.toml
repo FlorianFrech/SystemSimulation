@@ -84,7 +84,7 @@ full = [
 
 [project.urls]
 Homepage = "https://github.com/FlorianFrech/SystemSimulation"
-Documentation = "https://github.com/FlorianFrech/SystemSimulation/docs"
+Documentation = "https://github.com/FlorianFrech/SystemSimulation/tree/main/docs"
 Repository = "https://github.com/FlorianFrech/SystemSimulation"
 Issues = "https://github.com/FlorianFrech/SystemSimulation/issues"
 

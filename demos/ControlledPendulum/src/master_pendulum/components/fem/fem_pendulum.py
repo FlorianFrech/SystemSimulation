@@ -1,3 +1,11 @@
+"""This module implements the FEMPendulum component using the Netgen/NGSolve finite element library.
+
+The `FEMPendulum` class defines a finite element model of a controlled pendulum,
+including optional contact with a wall and distributed torque control.
+
+It provides methods for initializing the model, setting and getting the state, handling events, and snapshot/restore functionality for time integration. The component is designed to be used within a multi-model simulation framework, allowing it to be combined with other pendulum models (e.g., FMU, OpenSim) in a `MasterPendulum` component.
+"""
+
 from typing import Any
 
 import ipywidgets as widgets
@@ -164,13 +172,13 @@ class FEMPendulum(FEMComponent):
 
         self._material_pendulum = NeoHookeanMaterial(self.E_p, self.nu_p)
         self._deformation_gradient_p = self._material_pendulum.C
-        self._material_law_p = self._material_pendulum.energy_density
-        self._sigma_law_p = self._material_pendulum.sigma
+        self._psi_p = self._material_pendulum.psi
+        self._PK2_neo_hookean_p = self._material_pendulum.PK2_neo_hookean
 
         self._material_wall = NeoHookeanMaterial(self.E_w, self.nu_w)
         self._deformation_gradient_w = self._material_wall.C
-        self._material_law_w = self._material_wall.energy_density
-        self._sigma_law_w = self._material_wall.sigma
+        self._psi_w = self._material_wall.psi
+        self._PK2_neo_hookean_w = self._material_wall.PK2_neo_hookean
 
     def _create_mesh(self):
         self._mesh = build_mesh(self.geom_params, self.mesh_params, self._with_contact)
@@ -381,12 +389,12 @@ class FEMPendulum(FEMComponent):
         # Strain energy wall
         if self._with_contact:
             self._bfa += Variation(
-                self._material_law_w(self._deformation_gradient_w(self._u), self._u) * dx("wall")
+                self._psi_w(self._deformation_gradient_w(self._u), self._u) * dx("wall")
             ).Compile()
 
         # Strain energy pendulum
         self._bfa += Variation(
-            self._material_law_p(self._deformation_gradient_p(self._u), self._u) * dx("pendulum")
+            self._psi_p(self._deformation_gradient_p(self._u), self._u) * dx("pendulum")
         ).Compile()
 
         # Rotation constraint
@@ -717,11 +725,7 @@ class FEMPendulum(FEMComponent):
                         )
 
                 # Compute stress
-                self._gf_sigma.Interpolate(
-                    self._sigma_law_p(
-                        self._deformation_gradient_p(self._gf_u.components[0]), self._u
-                    )
-                )
+                self._gf_sigma.Interpolate(self._PK2_neo_hookean_p(self._gf_u.components[0]))
 
                 # Store results in time series
                 # self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
@@ -945,7 +949,7 @@ class FEMPendulum(FEMComponent):
 
         # Strain energy
         SE = Integrate(
-            self._material_law_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
+            self._psi_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
             self._mesh,
             definedon=self._mesh.Materials("pendulum"),
         )

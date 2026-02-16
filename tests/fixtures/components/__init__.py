@@ -21,6 +21,8 @@ from .multi_components import (
     MockSubComponentAlt,
     MockSubComponentIncompatible,
     SimpleMultiComponent,
+    UnitMismatchComponent,
+    UnitMismatchMultiComponent,
 )
 
 __all__ = [
@@ -42,4 +44,6 @@ __all__ = [
     "SimpleMultiComponent",
     "IncompatibleMultiComponent",
     "EmptyMultiComponent",
+    "UnitMismatchComponent",
+    "UnitMismatchMultiComponent",
 ]
