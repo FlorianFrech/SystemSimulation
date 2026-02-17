@@ -176,27 +176,6 @@ class MasterPendulum(MultiComponent):
         if target_mode == "FMU":
             return {"q0": state["q"], "omega0": state["omega"], "torque": state["torque"]}
         return state
-    
-        # support both plain state and macro-history dicts
-        if "current" in state_or_hist:
-            current = state_or_hist["current"]
-            previous = state_or_hist.get("previous")
-            dt = state_or_hist.get("dt")
-        else:
-            current, previous, dt = state_or_hist, None, None
-
-        def adapt_one(s: dict[str, Any] | None):
-            if s is None:
-                return None
-            if target_mode == "FMU":
-                return {"q0": s["q"], "omega0": s["omega"], "torque": s["torque"]}
-            return s
-
-        return {
-            "current": adapt_one(current),
-            "previous": adapt_one(previous),
-            "dt": dt,
-        }
 
     # ----------------------------------------------------------------------------
     # Mode Selection Logic

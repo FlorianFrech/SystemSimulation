@@ -549,82 +549,34 @@ class MultiComponent(CoSimComponent):
             captures detailed before/after state for debugging synchronization
             issues.
         """
-        version = "old"
         synch_event: dict[str, Any]
-        # -------------------------------------------------------------------
-        if version == "new":
-            if new_mode not in self.models:
-                raise ValueError(f"{self.name}: Unknown mode '{new_mode}'")
+        if new_mode not in self.models:
+            raise ValueError(f"{self.name}: Unknown mode '{new_mode}'")
 
-            # Store synchronization event
-            synch_event = {}
-            synch_event["time"] = t
-            synch_event["from_mode"] = self.active_mode
-            synch_event["to_mode"] = new_mode
-            print(f"[{self.name}] Switching: {self.active_mode} to {new_mode} @ t={t:.4f}s")
+        synch_event = {}
+        synch_event["time"] = t
+        synch_event["from_mode"] = self.active_mode
+        synch_event["to_mode"] = new_mode
+        print(f"[{self.name}] Switching: {self.active_mode} to {new_mode} @ t={t:.4f}s")
 
-            # Step 1: Get current state from active component
-            active = self._require_active_comp()
-            if hasattr(active, "get_macro_history"):
-                hist = active.get_macro_history()
-            else:
-                hist = {"current": active.get_state(), "previous": None, "dt": None}
+        synch_event["retrieved"] = self._require_active_comp().get_state()
 
-            synch_event["retrieved"] = hist
+        adapted_state = self._adapt_state(synch_event["retrieved"], new_mode)
 
-            # Step 2: Adapt state for new component (subclass hook)
-            adapted = self._adapt_state(hist, new_mode)
-            new_comp = self.models[new_mode]
-            if new_comp is None:
-                raise RuntimeError(f"{self.name}: Model '{new_mode}' is not initialized")
+        new_comp = self.models[new_mode]
+        if new_comp is None:
+            raise RuntimeError(f"{self.name}: Model '{new_mode}' is not initialized")
+        new_comp.set_state(adapted_state, t)
 
-            # Step 3: Set state in new component
-            if hasattr(new_comp, "set_state_with_history"):
-                new_comp.set_state_with_history(
-                    adapted["current"], adapted["previous"], adapted["dt"], t
-                )
-            else:
-                new_comp.set_state(adapted["current"], t)
+        self.active_mode = new_mode
+        self.active_comp = new_comp
 
-            # Step 4: Update active component
-            self.active_mode = new_mode
-            self.active_comp = new_comp
-            synch_event["now"] = self._require_active_comp().get_state()
-            self.sync_events.append(synch_event)
+        has_state = self._require_active_comp().get_state()
+        synch_event["now"] = has_state
+        self.sync_events.append(synch_event)
 
-            # Step 5: Record switch in hysteresis
-            if self.hysteresis is not None:
-                self.hysteresis.record_switch(t, new_mode)
-        # -------------------------------------------------------------------
-        if version == "old":
-            if new_mode not in self.models:
-                raise ValueError(f"{self.name}: Unknown mode '{new_mode}'")
-
-            synch_event = {}
-            synch_event["time"] = t
-            synch_event["from_mode"] = self.active_mode
-            synch_event["to_mode"] = new_mode
-            print(f"[{self.name}] Switching: {self.active_mode} to {new_mode} @ t={t:.4f}s")
-
-            synch_event["retrieved"] = self._require_active_comp().get_state()
-
-            adapted_state = self._adapt_state(synch_event["retrieved"], new_mode)
-
-            new_comp = self.models[new_mode]
-            if new_comp is None:
-                raise RuntimeError(f"{self.name}: Model '{new_mode}' is not initialized")
-            new_comp.set_state(adapted_state, t)
-
-            self.active_mode = new_mode
-            self.active_comp = new_comp
-
-            # Step 4.5: Check state consistency (debugging)
-            has_state = self._require_active_comp().get_state()
-            synch_event["now"] = has_state
-            self.sync_events.append(synch_event)
-
-            if self.hysteresis is not None:
-                self.hysteresis.record_switch(t, new_mode)
+        if self.hysteresis is not None:
+            self.hysteresis.record_switch(t, new_mode)
 
     # -------------------------------------------------------------------
     # Input/Output Delegation

@@ -32,33 +32,12 @@ class FMUPendulum(FMUComponent):
         # Add event input port for omega inversion
         self.input_specs.update({"omega_invert": PortSpec("omega_invert", PortType.EVENT, "in")})
 
-        self._curr_macro_state = None
-        self._prev_macro_state = None
-        self._prev_macro_dt = None
-        self._prev_macro_t = None
-    
-    def initialize(self, t0):
-        super().initialize(t0)
-        self._curr_macro_state = self.get_state()
-        self._prev_macro_state = None
-        self._prev_macro_dt = None
-        self._prev_macro_t = t0
-
     def _do_step_internal(self, t, dt):
         t_right = t + dt
         while t < t_right:
             step_size = min(1e-4, t_right - t)
             super()._do_step_internal(t, step_size)
             t += step_size
-        
-    def do_step(self, t: float, dt: float) -> None:
-        super().do_step(t, dt)
-
-        # shift history after the macro step
-        self._prev_macro_state = self._curr_macro_state
-        self._curr_macro_state = self.get_state()
-        self._prev_macro_dt = dt
-        self._prev_macro_t = t
 
     # Snapshot and restore state methods for rollback
     def snapshot_state(self):
@@ -122,11 +101,3 @@ class FMUPendulum(FMUComponent):
             for out_port in self.outputs.values():
                 if out_port.spec.type == PortType.EVENT:
                     out_port.set(value=False, t=t)
-
-    def get_macro_history(self) -> dict[str, Any]:
-        return {
-            "current": self._curr_macro_state or self.get_state(),
-            "previous": self._prev_macro_state,
-            "dt": self._prev_macro_dt,
-            "t": self._prev_macro_t,
-        }
