@@ -21,7 +21,6 @@ model DriveDynamic
 
   // Limits and losses
   parameter Real I_max(unit="A") = 10 "Current limit (driver/thermal)";
-  parameter Real b_viscous(unit="N.m.s/rad") = 0.01 "Output viscous friction";
 
   // Derived Parameter
   parameter Real k_n(unit="(1/min)/V") = n_0/V_rated;
@@ -40,6 +39,7 @@ model DriveDynamic
   Real omega_m(unit="rad/s");
   Real E(unit="V") "Back EMF Voltage";
   Real I_lim(unit="A") "Limited armature current";
+  Real dI(unit="A/s") "dI/dt internal for current limit";
 
 equation
   // Electrical input based on u_control
@@ -50,9 +50,13 @@ equation
   E = k_e * omega_m;
   
   // Current dynamics and torque mapping
-  der(I) = (U - R_arm * I - E) / L_arm;
+  dI = (U - R_arm * I - E) / L_arm;
+  der(I) = if noEvent(I > I_max and dI > 0) then 0
+           elseif noEvent(I <= -I_max and dI < 0) then 0
+           else dI;
+  
   I_lim = min(max(I, -I_max), I_max);
-  torque = eta * gearRatio * k_t * I_lim - b_viscous * omega;
+  torque = eta * gearRatio * k_t * I_lim;
   
   annotation(
     experiment(StartTime = 0, StopTime = 5, Interval = 0.1)

@@ -30,10 +30,10 @@ class PendulumMonitoringState(HasTraits):
     mode = Unicode("FEM")
 
     # Input signals
-    torque = Float(0.0)
+    tau = Float(0.0)
 
     # Output signals
-    q = Float(0.0)
+    theta = Float(0.0)
     omega = Float(0.0)
     alpha = Float(0.0)
 
@@ -49,7 +49,8 @@ class MasterPendulum(MultiComponent):
     def __init__(
         self,
         name: str = "MasterPendulum",
-        initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU"):
+        initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FEM",
+        fmu_solver: Literal["cvode", "euler"] = "cvode",):
         
         # Check initial mode validity
         if not is_valid_mode(initial_mode):
@@ -59,7 +60,7 @@ class MasterPendulum(MultiComponent):
         super().__init__(name=name, initial_mode=initial_mode, group="Plant")
         
         # Instantiate sub-components
-        self.fmu = FMUPendulum(name="FMU_Pendulum", solver="Cvode")
+        self.fmu = FMUPendulum(name="FMU_Pendulum", solver=fmu_solver)
         self.fem = FEMPendulum(name="FEM_Pendulum")
         self.opensim = OpenSimPendulum(name="OpenSim_Pendulum")
         self.models.update({
@@ -131,8 +132,8 @@ class MasterPendulum(MultiComponent):
             return
 
         # Extract computed parameters from FEM
-        q0 = np.deg2rad(self.fem.init_params.angular_position_deg)
-        omega0 = self.fem.init_params.angular_velocity
+        theta_start = np.deg2rad(self.fem.init_params.angular_position_deg)
+        omega_start = self.fem.init_params.angular_velocity
         self.use_gravity = self.fem._use_gravity
         length = self.fem._equivalent_length
         inertia = self.fem.inertia
@@ -140,8 +141,8 @@ class MasterPendulum(MultiComponent):
 
         # Synchronize to OpenSim
         if self.opensim is not None:
-            self.opensim.parameters["InitialConditions"]["q0"] = q0
-            self.opensim.parameters["InitialConditions"]["omega0"] = omega0
+            self.opensim.parameters["InitialConditions"]["theta_start"] = theta_start
+            self.opensim.parameters["InitialConditions"]["omega_start"] = omega_start
             self.opensim.parameters["Model"]["mass"] = mass
             self.opensim.parameters["Model"]["length"] = length
             self.opensim.parameters["Model"]["inertia"] = inertia - mass * length**2
@@ -151,11 +152,11 @@ class MasterPendulum(MultiComponent):
         # Synchronize to FMU
         if self.fmu is not None:
             parameters = {
-                "q0": q0,
-                "omega0": omega0,
+                "theta_start": theta_start,
+                "omega_start": omega_start,
                 "m": mass,
                 "L": length,
-                "inertia": inertia,
+                "J": inertia,
                 "g": 9.81 if self.use_gravity else 0.0,
             }
             self.fmu.set_parameters(**parameters)
@@ -168,13 +169,13 @@ class MasterPendulum(MultiComponent):
         Translate state between component-specific formats.
 
         Standard format (FEM, OpenSim):
-            {'q': {'value': ..., 'unit': 'rad'}, 'omega': {...}, 'torque': {...}}
+            {'theta': {'value': ..., 'unit': 'rad'}, 'omega': {...}, "tau": {...}}
 
         FMU format (initial conditions):
-            {'q0': {'value': ..., 'unit': 'rad'}, 'omega0': {...}, 'torque': {...}}
+            {'theta_start': {'value': ..., 'unit': 'rad'}, 'omega_start': {...}, "tau": {...}}
         """
         if target_mode == "FMU":
-            return {"q0": state["q"], "omega0": state["omega"], "torque": state["torque"]}
+            return {"theta_start": state["theta"], "omega_start": state["omega"], "tau": state["tau"]}
         return state
 
     # ----------------------------------------------------------------------------
@@ -183,37 +184,37 @@ class MasterPendulum(MultiComponent):
     def _time_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
         """
         Cycle through modes 4 times within simulation time.
-        Each complete cycle goes: FEM → EQB → OpenSim
+        Each complete cycle goes: FEM → FMU → OpenSim
         Total: 12 intervals (3 modes × 4 cycles)
         """
         interval = self._t_end / 12
         cycle_position = int(t / interval) % 3
         if cycle_position == 0:
-            return "OpenSim"
-        elif cycle_position == 1:
             return "FEM"
+        elif cycle_position == 1:
+            return "OpenSim"
         else:
             return "FMU"
 
     def _gap_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
         # Get current angular position from active component
         current_state = self.get_state()
-        q = current_state["q"]["value"]
+        theta = current_state["theta"]["value"]
 
         # Handle Quantity objects (with units)
-        if hasattr(q, "magnitude"):
-            q = q.magnitude
+        if hasattr(theta, "magnitude"):
+            theta = theta.magnitude
 
         # Convert to degrees for threshold comparison
-        q_deg = np.rad2deg(q)
+        theta_deg = np.rad2deg(theta)
 
         # Use absolute value for symmetric contact detection
-        q_abs = abs(q_deg)
+        theta_abs = abs(theta_deg)
 
         # Mode selection based on angular position thresholds
-        if q_abs > 15:
+        if theta_abs > 15:
             return "FMU"
-        elif q_abs > 5:
+        elif theta_abs > 5:
             return "OpenSim"
         else:
             return "FEM"
@@ -233,9 +234,9 @@ class MasterPendulum(MultiComponent):
 
         # 3) Update FEM scene if not active (for visualization consistency)
         if self.active_mode != "FEM" and self.fem.anim_params.animate:
-            q = self.active_comp.get_outputs()["q"]
+            theta = self.active_comp.get_outputs()["theta"]
             if t is not None:
-                self.fem.update_scene(q, t)
+                self.fem.update_scene(theta, t)
 
     # ----------------------------------------------------------------------------
     # Monitoring interface methods
@@ -315,8 +316,8 @@ class MasterPendulum(MultiComponent):
             "time": "time",
             "dt": "dt",
             "mode": "mode",
-            "torque": "torque",
-            "q": "q",
+            "tau": "tau",
+            "theta": "theta",
             "omega": "omega",
             "alpha": "alpha",
         }
@@ -409,8 +410,8 @@ class MasterPendulum(MultiComponent):
         self.monitoring_state.time = t + dt
         self.monitoring_state.dt = dt
         self.monitoring_state.mode = self.active_mode
-        self.monitoring_state.torque = state["torque"]["value"]
-        self.monitoring_state.q = state["q"]["value"]
+        self.monitoring_state.tau = state["tau"]["value"]
+        self.monitoring_state.theta = state["theta"]["value"]
         self.monitoring_state.omega = state["omega"]["value"]
         self.monitoring_state.alpha = state["alpha"]["value"]
 

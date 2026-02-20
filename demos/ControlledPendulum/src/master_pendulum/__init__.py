@@ -2,7 +2,6 @@ from .components import (
     FEMPendulum,
     FMUPendulum,
     OpenSimPendulum,
-    NativePendulum
 )
 from .orchestration.master_pendulum import MasterPendulum
 

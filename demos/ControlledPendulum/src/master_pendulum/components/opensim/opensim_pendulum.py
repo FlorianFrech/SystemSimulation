@@ -11,12 +11,12 @@ from syssimx.utilities.units import Quantity, ureg
 # Port specifications
 # ----------------------------------------------------------------------------
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit=ureg("N.m").units),
+    "tau": PortSpec("tau", PortType.REAL, direction="in", unit=ureg("N.m").units),
     "omega_invert": PortSpec("omega_invert", PortType.EVENT, direction="in"),
 }
 
 OUTPUT_SPECS = {
-    "q": PortSpec("q", PortType.REAL, direction="out", unit=ureg("rad").units),
+    "theta": PortSpec("theta", PortType.REAL, direction="out", unit=ureg("rad").units),
     "omega": PortSpec("omega", PortType.REAL, direction="out", unit=ureg("rad/s").units),
     "alpha": PortSpec("alpha", PortType.REAL, direction="out", unit=ureg("rad/s^2").units),
 }
@@ -42,8 +42,8 @@ CONTACT_PARAMETERS = {
 }
 
 INITIAL_CONDITIONS = {
-    "q0": 0.0,  # Initial angle of the pendulum (rad)
-    "omega0": 0.0,  # Initial angular velocity of the pendulum (rad/s)
+    "theta_start": 0.0,  # Initial angle of the pendulum (rad)
+    "omega_start": 0.0,  # Initial angular velocity of the pendulum (rad/s)
 }
 
 SOLVER_PARAMETERS = {
@@ -186,17 +186,17 @@ class OpenSimPendulum(OpenSimComponent):
         model.addJoint(head_to_base)
 
         # Get the coordinate and set initial conditions
-        self.q0 = ic["q0"]
-        self.omega0 = ic["omega0"]
+        self.theta_start = ic["theta_start"]
+        self.omega_start = ic["omega_start"]
         coord = head_to_base.getCoordinate()
-        coord.setName("q")
-        coord.setDefaultValue(self.q0)
-        coord.setDefaultSpeedValue(self.omega0)
+        coord.setName("theta")
+        coord.setDefaultValue(self.theta_start)
+        coord.setDefaultSpeedValue(self.omega_start)
         self.coord = coord
 
         # Add coordinate actuator to apply torque
         actuator = osim.CoordinateActuator()
-        actuator.setName("torque")
+        actuator.setName("tau")
         actuator.setCoordinate(coord)
         actuator.setOptimalForce(1)
         actuator.setMinControl(-1e6)
@@ -261,9 +261,9 @@ class OpenSimPendulum(OpenSimComponent):
         Acceleration is updated by updating the input toreque.
         """
         # ------------------------------------
-        q_state = state["q"]["value"]
+        theta_state = state["theta"]["value"]
         omega_state = state["omega"]["value"]
-        torque_state = state["torque"]["value"]
+        tau_state = state["tau"]["value"]
 
         # Start from a clean topology/state
         self.state = self.model.initSystem()
@@ -274,13 +274,13 @@ class OpenSimPendulum(OpenSimComponent):
 
         # Set time and the new generalized coordinate + speed
         self.state.setTime(float(t))
-        self.coord.setValue(self.state, float(q_state))  # [rad]
+        self.coord.setValue(self.state, float(theta_state))  # [rad]
         self.coord.setSpeedValue(self.state, float(omega_state))  # [rad/s]
 
         # Update the applied torque
         self.actuator.overrideActuation(self.state, True)
-        self.actuator.setOverrideActuation(self.state, float(torque_state))
-        self.set_inputs({"torque": float(torque_state)}, t)
+        self.actuator.setOverrideActuation(self.state, float(tau_state))
+        self.set_inputs({"tau": float(tau_state)}, t)
 
         # Create a fresh Manager bound to this (model,state) and initialize it
         self.manager = osim.Manager(self.model)
@@ -296,16 +296,16 @@ class OpenSimPendulum(OpenSimComponent):
         angular acceleration, and applied torque.
         """
         self.realize()
-        q_state = self.get_coordinate_value("q")
-        omega_state = self.get_coordinate_speed("q")
-        alpha_state = self.get_coordinate_acceleration("q")
-        torque_state = float(self.actuator.getActuation(self.state))
+        theta_state = self.get_coordinate_value("theta")
+        omega_state = self.get_coordinate_speed("theta")
+        alpha_state = self.get_coordinate_acceleration("theta")
+        tau_state = float(self.actuator.getActuation(self.state))
 
         state = {}
-        state["q"] = {"value": q_state, "unit": "rad"}
+        state["theta"] = {"value": theta_state, "unit": "rad"}
         state["omega"] = {"value": omega_state, "unit": "rad/s"}
         state["alpha"] = {"value": alpha_state, "unit": "rad/s^2"}
-        state["torque"] = {"value": torque_state, "unit": "N.m"}
+        state["tau"] = {"value": tau_state, "unit": "N.m"}
         return state
 
     # ----------------------------------------------------------------------------
@@ -331,7 +331,7 @@ class OpenSimPendulum(OpenSimComponent):
         print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s: Inverting velocity")
 
         # Invert angular velocity
-        omega_new = -1 * self.get_coordinate_speed("q")
+        omega_new = -1 * self.get_coordinate_speed("theta")
         self.coord.setSpeedValue(self.state, omega_new)
         self.realize()
 
@@ -345,8 +345,8 @@ class OpenSimPendulum(OpenSimComponent):
         while t_current < t_end:
             # Apply current input
             torque = float(
-                self.inputs["torque"].get().magnitude
-                if self.inputs["torque"].get() is not None
+                self.inputs["tau"].get().magnitude
+                if self.inputs["tau"].get() is not None
                 else 0
             )
             self.actuator.setOverrideActuation(self.state, torque)
@@ -366,8 +366,8 @@ class OpenSimPendulum(OpenSimComponent):
     def set_inputs(self, signals: dict[str, Any], t: float | None = None) -> None:
         super().set_inputs(signals, t)  # Update port states
 
-        if "torque" in signals:
-            value = signals["torque"]
+        if "tau" in signals:
+            value = signals["tau"]
             if isinstance(value, Quantity):
                 value = value.magnitude
             self.actuator.setOverrideActuation(self.state, value)
@@ -381,17 +381,17 @@ class OpenSimPendulum(OpenSimComponent):
         self, t: float | None = None, event_names: list[str] | None = []
     ) -> None:
         for name, out_port in self.outputs.items():
-            if name == "q":
+            if name == "theta":
                 value = float(self.coord.getValue(self.state))
-                value = self.get_coordinate_value("q")
+                value = self.get_coordinate_value("theta")
                 out_port.set(value * ureg("rad"), t=t)
             elif name == "omega":
                 value = float(self.coord.getSpeedValue(self.state))
-                value = self.get_coordinate_speed("q")
+                value = self.get_coordinate_speed("theta")
                 out_port.set(value * ureg("rad/s"), t=t)
             elif name == "alpha":
                 value = float(self.coord.getAccelerationValue(self.state))
-                value = self.get_coordinate_acceleration("q")
+                value = self.get_coordinate_acceleration("theta")
                 out_port.set(value * ureg("rad/s^2"), t=t)
         # Hybrid event outputs
         if event_names:

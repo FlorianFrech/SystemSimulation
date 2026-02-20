@@ -1,14 +1,14 @@
 SysSimX Documentation
 =====================
 
-.. .. image:: https://img.shields.io/badge/python-3.10+-blue.svg
-..    :alt: Python 3.10+
+.. image:: https://img.shields.io/badge/python-3.10+-blue.svg
+   :alt: Python 3.11+
 
-.. .. image:: https://img.shields.io/badge/license-MIT-green.svg
-..    :alt: MIT License
+.. image:: https://img.shields.io/badge/license-MIT-green.svg
+   :alt: MIT License
 
-**SysSimX** is a free and open-source Python library for heterogeneous system co-simulation.
-It lets you build multi-physics systems by connecting models from different environments, including:
+**SysSimX** is a free and open-source Python library for system simulation.
+It lets you build hybrid and heterogenous system models by connecting models from different environments, including:
 
 - **FMU Components** - `Functional Mock-up Units (FMI 2.0 Co-Simulation) <https://fmi-standard.org/>`_
 - **FEM Components** - `Finite Element Method solvers (NGSolve) <https://ngsolve.org/>`_
@@ -24,10 +24,12 @@ It lets you build multi-physics systems by connecting models from different envi
 Start Here
 ----------
 
-- New to SysSimX? Read the :doc:`getting_started/quickstart` and
-  :doc:`getting_started/concepts`.
-- Want hands-on learning? Go to :doc:`tutorials/beginners/index`.
-- Looking for APIs? Jump to the :doc:`api/syssimx`.
+- Want to install ``syssimx``? See :doc:`01_getting_started/01_installation`.
+- New to ``syssimx``? Read the :doc:`01_getting_started/02_quickstart` and
+  :doc:`01_getting_started/03_concepts`.
+- Looking for APIs? Jump to the :doc:`02_api/syssimx`.
+- Want hands-on learning? Go to :doc:`03_core_tutorials/01_fundamentals/index`.01_
+
 
 Quick Example
 -------------
@@ -87,52 +89,44 @@ Contents
    :caption: Getting Started
    :numbered:
 
-   getting_started/installation
-   getting_started/quickstart
-   getting_started/concepts
-
-.. toctree:: 
-   :maxdepth: 2
-   :caption: Theory and Background
-   :numbered:
-   
-   theory_background/01_introduction
-   theory_background/02_systems_and_models
-   theory_background/03_time_stepping_and_integration
-   theory_background/04_dependency_graphs_and_ordering
-   theory_background/05_algebraic_loops
-   theory_background/06_co_simulation_algorithms
-   theory_background/07_hybrid_and_events
-   theory_background/08_units_and_interfaces
+   01_getting_started/01_installation
+   01_getting_started/02_quickstart
+   01_getting_started/03_concepts
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
-   api/syssimx
-   api/core
-   api/components
-   api/system
-   api/algorithms
-   api/utilities
-   api/viz
+   02_api/syssimx
+   02_api/core
+   02_api/components
+   02_api/system
+   02_api/algorithms
+   02_api/utilities
+   02_api/viz
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Tutorials
+   :maxdepth: 2
+   :caption: Core Tutorials
 
-   tutorials/beginners/index
-   tutorials/intermediate/index
-   tutorials/advanced/index
-   tutorials/tool_integration/index
-   tutorials/case_study/index
+   03_core_tutorials/01_fundamentals/index
+   03_core_tutorials/02_intermediate/index
+   03_core_tutorials/03_advanced/index
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Development
+   :maxdepth: 2
+   :caption: Tool Integration
 
-   contributing
-   changelog
+   04_tool_integration/01_modelica/index
+   04_tool_integration/02_opensim/index
+   04_tool_integration/03_fem/index
+   04_tool_integration/04_master_pendulum/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Case Study
+
+   05_case_study/01_overview
 
 .. toctree::
    :caption: Other Links
@@ -144,6 +138,20 @@ Contents
    NGSolve Documentation <https://ngsolve.org>
    OpenSim Documentation <https://simtk-confluence.stanford.edu/display/OpenSim/Documentation>
    OpenSim Creator <https://www.opensimcreator.com/>
+
+.. .. toctree:: 
+..    :maxdepth: 2
+..    :caption: Theory and Background
+..    :numbered:
+   
+..    theory_background/01_introduction
+..    theory_background/02_systems_and_models
+..    theory_background/03_time_stepping_and_integration
+..    theory_background/04_dependency_graphs_and_ordering
+..    theory_background/05_algebraic_loops
+..    theory_background/06_co_simulation_algorithms
+..    theory_background/07_hybrid_and_events
+..    theory_background/08_units_and_interfaces
 
 Indices and Tables
 ------------------

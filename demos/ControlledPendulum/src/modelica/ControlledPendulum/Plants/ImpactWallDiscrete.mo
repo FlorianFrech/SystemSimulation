@@ -20,5 +20,5 @@ protected
 equation
   // Oriented gap (positive -> penetration)
   x = sense * (theta - theta_wall);
-  contact = (x > 0) and (sense * omega < 0);
+  contact = (x > 0);
 end ImpactWallDiscrete;

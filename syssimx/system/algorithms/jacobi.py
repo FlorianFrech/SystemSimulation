@@ -14,6 +14,7 @@ Dependencies:
 
 Example:
     .. code-block:: python
+
         from syssimx.system.algorithms.jacobi import JacobiAlgorithm
 
         algorithm = JacobiAlgorithm()

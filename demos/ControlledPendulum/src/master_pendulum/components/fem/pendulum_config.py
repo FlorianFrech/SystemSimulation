@@ -17,14 +17,14 @@ class GeometryParameters:
 
     def __init__(
         self,
-        r_rod=0.05,
-        r_hole=0.1,
-        r_head=0.2,
-        l_center=0.8,
+        r_rod=0.015, #0.015
+        r_hole=0.03, #0.03
+        r_head=0.06, #0.06
+        l_center=0.24, #0.24
         q_wall_deg=0.0,
-        wall_len_x=0.05,
-        wall_len_y=0.5,
-        wall_len_z=0.1,
+        wall_len_x=0.025, #0.015
+        wall_len_y=0.25, #0.15
+        wall_len_z=0.05, #0.03
     ):
         self.r_rod = r_rod
         self.r_hole = r_hole
@@ -71,9 +71,9 @@ class MaterialParameters:
         nu_pendulum=0.2,
         rho_pendulum=2700,
         E_wall=210e9,
-        nu_wall=0.2,
+        nu_wall=0.3, #0.2
         rho_wall=7850,
-        thickness=0.1,
+        thickness=0.1, #0.1
     ):
         self.E_pendulum = E_pendulum
         self.nu_pendulum = nu_pendulum

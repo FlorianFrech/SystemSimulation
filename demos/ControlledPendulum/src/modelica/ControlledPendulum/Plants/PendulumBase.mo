@@ -2,15 +2,15 @@ within ControlledPendulum.Plants;
 
 partial model PendulumBase
   // Parameters
-  parameter Real m(unit="kg") = 40 "Pendulum mass";
-  parameter Real L(unit="m") = 0.6 "Pendulum length";
-  parameter Real J(unit="kg.m2") = 20 "Moment of inertia about pivot";
+  parameter Real m(unit="kg") = 8.184 "Pendulum mass";
+  parameter Real L(unit="m") = 0.18165 "Pendulum length";
+  parameter Real J(unit="kg.m2") = 0.3338 "Moment of inertia about pivot";
   parameter Real g(unit="m/s2") = 9.81 "Gravitational acceleration";
   parameter Real theta_start(unit="rad") = 0 "Initial angle";
   parameter Real omega_start(unit="rad/s") = 0 "Initial angular velocity";
 
   // Friction parameters
-  parameter Real b_viscous(unit="N.m.s/rad") = 0.1 "Viscous friction";
+  parameter Real b_viscous(unit="N.m.s/rad") = 0.0 "Viscous friction";
   parameter Real tau_c(unit="N.m") = 0 "Coulomb friction";
   parameter Real omega_eps(unit="rad/s") = 1e-3 "Smoothing for Coulomb friction";
 

@@ -20,6 +20,7 @@ Usage:
 
 Example:
     .. code-block:: python
+
         from syssimx.system.algorithms.ijcsa import IJCSAAlgorithm
 
         algorithm = IJCSAAlgorithm(max_iter=100, tol=1e-8)
@@ -217,6 +218,7 @@ def solve_algebraic_scc_ijcsa(
             for port_name, val in out_vals.items():
                 if val is None:
                     continue
+                val = val.magnitude if isinstance(val, QuantityClass) else val
                 computed_out[(comp_name, port_name)] = float(val)
 
         # 5.4) Build residuals: F_i = U_i - Y_i(U)

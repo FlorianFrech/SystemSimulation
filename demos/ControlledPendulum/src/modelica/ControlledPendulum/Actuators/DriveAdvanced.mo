@@ -20,7 +20,7 @@ model DriveAdvanced
   parameter Real b_viscous(unit="N.m.s/rad") = 0.01 "Output viscous friction";
   
   // Mechanical Parameters
-  parameter Real J_motor(unit="kg.m2") = 0.05 "Motor-side inertia";
+  parameter Real J_motor(unit="kg.m2") = 5.6e-6 "Motor-side inertia";
   parameter Real J_interface(unit="kg.m2") = 0.10 "Interface inertia";
   parameter Real c(unit="N.m/rad") = 1e5 "Spring constant";
   parameter Real d(unit="N.m.s/rad") = 100 "Damping constant";
@@ -40,10 +40,11 @@ model DriveAdvanced
   parameter Real k_n(unit="(1/min)/V") = n_0/V_rated;
   parameter Real k_e(unit="V.s/rad") = 60 / (2 * pi * k_n);
   Real I(unit="A", start=0);
-  Real I_lim(unit="A");
   Real U(unit="V");
   Real omega_m(unit="rad/s");
   Real E(unit="V") "Back EMF Voltage";
+  Real dI(unit="A/s") "dI/dt internal for current limit";
+
   
   // Rotational components
   Modelica.Mechanics.Rotational.Components.Inertia      iniertia_motor(J=J_motor);
@@ -65,9 +66,11 @@ equation
   E = k_e * omega_m;
   
   // Current dynamics and torque mapping
-  der(I) = (U - R_arm * I - E) / L_arm;
-  I_lim = min(max(I, -I_max), I_max);
-  motorTorque.tau = eta * k_t * I_lim;
+  dI = (U - R_arm * I - E) / L_arm;
+  der(I) = if noEvent(I > I_max and dI > 0) then 0
+           elseif noEvent(I <= -I_max and dI < 0) then 0
+           else dI;
+  motorTorque.tau = eta * k_t * I;
   
   // Connect rotational drive train
   connect(motorTorque.flange, iniertia_motor.flange_a);

@@ -39,6 +39,9 @@ pip-wheel-metadata/
 *.log
 *_log.txt
 
+# Graph source
+*.gv
+
 # Jupyter
 *.ipynb_checkpoints/
 
@@ -57,3 +60,4 @@ docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.gif
 system_graph
 system_graph.svg
 *.vtu
+first_system_graph.svg

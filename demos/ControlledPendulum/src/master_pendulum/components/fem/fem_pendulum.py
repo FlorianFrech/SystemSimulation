@@ -28,12 +28,12 @@ from syssimx.utilities.units import Quantity, ureg
 # Port specifications
 # ----------------------------------------------------------------------------
 INPUT_SPECS = {
-    "torque": PortSpec("torque", PortType.REAL, direction="in", unit="N.m"),
+    "tau": PortSpec("tau", PortType.REAL, direction="in", unit="N.m"),
     "omega_invert": PortSpec("omega_invert", PortType.EVENT, direction="in"),
 }
 
 OUTPUT_SPECS = {
-    "q": PortSpec("q", PortType.REAL, direction="out", unit="rad"),
+    "theta": PortSpec("theta", PortType.REAL, direction="out", unit="rad"),
     "omega": PortSpec("omega", PortType.REAL, direction="out", unit="rad/s"),
     "alpha": PortSpec("alpha", PortType.REAL, direction="out", unit="rad/s^2"),
 }
@@ -150,9 +150,9 @@ class FEMPendulum(FEMComponent):
         self._setup_bilinear_form()
 
         state = {
-            "q": {"value": np.deg2rad(self.init_params.angular_position_deg)},
+            "theta": {"value": np.deg2rad(self.init_params.angular_position_deg)},
             "omega": {"value": self.init_params.angular_velocity},
-            "torque": {"value": self.init_params.drive_torque},
+            "tau": {"value": self.init_params.drive_torque},
         }
         self.set_state(state=state, t=t0)
 
@@ -433,7 +433,7 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     def _apply_rigid_state_to_fields(self, state: dict[str, Any], target: str) -> None:
         # target: "current" or "old"
-        theta = state.get("q", {}).get("value", 0.0)
+        theta = state.get("theta", {}).get("value", 0.0)
         omega = state.get("omega", {}).get("value", 0.0)
         alpha = state.get("alpha", {}).get("value", None)
 
@@ -443,7 +443,7 @@ class FEMPendulum(FEMComponent):
         v0 = CF((-omega * r0[1], omega * r0[0]))
 
         if alpha is None:
-            torque_drive = self._get_applied_drive_torque() if "torque" in state else 0.0
+            torque_drive = self._get_applied_drive_torque() if "tau" in state else 0.0
             torque_gravity = self._gravity_torque(theta)
             alpha = (torque_drive - torque_gravity) / self.inertia
 
@@ -484,8 +484,8 @@ class FEMPendulum(FEMComponent):
         """
         self.t = t
 
-        if "q" in state:
-            theta = state["q"]["value"]
+        if "theta" in state:
+            theta = state["theta"]["value"]
             if hasattr(theta, "magnitude"):
                 theta = theta.magnitude
             c, s = np.cos(theta), np.sin(theta)
@@ -518,7 +518,7 @@ class FEMPendulum(FEMComponent):
                 self._gf_vold.vec[:] = self._gf_v.vec
 
                 # Initialize accelartion from dynamics
-                torque_drive = self._get_applied_drive_torque() if "torque" in state else 0.0
+                torque_drive = self._get_applied_drive_torque() if "tau" in state else 0.0
                 torque_gravity = self._gravity_torque(theta)
                 alpha_init = (torque_drive - torque_gravity) / self.inertia
 
@@ -527,18 +527,18 @@ class FEMPendulum(FEMComponent):
                 self._gf_a.components[0].Set(a0, definedon=self._mesh.Materials("pendulum"))
                 self._gf_aold.vec[:] = self._gf_a.vec
 
-        if "torque" in state:
-            torque = state["torque"]["value"]
+        if "tau" in state:
+            torque = state["tau"]["value"]
             self.set_drive_torque(torque)
 
     def get_state(self):
         state = {}
         q_state, omega_state, alpha_state = self._rigid_proxy()
         torque_state = self._get_applied_drive_torque()
-        state["q"] = {"value": q_state, "unit": "rad"}
+        state["theta"] = {"value": q_state, "unit": "rad"}
         state["omega"] = {"value": omega_state, "unit": "rad/s"}
         state["alpha"] = {"value": alpha_state, "unit": "rad/s**2"}
-        state["torque"] = {"value": torque_state, "unit": "N*m"}
+        state["tau"] = {"value": torque_state, "unit": "N*m"}
         if self._with_contact:
             state["gap"] = {"value": self.gap, "unit": "m"}
             state["gap_prev"] = {"value": self.gap_prev, "unit": "m"}
@@ -633,6 +633,14 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     # Time stepping method
     # ----------------------------------------------------------------------------
+    def do_step(self, t, dt):
+        """Override base-class method to implement micro-stepping with internal event hints.
+
+        Outputs are updated and recorded within each micro-step to ensure accurate recording.
+        """
+        self._do_step_internal(t, dt)
+        self.t = t + dt
+
     def _do_step_internal(self, t, dt):
         """
         Advance FEM pendulum simulation from t to t+dt (called by base-class).
@@ -643,7 +651,7 @@ class FEMPendulum(FEMComponent):
         # Clear any stale internal event hints from previous steps
         self.internal_event_hints.clear()
 
-        if dt < 1e4:
+        if dt < 1e-4:
             effective_dt = dt
         elif dt < self.sim_params.tau:
             effective_dt = dt
@@ -744,7 +752,7 @@ class FEMPendulum(FEMComponent):
         for name, value in signals.items():
             if name in self.inputs:
                 self.inputs[name].set(value, t=t)
-                if name == "torque":
+                if name == "tau":
                     self.set_drive_torque(value)
         
         # Update acting torque
@@ -786,7 +794,7 @@ class FEMPendulum(FEMComponent):
         q_state = q_state * ureg("rad")
         omega_state = omega_state * ureg("rad/s")
         alpha_state = alpha_state * ureg("rad/s^2")
-        self.outputs["q"].set(q_state, t=t)
+        self.outputs["theta"].set(q_state, t=t)
         self.outputs["omega"].set(omega_state, t=t)
         self.outputs["alpha"].set(alpha_state, t=t)
 
@@ -980,7 +988,7 @@ class FEMPendulum(FEMComponent):
             t (float): The current time.
         """
         if self.scene:
-            self.set_state({"q": {"value": q}}, t)
+            self.set_state({"theta": {"value": q}}, t)
             self.scene.Redraw()
 
     def visualize_state(self, draw_u: bool = True, draw_v: bool = True, draw_a: bool = True):

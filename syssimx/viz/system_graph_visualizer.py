@@ -284,14 +284,25 @@ def _legend_label() -> str:
         Graphviz HTML-like label string.
     """
     return """<
-    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2" CELLPADDING="2">
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Edges:</B></FONT></TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">───&gt; Data flow</FONT></TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444">───&gt; Algebraic loop</FONT></TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff">┄┄┄o Event connection</FONT></TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Ports:</B></FONT></TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>red</B></FONT> Direct feedthrough</TD></TR>
-        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>blue</B></FONT> Event port</TD></TR>
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+        <TR>
+            <TD ALIGN="LEFT" VALIGN="TOP">
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Edges:</B></FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">───&gt; Data flow</FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444">───&gt; Algebraic loop</FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff">┄┄┄o Event connection</FONT></TD></TR>
+                </TABLE>
+            </TD>
+            <TD WIDTH="6"></TD>
+            <TD ALIGN="LEFT" VALIGN="TOP">
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Ports:</B></FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>red</B></FONT> Direct feedthrough</TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>blue</B></FONT> Event port</TD></TR>
+                </TABLE>
+            </TD>
+        </TR>
     </TABLE>
     >"""
 

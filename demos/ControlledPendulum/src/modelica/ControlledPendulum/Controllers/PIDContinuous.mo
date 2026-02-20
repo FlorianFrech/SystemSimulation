@@ -2,10 +2,10 @@ within ControlledPendulum.Controllers;
 
 model PIDContinuous
   // Parameters (parallel form)
-  parameter Real Kp=10 "Proportional gain";
-  parameter Real Ki=20 "Integral gain";
-  parameter Real Kd=0.6 "Derivative gain";
-  parameter Real Td=0.6 "Derivative time constant";
+  parameter Real Kp=20 "Proportional gain";
+  parameter Real Ki=5 "Integral gain";
+  parameter Real Kd=0.01 "Derivative gain";
+  parameter Real Td=0.6  "Derivative time constant";
   parameter Real Nd=10 "Derivative filter divisor";
   parameter Real uMin=-1, uMax=1 "Output limits";
   

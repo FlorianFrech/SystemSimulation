@@ -14,6 +14,15 @@ Classes:
 Functions:
     _prepare_inputs: Prepares inputs for all generations and solves algebraic loops.
     _detect_crossings: Detects event crossings in a given time interval.
+    _locate_event_time: Locates the event time within a given interval using bisection.
+    _evaluate_indicators_at: Evaluates event indicators for all event source components at a target
+    _evaluate_component_indicators: Evaluates event indicators for a single component at a target time.
+    _detect_crossing_between: Detects crossings between two sets of indicator values for all event
+    _restore_all_to_left: Restores all components to their state at the left boundary of the interval.
+    _handle_events: Handles the specified events at the given time.
+    _log: Helper method for logging messages.
+    _log_debug: Helper method for logging debug messages.
+    _log_section: Helper method for logging section headers.
 
 Usage:
     The `HybridAlgorithm` class is designed to be used as part of the system
@@ -22,6 +31,7 @@ Usage:
 
 Example:
     .. code-block:: python
+
         from syssimx.system.algorithms.hybrid import HybridAlgorithm
 
         algorithm = HybridAlgorithm()
@@ -30,6 +40,7 @@ Example:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -81,23 +92,57 @@ class HybridAlgorithm(Algorithm):
         self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
         self.verbose: bool = True
         self.record_internal_steps: bool = False
+        self.logger = logging.getLogger(self.name)
+        self.logger.propagate = False
+        self.set_logger_to_stdout()
 
     # --------------------------------------------------------------------------
     # Logging Helpers
     # --------------------------------------------------------------------------
-    def _log(self, message: str, *, end: str = "\n") -> None:
+    def set_logger_to_stdout(self, level=logging.INFO):
+        """
+        Set up the logger to output to stdout, suitable for Jupyter notebooks.
+        """
+        import sys
+
+        # Remove all handlers first
+        for handler in list(self.logger.handlers):
+            self.logger.removeHandler(handler)
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter("[%(levelname)s] %(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(level)
+
+    def set_logger_to_file(self, filename, level=logging.INFO):
+        """
+        Set up the logger to output to a file.
+        """
+        # Remove all handlers first
+        for handler in list(self.logger.handlers):
+            self.logger.removeHandler(handler)
+        handler = logging.FileHandler(filename)
+        formatter = logging.Formatter("[%(levelname)s] %(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(level)
+
+    def _log(self, message: str) -> None:
         if self.verbose:
-            print(f"[Hybrid] {message}", end=end)
+            self.logger.info(f"[Hybrid] {message}")
+
+    def _log_debug(self, message: str) -> None:
+        self.logger.debug(f"[Hybrid] {message}")
 
     def _log_section(self, title: str) -> None:
         if self.verbose:
-            print("\n" + "=" * 72)
-            print(f"[Hybrid] {title}")
-            print("=" * 72)
+            self.logger.info("=" * 72)
+            self.logger.info(f"[Hybrid] {title}")
+            self.logger.info("=" * 72)
 
     def _log_progress(self, t: float) -> None:
         if self.verbose:
-            print(f"[Hybrid] Time: {t:.4f} s", end="\r")
+            self.logger.info(f"[Hybrid] Time: {t:.4f} s")
 
     # --------------------------------------------------------------------------
     # Global Step Method
@@ -251,8 +296,7 @@ class HybridAlgorithm(Algorithm):
     # Helper - Input Preparation and Algebraic Loop Solving
     # --------------------------------------------------------------------------
     def _prepare_inputs(self, system: System, t: float) -> None:
-        """
-        Prepare inputs for all generations and solve algebraic loops.
+        """Prepare inputs for all generations and solve algebraic loops.
 
         This method sets the inputs for all generations in the system and
         resolves any algebraic loops within each generation.
@@ -280,8 +324,7 @@ class HybridAlgorithm(Algorithm):
         list[tuple[str, str]],
         dict[str, list[InternalEventInfo]],
     ]:
-        """
-        Detect event crossings in a given time interval.
+        """Detect event crossings in a given time interval.
 
         This method identifies events that occur within the specified time
         interval by evaluating event indicators and collecting internal hints
@@ -375,9 +418,7 @@ class HybridAlgorithm(Algorithm):
         return snapshots, input_cache, indicators_left, crossings, internal_hints
 
     def _capture_inputs(self, comp: CoSimComponent) -> dict[str, Any]:
-        """
-        Capture the current inputs of the component.
-        """
+        """Capture the current inputs of the component."""
         inputs: dict[str, Any] = {}
         for name, port in comp.inputs.items():
             value = port.get()
@@ -388,9 +429,7 @@ class HybridAlgorithm(Algorithm):
     def _restore_with_inputs(
         self, comp: CoSimComponent, snapshot: Any, inputs: dict[str, Any], t: float
     ) -> None:
-        """
-        Restore the component's state from snapshot and set its inputs.
-        """
+        """Restore the component's state from snapshot and set its inputs."""
         comp.restore_state(snapshot, t=t)
         if inputs:
             comp.set_inputs(inputs, t=t)
@@ -408,8 +447,7 @@ class HybridAlgorithm(Algorithm):
         t_right: float,
         internal_hints: dict[str, list[InternalEventInfo]] | None = None,
     ) -> tuple[DenseTime, list[tuple[str, str]]]:
-        """
-        Locate the event time within [t_left, t_right] using bisection.
+        """Locate the event time within [t_left, t_right] using bisection.
 
         If internal_hints are provided (from components with internal micro-stepping),
         the algorithm uses these to narrow the search interval before bisection,
@@ -500,7 +538,7 @@ class HybridAlgorithm(Algorithm):
                 comp._update_output_states()
             working_snapshots[comp.name] = comp.snapshot_state()
 
-        self._log("Entering Bisection Loop ...")
+        self._log_debug("Entering Bisection Loop ...")
         # 7) Bisection loop
         for iteration in range(self.max_iter):
             # a) Check termination: interval width
@@ -510,7 +548,7 @@ class HybridAlgorithm(Algorithm):
 
             # b) Bisect the interval
             mid = 0.5 * (left + right)
-            self._log(
+            self._log_debug(
                 f"Iteration {iteration + 1}: "
                 f"Interval = [{left:.8f}, {right:.8f}], Mid = {mid:.8f}\n"
             )
@@ -519,14 +557,14 @@ class HybridAlgorithm(Algorithm):
             indicators_mid = self._evaluate_indicators_at(
                 event_sources, working_snapshots, input_cache, t_left_ref, mid
             )
-            self._log(f"Indicators at Mid (t={mid:.8f}): {indicators_mid}")
+            self._log_debug(f"Indicators at Mid (t={mid:.8f}): {indicators_mid}")
 
             # d) Detect crossings in [left, mid]
             events_left_interval = self._detect_crossing_between(
                 event_sources, indicators_left_vals, indicators_mid
             )
 
-            self._log(f"Events in [left, mid]: {events_left_interval}")
+            self._log_debug(f"Events in [left, mid]: {events_left_interval}")
 
             # e) Check if we found exact crossing at midpoint
             if len(events_left_interval) == 1:
@@ -586,8 +624,7 @@ class HybridAlgorithm(Algorithm):
         t_left: float | None = None,
         t_right: float | None = None,
     ) -> InternalEventInfo | None:
-        """
-        Find the earliest event hint across all components.
+        """Find the earliest event hint across all components.
 
         Only considers hints that fall within [t_left, t_right] if provided.
         Returns the InternalEventInfo with the smallest t_before value.
@@ -606,9 +643,7 @@ class HybridAlgorithm(Algorithm):
         return earliest
 
     def _collect_events_at_time(self, event_sources: list[CoSimComponent]) -> list[tuple[str, str]]:
-        """
-        Collect all events at the current time based on indicator values.
-        """
+        """Collect all events at the current time based on indicator values."""
         all_events = []
         for comp in event_sources:
             indicators = comp.evaluate_event_indicators()
@@ -630,8 +665,7 @@ class HybridAlgorithm(Algorithm):
         t_left: float,
         t_target: float,
     ) -> dict[str, dict[str, float]]:
-        """
-        Evaluate event indicators for all event source components at t_target
+        """Evaluate event indicators for all event source components at t_target
         starting from snapshots and input caches at t_left.
 
         Args:
@@ -661,8 +695,7 @@ class HybridAlgorithm(Algorithm):
         t_left: float,
         t_target: float,
     ) -> dict[str, float]:
-        """
-        Evaluate event indicators for a single component at t_target
+        """Evaluate event indicators for a single component at t_target
         starting from snapshot and input cache at t_left.
 
         Args:
@@ -695,8 +728,7 @@ class HybridAlgorithm(Algorithm):
         indicators_prev: dict[str, dict[str, float]],
         indicators_curr: dict[str, dict[str, float]],
     ) -> list[tuple[str, str]]:
-        """
-        Detect crossings between two sets of indicator values for all event source components.
+        """Detect crossings between two sets of indicator values for all event source components.
 
         Returns a list of (component name, event name) tuples where crossings were detected.
         """
@@ -718,9 +750,7 @@ class HybridAlgorithm(Algorithm):
         input_cache: dict[str, dict[str, Any]],
         t_left: float,
     ) -> None:
-        """
-        Restore all event source components to their state at t_left.
-        """
+        """Restore all event source components to their state at t_left."""
         for comp in event_sources:
             self._restore_with_inputs(
                 comp, snapshots_left[comp.name], input_cache[comp.name], t_left

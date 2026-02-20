@@ -12,9 +12,9 @@ model AnglePotentiometerADC
   Modelica.Blocks.Interfaces.RealOutput v_out(unit="V") "Quantized ADC voltage";
 
   // Public parameters
-  parameter Integer nBits(min=1) = 8 "ADC resolution [bits]";
-  parameter Real theta_min(unit="rad") = -pi/9 "Minimum measurable angle";
-  parameter Real theta_max(unit="rad") =  pi/9 "Maximum measurable angle";
+  parameter Integer nBits(min=8) = 10 "ADC resolution [bits]";
+  parameter Real theta_min(unit="rad") = -1.3 * pi/9 "Minimum measurable angle";
+  parameter Real theta_max(unit="rad") = 1.3 * pi/9 "Maximum measurable angle";
 
   parameter Real v_pot(unit="V") = 5 "Potentiometer supply voltage";
   parameter Real v_adc(unit="V") = 3 "ADC reference voltage";
@@ -66,7 +66,7 @@ equation
 
 algorithm
   when initial() then
-    code := min(max(integer(v_adc_noisy / delta + 0.5), 0), levels);
+    code := min(max(integer((v_adc/2 + v_adc_noisy) / delta + 0.5), 0), levels);
     v_quant := code * delta;
     v_hold := v_quant;
   end when;

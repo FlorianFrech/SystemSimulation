@@ -1,29 +1,29 @@
 import sys
 PLATFORM = sys.platform
 
-from typing import Any
+from typing import Literal
 
 from pathlib import Path
 
 from syssimx.components.fmu import FMUComponent
 from syssimx.core.port import PortSpec, PortType
 
+SOLVERS = Literal["euler", "cvode"]
+
 # ----------------------------------------------------------------------------
-# Hybrid FMU Pendulum Component
+# FMU Pendulum Component
 # ----------------------------------------------------------------------------
 class FMUPendulum(FMUComponent):
     """
     FMU-based pendulum component with rollback support.
     """
 
-    def __init__(self, name, group="Pendulum", solver: str = "Euler"):
+    def __init__(self, name, group="Pendulum", solver: SOLVERS = "cvode"):
         # Select FMU based on solver choice
-        if solver == "Euler":
-            fmu_path = Path(__file__).parents[4]/ f"artifacts/fmus/{PLATFORM}" / "Pendulum_Euler.fmu"
-        elif solver == "Cvode":
-            fmu_path = Path(__file__).parents[4] / f"artifacts/fmus/{PLATFORM}" / "Pendulum_Cvode.fmu"
-        else:
-            raise ValueError(f"Unsupported solver '{solver}'. Choose 'Euler' or 'Cvode'.")
+        try:
+            fmu_path = Path(__file__).parents[4]/ f"artifacts/fmus/{PLATFORM}/Plants/Pendulum_{solver}.fmu"
+        except KeyError:
+             raise ValueError(f"Unsupported platform '{PLATFORM}'. No FMU available for this platform.")
         self.solver = solver
 
         # Initialize base class
@@ -38,33 +38,37 @@ class FMUPendulum(FMUComponent):
             step_size = min(1e-4, t_right - t)
             super()._do_step_internal(t, step_size)
             t += step_size
+            self._update_output_states(t)
+            self._record_outputs(t)
 
     # Snapshot and restore state methods for rollback
     def snapshot_state(self):
-        state = {"mode": "EQB"}
-        if self.solver == "Euler":
+        state = {"mode": "FMU"}
+        if self.solver == "euler":
             state["fmu_state"] = self._instance.getFMUState()
-        elif self.solver == "Cvode":
+        elif self.solver == "cvode":
             current_state = super().get_state()
             state.update(current_state)
         return state
 
     def restore_state(self, snapshot, t):
-        if snapshot.get("mode", "") != "EQB":
+        if snapshot.get("mode", "") != "FMU":
             raise ValueError(
                 f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'."
             )
         self.t = t
-        if self.solver == "Euler":
+        if self.solver == "euler":
             self._instance.setFMUState(snapshot["fmu_state"])
-        elif self.solver == "Cvode":
-            q0 = snapshot["q"]["value"]
-            omega0 = snapshot["omega"]["value"]
+            self._apply_parameters_starts()
+
+        elif self.solver == "cvode":
+            theta_start = snapshot["theta"]["value"]
+            omega_start = snapshot["omega"]["value"]
             self._instance.reset()
             self._instance.instantiate()
             self._instance.setupExperiment(startTime=t)
             self._instance.enterInitializationMode()
-            self.set_parameters(**{"q0": q0, "omega0": omega0})
+            self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
             self._apply_parameters_starts()
             self._apply_input_starts()
             self._instance.exitInitializationMode()
@@ -77,14 +81,14 @@ class FMUPendulum(FMUComponent):
             return
         restitution = 1
         output = self.get_outputs()
-        q0 = output["q"].magnitude
-        omega0 = -restitution * output["omega"].magnitude
+        theta_start = output["theta"].magnitude
+        omega_start = -restitution * output["omega"].magnitude
 
         self._instance.reset()
         self._instance.instantiate()
         self._instance.setupExperiment(startTime=t)
         self._instance.enterInitializationMode()
-        self.set_parameters(**{"q0": q0, "omega0": omega0})
+        self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
         self._apply_parameters_starts()
         self._apply_input_starts()
         self._instance.exitInitializationMode()

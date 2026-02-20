@@ -15,7 +15,6 @@ model DriveSimple
 
   // Limits and losses
   parameter Real I_max(unit="A") = 10 "Current limit (driver/thermal)";
-  parameter Real b_viscous(unit="N.m.s/rad") = 0.01 "Output viscous friction";
 
   // Derived Parameter
   parameter Real k_n(unit="(1/min)/V") = n_0/V_rated;
@@ -45,8 +44,8 @@ equation
   // Quasi-static current with limit
   I = min(max((U - E) / R_arm, -I_max), I_max);
 
-  // Quasi-static torque with viscous loss
-  torque = eta * gearRatio * k_t * I - b_viscous * omega;
+  // Quasi-static torque
+  torque = eta * gearRatio * k_t * I;
   
   annotation(
     experiment(StartTime = 0, StopTime = 5, Interval = 0.1)
