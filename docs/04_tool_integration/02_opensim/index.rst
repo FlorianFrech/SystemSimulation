@@ -39,12 +39,6 @@ What each tutorial does:
    - Simulates free-swing and torque-driven repeated impacts.
    - Studies how dissipation controls rebound energy loss and how stiffness trades penetration against collision sharpness/numerical stiffness.
 
-4. ``04_opensim_pendulum_component``
-   
-   - Implements a custom `OpenSimComponent` wrapper for the pendulum model.
-   - Validates that the component produces identical trajectories to direct OpenSim API usage.
-   - Demonstrates how to use the component in a co-simulation context with other components (e.g., FMU, FEM) in the MasterPendulum setup.
-
 .. toctree::
    :maxdepth: 1
    :numbered:
@@ -52,4 +46,3 @@ What each tutorial does:
    01_opensim_pendulum_basics
    02_opensim_pendulum_torque
    03_opensim_pendulum_contact
-   04_opensim_pendulum_component

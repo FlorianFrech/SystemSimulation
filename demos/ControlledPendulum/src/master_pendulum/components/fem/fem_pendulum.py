@@ -184,20 +184,16 @@ class FEMPendulum(FEMComponent):
         self._mesh = build_mesh(self.geom_params, self.mesh_params, self._with_contact)
 
     def _compute_mass(self):
+        """Compute mass by integrating density over the undeformed area of the pendulum."""
         area = Integrate(1, self._mesh, definedon=self._mesh.Materials("pendulum"))
         self.mass = area * self.mat_params.thickness * self.rho_p
 
     def _compute_inertia(self):
-        # Compute center of mass
-        total_mass = Integrate(self.rho_p, self._mesh, definedon=self._mesh.Materials("pendulum"))
-        cx = (
-            Integrate(self.rho_p * x, self._mesh, definedon=self._mesh.Materials("pendulum"))
-            / total_mass
-        )
-        cy = (
-            Integrate(self.rho_p * y, self._mesh, definedon=self._mesh.Materials("pendulum"))
-            / total_mass
-        )
+        """Compute moment of inertia about the pivot by integrating r² over the area, where r is distance from pivot."""
+        # Compute center of mass (rho cancels since it's a constant scalar)
+        area = self.mass / (self.mat_params.thickness * self.rho_p)
+        cx = Integrate(x, self._mesh, definedon=self._mesh.Materials("pendulum")) / area
+        cy = Integrate(y, self._mesh, definedon=self._mesh.Materials("pendulum")) / area
 
         # Compute effective length from pivot to CoM
         self._equivalent_length = np.sqrt(cx**2 + cy**2)
@@ -205,15 +201,15 @@ class FEMPendulum(FEMComponent):
         # Store for torque calculation
         self._X_rel = CF((x - 0, y - 0))  # Relative to pivot at (0,0)
 
-        # Parallel axis theorem: I = I_cm + m*d²
+        # Moment of inertia about pivot: I = rho * t * ∫ r² dA
         J_area = Integrate(
-            self.rho_p * (self._X_rel[0] ** 2 + self._X_rel[1] ** 2),
+            self._X_rel[0] ** 2 + self._X_rel[1] ** 2,
             self._mesh,
             definedon=self._mesh.Materials("pendulum"),
         )
-        self.inertia = J_area * self.mat_params.thickness
+        self.inertia = self.rho_p * self.mat_params.thickness * J_area
 
-    def _compute_fem_gravity_torque(self):
+    def _gravity_torque_fem(self):
         """Compute gravitational torque by integrating moment arm × gravity force."""
         g = 9.81
         rhoA_p = self.rho_p * self.mat_params.thickness
@@ -229,12 +225,14 @@ class FEMPendulum(FEMComponent):
         )
         return torque_fem
 
-    def _gravity_torque(self, theta: float):
+    def _gravity_torque_rigid(self, theta: float):
+        """Compute gravitational torque using rigid-body approximation: τ = m * g * L * sin(θ)."""
         if not self._use_gravity:
             return 0.0
         return self.mass * 9.81 * self._equivalent_length * np.sin(theta)
 
     def _initialize_fe_spaces(self):
+        """Initialize finite element spaces for displacement, Lagrange multipliers, and stress."""
         # Create H1 vector space for 3D quantities (displacement, velocity, acceleration)
         self._V = VectorH1(self._mesh, order=self.mesh_params.mesh_order, dirichlet="fix")
 
@@ -261,7 +259,7 @@ class FEMPendulum(FEMComponent):
         )
 
     def _initialize_grid_functions(self):
-        # Initialize grid functions
+        """Initialize grid functions for state variables and stress."""
         self._gf_u = GridFunction(self._fes)  # Current state
         self._gf_v = GridFunction(self._fes)  # Velocity
         self._gf_a = GridFunction(self._fes)  # Acceleration
@@ -452,7 +450,7 @@ class FEMPendulum(FEMComponent):
 
         if alpha is None:
             torque_drive = self._get_applied_drive_torque() if "tau" in state else 0.0
-            torque_gravity = self._gravity_torque(theta)
+            torque_gravity = self._gravity_torque_rigid(theta)
             alpha = (torque_drive - torque_gravity) / self.inertia
 
         a0 = CF((-alpha * r0[1], alpha * r0[0]))
@@ -506,7 +504,6 @@ class FEMPendulum(FEMComponent):
             # Update displacement grid function
             self._gf_u.components[0].Set(u0, definedon=self._mesh.Materials("pendulum"))
             self._gf_uold.vec[:] = self._gf_u.vec
-            self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
 
             # Update gap if contact is enabled
             if self._with_contact:
@@ -520,14 +517,13 @@ class FEMPendulum(FEMComponent):
 
                 # Update velocity grid function
                 self._gf_v.components[0].Set(v0, definedon=self._mesh.Materials("pendulum"))
-                self._gf_v_history.AddMultiDimComponent(self._gf_v.components[0].vec)
 
                 # Initialize previous velocity for Newmark
                 self._gf_vold.vec[:] = self._gf_v.vec
 
                 # Initialize accelartion from dynamics
                 torque_drive = self._get_applied_drive_torque() if "tau" in state else 0.0
-                torque_gravity = self._gravity_torque(theta)
+                torque_gravity = self._gravity_torque_rigid(theta)
                 alpha_init = (torque_drive - torque_gravity) / self.inertia
 
                 # Convert scalar angular acceleration to acceleration field
@@ -647,7 +643,6 @@ class FEMPendulum(FEMComponent):
         Outputs are updated and recorded within each micro-step to ensure accurate recording.
         """
         self._do_step_internal(t, dt)
-        self.t = t + dt
 
     def _do_step_internal(self, t, dt):
         """
@@ -694,10 +689,12 @@ class FEMPendulum(FEMComponent):
                         self.tau.Set(effective_dt)
                     elif self.gap_prev < 0.001:
                         self.tau.Set(1e-4)
-                    elif self.gap_prev < 0.01:
+                    elif self.gap_prev < 0.005:
                         self.tau.Set(5e-4)
-                    elif self.gap_prev < 0.02:
+                    elif self.gap_prev < 0.01:
                         self.tau.Set(1e-3)
+                    elif self.gap_prev < 0.02:
+                        self.tau.Set(5e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
 
@@ -744,10 +741,9 @@ class FEMPendulum(FEMComponent):
                 self._gf_sigma.Interpolate(self._PK2_neo_hookean_p(self._gf_u.components[0]))
                 self._gf_sigma_norm.Set(Norm(self._gf_sigma))
 
-                # Store results in time series
-                if self.anim_params.animate:
-                    self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                    self._gf_sigma_norm_history.AddMultiDimComponent(self._gf_sigma_norm.vec)
+                # Add current state to time series history for visualization
+                self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+                self._gf_sigma_norm_history.AddMultiDimComponent(self._gf_sigma_norm.vec)
 
                 if self.anim_params.animate:
                     self.scene.Redraw()
@@ -755,7 +751,8 @@ class FEMPendulum(FEMComponent):
 
                 self._record_outputs(t_current)
                 self.update_monitoring()
-
+        self.t = t_current
+        
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
@@ -768,7 +765,7 @@ class FEMPendulum(FEMComponent):
         
         # Update acting torque
         drive_torque = self._get_applied_drive_torque()
-        gravity_torque = self._compute_fem_gravity_torque()
+        gravity_torque = self._gravity_torque_fem()
         total_torque = drive_torque - gravity_torque
         alpha = total_torque / self.inertia
         self.outputs["alpha"].set(alpha, t=t)
@@ -1026,6 +1023,29 @@ class FEMPendulum(FEMComponent):
         if draw_a:
             Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
 
+    def animate_displacement(self, settings: dict | None = None):
+        """
+        Animate displacement history.
+
+        Requires that `anim_params.animate` was True during simulation so
+        histories were recorded.
+        """
+        if settings is None:
+            settings = {"Multidim": {"speed": 15}}
+        if not hasattr(self, "_gf_u_history") or len(self._gf_u_history.vecs) == 0:
+            raise RuntimeError(
+                f"{self.name}: No displacement history recorded. "
+                "Run with anim_params.animate=True to collect history."
+            )
+        Draw(
+            self._gf_u_history,
+            self._mesh,
+            deformation=self._gf_u_history,
+            animate=True,
+            settings=settings,
+        )
+    
+    
     def animate_stress(self, settings: dict | None = None):
         """
         Animate stress norm history with deformation.

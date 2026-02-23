@@ -227,8 +227,8 @@
 							<HuntCrossleyForce::ContactParameters>
 								<!--Names of geometry objects affected by these parameters.-->
 								<geometry>wall_contact head_contact</geometry>
-								<stiffness>1000000</stiffness>
-								<dissipation>0.5</dissipation>
+								<stiffness>100000000</stiffness>
+								<dissipation>0.10000000000000001</dissipation>
 								<static_friction>0</static_friction>
 								<dynamic_friction>0</dynamic_friction>
 								<viscous_friction>0</viscous_friction>

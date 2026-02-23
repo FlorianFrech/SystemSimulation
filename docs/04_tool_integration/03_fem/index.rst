@@ -39,12 +39,6 @@ What each tutorial does:
   - Uses an incremental normal-gap penalty energy to resist penetration and tracks minimum contact gap for diagnostics.
   - Compares non-adaptive vs adaptive time stepping for energy behavior and studies stiff vs compliant pendulum responses during impact.
 
-- ``04_fem_pendulum_component``
-
-  - Implements a custom `FEMComponent` wrapper for the pendulum model.
-  - Validates that the component produces identical trajectories to direct NGSolve API usage.
-  - Demonstrates how to use the component in a co-simulation context with other components (e.g., FMU, OpenSim) in the MasterPendulum setup.
-
 .. toctree::
    :maxdepth: 1
    :numbered:
@@ -52,4 +46,3 @@ What each tutorial does:
    01_fem_pendulum_basics
    02_fem_pendulum_torque
    03_fem_pendulum_contact
-   04_fem_pendulum_component
