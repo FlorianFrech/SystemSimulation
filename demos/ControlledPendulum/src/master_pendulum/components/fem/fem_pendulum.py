@@ -253,6 +253,12 @@ class FEMPendulum(FEMComponent):
                 definedon=self._mesh.Materials("pendulum"),
             )
         )
+        # Scalar H1 space for stress norm visualization
+        self._S_norm = H1(
+            self._mesh,
+            order=self.mesh_params.mesh_order,
+            definedon=self._mesh.Materials("pendulum"),
+        )
 
     def _initialize_grid_functions(self):
         # Initialize grid functions
@@ -265,11 +271,13 @@ class FEMPendulum(FEMComponent):
         self._gf_aold = GridFunction(self._fes)  # Previous acceleration
 
         self._gf_sigma = GridFunction(self._S)  # Stress
+        self._gf_sigma_norm = GridFunction(self._S_norm)  # Stress norm (scalar)
 
         # Time series storage
         self._gf_u_history = GridFunction(self._V, multidim=0)
         self._gf_v_history = GridFunction(self._V, multidim=0)
         self._gf_stress_history = GridFunction(self._S, multidim=0)
+        self._gf_sigma_norm_history = GridFunction(self._S_norm, multidim=0)
 
     def _initialize_contact(self):
         """
@@ -688,7 +696,7 @@ class FEMPendulum(FEMComponent):
                         self.tau.Set(1e-4)
                     elif self.gap_prev < 0.01:
                         self.tau.Set(5e-4)
-                    elif self.gap_prev < 0.05:
+                    elif self.gap_prev < 0.02:
                         self.tau.Set(1e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
@@ -734,9 +742,12 @@ class FEMPendulum(FEMComponent):
 
                 # Compute stress
                 self._gf_sigma.Interpolate(self._PK2_neo_hookean_p(self._gf_u.components[0]))
+                self._gf_sigma_norm.Set(Norm(self._gf_sigma))
 
                 # Store results in time series
-                # self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+                if self.anim_params.animate:
+                    self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+                    self._gf_sigma_norm_history.AddMultiDimComponent(self._gf_sigma_norm.vec)
 
                 if self.anim_params.animate:
                     self.scene.Redraw()
@@ -812,6 +823,7 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     def reset(self):
         # Reset all grid functions and time series
+        super().reset()
         self._gf_u.vec[:] = 0
         self._gf_v.vec[:] = 0
         self._gf_a.vec[:] = 0
@@ -819,9 +831,11 @@ class FEMPendulum(FEMComponent):
         self._gf_vold.vec[:] = 0
         self._gf_aold.vec[:] = 0
         self._gf_sigma.vec[:] = 0
+        self._gf_sigma_norm.vec[:] = 0
         self._gf_u_history = GridFunction(self._V, multidim=0)
         self._gf_v_history = GridFunction(self._V, multidim=0)
         self._gf_stress_history = GridFunction(self._S, multidim=0)
+        self._gf_sigma_norm_history = GridFunction(self._S_norm, multidim=0)
 
     # ----------------------------------------------------------------------------
     # Helpers for diagnostics and visualization
@@ -1011,6 +1025,32 @@ class FEMPendulum(FEMComponent):
         # Acceleration
         if draw_a:
             Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+
+    def animate_stress(self, settings: dict | None = None):
+        """
+        Animate stress norm history with deformation.
+
+        Requires that `anim_params.animate` was True during simulation so
+        histories were recorded.
+        """
+        if settings is None:
+            settings = {"Multidim": {"speed": 15}}
+        if not hasattr(self, "_gf_sigma_norm_history") or len(self._gf_sigma_norm_history.vecs) == 0:
+            raise RuntimeError(
+                f"{self.name}: No stress history recorded. "
+                "Run with anim_params.animate=True to collect history."
+            )
+        Draw(
+            self._gf_sigma_norm_history,
+            self._mesh,
+            interpolation_multidim=True,
+            deformation=self._gf_u_history,
+            animate=True,
+            autoscale=False,
+            min=0,
+            max=np.max([v.FV().NumPy().max() for v in self._gf_sigma_norm_history.vecs]),
+            settings=settings,
+        )
 
     # ----------------------------------------------------------------------------
     # Monitoring interface methods

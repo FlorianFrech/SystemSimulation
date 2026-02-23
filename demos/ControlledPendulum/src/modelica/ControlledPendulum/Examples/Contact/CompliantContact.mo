@@ -1,6 +1,6 @@
 within ControlledPendulum.Examples.Contact;
 
-model Example_Discrete
+model CompliantContact
   // Parameters
   parameter Boolean useReset(fixed=false, start=true);
   
@@ -8,9 +8,9 @@ model Example_Discrete
   Trajectories.SineAngleSetPoint       set_point;
   Sensors.AnglePotentiometerADC        angle_sensor(nBits=12);
   Sensors.AnglePotentiometerADCDecoder angle_decoder(nBits=12);
-  Controllers.PIDContinuous            pid;
+  Controllers.PIDContinuous            pid(Kd=0.05, Ki=5, Kp=5);
   Actuators.DriveDynamic               drive;
-  Plants.PendulumWithDiscreteWall      pendulum(theta_start=0.3);
+  Plants.PendulumWithCompliantWall     pendulum;
 
 protected
   discrete Boolean contact(start=false) "Current contact state";
@@ -46,4 +46,4 @@ equation
     experiment(StartTime = 0, StopTime = 10, Interval = 0.001)
   );
 
-end Example_Discrete;
+end CompliantContact;

@@ -408,12 +408,9 @@ class OpenSimPendulum(OpenSimComponent):
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
         super().reset()
-        self.model = None
-        self.state = None
         self.coord = None
         self.actuator = None
         self.manager = None
-        self.model, self.state, self.coord, self.actuator, self.manager = self._build()
 
     # ----------------------------------------------------------------------------
     # Save XML file

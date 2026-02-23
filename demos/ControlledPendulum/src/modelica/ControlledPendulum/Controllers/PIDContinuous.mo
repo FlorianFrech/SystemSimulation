@@ -31,8 +31,8 @@ model PIDContinuous
   // Integral part with reset capability
   Modelica.Blocks.Continuous.LimIntegrator I(
     k=Ki,
-    outMax=uMax,
-    outMin=uMin,
+    outMax=100*uMax,
+    outMin=100*uMin,
     y_start=xi_start,
     initType=Modelica.Blocks.Types.Init.InitialState,
     use_reset=true);

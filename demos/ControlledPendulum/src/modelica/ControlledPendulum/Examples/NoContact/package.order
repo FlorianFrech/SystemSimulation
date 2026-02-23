@@ -1,4 +1,3 @@
-Example_Simple
-Example_SensorQuantized
-Example_DynamicDrive
-Example_AdvancedDrive
+Baseline
+Quantization
+AlgebraicLoop

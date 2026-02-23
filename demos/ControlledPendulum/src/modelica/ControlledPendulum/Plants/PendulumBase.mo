@@ -2,9 +2,9 @@ within ControlledPendulum.Plants;
 
 partial model PendulumBase
   // Parameters
-  parameter Real m(unit="kg") = 8.184 "Pendulum mass";
-  parameter Real L(unit="m") = 0.18165 "Pendulum length";
-  parameter Real J(unit="kg.m2") = 0.3338 "Moment of inertia about pivot";
+  parameter Real m(unit="kg") = 10.8429606 "Pendulum mass";
+  parameter Real L(unit="m") = 0.181650853 "Pendulum length";
+  parameter Real J(unit="kg.m2") = 0.442268222 "Moment of inertia about pivot";
   parameter Real g(unit="m/s2") = 9.81 "Gravitational acceleration";
   parameter Real theta_start(unit="rad") = 0 "Initial angle";
   parameter Real omega_start(unit="rad/s") = 0 "Initial angular velocity";

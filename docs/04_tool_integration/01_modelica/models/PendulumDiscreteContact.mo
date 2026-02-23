@@ -11,6 +11,8 @@ model PendulumDiscreteContact
   parameter Real inertia(unit="kg.m2") = 20;
   parameter Real theta_wall (unit="rad") = 0;
   parameter Integer sense = -1; 
+  parameter Real restitution = 1 "Coefficient of restitution";
+  parameter Real gap_tol(unit="rad") = 0 "Contact tolerance (>=0)";
 
   // Input torque at the pivot
   Modelica.Blocks.Interfaces.RealInput torque(unit="N.m");
@@ -20,21 +22,23 @@ model PendulumDiscreteContact
   Modelica.Blocks.Interfaces.RealOutput omega(unit="rad/s");
   Modelica.Blocks.Interfaces.RealOutput alpha(unit="rad/s2") = der(omega);
   Modelica.Blocks.Interfaces.BooleanOutput contact;
+  
+protected
+  Real x(unit="rad");
 
 initial equation
   theta = theta0;
   omega = omega0;
-  contact = theta <= theta_wall and omega < 0;
 
 equation
   der(theta) = omega;
   der(omega) = -(m * g * L / inertia) * sin(theta) + torque / inertia;
+  x = sense * (theta - theta_wall);
+  contact = (x >= -gap_tol);
   
-  when theta <= theta_wall then
-    contact = true;
-    reinit(omega, -omega);  
-  elsewhen theta >= theta_wall then
-    contact = false;
+  when contact and not pre(contact) then
+    reinit(omega, -restitution * omega);
+    reinit(theta, theta_wall);
   end when;
   
 end PendulumDiscreteContact;

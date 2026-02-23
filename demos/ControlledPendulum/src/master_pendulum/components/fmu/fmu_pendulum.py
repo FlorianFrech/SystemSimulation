@@ -38,8 +38,8 @@ class FMUPendulum(FMUComponent):
             step_size = min(1e-4, t_right - t)
             super()._do_step_internal(t, step_size)
             t += step_size
-            self._update_output_states(t)
-            self._record_outputs(t)
+            # self._update_output_states(t)
+            # self._record_outputs(t)
 
     # Snapshot and restore state methods for rollback
     def snapshot_state(self):
@@ -81,14 +81,13 @@ class FMUPendulum(FMUComponent):
             return
         restitution = 1
         output = self.get_outputs()
-        theta_start = output["theta"].magnitude
         omega_start = -restitution * output["omega"].magnitude
 
         self._instance.reset()
         self._instance.instantiate()
         self._instance.setupExperiment(startTime=t)
         self._instance.enterInitializationMode()
-        self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
+        self.set_parameters(**{"theta_start": 0, "omega_start": omega_start})
         self._apply_parameters_starts()
         self._apply_input_starts()
         self._instance.exitInitializationMode()

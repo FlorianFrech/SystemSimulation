@@ -9,27 +9,22 @@ model PendulumWithDiscreteWall
 
   // Parameters
   parameter Real theta_wall(unit="rad") = 0;
-  parameter Integer sense = -1;
+  parameter Integer sense = 1;
   parameter Real restitution = 1 "Coefficient of restitution";
-
-  // Components
-  ImpactWallDiscrete wall(theta_wall=theta_wall, sense=sense);
 
   // Outputs
   Modelica.Blocks.Interfaces.BooleanOutput contact;
-
+  
 initial equation
-  contact = wall.contact;
+  contact = sense * (theta - theta_wall) < 0;
 
 equation
-  tau_total = tau;
-  connect(theta, wall.theta);
-  connect(omega, wall.omega);
-  contact = wall.contact;
-
-  when contact and not pre(contact) then
-    reinit(omega, -restitution*omega);
+contact = sense * (theta - theta_wall) < 0;
+  when contact then
+    reinit(omega, -omega);  
   end when;
+  
+  tau_total = tau;
 
   annotation(
     experiment(StartTime = 0, StopTime = 10, Interval = 0.002)
