@@ -693,8 +693,6 @@ class FEMPendulum(FEMComponent):
                         self.tau.Set(5e-4)
                     elif self.gap_prev < 0.01:
                         self.tau.Set(1e-3)
-                    elif self.gap_prev < 0.02:
-                        self.tau.Set(5e-3)
                     else:
                         self.tau.Set(self.sim_params.tau)
 

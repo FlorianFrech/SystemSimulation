@@ -18,7 +18,7 @@ class FMUPendulum(FMUComponent):
     FMU-based pendulum component with rollback support.
     """
 
-    def __init__(self, name, group="Pendulum", solver: SOLVERS = "cvode"):
+    def __init__(self, name, group="Plant", solver: SOLVERS = "cvode"):
         # Select FMU based on solver choice
         try:
             fmu_path = Path(__file__).parents[4]/ f"artifacts/fmus/{PLATFORM}/Plants/Pendulum_{solver}.fmu"

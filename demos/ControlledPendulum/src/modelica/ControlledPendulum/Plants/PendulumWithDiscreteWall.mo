@@ -13,10 +13,7 @@ model PendulumWithDiscreteWall
   parameter Real restitution = 1 "Coefficient of restitution";
 
   // Outputs
-  Modelica.Blocks.Interfaces.BooleanOutput contact;
-  
-initial equation
-  contact = sense * (theta - theta_wall) < 0;
+  Modelica.Blocks.Interfaces.BooleanOutput contact(start=false, fixed=true);
 
 equation
 contact = sense * (theta - theta_wall) < 0;

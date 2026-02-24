@@ -184,7 +184,7 @@ class SimulationParameters:
     def __init__(
         self,
         t_start=0.0,
-        tau=0.01,
+        tau=0.001,
         t_end=2.0,
         max_err=1e-6,
         max_it=20,

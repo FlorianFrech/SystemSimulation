@@ -34,7 +34,7 @@ model DriveDynamic
   Modelica.Blocks.Interfaces.RealOutput torque(unit="N.m", start=0);
 
   // Internal Variables
-  Real I(unit="A", start=0);
+  Real I(unit="A", start=0, fixed=true);
   Real U(unit="V");
   Real omega_m(unit="rad/s");
   Real E(unit="V") "Back EMF Voltage";

@@ -5,10 +5,10 @@ OpenSim
 .. figure:: pendulum_contact.png
    :width: 60%
    :figclass: caption
-   :alt: Visualization of the Modelica Pendulum Model with wall contact.
-   :name: modelica-pendulum-fig
+   :alt: Visualization of the OpenSim Pendulum Model with wall contact.
+   :name: opensim-pendulum-fig
 
-   Visualization of the Modelica Pendulum Model with wall contact.
+   Visualization of the OpenSim Pendulum Model with wall contact.
 
 This sequence builds a rigid-body pendulum in OpenSim step by step, from basic model construction to torque actuation and impact/contact behavior.
 

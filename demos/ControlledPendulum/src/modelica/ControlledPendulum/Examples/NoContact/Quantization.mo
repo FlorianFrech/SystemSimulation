@@ -5,12 +5,12 @@ model Quantization
   type RealOutput = Modelica.Blocks.Interfaces.RealOutput;
 
   // Components
-  Trajectories.SineAngleSetPoint       set_point;
-  Sensors.AnglePotentiometerADC        angle_sensor;
-  Sensors.AnglePotentiometerADCDecoder angle_decoder;
-  Controllers.PIDContinuous            pid;
-  Actuators.DriveDynamic               drive;
-  Plants.Pendulum                      pendulum;
+  Trajectories.SetPoint     set_point;
+  Sensors.AngleSensor       angle_sensor;
+  Sensors.AngleDecoder      angle_decoder;
+  Controllers.PIDController pid;
+  Actuators.DriveDynamic    drive;
+  Plants.Pendulum           pendulum;
 
   // FMUCompoent observables
   RealOutput theta_ref(unit="rad") "Reference angle from set point";
@@ -39,11 +39,9 @@ equation
   alpha = pendulum.alpha;
   u_control = pid.u;
   tau = drive.torque;  
-  
-  pid.resetI = false; // No contact - reset not required
-  
+    
   annotation(
-    experiment(StartTime = 0, StopTime = 5, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
   );
 
 end Quantization;

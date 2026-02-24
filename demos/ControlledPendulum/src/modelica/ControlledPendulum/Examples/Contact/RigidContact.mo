@@ -8,12 +8,12 @@ model RigidContact
   parameter Boolean useReset(start=false, fixed=false);
   
   // Components
-  Trajectories.SineAngleSetPoint       set_point;
-  Sensors.AnglePotentiometerADC        angle_sensor;
-  Sensors.AnglePotentiometerADCDecoder angle_decoder;
-  Controllers.PIDContinuous            pid;
-  Actuators.DriveDynamic               drive;
-  Plants.PendulumWithDiscreteWall      pendulum;
+  Trajectories.SetPoint           set_point;
+  Sensors.AngleSensor             angle_sensor;
+  Sensors.AngleDecoder            angle_decoder;
+  Controllers.PIDControllerReset  pid;
+  Actuators.DriveDynamic          drive;
+  Plants.PendulumWithDiscreteWall pendulum;
   
   // FMUCompoent observables
   RealOutput theta_ref(unit="rad") "Reference angle from set point";
@@ -25,8 +25,7 @@ model RigidContact
   RealOutput tau(unit="N.m") "Torque from drive";
 
 protected
-  discrete Boolean contact(start=false, fixed=false) "Current contact state";
-  discrete Boolean contactRisingEdge(start=false, fixed=false) "Rising edge detector for contact";
+  discrete Boolean contactRisingEdge(start=false, fixed=true) "Rising edge detector for contact";
 
 equation
   // Connections
@@ -39,12 +38,10 @@ equation
   connect(drive.omega, pendulum.omega);
   
   // Rising edge detection using when clause
-  when pendulum.contact and not pre(contact) then
+  when pendulum.contact and not pre(pendulum.contact) then
     contactRisingEdge = true;
-    contact = true;
   elsewhen not pendulum.contact then
     contactRisingEdge = false;
-    contact = false;
   end when;
   
   // Reset integrator on wall impact
@@ -64,7 +61,7 @@ equation
   tau = drive.torque; 
   
   annotation(
-    experiment(StartTime = 0, StopTime = 5, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 6, Interval = 0.001)
   );
 
 end RigidContact;

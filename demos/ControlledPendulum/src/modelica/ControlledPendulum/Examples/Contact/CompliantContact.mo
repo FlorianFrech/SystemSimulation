@@ -5,12 +5,12 @@ model CompliantContact
   parameter Boolean useReset(fixed=false, start=true);
   
   // Components
-  Trajectories.SineAngleSetPoint       set_point;
-  Sensors.AnglePotentiometerADC        angle_sensor(nBits=12);
-  Sensors.AnglePotentiometerADCDecoder angle_decoder(nBits=12);
-  Controllers.PIDContinuous            pid(Kd=0.05, Ki=5, Kp=5);
-  Actuators.DriveDynamic               drive;
-  Plants.PendulumWithCompliantWall     pendulum;
+  Trajectories.SetPoint            set_point;
+  Sensors.AngleSensor              angle_sensor;
+  Sensors.AngleDecoder             angle_decoder;
+  Controllers.PIDControllerReset   pid;
+  Actuators.DriveDynamic           drive;
+  Plants.PendulumWithCompliantWall pendulum;
 
 protected
   discrete Boolean contact(start=false) "Current contact state";
@@ -43,7 +43,7 @@ equation
  end if;
   
   annotation(
-    experiment(StartTime = 0, StopTime = 10, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
   );
 
 end CompliantContact;

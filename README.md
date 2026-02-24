@@ -45,7 +45,7 @@ OpenSim is conda-only and ABI-coupled to specific NumPy/SciPy builds. Recommende
 2. Install OpenSim with `conda` using ABI-compatible NumPy/SciPy pins.
 
 See the full installation guide:
-- `docs/getting_started/installation.ipynb`
+- `docs/01_getting_started/01_installation.ipynb`
 
 ## Quickstart Example
 
@@ -128,21 +128,19 @@ plt.show()
 ```
 
 For the complete walkthrough, see:
-- `docs/getting_started/quickstart.ipynb`
+- `docs/01_getting_started/02_quickstart.ipynb`
 
 ## Documentation
 
 - Documentation entry: `docs/index.rst`
-- Installation guide: `docs/getting_started/installation.ipynb`
-- Core concepts: `docs/getting_started/concepts.ipynb`
-- Quickstart tutorial: `docs/getting_started/quickstart.ipynb`
-- API docs: `docs/api/`
-- Tutorials:
-  - `docs/tutorials/beginners/`
-  - `docs/tutorials/intermediate/`
-  - `docs/tutorials/advanced/`
-  - `docs/tutorials/tool_integration/`
-  - `docs/tutorials/case_study/`
+- Installation guide: `docs/01_getting_started/01_installation.ipynb`
+- Core concepts: `docs/01_getting_started/03_concepts.ipynb`
+- Quickstart tutorial: `docs/01_getting_started/02_quickstart.ipynb`
+- API docs: `docs/02_api/`
+- Tutorials and case studies:
+  - `docs/03_core_tutorials/`
+  - `docs/04_tool_integration/`
+  - `docs/05_case_study/`
 
 ## Project Status
 

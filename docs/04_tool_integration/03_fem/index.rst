@@ -2,13 +2,12 @@ Netgen/NGSolve
 ==============
 
 
-.. figure:: ../../figures/fem_pendulum.png
-   :width: 60%
-   :figclass: caption
-   :alt: Visualization of the FEM Pendulum Model with wall contact.
-   :name: fem-pendulum-fig
+.. figure:: /_static/fem_pendulum_swing.gif
+   :alt: FEM pendulum swing
+   :width: 600px
 
-   Visualization of the FEM Pendulum Model with wall contact.
+   Animation of the FEM pendulum swing.
+
 
 This sequence builds a nonlinear, deformable pendulum model step by step using Netgen/NGSolve, starting from core dynamics and extending to actuation and contact.
 

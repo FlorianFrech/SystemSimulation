@@ -63,7 +63,7 @@ equation
   v_adc_noisy = min(max(v_adc_in + noise_val, 0), v_adc);
 
   v_out = v_hold;
-
+  
 algorithm
   when initial() then
     code := min(max(integer((v_adc/2 + v_adc_noisy) / delta + 0.5), 0), levels);

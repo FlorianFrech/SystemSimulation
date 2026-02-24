@@ -1,7 +1,7 @@
 SysSimX Documentation
 =====================
 
-.. image:: https://img.shields.io/badge/python-3.10+-blue.svg
+.. image:: https://img.shields.io/badge/python-3.11+-blue.svg
    :alt: Python 3.11+
 
 .. image:: https://img.shields.io/badge/license-MIT-green.svg
@@ -28,7 +28,7 @@ Start Here
 - New to ``syssimx``? Read the :doc:`01_getting_started/02_quickstart` and
   :doc:`01_getting_started/03_concepts`.
 - Looking for APIs? Jump to the :doc:`02_api/syssimx`.
-- Want hands-on learning? Go to :doc:`03_core_tutorials/01_fundamentals/index`.01_
+- Want hands-on learning? Go to :doc:`03_core_tutorials/01_fundamentals/index`.
 
 
 Quick Example
@@ -60,8 +60,8 @@ Key Features
 ------------
 
 **Graph-Based Execution**
-   Automatic dependency analysis with SCC-based generation scheduling
-   for optimal parallel execution.
+   Automatic dependency analysis with direct feedthrough and algebraic loop detection.
+   Components are executed in topologically sorted order.
 
 **Algebraic Loop Handling**
    Detection and iterative solving using the Interface-Jacobian 
@@ -125,8 +125,14 @@ Contents
 .. toctree::
    :maxdepth: 2
    :caption: Case Study
+   :numbered:
 
-   05_case_study/01_overview
+   05_case_study/00_overview
+   05_case_study/01_baseline
+   05_case_study/02_quantization
+   05_case_study/03_algebraic_loop
+   05_case_study/04_rigid_contact
+   05_case_study/05_multi_model_switching
 
 .. toctree::
    :caption: Other Links
