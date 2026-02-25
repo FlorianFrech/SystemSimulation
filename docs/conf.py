@@ -4,7 +4,6 @@
 import os
 import sys
 import warnings
-from  syssimx import __version__
 
 from sphinx.deprecation import RemovedInSphinx10Warning
 
@@ -15,8 +14,8 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "SysSimX"
 copyright = "2026, Florian Frech"
 author = "Florian Frech"
-version = __version__
-release = __version__
+version = "0.1"
+release = "0.1.3"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
