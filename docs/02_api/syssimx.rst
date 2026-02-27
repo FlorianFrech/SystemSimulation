@@ -2,5 +2,7 @@ SysSimX Package
 ===============
 
 .. automodule:: syssimx
-   :no-members:
+   :members:
+   :show-inheritance:
+   :exclude-members: CoSimComponent, PortSpec, PortType, Connection, EventConnection, System, SystemGraphVisualizer, FMUComponent, FEMComponent, OpenSimComponent
    :no-index:
