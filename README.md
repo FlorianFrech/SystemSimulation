@@ -31,7 +31,6 @@ pip install syssimx
 ```bash
 pip install "syssimx[fmu]"
 pip install "syssimx[fem]"
-pip install "syssimx[viz]"
 pip install "syssimx[dev]"
 pip install "syssimx[all]"
 pip install "syssimx[full]"

@@ -85,7 +85,7 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Getting Started
    :numbered:
 
@@ -123,7 +123,7 @@ Contents
    04_tool_integration/04_master_pendulum/index
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Case Study
    :numbered:
 

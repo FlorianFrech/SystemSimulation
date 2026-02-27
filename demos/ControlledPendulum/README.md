@@ -1,21 +1,44 @@
-# Controlled Pendulum Demo
+# Controlled Pendulum
 
-This demo showcases the simulation of a controlled pendulum system using various modeling approaches, including Finite Element Method (FEM), OpenSim, and Functional Mock-up Units (FMU). The goal is to demonstrate how different components can be integrated into a single simulation framework to analyze the dynamics of a pendulum under control inputs.
+Hybrid co-simulation benchmark for a torque-driven pendulum with interchangeable plant fidelity:
+- `FEM` for high-fidelity structural dynamics.
+- `OpenSim` for biomechanical multibody dynamics.
+- `FMU` for fast Modelica-based co-simulation.
 
-## Directory Structure
+The `MasterPendulum` orchestrator composes these models behind one interface and can switch modes during runtime.
+
+## Architecture
+
+- **Orchestrator**: `src/master_pendulum/orchestration/master_pendulum.py`
+- **Components**:
+  - `src/master_pendulum/components/fem/`
+  - `src/master_pendulum/components/opensim/`
+  - `src/master_pendulum/components/fmu/`
+- **Modelica source models**: `src/modelica/ControlledPendulum/`
+- **Generated artifacts**: `artifacts/fmus/linux/`, `artifacts/figures/`, `artifacts/results/`
+
+Core public API:
+
+```python
+from demos.ControlledPendulum.src import MasterPendulum, FEMPendulum, OpenSimPendulum, FMUPendulum
 ```
-demos/ControlledPendulum/
-├── notebooks/
-│   └── master_pendulum/
-│       ├── test_master_pendulum_combined.ipynb
-├── src/
-│   └── master_pendulum/
-│       └── orchestration/
-│           └── master_pendulum.py
+
+## Notebook Entry Points
+
+- `notebooks/master_pendulum/`: mode-specific and combined pendulum experiments.
+- `notebooks/system/no_contact/`: closed-loop baseline and algorithm verification.
+- `notebooks/system/contact/`: hybrid/contact dynamics and event-driven switching.
+- `notebooks/system/verification_algorithms/`: co-simulation algorithm comparison.
+
+## FMU Workflow
+
+Modelica FMUs can be generated/updated via:
+
+```bash
+python demos/ControlledPendulum/scripts/modelica_to_fmu.py
 ```
 
-## Notebooks 
-- `test_master_pendulum_combined.ipynb`: This notebook contains tests for the combined master pendulum system, integrating different modeling approaches and verifying their interactions.
+## Notes
 
-## Source Code
-- `master_pendulum.py`: This script orchestrates the master pendulum system, integrating components such as FEM pendulum, OpenSim pendulum, and FMU pendulum into a cohesive simulation framework.
+- This demo is intended for comparative studies: fidelity vs. runtime, contact handling, and mode-switch consistency.
+- Some notebooks/components require optional dependencies (e.g., OpenSim, FEM tooling, FMU tooling) available in your active environment.
