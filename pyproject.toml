@@ -80,14 +80,14 @@ full = [
 
 [project.urls]
 Homepage = "https://github.com/FlorianFrech/SystemSimulation"
-Documentation = "https://github.com/FlorianFrech/SystemSimulation/tree/main/docs"
+Documentation = "https://syssimx.readthedocs.io/en/latest/"
 Repository = "https://github.com/FlorianFrech/SystemSimulation"
 Issues = "https://github.com/FlorianFrech/SystemSimulation/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["syssimx*"]  # Match actual package name (lowercase)
-exclude = ["tests*", "demos*", "examples*", "docs*"]
+exclude = ["tests*", "demos*", "examples*", "docs*", "thesis*", ]
 
 [tool.setuptools]
 

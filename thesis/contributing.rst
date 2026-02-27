@@ -13,14 +13,13 @@ Development Setup
    git clone https://github.com/FlorianFrech/SystemSimulation.git
    cd SystemSimulation
 
-2. Create a virtual environment:
+2. Create a virtual environment using conda:
 
 .. code-block:: bash
 
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/macOS
-   # or
-   .venv\Scripts\activate     # Windows
+   conda create -n env-311 python=3.11 -y
+   conda activate env-311
+
 
 3. Install development dependencies:
 
@@ -154,3 +153,37 @@ Please include:
 4. Minimal reproducible example
 5. Expected vs actual behavior
 6. Full error traceback if applicable
+
+
+.. code-block:: bash
+   # 0) From project root
+   cd /home/flo/code/SystemSimulation
+
+   # 1) Ensure build/upload tools are available
+   python -m pip install --upgrade build twine
+
+   # 2) Build source + wheel
+   rm -rf dist/ build/ *.egg-info
+   python -m build
+
+   # 3) Validate package metadata/artifacts
+   python -m twine check dist/*
+
+   # 4) Upload to TestPyPI (will prompt for credentials/token)
+   python -m twine upload --repository testpypi dist/*
+   # If using token auth:
+   # python -m twine upload --repository testpypi -u __token__ -p "pypi-<TEST_PYPI_TOKEN>" dist/*
+
+   # 5) Install from TestPyPI (plus PyPI for dependencies)
+   python -m pip install --index-url https://test.pypi.org/simple/ \
+   --extra-index-url https://pypi.org/simple \
+   syssimx
+
+   # 6) Verify import + installed version
+   python -c "import syssimx; print(syssimx.__version__)"
+
+   # 8) Optional: show resolved package details
+   python -m pip show syssimx
+   python -m pip freeze | rg syssimx
+
+
