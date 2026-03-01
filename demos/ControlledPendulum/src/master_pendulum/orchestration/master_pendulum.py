@@ -69,6 +69,7 @@ class MasterPendulum(MultiComponent):
             "FMU": self.fmu})
         self.active_comp = self.models[initial_mode]
         self._unify_ports()
+        self._initialize_ports_from_specs()
         
         # Aggregate parameters from all sub-components
         self.parameters.update({

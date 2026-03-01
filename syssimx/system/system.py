@@ -561,13 +561,26 @@ class System:
 
         Performs the complete initialization sequence:
 
-        1. Initializes all registered components at time ``t0``
-        2. Classifies components and auto-selects ``HybridAlgorithm``
+        1. Classifies components and auto-selects ``HybridAlgorithm``
            if event sources are detected
-        3. Builds dependency graphs from connections
-        4. Computes execution order via topological sort
-        5. Sets initial inputs and solves algebraic loops
-        6. Performs a zero-step (dt=0) to establish consistent initial state
+        2. Builds dependency graphs from connections
+        3. Computes execution order via topological sort
+        4. Iterates over generations in execution order:
+
+           a. Propagates initial input values from upstream outputs
+              into the generation's input port states
+
+           b. Initializes components (FMUs apply stored port values
+              via ``_apply_input_starts`` during init mode)
+
+           c. Solves algebraic loops within the generation
+
+           d. Performs a zero-step (dt=0) to establish consistent
+              initial outputs for downstream generations
+
+        This ordering ensures that each generation receives consistent
+        initial values from already-initialized upstream components
+        before entering FMU initialization mode.
 
         Args:
             t0: Initial simulation time in seconds.
@@ -587,31 +600,44 @@ class System:
         """
         self.t = t0
 
-        # 1) Initialize all CoSimComponents
-        for comp in self.components.values():
-            comp.initialize(t0)
-
-        # 2) Auto-select hybrid algorithm if needed
+        # 1) Classify components and auto-select hybrid algorithm
         self.classify_components()
         if self.event_sources:
             self.algorithm = HybridAlgorithm()
 
-        # 3) Build connections and compute execution order
+        # 2) Build dependency graphs and compute execution order
         self.build_graphs()
         self.compute_execution_order()
 
-        # 4) Set initial inputs and solve for consistent initial state
+        # 3) Ensure all components have port states created so that
+        #    _set_inputs_for_generation can write to them before initialize().
+        #    For FMU components ports already exist (created in __init__);
+        #    _initialize_ports_from_specs skips already-existing ports.
+        for comp in self.components.values():
+            comp._initialize_ports_from_specs()
+
+        # 4) Initialize generation by generation in execution order
         for gen in self.execution_order:
+            # 4a) Propagate upstream outputs into this generation's input ports.
+            #     Components are not yet initialized, so values are written
+            #     directly to PortState objects (no FMU instance needed).
             self._set_inputs_for_generation(gen, t0)
 
+            # 4b) Initialize components in this generation.
+            #     For FMU components, _apply_input_starts() will push the
+            #     port state values into the FMU during initialization mode.
+            for comp_name in gen:
+                self.components[comp_name].initialize(t0)
+
+            # 4c) Solve algebraic loops within this generation
             gen_set = set(gen)
             for loop in self.algebraic_loops:
                 if set(loop).issubset(gen_set):
                     solve_algebraic_scc_ijcsa(self, loop, t0)
 
+            # 4d) Zero-step to update outputs for downstream generations
             for comp_name in gen:
-                comp = self.components[comp_name]
-                comp.do_step(0, 0)
+                self.components[comp_name].do_step(0, 0)
 
         self.is_initialized = True
 
@@ -621,6 +647,14 @@ class System:
         For each component in the generation, retrieves values from
         connected source ports and sets them as inputs. This propagates
         signal values through the connection graph.
+
+        If a component is not yet initialized (e.g. during the
+        generation-based initialization sequence), values are written
+        directly to the ``PortState`` objects so that they are available
+        when the component's ``initialize()`` is called later.  For
+        already-initialized components the regular ``set_inputs()`` path
+        is used, which also pushes values into the underlying solver
+        (e.g. an FMU instance).
 
         Args:
             gen: List of component names in the current generation.
@@ -640,7 +674,13 @@ class System:
                     to_set[dst_port] = src_value
 
             if to_set:
-                comp.set_inputs(to_set, t=t)
+                if comp._is_initialized:
+                    comp.set_inputs(to_set, t=t)
+                else:
+                    # Component not yet initialized — write directly to port
+                    # states so values are available for _apply_input_starts()
+                    for port_name, value in to_set.items():
+                        comp.inputs[port_name].set(value, t=t)
 
     # ----------------------------------------------------------------------------
     # Run System Simulation

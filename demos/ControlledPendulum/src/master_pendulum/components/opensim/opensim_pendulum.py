@@ -74,6 +74,7 @@ class OpenSimPendulum(OpenSimComponent):
         # Define input and output specifications
         self.input_specs.update(INPUT_SPECS)
         self.output_specs.update(OUTPUT_SPECS)
+        self._initialize_ports_from_specs()
 
         # Model parameters
         self.parameters.update(PARAMETERS)

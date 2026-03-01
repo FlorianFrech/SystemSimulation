@@ -108,6 +108,7 @@ class FMUComponent(CoSimComponent):
 
         # Build port specifications from model description (Real, Int, Bool, Str, Bytes)
         self._build_port_specs()
+        self._initialize_ports_from_specs()
 
         # Cache value references map
         self._vrs_in_real = {}

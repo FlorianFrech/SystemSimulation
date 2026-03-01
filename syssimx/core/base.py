@@ -370,9 +370,11 @@ class CoSimComponent(ABC):
             :class:`PortState`: Mutable port value container
         """
         for spec in self.input_specs.values():
-            self.inputs[spec.name] = PortState(spec)
+            if spec.name not in self.inputs:
+                self.inputs[spec.name] = PortState(spec)
         for spec in self.output_specs.values():
-            self.outputs[spec.name] = PortState(spec)
+            if spec.name not in self.outputs:
+                self.outputs[spec.name] = PortState(spec)
             unit = str(spec.unit) if spec.unit is not None else None
             self.history.add_port(spec.name, unit)
 

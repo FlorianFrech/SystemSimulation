@@ -57,6 +57,7 @@ class FEMPendulum(FEMComponent):
         # Define input and output specifications
         self.input_specs = INPUT_SPECS
         self.output_specs = OUTPUT_SPECS
+        self._initialize_ports_from_specs()
 
         # Pendulum configuration parameters
         self.geom_params = GeometryParameters()
