@@ -10,12 +10,14 @@ from sphinx.deprecation import RemovedInSphinx10Warning
 # Add the project root to the path so autodoc can find the modules
 sys.path.insert(0, os.path.abspath(".."))
 
+from syssimx.__version__ import __version__ as _pkg_version  # noqa: E402
+
 # -- Project information -----------------------------------------------------
 project = "SysSimX"
 copyright = "2026, Florian Frech"
 author = "Florian Frech"
-version = "0.1"
-release = "0.1.3"
+version = ".".join(_pkg_version.split(".")[:2])  # e.g. "0.1"
+release = _pkg_version  # e.g. "0.1.4"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
