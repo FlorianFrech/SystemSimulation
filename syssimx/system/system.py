@@ -563,9 +563,14 @@ class System:
 
         1. Classifies components and auto-selects ``HybridAlgorithm``
            if event sources are detected
-        2. Builds dependency graphs from connections
-        3. Computes execution order via topological sort
-        4. Iterates over generations in execution order:
+        2. Creates port state objects for all components so that
+           feedthrough detection and input propagation can work
+        3. Detects direct feedthrough for pure-Python components via
+           perturbation (FMU components already have this from their
+           model description)
+        4. Builds dependency graphs and computes execution order;
+           algebraic loops are identified from zero-delay edges
+        5. Iterates over generations in execution order:
 
            a. Propagates initial input values from upstream outputs
               into the generation's input port states
@@ -605,37 +610,47 @@ class System:
         if self.event_sources:
             self.algorithm = HybridAlgorithm()
 
-        # 2) Build dependency graphs and compute execution order
-        self.build_graphs()
-        self.compute_execution_order()
-
-        # 3) Ensure all components have port states created so that
+        # 2) Ensure all components have port states created so that
+        #    _detect_direct_feedthrough() can call evaluate_outputs() and
         #    _set_inputs_for_generation can write to them before initialize().
         #    For FMU components ports already exist (created in __init__);
         #    _initialize_ports_from_specs skips already-existing ports.
         for comp in self.components.values():
             comp._initialize_ports_from_specs()
 
-        # 4) Initialize generation by generation in execution order
+        # 3) Detect direct feedthrough for components that haven't computed
+        #    it yet.  FMU components populate this from modelDescription.xml
+        #    in __init__(); pure-Python components need perturbation-based
+        #    detection here so that build_graphs() can correctly identify
+        #    zero-delay edges and algebraic loops.
+        for comp in self.components.values():
+            if not comp.direct_feedthrough:
+                comp._detect_direct_feedthrough()
+
+        # 4) Build dependency graphs and compute execution order
+        self.build_graphs()
+        self.compute_execution_order()
+
+        # 5) Initialize generation by generation in execution order
         for gen in self.execution_order:
-            # 4a) Propagate upstream outputs into this generation's input ports.
+            # 5a) Propagate upstream outputs into this generation's input ports.
             #     Components are not yet initialized, so values are written
             #     directly to PortState objects (no FMU instance needed).
             self._set_inputs_for_generation(gen, t0)
 
-            # 4b) Initialize components in this generation.
+            # 5b) Initialize components in this generation.
             #     For FMU components, _apply_input_starts() will push the
             #     port state values into the FMU during initialization mode.
             for comp_name in gen:
                 self.components[comp_name].initialize(t0)
 
-            # 4c) Solve algebraic loops within this generation
+            # 5c) Solve algebraic loops within this generation
             gen_set = set(gen)
             for loop in self.algebraic_loops:
                 if set(loop).issubset(gen_set):
                     solve_algebraic_scc_ijcsa(self, loop, t0)
 
-            # 4d) Zero-step to update outputs for downstream generations
+            # 5d) Zero-step to update outputs for downstream generations
             for comp_name in gen:
                 self.components[comp_name].do_step(0, 0)
 

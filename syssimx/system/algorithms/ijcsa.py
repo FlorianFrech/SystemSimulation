@@ -29,6 +29,7 @@ Example:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -37,6 +38,8 @@ import numpy as np
 from ...utilities.units import QuantityClass
 from ..graph import collect_global_interface_unknowns
 from .base import Algorithm
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ..system import System
@@ -103,7 +106,6 @@ def solve_algebraic_scc_ijcsa(
     t: float,
     max_iter: int = 50,
     tol: float = 1e-6,
-    verbose: bool = False,
 ) -> None:
     """
     Solve algebraic loop for a strongly coupled SCC using an interface
@@ -115,7 +117,6 @@ def solve_algebraic_scc_ijcsa(
         t (float): Current simulation time.
         max_iter (int, optional): Maximum number of iterations for convergence. Defaults to 50.
         tol (float, optional): Tolerance for convergence. Defaults to 1e-6.
-        verbose (bool, optional): If True, prints detailed debug information. Defaults to False.
 
     Raises:
         RuntimeError: If the algorithm fails to converge within the maximum number of iterations.
@@ -124,8 +125,7 @@ def solve_algebraic_scc_ijcsa(
         Sicklinger, S., Belsky, V., Engelmann, B., Elmqvist, H., Olsson, H., Wüchner, R. and Bletzinger, K.-.-U. (2014), Interface Jacobian-based Co-Simulation. Int. J. Numer. Meth. Engng, 98: 418-444. https://doi.org/10.1002/nme.4637
     """
     scc_set = set(scc)
-    if verbose:
-        print(60 * "=", f"\nSolving algebraic SCC {scc}:")
+    logger.debug("Solving algebraic SCC %s:", scc)
 
     # 1) Collect interface variables
     interface_inputs: list[tuple[str, str]] = []  # (dst_comp_name, input_port)
@@ -172,11 +172,9 @@ def solve_algebraic_scc_ijcsa(
             driver_for_input[key] = (src_c, src_p)
 
     # Debug info: involved components and interface inputs
-    if verbose:
-        print("\nConnections:")
-        print(f"  Interface inputs: {interface_inputs}")
-        print(f"  Internal zero-delay connections: {internal_connections}")
-        print(f"  External zero-delay inputs: {external_in_connections}")
+    logger.debug("Interface inputs: %s", interface_inputs)
+    logger.debug("Internal zero-delay connections %s", internal_connections)
+    logger.debug("External zero-delay inputs %s", external_in_connections)
 
     # 4) Initial guess U0 from current input values
     u0 = np.zeros(n, dtype=float)
@@ -184,8 +182,7 @@ def solve_algebraic_scc_ijcsa(
         val = system.components[dst_c].inputs[dst_p].get()
         val = val.magnitude if isinstance(val, QuantityClass) else val
         u0[i] = float(val) if val is not None else 0.0
-        if verbose:
-            print(f"\nInitial guess for {dst_c}.{dst_p} = {u0[i]}")
+        logger.debug("Initial guess for %s.%s = %s", dst_c, dst_p, u0[i])
 
     # 5) Residual Evaluation F(U)
     def compute_interface_residual(u_vec: np.ndarray) -> np.ndarray:
@@ -231,8 +228,7 @@ def solve_algebraic_scc_ijcsa(
                 val = val.magnitude if isinstance(val, QuantityClass) else val
                 y = float(val) if val is not None else 0.0
             r[i] = u_vec[i] - y
-            if verbose:
-                print(f"    Residual for {dst_c}.{dst_p}: {r[i]}")
+            logger.debug("    Residual for %s.%s: %s", dst_c, dst_p, r[i])
         return r
 
     # 6) Interface Jacobian by finite differences
@@ -256,25 +252,21 @@ def solve_algebraic_scc_ijcsa(
     # 7) Newton iteration on F(U) = 0
     u_current = u0.copy()
 
-    if verbose:
-        print("\nStarting IJCSA iterations:")
+    logger.debug("Starting IJCSA iterations:")
     for k in range(max_iter):
-        if verbose:
-            print(f"  Iteration {k}: u = {u_current}")
+        logger.debug("  Iteration %d: u = %s", k, u_current)
 
         # Compute residual
         r_current = compute_interface_residual(u_current)
 
         # Check convergence
         if np.linalg.norm(r_current) < tol:
-            if verbose:
-                print(f"  Converged in {k} iterations.")
+            logger.debug("  Converged in %d iterations.", k)
             break
 
         # Compute Jacobian
         J_current = compute_interface_jacobian(u_current, r_current)
-        if verbose:
-            print(f"    Jacobian J = {J_current}")
+        logger.debug("    Jacobian J = %s", J_current)
 
         # Solve for correction: J * Δu = -r
         try:
@@ -284,16 +276,14 @@ def solve_algebraic_scc_ijcsa(
 
         # Apply correction
         u_current += delta_u
-        if verbose:
-            print(f"    Correction Δu = {delta_u}")
+        logger.debug("    Correction Δu = %s", delta_u)
     else:
         raise RuntimeError(f"IJCSA did not converge for SCC {scc} after {max_iter} iterations")
 
     # 8) Commit solved interface inputs to components
     for (dst_c, dst_p), i in idx_of_input.items():
         system.components[dst_c].inputs[dst_p].set(float(u_current[i]), t)
-        if verbose:
-            print(f"\nCommitted solved input {dst_c}.{dst_p} = {float(u_current[i])}")
+        logger.debug("Committed solved input %s.%s = %s", dst_c, dst_p, float(u_current[i]))
 
 
 # ----------------------------------------------------------------------------

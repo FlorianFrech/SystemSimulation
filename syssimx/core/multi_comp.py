@@ -59,12 +59,15 @@ See Also:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any, Protocol
 
 from .base import CoSimComponent
 from .events import InternalEventInfo
 from .port import PortSpec, PortType
+
+logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
 # Type Aliases
@@ -557,7 +560,7 @@ class MultiComponent(CoSimComponent):
         synch_event["time"] = t
         synch_event["from_mode"] = self.active_mode
         synch_event["to_mode"] = new_mode
-        print(f"[{self.name}] Switching: {self.active_mode} to {new_mode} @ t={t:.4f}s")
+        logger.info("[%s] Switching: %s to %s @ t=%.4fs", self.name, self.active_mode, new_mode, t)
 
         synch_event["retrieved"] = self._require_active_comp().get_state()
 

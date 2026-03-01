@@ -20,9 +20,6 @@ Functions:
     _detect_crossing_between: Detects crossings between two sets of indicator values for all event
     _restore_all_to_left: Restores all components to their state at the left boundary of the interval.
     _handle_events: Handles the specified events at the given time.
-    _log: Helper method for logging messages.
-    _log_debug: Helper method for logging debug messages.
-    _log_section: Helper method for logging section headers.
 
 Usage:
     The `HybridAlgorithm` class is designed to be used as part of the system
@@ -43,8 +40,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
-
 from ...core.events import DenseTime, Event, InternalEventInfo
 from .base import Algorithm
 from .gauss_seidel import GaussSeidelAlgorithm
@@ -53,6 +48,8 @@ from .ijcsa import solve_algebraic_scc_ijcsa
 if TYPE_CHECKING:
     from ...core.base import CoSimComponent
     from ..system import System
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
@@ -73,11 +70,12 @@ class HybridAlgorithm(Algorithm):
         max_iter (int): Maximum number of iterations for convergence.
         sign_tolerance (float): Tolerance for detecting sign changes in event indicators.
         tol_time (float): Tolerance for time comparisons.
+        event_dedup_tol (float): Tolerance for deduplicating events. Events of
+            the same type handled within this time window are treated as
+            duplicates and skipped.
         max_microsteps (int): Maximum number of microsteps for event handling.
         gauss_seidel_algorithm (GaussSeidelAlgorithm): Fallback algorithm for
             continuous integration in the absence of events.
-        verbose (bool): If True, enables detailed logging of the algorithm's
-            execution.
         record_internal_steps (bool): If True, records internal steps during
             event handling.
     """
@@ -88,61 +86,10 @@ class HybridAlgorithm(Algorithm):
         self.max_iter: int = 50
         self.sign_tolerance: float = 1e-10
         self.tol_time: float = 1e-8
+        self.event_dedup_tol: float = 1e-4
         self.max_microsteps: int = 100
         self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
-        self.verbose: bool = True
         self.record_internal_steps: bool = False
-        self.logger = logging.getLogger(self.name)
-        self.logger.propagate = False
-        self.set_logger_to_stdout()
-
-    # --------------------------------------------------------------------------
-    # Logging Helpers
-    # --------------------------------------------------------------------------
-    def set_logger_to_stdout(self, level=logging.INFO):
-        """
-        Set up the logger to output to stdout, suitable for Jupyter notebooks.
-        """
-        import sys
-
-        # Remove all handlers first
-        for handler in list(self.logger.handlers):
-            self.logger.removeHandler(handler)
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter("[%(levelname)s] %(message)s")
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-        self.logger.setLevel(level)
-
-    def set_logger_to_file(self, filename, level=logging.INFO):
-        """
-        Set up the logger to output to a file.
-        """
-        # Remove all handlers first
-        for handler in list(self.logger.handlers):
-            self.logger.removeHandler(handler)
-        handler = logging.FileHandler(filename)
-        formatter = logging.Formatter("[%(levelname)s] %(message)s")
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-        self.logger.setLevel(level)
-
-    def _log(self, message: str) -> None:
-        if self.verbose:
-            self.logger.info(f"[Hybrid] {message}")
-
-    def _log_debug(self, message: str) -> None:
-        self.logger.debug(f"[Hybrid] {message}")
-
-    def _log_section(self, title: str) -> None:
-        if self.verbose:
-            self.logger.info("=" * 72)
-            self.logger.info(f"[Hybrid] {title}")
-            self.logger.info("=" * 72)
-
-    def _log_progress(self, t: float) -> None:
-        if self.verbose:
-            self.logger.info(f"[Hybrid] Time: {t:.4f} s")
 
     # --------------------------------------------------------------------------
     # Global Step Method
@@ -169,10 +116,10 @@ class HybridAlgorithm(Algorithm):
         t_left = t
         t_right = t + dt
         eps = 1e-12
-        self._log_progress(t_right)
 
         # Track all events handled in this macro-step (to avoid duplicates at boundaries)
-        handled_events_this_step: set[tuple[str, str, float]] = set()
+        # Maps (comp_name, event_name) -> time at which it was last handled
+        handled_events_this_step: dict[tuple[str, str], float] = {}
 
         while t_left < t_right - eps:
             # 1) Prpare inputs: set inputs and resolve algebraic loops
@@ -188,12 +135,20 @@ class HybridAlgorithm(Algorithm):
                 self.gauss_seidel_algorithm.step(system, t_left, t_right - t_left)
                 return
 
-            if self.verbose:
-                self._log_section(f"Events detected in interval [{t_left:.8f}, {t_right:.8f}]")
-                self._log(f"Crossings: {crossings}")
-                if internal_hints:
-                    hints = [(c, [h.event_name for h in hs]) for c, hs in internal_hints.items()]
-                    self._log(f"Internal hints: {hints}")
+            logger.info("%s", "=" * 80)
+            logger.info(
+                "Event crossing in [%.6f, %.6f]: %s",
+                t_left,
+                t_right,
+                ", ".join(f"{c}.{e}" for c, e in crossings),
+            )
+            if internal_hints:
+                for comp_name, hints_list in internal_hints.items():
+                    logger.debug(
+                        "  Internal hints from %s: %s",
+                        comp_name,
+                        [h.event_name for h in hints_list],
+                    )
 
             # 4) Locate event time (using internal hints if available)
             dense_time, initial_events = self._locate_event_time(
@@ -206,24 +161,31 @@ class HybridAlgorithm(Algorithm):
                 internal_hints,
             )
 
-            self._log(f"Initial events to handle: {initial_events}")
-            self._log(f"Located at t={dense_time}")
+            logger.info("Event located at t=%.8f", dense_time.t)
+            logger.debug(
+                "  Events at located time: %s",
+                ", ".join(f"{c}.{e}" for c, e in initial_events),
+            )
 
-            # 5) Filter out events that were already handled at this time
-            t_event_rounded = np.round(dense_time.t, decimals=6)
+            # 5) Filter out events that were already handled nearby
             new_events = []
             for comp_name, event_name in initial_events:
-                event_key = (comp_name, event_name, t_event_rounded)
-                if event_key not in handled_events_this_step:
-                    new_events.append((comp_name, event_name))
-                elif self.verbose:
-                    self._log(
-                        f"Skipping already-handled event: {comp_name}.{event_name} at "
-                        f"t≈{t_event_rounded:.8f}"
+                event_key = (comp_name, event_name)
+                prev_t = handled_events_this_step.get(event_key)
+                if prev_t is not None and abs(dense_time.t - prev_t) < self.event_dedup_tol:
+                    logger.debug(
+                        "  Skipping duplicate: %s.%s (already handled at t=%.8f, "
+                        "\u0394t=%.2e < tol=%.2e)",
+                        comp_name,
+                        event_name,
+                        prev_t,
+                        abs(dense_time.t - prev_t),
+                        self.event_dedup_tol,
                     )
+                else:
+                    new_events.append((comp_name, event_name))
 
             initial_events = new_events
-            self._log(f"Events to handle at t={dense_time}: {initial_events}")
             # 6) Step all components to event time
             self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
 
@@ -232,16 +194,19 @@ class HybridAlgorithm(Algorithm):
             event_pairs = initial_events
             current_time = dense_time
             while event_pairs and current_time.micro < self.max_microsteps:
-                if self.verbose:
-                    self._log(f"Already handled events: {handled_events_this_step}")
-                    self._log(f"Handling events at {current_time}: {event_pairs}")
+                logger.info(
+                    "Handling %d event(s) at t=%.8f, micro=%d: %s",
+                    len(event_pairs),
+                    current_time.t,
+                    current_time.micro,
+                    ", ".join(f"{c}.{e}" for c, e in event_pairs),
+                )
 
                 # a) Record events with microstep and mark as handled
                 for comp_name, event_name in event_pairs:
                     system.history.record_event(comp_name, event_name, current_time)
                     all_handled_events.add((comp_name, event_name))
-                    event_key = (comp_name, event_name, t_event_rounded)
-                    handled_events_this_step.add(event_key)
+                    handled_events_this_step[(comp_name, event_name)] = current_time.t
 
                 # b) Indicators before handling
                 indicators_before_handling = {
@@ -271,8 +236,11 @@ class HybridAlgorithm(Algorithm):
                         event_pair = (comp.name, event_name)
                         if event_pair not in all_handled_events and event_pair not in new_events:
                             new_events.append(event_pair)
-                if new_events and self.verbose:
-                    self._log(f"New events detected after handling: {new_events}")
+                if new_events:
+                    logger.info(
+                        "Cascaded events: %s",
+                        ", ".join(f"{c}.{e}" for c, e in new_events),
+                    )
 
                 # g) Advance microstep if new events detected
                 if new_events:
@@ -289,8 +257,7 @@ class HybridAlgorithm(Algorithm):
 
             # 9) Update left time
             t_left = dense_time.t + self.tol_time
-            if self.verbose:
-                self._log_section("End of event window")
+            logger.info("%s", "=" * 80)
 
     # --------------------------------------------------------------------------
     # Helper - Input Preparation and Algebraic Loop Solving
@@ -379,11 +346,13 @@ class HybridAlgorithm(Algorithm):
                     for hint in raw_hints:
                         if hint.t_after > t_left + self.tol_time and hint.t_before < t_right:
                             filtered_hints.append(hint)
-                            if self.verbose:
-                                self._log(
-                                    f"Internal hint from {comp.name}: {hint.event_name} "
-                                    f"in [{hint.t_before:.8f}, {hint.t_after:.8f}]"
-                                )
+                            logger.debug(
+                                "Internal hint: %s.%s in [%.8f, %.8f]",
+                                comp.name,
+                                hint.event_name,
+                                hint.t_before,
+                                hint.t_after,
+                            )
 
                 if filtered_hints:
                     internal_hints[comp.name] = filtered_hints
@@ -455,7 +424,7 @@ class HybridAlgorithm(Algorithm):
 
         Returns the located event time and the list of (component name, event name) tuples.
         """
-        self._log("Starting Event Localization ...")
+        logger.debug("Starting bisection for event localization ...")
         # 1) Initialize bisection boundaries
         left = t_left
         right = t_right
@@ -479,9 +448,12 @@ class HybridAlgorithm(Algorithm):
                 hint_left = max(t_left, earliest_hint.t_before)
                 hint_right = min(t_right, earliest_hint.t_after)
 
-                self._log(
-                    f"Using internal hint to narrow interval: "
-                    f"[{left:.8f}, {right:.8f}] -> [{hint_left:.8f}, {hint_right:.8f}]"
+                logger.debug(
+                    "Narrowed interval via hint: [%.6f, %.6f] -> [%.6f, %.6f]",
+                    left,
+                    right,
+                    hint_left,
+                    hint_right,
                 )
 
                 # Update boundaries
@@ -518,14 +490,13 @@ class HybridAlgorithm(Algorithm):
                 event_sources, snapshots_left, input_cache, t_left, left
             )
             t_left_ref = left
-            self._log(f"Updated left indicators at t_left = {left:.8f} after narrowing with hints.")
 
         indicators_right_vals = self._evaluate_indicators_at(
             event_sources, snapshots_left, input_cache, t_left, right
         )
 
-        self._log(f"Initial Indicators at Left (t={left:.8f}): {indicators_left_vals}")
-        self._log(f"Initial Indicators at Right (t={right:.8f}): {indicators_right_vals}")
+        logger.debug("Indicators at left  (t=%.8f): %s", left, indicators_left_vals)
+        logger.debug("Indicators at right (t=%.8f): %s", right, indicators_right_vals)
 
         # 6) Working snapshots - start from t_left_ref
         working_snapshots = {}
@@ -538,7 +509,6 @@ class HybridAlgorithm(Algorithm):
                 comp._update_output_states()
             working_snapshots[comp.name] = comp.snapshot_state()
 
-        self._log_debug("Entering Bisection Loop ...")
         # 7) Bisection loop
         for iteration in range(self.max_iter):
             # a) Check termination: interval width
@@ -548,23 +518,16 @@ class HybridAlgorithm(Algorithm):
 
             # b) Bisect the interval
             mid = 0.5 * (left + right)
-            self._log_debug(
-                f"Iteration {iteration + 1}: "
-                f"Interval = [{left:.8f}, {right:.8f}], Mid = {mid:.8f}\n"
-            )
 
             # c) Evaluate indicators at midpoint (with frozen inputs from t_left_ref)
             indicators_mid = self._evaluate_indicators_at(
                 event_sources, working_snapshots, input_cache, t_left_ref, mid
             )
-            self._log_debug(f"Indicators at Mid (t={mid:.8f}): {indicators_mid}")
 
             # d) Detect crossings in [left, mid]
             events_left_interval = self._detect_crossing_between(
                 event_sources, indicators_left_vals, indicators_mid
             )
-
-            self._log_debug(f"Events in [left, mid]: {events_left_interval}")
 
             # e) Check if we found exact crossing at midpoint
             if len(events_left_interval) == 1:
@@ -648,8 +611,7 @@ class HybridAlgorithm(Algorithm):
         for comp in event_sources:
             indicators = comp.evaluate_event_indicators()
             for event_name, value in indicators.items():
-                if self.verbose:
-                    self._log(f"Indicator for {comp.name}.{event_name} = {value:.8e}")
+                logger.debug("Indicator %s.%s = %.4e", comp.name, event_name, value)
                 if abs(value) <= self.tol_value:
                     all_events.append((comp.name, event_name))
         return all_events
@@ -785,7 +747,7 @@ class HybridAlgorithm(Algorithm):
             for event_pair in event_pairs:
                 if listener_name in system._event_targets_by_source.get(event_pair, []):
                     events_by_component.setdefault(listener_name, []).append(event_pair[1])
-        self._log(f"Events grouped by component for handling: {events_by_component}")
+        logger.debug("Events grouped by listener: %s", events_by_component)
 
         # 2) Check for conflicts in each component
         for comp_name, event_names in events_by_component.items():
@@ -816,21 +778,22 @@ class HybridAlgorithm(Algorithm):
         Returns:
             bool: True if the event handlers commute, False otherwise.
         """
-        self._log(f"Checking commutativity for events {event_names} on component {comp.name}...")
+        logger.debug("Checking commutativity for %s on %s", event_names, comp.name)
         # Method 1) Annotation-based check
         if comp.event_commutativity:
             for i, event1 in enumerate(event_names):
                 for event2 in event_names[i + 1 :]:
                     if not comp.event_commutativity.get((event1, event2), False):
                         return False
-            self._log(
-                f"Event handlers {event_names} on component {comp.name} "
-                f"verified as commutative via annotations."
+            logger.debug(
+                "Commutativity verified (annotations): %s on %s",
+                event_names,
+                comp.name,
             )
             return True
 
         # Method 2) Dynamic check via permutations
-        self._log("Verifying dynamically ...")
+        logger.debug("Verifying commutativity dynamically for %s on %s", event_names, comp.name)
         return self._verify_event_commutativity_dynamically(comp, event_names)
 
     def _verify_event_commutativity_dynamically(
@@ -872,15 +835,17 @@ class HybridAlgorithm(Algorithm):
         comp.restore_state(initial_snapshot, t=t)  # Restore to initial state
         first_result = results[0]
         if all(self._states_equal(first_result, other) for other in results[1:]):
-            self._log(
-                f"Event handlers {event_names} on component {comp.name} "
-                f"verified as commutative via dynamic check."
+            logger.debug(
+                "Commutativity verified (dynamic): %s on %s",
+                event_names,
+                comp.name,
             )
             return True
         else:
-            self._log(
-                f"Event handlers {event_names} on component {comp.name} "
-                f"are non-commutative (dynamic check)."
+            logger.warning(
+                "Non-commutative events detected: %s on %s",
+                event_names,
+                comp.name,
             )
             return False
 

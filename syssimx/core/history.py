@@ -15,6 +15,7 @@ Overview of Classes:
 from __future__ import annotations
 
 import csv
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -23,6 +24,8 @@ import numpy as np
 
 from ..utilities.units import QuantityClass, QuantityType, ureg
 from .events import DenseTime
+
+logger = logging.getLogger(__name__)
 
 
 # -------------------------------------------------------------------
@@ -453,7 +456,7 @@ class SystemHistory:
         )
 
         if not histories:
-            print("No data to save.")
+            logger.warning("No data to save.")
             return
 
         # Get all time points (assuming all signals have same time base)
@@ -486,7 +489,7 @@ class SystemHistory:
                     row.append(histories[signal]["values"][i])
                 writer.writerow(row)
 
-        print(f"Results saved to: {filepath}")
+        logger.info("Results saved to: %s", filepath)
 
     @staticmethod
     def load_csv(filepath: Path) -> dict[str, Any]:

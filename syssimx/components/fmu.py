@@ -446,7 +446,6 @@ class FMUComponent(CoSimComponent):
             instance.setString(str_vrs, str_vals)
 
         # Evaluation of direct feedthrough outputs
-        # self._do_step_internal(0.0, 0.0)
         self._update_output_states(t=None)
 
     def get_outputs(self) -> dict[str, Any]:

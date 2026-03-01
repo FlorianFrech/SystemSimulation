@@ -125,6 +125,7 @@ filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
+    "ignore::ResourceWarning:webgui_jupyter_widgets",
 ]
 
 # Ruff linter configuration

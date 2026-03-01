@@ -31,6 +31,8 @@ See Also:
     - Repository: https://github.com/FlorianFrech/SystemSimulation
 """
 
+import logging
+
 from .__version__ import __version__, __version_info__
 from .core.base import CoSimComponent, PortSpec, PortType
 from .system import Connection, EventConnection, System
@@ -76,3 +78,6 @@ if TYPE_CHECKING:
     from .components import FEMComponent as FEMComponent
     from .components import FMUComponent as FMUComponent
     from .components import OpenSimComponent as OpenSimComponent
+
+# Library-level NullHandler: no output unless the application configures logging.
+logging.getLogger(__name__).addHandler(logging.NullHandler())
