@@ -8,11 +8,11 @@ SysSimX Documentation
    :alt: MIT License
 
 **SysSimX** is a free and open-source Python library for system simulation.
-It lets you build hybrid and heterogenous system models by connecting models from different environments, including:
+It allows you to build hybrid and heterogenous system models by connecting system component models from different environments, including:
 
 - **FMU Components** - `Functional Mock-up Units (FMI 2.0 Co-Simulation) <https://fmi-standard.org/>`_
-- **FEM Components** - `Finite Element Method solvers (NGSolve) <https://ngsolve.org/>`_
 - **OpenSim Components** - Musculoskeletal biomechanics models using `OpenSim <https://opensim.stanford.edu/>`_
+- **FEM Components** - Finite Element Models using `NGSolve <https://ngsolve.org/>`_
 - **Custom Python Components** - User-defined models implemented directly in Python
 
 .. note::
@@ -29,6 +29,8 @@ Start Here
   :doc:`01_getting_started/03_concepts`.
 - Looking for APIs? Jump to the :doc:`02_api/syssimx`.
 - Want hands-on learning? Go to :doc:`03_core_tutorials/01_fundamentals/index`.
+- Interested in tool integration? Check out :doc:`04_tool_integration/01_modelica/index`, :doc:`04_tool_integration/02_opensim/index`, :doc:`04_tool_integration/03_fem/index`, and :doc:`04_tool_integration/04_master_pendulum/index`.
+- Curious about a case study? See :doc:`05_case_study/00_overview` and subsequent chapters.
 
 
 Quick Example
@@ -64,7 +66,7 @@ Key Features
    Components are executed in topologically sorted order.
 
 **Algebraic Loop Handling**
-   Detection and iterative solving using the Interface-Jacobian 
+   Detection and iterative solving using the Interface Jacobian-based 
    Co-Simulation Algorithm (IJCSA).
 
 **Hybrid Co-Simulation**
@@ -74,6 +76,12 @@ Key Features
 **Multiple Master Algorithms**
    Choose from Jacobi (parallel), Gauss-Seidel (sequential), or
    Hybrid (event-driven) algorithms.
+
+**Multi-Tool Integration**
+   Seamlessly connect FMUs, OpenSim models, and NGSolve FEM models in a single system.
+
+**Multi-Model Switching**
+   Dynamically switch between multiple models of the same component during simulation.
 
 **Unit-Aware Connections**
    Automatic unit conversion between ports using Pint.
@@ -144,20 +152,6 @@ Contents
    NGSolve Documentation <https://ngsolve.org>
    OpenSim Documentation <https://simtk-confluence.stanford.edu/display/OpenSim/Documentation>
    OpenSim Creator <https://www.opensimcreator.com/>
-
-.. .. toctree:: 
-..    :maxdepth: 2
-..    :caption: Theory and Background
-..    :numbered:
-   
-..    theory_background/01_introduction
-..    theory_background/02_systems_and_models
-..    theory_background/03_time_stepping_and_integration
-..    theory_background/04_dependency_graphs_and_ordering
-..    theory_background/05_algebraic_loops
-..    theory_background/06_co_simulation_algorithms
-..    theory_background/07_hybrid_and_events
-..    theory_background/08_units_and_interfaces
 
 Indices and Tables
 ------------------

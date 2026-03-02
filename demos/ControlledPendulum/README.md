@@ -7,6 +7,11 @@ Hybrid co-simulation benchmark for a torque-driven pendulum with interchangeable
 
 The `MasterPendulum` orchestrator composes these models behind one interface and can switch modes during runtime.
 
+<img src="./artifacts/graphs/master_pendulum_system.svg" width="60%">
+
+<img src="./artifacts/figures/master_pendulum/master_pendulum_contact.png" width="60%">
+
+
 ## Architecture
 
 - **Orchestrator**: `src/master_pendulum/orchestration/master_pendulum.py`

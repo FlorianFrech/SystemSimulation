@@ -1,24 +1,35 @@
 # SysSimX
 
-SysSimX is an open-source Python library for heterogeneous co-simulation.
-It lets you build coupled systems from components with different model representations and simulation backends, then execute them with consistent orchestration logic.
+**SysSimX** is a free and open-source Python library for system simulation.
+It allows you to build hybrid and heterogenous system models by connecting system component models from different environments, including:
+- **FMU Components** - [Functional Mock-up Units (FMI 2.0 Co-Simulation)](https://fmi-standard.org/)
+- **OpenSim Components** - Musculoskeletal biomechanics models using [OpenSim](https://opensim.stanford.edu/)
+- **FEM Components** - Finite Element Models using [NGSolve](https://ngsolve.org/)
+- **Custom Python Components** - User-defined models implemented directly in Python
 
-## What SysSimX Provides
+The library comes with a [user documentation site]() that includes installation instructions, core concepts, API references, and tutorials covering fundamental techniques, tool integrations, and a case study.
 
-- Graph-based system orchestration with dependency analysis and execution ordering
-- Algebraic loop detection and iterative handling (IJCSA-style workflow)
-- Multiple master algorithms:
-  - Jacobi (parallel-style updates)
-  - Gauss-Seidel (sequential updates with fresh values)
-  - Hybrid (event-aware stepping with zero-crossing support)
-- Unit-aware port interfaces and conversion via Pint
-- Reusable component abstractions for:
-  - FMI 2.0 Co-Simulation FMUs
-  - NGSolve-based FEM models
-  - OpenSim models
-  - Custom Python components
+## Key Features
+
+- **Graph-Based Execution:** Automatic dependency analysis with direct feedthrough and algebraic loop detection. Components are executed in topologically sorted order.
+
+- **Algebraic Loop Handling:** Detection and iterative solving using the Interface Jacobian-based Co-Simulation Algorithm (IJCSA).
+
+- **Hybrid Co-Simulation:** Event detection via zero-crossing indicators with bisection-based time localization and superdense time semantics.
+
+- **Multiple Master Algorithms:** Choose from Jacobi (parallel), Gauss-Seidel (sequential), or Hybrid (event-driven) algorithms.
+
+- **Multi-Tool Integration:** Seamlessly connect FMUs, OpenSim models, and NGSolve FEM models in a single system.
+
+- **Multi-Model Switching:** Dynamically switch between multiple models of the same component during simulation.
+
+- **Unit-Aware Connections:** Automatic unit conversion between ports using Pint.
+
+- **Extensible Component API:** Base class for custom components with lifecycle methods for initialization, stepping, and output updates.
 
 ## Installation
+
+The `syssimx` package is available on [PyPI](https://pypi.org/project/syssimx/). You can install it using `pip`. Optional extras are available for FMU, OpenSim, and FEM support.
 
 ### Basic install
 
