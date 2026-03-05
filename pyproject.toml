@@ -43,7 +43,7 @@ classifiers = [
 # FMI/Modelica support
 fmu = [
     "fmpy",
-    "OMPython",          # For OMPython examples
+    "OMPython>=4.0.0",          # For OMPython examples
 ]
 
 # FEM support (NGSolve)
@@ -70,7 +70,7 @@ dev = [
 
 # Complete installation with all features
 all = [
-    "syssimx[fmu,fem,viz]",
+    "syssimx[fmu,fem]",
 ]
 
 # Complete development environment

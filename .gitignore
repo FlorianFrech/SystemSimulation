@@ -63,3 +63,7 @@ system_graph.svg
 *.vtu
 first_system_graph
 hybrid_event_chain_system_graph
+*.aux
+*.gz
+*.fls
+*_latexmk

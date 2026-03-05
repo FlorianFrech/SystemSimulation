@@ -7,7 +7,7 @@ It allows you to build hybrid and heterogenous system models by connecting syste
 - **FEM Components** - Finite Element Models using [NGSolve](https://ngsolve.org/)
 - **Custom Python Components** - User-defined models implemented directly in Python
 
-The library comes with a [user documentation site]() that includes installation instructions, core concepts, API references, and tutorials covering fundamental techniques, tool integrations, and a case study.
+The library comes with a [user documentation site](https://syssimx.readthedocs.io/en/latest/) that includes installation instructions, core concepts, API references, and tutorials covering fundamental techniques, tool integrations, and a case study.
 
 ## Key Features
 
