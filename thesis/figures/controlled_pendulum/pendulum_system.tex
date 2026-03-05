@@ -1,0 +1,190 @@
+\documentclass[border=3pt,tikz]{standalone}
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage{ifthen}
+\usepackage{tikz}
+\usepackage[outline]{contour} % glow around text
+\usepackage{silence}
+
+\usetikzlibrary{calc}
+\AtBeginDocument{\RenewCommandCopy\qty\SI}
+\usetikzlibrary{angles,quotes} % for pic
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{patterns}
+\tikzset{>=latex} % for LaTeX arrow head
+\contourlength{1.4pt}
+
+% Reusable coordinate system pic
+% Usage: \pic at (x,y) {coordsys};
+%   or:  \pic[rotate=30] at (x,y) {coordsys};
+\tikzset{
+  coordsys/.pic={
+    \fill[red] (0,0) circle(0.1);
+    \draw[->,thick, red] (0,0) -- (1.4,0) node[below] {$x$};
+    \draw[->,thick, red] (0,0) -- (0,1.4) node[above] {$y$};
+  }
+}
+
+% Reusable potentiometer pic (concentric angular sensor)
+% Expects \ang (pendulum angle from -y) and \potR (outer radius) to be defined.
+\def\potR{0.85}       % potentiometer outer housing radius
+\def\trackR{0.63}     % resistive track radius
+\tikzset{
+  potentiometer/.pic={
+    % Outer housing
+    \draw[thick, fill=white!92!black] (0,0) circle (\potR);
+    % Resistive track (270° arc, dead zone at top: 45°–135°)
+    \draw[line width=2.5pt, black!35]
+        (135:\trackR) arc (135:-135:\trackR);
+    % Track end caps
+    \fill[black!45] ( 135:\trackR) circle (0.055);
+    \fill[black!45] (-135:\trackR) circle (0.055);
+    % Wiper arm (aligned to pendulum angle \ang from -y axis)
+    \pgfmathsetmacro{\wiperAng}{\ang - 90}
+    \draw[semithick, black!55] (0,0) -- (\wiperAng:\trackR);
+    \fill[black!65] (\wiperAng:\trackR) circle (0.05);
+  }
+}
+
+\colorlet{xcol}{blue!70!black}
+\colorlet{vcol}{green!60!black}
+\colorlet{myred}{red!65!black}
+\colorlet{acol}{red!50!blue!80!black!80}
+\tikzstyle{ground}=[preaction={fill,top color=black!10,bottom color=black!5,shading angle=20},
+                    fill,pattern=north east lines,draw=none,minimum width=0.3,minimum height=0.6]
+\tikzstyle{mass}=[line width=0.6,red!30!black,fill=red!40!black!10,rounded corners=1,
+                  top color=red!40!black!20,bottom color=red!40!black!10,shading angle=20]
+\tikzstyle{faded mass}=[dashed,line width=0.1,red!30!black!40,fill=red!40!black!10,rounded corners=1,
+                        top color=red!40!black!10,bottom color=red!40!black!10,shading angle=20]
+\tikzstyle{rod}=[brown!70!black,very thick,line cap=round]
+\def\rod#1{ \draw[black,line width=1.4] #1; \draw[rod,line width=1.1] #1; }
+\tikzstyle{force}=[->,myred,very thick,line cap=round]
+\tikzstyle{velocity}=[->,vcol,very thick,line cap=round]
+
+\begin{document}
+
+
+% PENDULUM - ORIGIN AT HINGE
+\def\L{4}      % rod length
+\def\W{0.3}    % rod width
+\def\R{0.4}    % pendulum head radius
+\def\ang{40}   % angle from negative y-axis (hanging down)
+\def\F{1.6}    % force arrow magnitude
+
+\begin{tikzpicture}
+  \coordinate (O) at (0,0);
+  
+  % Pendulum rod (rectangle, rotated about hinge)
+  \begin{scope}[rotate=\ang]
+    \draw[thick, fill=brown!30] (-\W/2,0) rectangle (\W/2,-\L);
+    % Pendulum head (circle at end of rod)
+    \draw[thick, fill=gray!40] (0,-\L) circle(\R);
+    \node[right=\R+12pt] at (0,-\L) {$m,\,I$};
+    % Rod midline (dash-dot) — extended beyond head for force reference
+    \draw[dash dot, thin] (0,0.3) -- (0,-\L-\R-1.2);
+    % Pendulum head center lines (dash-dot, cross at center of circle)
+    \draw[dash dot, thin] (-\R-0.3,-\L) -- (\R+0.3,-\L);
+    % Origin center line parallel to pendulum head center line (dash-dot)
+    \draw[dash dot, thin] (-\R-0.3,0) -- (\R+0.3,0);
+  \end{scope}
+  
+  % === Ghost pendulum at theta = 0 (contact position) ===
+  \begin{scope}[opacity=0.35]
+    \draw[thick, fill=brown!15] (-\W/2,0) rectangle (\W/2,-\L);
+    \draw[thick, fill=gray!20] (0,-\L) circle(\R);
+  \end{scope}
+  
+  % Vertical reference line (theta = 0)
+  \draw[dash dot, thin] (0,0) -- (0,-\L-\R-0.3);
+  
+  % Pendulum trajectory (arc of the head center)
+  \draw[dotted, thick] (-90:\L) arc (-90:-90+\ang+0:\L);
+  
+  % Wall (impact surface at theta = 0, right edge at x = -R)
+  \def\wallW{0.4}   % wall thickness
+  \def\wallH{2}   % wall height
+  \draw[ground] (-\R-\wallW, -\L-\wallH/2) rectangle (-\R, -\L+\wallH/2);
+  \draw[thick] (-\R, -\L-\wallH/2) -- (-\R, -\L+\wallH/2);
+  % Wall label (with leader line)
+  \node[left, font=\footnotesize\itshape] (walllabel) at (-\R-\wallW-0.8, -\L) {rigid wall};
+  \draw[thin, gray] (walllabel.east) -- (-\R-\wallW, -\L);
+  
+  % Pendulum head center coordinate (needed for angle annotation)
+  \coordinate (M) at (\ang-90:\L);
+  
+  % Angle theta at hinge (between vertical and rod midline)
+  \coordinate (B) at (0,-1.5);
+  \draw pic[->,"\,$\theta$", draw, angle radius=60, angle eccentricity=1.1] {angle=B--O--M};
+  
+  % Length L annotation (offset so it clears the hinge circle)
+  \draw[<->,thick] (\ang-90+90:0.7) ++ (\ang-90:0) -- ++ (\ang-90:\L)
+    node[midway, above, sloped] {$L$};
+  
+  % === Potentiometer (angular sensor) concentric with hinge ===
+  \pic at (0,0) {potentiometer};
+  
+  % Terminal wires from potentiometer housing (left side, horizontal)
+  % +5V supply (red) — exits at 150° on housing
+  \draw[semithick, red!70!black]
+      (150:\potR) -- (-2.2,{\potR*sin(150)});
+  \fill[red!70!black] (-2.2,{\potR*sin(150)}) circle(0.05);
+  \node[left, font=\footnotesize, red!70!black]
+      at (-2.2,{\potR*sin(150)}) {$+5\,\mathrm{V}$};
+  % Signal output V(θ) (green) — exits at 180° on housing
+  \draw[semithick, green!50!black]
+      (180:\potR) -- (-2.2,0);
+  \fill[green!50!black] (-2.2,0) circle(0.05);
+  \node[left, font=\footnotesize, green!50!black]
+      at (-2.2,0) {$V(\theta)$};
+  % Ground reference (black) — exits at 210° on housing
+  \draw[semithick, black!70]
+      (210:\potR) -- (-2.2,{\potR*sin(210)});
+  \fill[black!70] (-2.2,{\potR*sin(210)}) circle(0.05);
+  \node[left, font=\footnotesize, black!70]
+      at (-2.2,{\potR*sin(210)}) {GND};
+  % Sensor label
+  \node[font=\footnotesize\itshape, text=black!60] at (-1.5,-0.85) {angular sensor};
+  
+  % === BLDC Motor with belt drive ===
+  \def\motorX{3.5}       % motor shaft x-position
+  \def\motorY{1.5}       % motor shaft y-position
+  \def\motorW{1.4}       % motor body width (extends right from shaft)
+  \def\motorH{1.0}       % motor body height
+  \def\motorShaftR{0.35} % motor shaft/drive pulley radius
+  
+  % Belt tangent geometry (open belt: potR as driven pulley, motorShaftR as drive pulley)
+  \pgfmathsetmacro{\beltAngle}{atan2(\motorY, \motorX)}
+  \pgfmathsetmacro{\beltDist}{sqrt(\motorX*\motorX + \motorY*\motorY)}
+  \pgfmathsetmacro{\beltBeta}{asin((\potR - \motorShaftR) / \beltDist)}
+  \pgfmathsetmacro{\tangTop}{\beltAngle + 90 + \beltBeta}
+  \pgfmathsetmacro{\tangBot}{\beltAngle - 90 - \beltBeta}
+  % Belt lines (external tangent)
+  \draw[semithick, black!45]
+      (\tangTop:\potR) -- ($(\motorX,\motorY) + (\tangTop:\motorShaftR)$);
+  \draw[semithick, black!45]
+      (\tangBot:\potR) -- ($(\motorX,\motorY) + (\tangBot:\motorShaftR)$);
+  
+  % Motor body (extends right from shaft center)
+  \draw[thick, fill=blue!5, rounded corners=2]
+      (\motorX, \motorY-\motorH/2) rectangle (\motorX+\motorW, \motorY+\motorH/2);
+  \node[font=\footnotesize] at (\motorX+\motorW/2+0.15, \motorY) {BLDC};
+  % Motor shaft / drive pulley
+  \draw[thick, fill=white] (\motorX, \motorY) circle(\motorShaftR);
+  \fill[black!50] (\motorX, \motorY) circle(0.06);
+  
+  % Hinge joint / shaft center (drawn on top of potentiometer)
+  \draw[thick, fill=white] (O) circle(0.4);
+  % Revolute joint label (upper-left, with leader line)
+  \node[font=\footnotesize\itshape] (jointlabel) at (-2.5,1.2) {revolute joint};
+  \draw[thin, gray] (jointlabel.south east) -- (O);
+  
+  % Drive torque at hinge
+  \draw[<-, very thick, blue!70!black] (160:1.0) arc (160:70:1.0)
+    node[midway, above] {$\tau$};
+  
+  % Coordinate system at hinge (topmost layer)
+  \pic at (0,0) {coordsys};
+\end{tikzpicture}
+
+\end{document}
+

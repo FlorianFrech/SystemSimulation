@@ -1,0 +1,42 @@
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage{ifthen}
+\usepackage{tikz}
+\usepackage[outline]{contour}
+\usepackage{silence}
+
+\usetikzlibrary{calc}
+\usetikzlibrary{angles,quotes}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{patterns}
+
+\AtBeginDocument{\RenewCommandCopy\qty\SI}
+\tikzset{>=latex}
+\contourlength{1.4pt}
+
+% -----------------------------------------------------------------------------
+% Color palette
+% -----------------------------------------------------------------------------
+\colorlet{angleColor}{blue!70!black}
+\colorlet{forceColor}{red!65!black}
+\colorlet{forceComponentColor}{red!50!blue!80!black!80}
+
+% -----------------------------------------------------------------------------
+% Reusable drawing styles (used by pendulum.tex)
+% -----------------------------------------------------------------------------
+\tikzset{
+  supportSurface/.style={
+    preaction={fill,top color=black!10,bottom color=black!5,shading angle=20},
+    fill,
+    pattern=north east lines,
+    draw=none,
+    minimum width=0.3,
+    minimum height=0.6
+  },
+  forceVector/.style={
+    ->,
+    forceColor,
+    very thick,
+    line cap=round
+  }
+}

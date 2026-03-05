@@ -1,0 +1,74 @@
+\documentclass[border=3pt,tikz]{standalone}
+\input{styles.tex}
+\input{components.tex}
+
+\begin{document}
+
+% ============================================================================
+% Potentiometer figure parameters (origin at center of potentiometer)
+% ============================================================================
+\def\rOuter{3}     % outer radius
+\def\rTrack{2}   % resistive track radius
+\def\rWiper{0.75}   % wiper arm inner radius
+\def\ang{45}        % wiper angle from vertical (counterclockwise)
+\def\widthTrack{14}   % width of resistive track
+\def\widthWiper{7}    % width of wiper arm
+
+\colorlet{colTRACK}{black!50}
+\colorlet{colVOUT}{green!70}
+\colorlet{colGND}{blue!70}
+\colorlet{colSUPPLY}{red!70}
+
+\begin{tikzpicture}
+    \pgfmathsetmacro{\wAng}{\ang - 90}
+    \coordinate (O) at (0,0);
+    \coordinate (B) at (0,-1.6);
+    \coordinate (W) at (\wAng:\rTrack);
+
+    \draw[thick] (0,0) circle (\rOuter);
+
+    % --- resistive track (arc) ---
+    \draw[line width=\widthTrack, colTRACK] 
+        (-225:\rTrack) arc (-225:45:\rTrack);
+    \node[font=\footnotesize\itshape, align=left] (trackLabel) at (\rOuter+1,2) {resistive\\track};
+    \draw[thin, black] (trackLabel.west) -- (35:\rTrack);
+
+    % --- center shaft ---
+    \draw[line width=\widthWiper, colVOUT] (0,0) circle (\rWiper);
+    \node[font=\footnotesize\itshape, align=left] (shaftLabel) at (\rOuter+1.3,0.7)
+      {joint shaft\\(shared with\\pendulum)};
+    \draw[thin, black] (shaftLabel.west) -- (O);
+
+    % --- VOUT ---
+    \draw[line width=\widthWiper, colVOUT] (\wAng:\rWiper) -- (\wAng:\rTrack);
+    \node[font=\footnotesize\itshape, align=left] (wiperLabel) at (\rOuter+1,-0.9) {moveable\\wiper};
+    \draw[thin, black] (wiperLabel.west) -- (\wAng:{0.5*(\rWiper+\rTrack)});
+    \draw[line width=\widthWiper, colVOUT](90:\rWiper) -- (90:\rOuter+1) node[above] {$V_\mathrm{out}$};
+    
+    % --- GND ---
+    \draw[line width=\widthWiper, colGND](-225:\rTrack-0.25) -- ++(-225:\rOuter+0.2) node[above] {$GND$};
+
+    % --- SUPPLY ---
+    \draw[line width=\widthWiper, colSUPPLY](45:\rTrack-0.25) -- ++(45:\rOuter+0.2) node[above] {$V_\mathrm{+}$};
+
+    % --- center lines (potentiometer body reference) ---
+    \draw[dash dot, thin, black!55] (-\rOuter*1.2,0) -- (\rOuter*1.2,0);
+    \draw[dash dot, thin, black!55] (0,-\rOuter*1.2) -- (0,\rOuter*1.2);
+
+    % Midline indicating current wiper angular position
+    \draw[dash dot, thin, black!65] (O) -- (\wAng:\rOuter*1.2);
+
+    % --- rotation arrows ---
+    \draw[<->](40:1.3) arc (40:-220:1.3);
+
+    % --- angular position of wiper ---
+    \draw pic[->,"\,$\theta_\mathrm{pot}$", draw, angle radius=\rOuter*32, angle eccentricity=1.1] {angle=B--O--W};
+
+    % --- origin and axes ---
+    \fill[red] (0,0) circle(0.05);
+    \draw[->,thick, red] (0,0) -- (1.4,0) node[below] {$x$};
+    \draw[->,thick, red] (0,0) -- (0,1.4) node[left] {$y$};
+
+\end{tikzpicture}
+
+\end{document}

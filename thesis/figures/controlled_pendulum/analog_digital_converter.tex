@@ -1,0 +1,69 @@
+\documentclass[border=3pt,tikz]{standalone}
+\input{styles.tex}
+\input{components.tex}
+
+\begin{document}
+
+% ============================================================================
+% AngleSensor ADC pipeline (matches AngleSensor.mo)
+% ============================================================================
+\def\bw{3.4}    % block width
+\def\bh{1.2}    % block height
+\def\dx{4.3}    % block spacing
+
+
+\begin{tikzpicture}
+  % Block centers
+  \coordinate (B1) at (0,0);
+  \coordinate (B2) at (\dx,0);
+  \coordinate (B3) at (2*\dx,0);
+  \coordinate (SUM) at (3*\dx,0);
+  \coordinate (B4) at (3.7*\dx,0);
+  \coordinate (B5) at (4.8*\dx,0);
+
+  % --- angle saturation ---
+  \draw[thick, fill=blue!8] ($(B1)+(-\bw/2,-\bh/2)$) rectangle ($(B1)+(\bw/2,\bh/2)$);
+  \node[align=center] at (B1) {angle\\saturation};
+  \node[font=\scriptsize, align=center] at ($(B1)+(0,-0.85)$) {$\theta_{\mathrm{sat}}=\mathrm{clip}(\theta,\theta_{\min},\theta_{\max})$};
+
+  % --- potentiometer mapping + divider ---
+  \draw[thick, fill=blue!8] ($(B2)+(-\bw/2,-\bh/2)$) rectangle ($(B2)+(\bw/2,\bh/2)$);
+  \node[align=center] at (B2) {potentiometer\\mapping + divider};
+  \node[font=\scriptsize] at ($(B2)+(0,-0.85)$) {$v_\mathrm{pot\_wiper}$};
+
+  % --- ADC input clamp ---
+  \draw[thick, fill=blue!8] ($(B3)+(-\bw/2,-\bh/2)$) rectangle ($(B3)+(\bw/2,\bh/2)$);
+  \node[align=center] at (B3) {ADC input\\clamp};
+  \node[font=\scriptsize] at ($(B3)+(0,-0.85)$) {$v_\mathrm{adc\_in}\in[0,v_\mathrm{adc}]$};
+
+  % --- optional noise summation ---
+  \draw[thick, fill=white] (SUM) circle (0.45);
+  \node at (SUM) {$+$};
+  \draw[->, semithick] ($(SUM)+(0,1.35)$) -- ($(SUM)+(0,0.45)$) node[midway,right,font=\scriptsize] {noise (optional)};
+
+  % --- clamp after noise ---
+  \draw[thick, fill=blue!8] ($(B4)+(-\bw/2,-\bh/2)$) rectangle ($(B4)+(\bw/2,\bh/2)$);
+  \node[align=center] at (B4) {post-noise\\clamp};
+  \node[font=\scriptsize] at ($(B4)+(0,-0.85)$) {$v_\mathrm{adc\_noisy}\in[0,v_\mathrm{adc}]$};
+
+  % --- sample + quantize + hold ---
+  \draw[thick, fill=green!9] ($(B5)+(-\bw/2,-\bh/2)$) rectangle ($(B5)+(\bw/2,\bh/2)$);
+  \node[align=center] at (B5) {sample +\\quantize + hold};
+  \node[font=\scriptsize, align=center] at ($(B5)+(0,-0.95)$) {$\Delta=v_\mathrm{adc}/(2^{nBits}-1)$\\$T_s=\mathrm{samplePeriod}$};
+
+  % --- main signal path ---
+  \draw[->, very thick] ($(B1)+(-\bw/2-1.6,0)$) -- ($(B1)+(-\bw/2,0)$)
+    node[midway,above] {$\theta$};
+  \draw[->, very thick] ($(B1)+(\bw/2,0)$) -- ($(B2)+(-\bw/2,0)$);
+  \draw[->, very thick] ($(B2)+(\bw/2,0)$) -- ($(B3)+(-\bw/2,0)$);
+  \draw[->, very thick] ($(B3)+(\bw/2,0)$) -- ($(SUM)+(-0.45,0)$);
+  \draw[->, very thick] ($(SUM)+(0.45,0)$) -- ($(B4)+(-\bw/2,0)$);
+  \draw[->, very thick] ($(B4)+(\bw/2,0)$) -- ($(B5)+(-\bw/2,0)$);
+  \draw[->, very thick, red!70!black] ($(B5)+(\bw/2,0)$) -- ++(2.3,0)
+    node[midway,above] {$v_\mathrm{out}$};
+
+  % --- title ---
+  \node[font=\footnotesize\itshape] at ($(B3)+(0,1.7)$) {AngleSensor measurement chain (ADC model)};
+\end{tikzpicture}
+
+\end{document}
