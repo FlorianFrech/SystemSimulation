@@ -1,0 +1,43 @@
+% =============================================================================
+% Decoder Component
+% =============================================================================
+\newcommand{\DecoderComponent}{
+  \def\bw{5}         % component width
+  \def\bh{4.5}         % component height
+  \def\gW{3.6}       % mini-graph width
+  \def\gH{2}       % mini-graph height
+
+  \coordinate (C) at (0,0);
+
+  \tikzset{dec-default/.style={line cap=round, line join=round}}
+
+  % Component panel
+  \draw[thick, fill=white!95!black] ($(C)+(-\bw/2,-\bh/2)$) rectangle ($(C)+(\bw/2,\bh/2)$);
+  \node[font=\large\bfseries] at ($(C)+(0,\bh/2-0.55)$) {Decoder};
+
+  % Mini-graph: V → θ mapping
+  \begin{scope}[shift={(-\gW/2,-\gH/2+0.3)}]
+    \pgfmathsetmacro{\stepW}{\gW/8}
+    \pgfmathsetmacro{\stepH}{\gH/8}
+    \draw[dec-default,xstep=\stepW,ystep=\stepH,color=black!30] (0,0) grid (\gW,\gH);
+
+    \draw[dec-default,->,thick] (0,0) -- (\gW+0.3,0) node[right] {$V$};
+    \draw[dec-default,->,thick] (0,0) -- (0,\gH+0.4) node[above] {$\theta$};
+
+    % Ideal linear mapping (dashed reference)
+    \draw[dec-default,black!40,dashed,domain=0:\gW,samples=2]
+      plot (\x,{\x*\gH/\gW});
+
+    % Staircase: quantized voltage bins → decoded angle levels
+    \foreach \i in {0,1,...,7} {
+      \pgfmathsetmacro{\xa}{\i*\stepW}
+      \pgfmathsetmacro{\xb}{(\i+1)*\stepW}
+      \pgfmathsetmacro{\yq}{\i*\stepH}
+      \draw[dec-default,signalOutputColor,semithick] (\xa,\yq) -- (\xb,\yq);
+    }
+  \end{scope}
+
+  % Parameters
+  \node[below, text width=4.2cm, align=center, information text] at ($(C)+(0,-1)$)
+    {$\mathrm{nBits}$ (resolution)\\$V_\mathrm{ref}$ (reference voltage)};
+}

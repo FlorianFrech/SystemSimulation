@@ -1,0 +1,100 @@
+% =============================================================================
+% Drive Component
+% =============================================================================
+\newcommand{\DriveElectricalNetwork}{
+  \def\xIn{0.5}
+  \def\xNet{1}
+  \def\hNet{5}
+  \def\wNet{3}
+  \def\wDrive{0.3}
+  \def\rDrive{0.4}
+
+  % control-scaling pre-stage
+  \draw[short, *-] (0, 0) to (\xIn, 0);
+  \draw[short, *-] (0, \hNet) to (\xIn, \hNet);
+  \draw (0,\hNet) to [open, v^=$V_\mathrm{in}$] (0,0);
+
+  % electrical equivalent circuit
+  \draw (\xNet,\hNet) to [open, v^=$V_\mathrm{A}$] (\xNet,0);
+  \draw[short, *-] (\xNet,\hNet) to[short, i^=$I_A$] (\wNet,\hNet);
+  \draw[short, -] (\wNet,\hNet) to[R, l_=$R_A$] (\wNet,\hNet-1*\hNet/3);
+  \draw[short, -] (\wNet,\hNet-1*\hNet/3) to[L, l_=$L_A$] (\wNet,\hNet-2*\hNet/3);
+  \draw[short, -] (\wNet,\hNet-2*\hNet/3) to[V, v_=$U_i$] (\wNet,0);
+  % \draw[short, -] (\wNet,2) to[short] (\wNet,0);
+  \draw[short, -*] (\wNet,0) to (\xNet,0);
+
+  % drive
+  \draw[fill=black] (\wNet-\wDrive/2,\hNet/6-1.4*\rDrive) rectangle (\wNet+\wDrive/2,\hNet/6+1.4*\rDrive);
+  \draw[fill=white] (\wNet,\hNet/6) circle (\rDrive);
+}
+
+\newcommand{\DriveMechanicalNetwork}{
+  \def\shaftHeight{0.1}
+  \coordinate (shaft1start) at (0,0);
+  \coordinate (shaft1end) at (1,0);
+
+  % shaft drive -> transmission
+  \draw[fill=black] ($(shaft1start)+(0,-\shaftHeight/2)$) rectangle ($(shaft1end)+(0,\shaftHeight/2)$);
+
+  % transmission gear one
+  \draw[fill=black!50] (1.2,0) ellipse (.08 and 0.33);
+  \draw[fill=black!50, color=black!50] (1.2,0.33) rectangle (1,-0.33);
+  \draw[fill=white] (1,0) ellipse (.08 and 0.33);
+  \draw (1,0.33) -- (1.2,0.33);
+  \draw (1,-0.33) -- (1.2,-0.33);
+
+  % transmission gear two
+  \draw[fill=black!50] (1.2,-1.09) ellipse (.13 and 0.67);
+  \draw[fill=black!50, color=black!50] (1.2,-0.42) rectangle (1.0,-1.76);
+  \draw[fill=white] (1.0,-1.09) ellipse (.13 and 0.67);
+  \draw (1.0,-0.42) -- (1.2,-0.42);
+  \draw (1.0,-1.76) -- (1.2,-1.76);
+
+  % transmission gear three
+  \draw[fill=black!50] (1.35,-0.35) ellipse (.08 and 0.3);
+  \draw[fill=black!50, color=black!50] (1.35,-0.05) rectangle (1.15,-0.65);
+  \draw[fill=white] (1.15,-0.35) ellipse (.08 and 0.3);
+  \draw (1.15,-0.05) -- (1.36,-0.05);
+  \draw (1.15,-0.65) -- (1.36,-0.65);
+
+  % output shaft
+  \draw[fill=black] (1.35,-1.1) rectangle (3.5,-1.2);
+
+  % rotational arrows and labels
+  \draw[line width=0.7pt,<-] (0.4,-0.5) arc (-30:30:1);
+  \draw (0.4,0.7) node {$\omega_\mathrm{M}$};
+  \draw[line width=0.7pt,<-, color=green!80!black] (2,-1.7) arc (-30:30:1);
+  \draw[line width=0.7pt,<-, color=orange!90!black] (3,-1.7) arc (-30:30:1);
+  \draw[color=green!80!black] (2,-0.3) node {$\tau$};
+  \draw[color=orange!90!black] (3,-0.3) node {$\omega$};
+  \draw (1,-2) node {$i,\, \eta$};
+}
+
+\newcommand{\DriveComponent}{
+  % layout parameters
+  \def\boxWidth{9.5}
+  \def\boxHeight{8}
+
+  \draw[thick, fill=white!95!black] (-\boxWidth/2, -\boxHeight/2) rectangle (\boxWidth/2, \boxHeight/2);
+  \node[font=\large\bfseries, below] at (0,\boxHeight/2-0.25) {BLDC Drive};
+
+  % network model: electrical + mechanical
+  \begin{scope}[shift={(-\boxWidth/2 + 0.5, -\boxHeight/2 + 1.5)}]
+    \DriveElectricalNetwork
+    \begin{scope}[shift={(3.4,0.85)}]
+      \DriveMechanicalNetwork
+    \end{scope}
+  \end{scope}
+
+  % equation block
+  \draw[xshift=1.75cm, yshift=1cm]
+  node [text width=4.5cm, information text]
+  {
+    \begin{align*}
+      V_\mathrm{A} &= V_\mathrm{in}\,\color{red!90!black}u_\mathrm{control} \\
+      U_i &= k_e\,\omega_\mathrm{M}, \quad \omega_\mathrm{M} = \frac{\color{orange!90!black}\omega}{i} \\
+      V_\mathrm{A} &= L_A\,\dfrac{\mathrm{d}I_A}{\mathrm{d}t} + R_A\,I_A + U_i \\
+      \color{green!80!black}\tau \color{black}&= \eta\,i\,k_t\,I_A
+    \end{align*}
+  };
+}

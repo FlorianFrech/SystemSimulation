@@ -1,0 +1,118 @@
+\providecommand{\potR}{0.85}
+\providecommand{\trackR}{0.63}
+\providecommand{\ang}{0}
+
+% =============================================================================
+% Coordinate system pic (for pendulum hinge)
+% =============================================================================
+\tikzset{
+  coordsys/.pic={
+      \fill[red] (0,0) circle(0.05);
+      \draw[->,thick, red] (0,0) -- (1,0) node[right] {$x$};
+      \draw[->,thick, red] (0,0) -- (0,1) node[above] {$y$};
+    }
+}
+
+% =============================================================================
+% Potentiometer
+% =============================================================================
+\pgfkeys{
+  /pot/.is family, /pot,
+  scale/.store in=\potScale,
+  angle/.store in=\potAngleDeg,
+  show_axes/.store in=\potShowAxes,
+  show_labels/.store in=\potShowLabels
+}
+
+\newcommand{\PotentiometerComponent}[1][]{
+  % Key defaults (overridable via optional args)
+  \pgfkeys{/pot/.cd, scale=1.0, angle=45, show_axes=true, show_labels=true}
+  \pgfkeys{/pot/.cd, #1}
+
+  % Base and derived dimensions
+  \pgfmathsetmacro{\potR}{2.0*\potScale}
+  \pgfmathsetmacro{\potTrackR}{0.67*\potR}
+  \pgfmathsetmacro{\potWiperR}{0.25*\potR}
+  \pgfmathsetmacro{\potRefR}{1.15*\potR}
+  \pgfmathsetmacro{\potThetaArcR}{1.1*\potR}
+  \pgfmathsetmacro{\potLabelDx}{0.5*\potR}
+  \pgfmathsetmacro{\potLabelPad}{0.08*\potR}
+  \pgfmathsetmacro{\potWAng}{\potAngleDeg - 90}
+  \pgfmathsetmacro{\potTrackLW}{14*\potScale}
+  \pgfmathsetmacro{\potWiperLW}{7*\potScale}
+  \pgfmathsetmacro{\potTerminalLW}{7*\potScale}
+
+  % Coordinate map
+  \coordinate (pot-O) at (0,0);
+  \coordinate (pot-Vref) at (0,-\potRefR);
+  \coordinate (pot-Wray) at (\potWAng:\potRefR);
+  \coordinate (pot-TrackStart) at (-225:\potTrackR);
+  \coordinate (pot-TrackEnd) at (45:\potTrackR);
+  \coordinate (pot-WiperInner) at (\potWAng:\potWiperR);
+  \coordinate (pot-WiperOuter) at (\potWAng:\potTrackR);
+  \coordinate (pot-TermVout0) at (90:\potWiperR);
+  \coordinate (pot-TermVout1) at (90:\potR+0.5);
+  \coordinate (pot-TermGnd0) at (-225:\potTrackR-0.25);
+  \coordinate (pot-TermGnd1) at ($(pot-TermGnd0)+(-225:\potR*0.68)$);
+  \coordinate (pot-TermVplus0) at (45:\potTrackR-0.25);
+  \coordinate (pot-TermVplus1) at ($(pot-TermVplus0)+(45:\potR*0.68)$);
+  \coordinate (pot-LblTrack) at (\potR+\potLabelDx,\potR*0.60);
+  \coordinate (pot-LblShaft) at (\potR+\potLabelDx,\potR*0.20);
+  \coordinate (pot-LblWiper) at (\potR+\potLabelDx,-\potR*0.25);
+  \coordinate (pot-LblEq) at (\potR+\potLabelDx,-\potR*0.95);
+
+  % External assembly anchors
+  \coordinate (pot-vout) at (pot-TermVout1);
+  \coordinate (pot-vplus) at (pot-TermVplus1);
+  \coordinate (pot-gnd) at (pot-TermGnd1);
+  \coordinate (pot-shaft) at (pot-O);
+
+  % Component panel
+  \draw[thick, fill=white!95!black]
+    (-\potR-0.5,-\potR-1) rectangle (\potR+0.5,\potR+2);
+
+  \draw node at (0, 1.6*\potR) [above, font=\large\bfseries] {Potentiometer};
+
+  % Body
+  \draw[thick] (pot-O) circle (\potR);
+  \draw[line width=\potTrackLW pt, sensorTrackColor]
+    (pot-TrackStart) arc (-225:45:\potTrackR);
+  \draw[line width=\potWiperLW pt, signalOutputColor] (pot-O) circle (\potWiperR);
+  \draw[line width=\potWiperLW pt, signalOutputColor] (pot-WiperInner) -- (pot-WiperOuter);
+
+  % Terminals
+  \draw[line width=\potTerminalLW pt, signalOutputColor] (pot-TermVout0) -- (pot-TermVout1)
+    node[above] {$V_\mathrm{out}$};
+  \draw[line width=\potTerminalLW pt, groundTerminalColor] (pot-TermGnd0) -- (pot-TermGnd1)
+    node[above] {$GND$};
+  \draw[line width=\potTerminalLW pt, supplyTerminalColor] (pot-TermVplus0) -- (pot-TermVplus1)
+    node[above] {$V_\mathrm{+}$};
+
+  % References
+  \draw[dash dot, thin, black!55] (-\potRefR,0) -- (\potRefR,0);
+  \draw[dash dot, thin, black!55] (0,-\potRefR) -- (0,\potRefR);
+  \draw[dash dot, thin, black!65] (pot-O) -- (pot-Wray);
+  \draw[<->] (40:{0.44*\potR}) arc (40:-220:{0.44*\potR});
+  \draw pic[->,"\,$\theta_\mathrm{pot}$", draw,
+    angle radius=\potThetaArcR cm, angle eccentricity=1.15] {angle=pot-Vref--pot-O--pot-Wray};
+
+  % Labels
+  \ifthenelse{\equal{\potShowLabels}{true}}{
+    \node[font=\footnotesize\itshape, align=left] (pot-track-label) at (pot-LblTrack) {resistive\\track};
+    \draw[thin, black] (pot-track-label.west) -- ($(pot-TrackEnd)+(-\potLabelPad,0)$);
+    \node[font=\footnotesize\itshape, align=left] (pot-shaft-label) at (pot-LblShaft)
+      {joint shaft\\(shared with\\pendulum)};
+    \draw[thin, black] (pot-shaft-label.west) -- (pot-O);
+    \node[font=\footnotesize\itshape, align=left] (pot-wiper-label) at (pot-LblWiper) {moveable\\wiper};
+    \draw[thin, black] (pot-wiper-label.west) -- ($(pot-WiperInner)!0.55!(pot-WiperOuter)$);
+    \node[font=\footnotesize\itshape, align=left] (pot-eq-label) at (pot-LblEq)
+      {$\theta_\mathrm{pot}=\theta_\mathrm{pend}$};
+  }{}
+
+  % Optional axes
+  \ifthenelse{\equal{\potShowAxes}{true}}{
+    \fill[red] (pot-O) circle(0.05);
+    \draw[->,thick, red] (pot-O) -- ++(1.4,0) node[below] {$x$};
+    \draw[->,thick, red] (pot-O) -- ++(0,1.4) node[left] {$y$};
+  }{}
+}

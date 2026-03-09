@@ -20,6 +20,13 @@
 \colorlet{angleColor}{blue!70!black}
 \colorlet{forceColor}{red!65!black}
 \colorlet{forceComponentColor}{red!50!blue!80!black!80}
+\colorlet{sensorTrackColor}{black!50}
+\colorlet{signalOutputColor}{green!70!black}
+\colorlet{supplyTerminalColor}{red!70!black}
+\colorlet{groundTerminalColor}{blue!70!black}
+% \colorlet{uColor}{green!50!black};
+% \colorlet{omegaColor}{orange!90!black};
+% \colorlet{tauColor}{green!80!black};
 
 % -----------------------------------------------------------------------------
 % Reusable drawing styles (used by pendulum.tex)
@@ -38,5 +45,10 @@
     forceColor,
     very thick,
     line cap=round
+  },
+  information text/.style={
+    rounded corners,
+    fill=red!10,
+    inner sep=1ex
   }
 }
