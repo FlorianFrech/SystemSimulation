@@ -5,7 +5,7 @@
   \def\bw{5}         % component width
   \def\bh{4.5}         % component height
   \def\gW{3.6}       % mini-graph width
-  \def\gH{2}       % mini-graph height
+  \def\gH{2.4}       % mini-graph height
 
   \coordinate (C) at (0,0);
 
@@ -16,16 +16,16 @@
   \node[font=\large\bfseries] at ($(C)+(0,\bh/2-0.55)$) {Decoder};
 
   % Mini-graph: V → θ mapping
-  \begin{scope}[shift={(-\gW/2,-\gH/2+0.3)}]
+  \begin{scope}[shift={(-\gW/2,-\gH/2-0.5)}]
     \pgfmathsetmacro{\stepW}{\gW/8}
     \pgfmathsetmacro{\stepH}{\gH/8}
     \draw[dec-default,xstep=\stepW,ystep=\stepH,color=black!30] (0,0) grid (\gW,\gH);
 
-    \draw[dec-default,->,thick] (0,0) -- (\gW+0.3,0) node[right] {$V$};
-    \draw[dec-default,->,thick] (0,0) -- (0,\gH+0.4) node[above] {$\theta$};
+    \draw[dec-default,->,thick] (0,0) -- (\gW+0.3,0) node[below] {$V$};
+    \draw[dec-default,->,thick] (0,0) -- (0,\gH+0.4) node[left] {$\theta$};
 
     % Ideal linear mapping (dashed reference)
-    \draw[dec-default,black!40,dashed,domain=0:\gW,samples=2]
+    \draw[dec-default,red!90,dashed,domain=0:\gW,samples=2]
       plot (\x,{\x*\gH/\gW});
 
     % Staircase: quantized voltage bins → decoded angle levels
@@ -35,9 +35,16 @@
       \pgfmathsetmacro{\yq}{\i*\stepH}
       \draw[dec-default,signalOutputColor,semithick] (\xa,\yq) -- (\xb,\yq);
     }
+
+    % Legend
+    \fill[white, opacity=0.85] (0.05, \gH-0.55) rectangle (2, \gH+0.02);
+    \draw[red!90, dashed, semithick] (0.15, \gH-0.15) -- ++(0.3,0);
+    \node[right, font=\tiny] at (0.45, \gH-0.15) {$\theta_\mathrm{ideal}(V)$};
+    \draw[signalOutputColor, semithick] (0.15, \gH-0.4) -- ++(0.3,0);
+    \node[right, font=\tiny] at (0.45, \gH-0.4) {$\theta_\mathrm{decoder}(V)$};
   \end{scope}
 
-  % Parameters
-  \node[below, text width=4.2cm, align=center, information text] at ($(C)+(0,-1)$)
-    {$\mathrm{nBits}$ (resolution)\\$V_\mathrm{ref}$ (reference voltage)};
+  % % Parameters
+  % \node[below, text width=4.2cm, align=center, information text] at ($(C)+(0,-1)$)
+  %   {$\mathrm{nBits}$ (resolution)\\$V_\mathrm{ref}$ (reference voltage)};
 }

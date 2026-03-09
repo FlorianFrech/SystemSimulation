@@ -33,8 +33,8 @@
   \pgfmathsetmacro{\potR}{2.0*\potScale}
   \pgfmathsetmacro{\potTrackR}{0.67*\potR}
   \pgfmathsetmacro{\potWiperR}{0.25*\potR}
-  \pgfmathsetmacro{\potRefR}{1.15*\potR}
-  \pgfmathsetmacro{\potThetaArcR}{1.1*\potR}
+  \pgfmathsetmacro{\potRefR}{1.2*\potR}
+  \pgfmathsetmacro{\potThetaArcR}{1.2*\potR}
   \pgfmathsetmacro{\potLabelDx}{0.5*\potR}
   \pgfmathsetmacro{\potLabelPad}{0.08*\potR}
   \pgfmathsetmacro{\potWAng}{\potAngleDeg - 90}
@@ -93,8 +93,8 @@
   \draw[dash dot, thin, black!55] (0,-\potRefR) -- (0,\potRefR);
   \draw[dash dot, thin, black!65] (pot-O) -- (pot-Wray);
   \draw[<->] (40:{0.44*\potR}) arc (40:-220:{0.44*\potR});
-  \draw pic[->,"\,$\theta_\mathrm{pot}$", draw,
-    angle radius=\potThetaArcR cm, angle eccentricity=1.15] {angle=pot-Vref--pot-O--pot-Wray};
+  \draw pic[->,"\,$\theta$", draw,
+    angle radius=\potThetaArcR cm, angle eccentricity=1.1] {angle=pot-Vref--pot-O--pot-Wray};
 
   % Labels
   \ifthenelse{\equal{\potShowLabels}{true}}{

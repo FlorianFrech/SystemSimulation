@@ -8,8 +8,8 @@
   \def\xPID{3.5}   % PID branch boxes x
   \def\xCtrl{7}   % control summation x
   \def\wPID{3.5}
-  \def\hPID{1.4}
-  \def\rSum{0.58}
+  \def\hPID{1.25}
+  \def\rSum{0.5}
 
   \colorlet{sumColor}{green!90!black}
   \colorlet{pColor}{yellow!90!black}
@@ -25,7 +25,10 @@
   \coordinate (I) at (\xPID,0.0);
   \coordinate (D) at (\xPID,-2.0);
   \coordinate (SumU) at (\xCtrl,0);
-  \coordinate (MeasIn) at (\xErr,-2.5);
+  \coordinate (RefIn) at (\xErr-2,0);
+  \coordinate (MeasIn) at (\xErr, -3.5);
+  \coordinate (ResetIn) at (0.5, -3.5);
+  \coordinate (CtrlOut) at (\xCtrl+1.5,-3.5);
 
   % --- summation circles ---
   \draw[thick, fill=sumColor] (SumE) circle (\rSum);
@@ -45,7 +48,8 @@
   \node[font=\large] at ($(D)+(0.3,0)$) {$K_d\,\dfrac{\mathrm{d}\theta_\mathrm{meas}(t)}{\mathrm{d}t}$};
 
   % --- reference, error, and branch split ---
-  \draw[->, very thick] (\xErr-2,0) -- ($(SumE)+(-\rSum,0)$) node[midway,above] {$\theta_\mathrm{ref}(t)$};
+  \draw[->, very thick] (-3.5,2) --++ (2.5,0) -- ($(SumE)+(0, \rSum)$) node[midway,above left] {$\theta_\mathrm{ref}(t)$};
+  
   \draw[->, very thick] (MeasIn) -- ($(SumE)+(0,-\rSum)$) node at (\xErr-0.8, -2){$\theta_\mathrm{meas}(t)$};
   \node[font=\large\bfseries] at ($(SumE)+(-0.7,0.6)$) {$+$};
   \node[font=\large\bfseries] at ($(SumE)+(-0.35,-0.95)$) {$-$};
@@ -66,9 +70,9 @@
   \node[font=\large\bfseries] at ($(SumU)+(-0.35,0.95)$) {$+$};
 
   % Optional integrator reset integrator
-  \draw[->, very thick, dashed, red] (0.5, -2.5) node[below] {reset} -- (0.5, -0.4) -- (\xPID-\wPID/2, -0.4);
+  \draw[->, very thick, dashed, red] (ResetIn) node[midway, below=2.5cm] {reset} -- (0.5, -0.4) -- (\xPID-\wPID/2, -0.4);
 
   % --- controller output and plant output ---
-  \draw[->, very thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1.5,0)$) node[midway,above] {$u(t)$};
+  \draw[->, very thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1,0)$) -- (CtrlOut) node[midway,left] {$u(t)$};
 
 }

@@ -7,6 +7,7 @@
 \input{components/pendulum.tex}
 \input{components/potentiometer.tex}
 \input{components/adc.tex}
+\input{components/angle_sensor.tex}
 \input{components/decoder.tex}
 \input{components/pid.tex}
 \input{components/drive.tex}
@@ -23,18 +24,14 @@
     \fill[white] (0,0) rectangle (\textwidth,0.5\textheight);
     \begin{scope}[shift={(0.5\textwidth, 0.5\textheight)}]
         
-        \node[font=\Large\bfseries] at (0,0.5\textheight) {Controlled Pendulum System};
+        \node[font=\Large\bfseries] at (0,0.5\textheight-0.5cm) {Controlled Pendulum System};
         
         \begin{scope}[scale=1, xshift=-5cm, yshift=-4cm]
             \PendulumComponent
         \end{scope}
 
-        \begin{scope}[scale=1, xshift=-11cm, yshift=-6.5cm]
-            \PotentiometerComponent[scale=1,angle=45,show_axes=true,show_labels=false]
-        \end{scope}
-
-        \begin{scope}[scale=1, xshift=-11cm, yshift=1.25cm]
-            \ADCComponent
+        \begin{scope}[scale=1, xshift=-10.75cm, yshift=-3cm]
+            \AngleSensorComponent
         \end{scope}
 
         \begin{scope}[scale=1, xshift=-4cm, yshift=1.25cm]
@@ -52,7 +49,6 @@
         \begin{scope}[scale=1, xshift=-9.5cm, yshift=6.75cm]
             \SetPointComponent
         \end{scope}
-
 
         % \begin{scope}[axes]
         %     \draw  [help lines, step=0.5] (-\textwidth/2,-\textheight/2) grid (\textwidth/2,\textheight/2);
@@ -74,21 +70,21 @@
         %     }
         % \end{scope}
 
-        \draw[ultra thick, ->] (-5.5,7) -- node[fill=white] {$\theta_\mathrm{ref}$} (0.5,7);
+        \draw[ultra thick, ->] (-5.5,7) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{ref}$} (0.5,7);
 
-        \draw[ultra thick, ->] (-1.5,0.5) -- node[fill=white] {$\theta_\mathrm{meas}$} (3,0.5) -- (3, 1.5);
+        \draw[ultra thick, ->] (-1.5,0.5) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{decoder}$} (3,0.5) -- (3, 1.5);
 
-        \draw[ultra thick, ->] (12.5,1.5) -- node[fill=white] {$u_\mathrm{control}$} (12.5,-1.5);
+        \draw[ultra thick, ->] (12.5,1.5) -- node[fill=white, left=4pt,font=\Large] {$u_\mathrm{control}$} (12.5,-1.5);
 
-        \draw[ultra thick, ->] (4,-4) -- node[fill=white] {$\tau$} (2.5, -4);
+        \draw[ultra thick, ->] (4,-4) -- node[fill=white, above=3pt, font=\Large] {$\tau$} (2.5, -4);
 
-        \draw[ultra thick, ->] (2.5,-7) -- node[fill=white] {$\omega$} (4, -7);
+        \draw[ultra thick, ->] (2.5,-7) -- node[fill=white, above=3pt,font=\Large] {$\omega$} (4, -7);
 
-        \draw[ultra thick, ->] (-6.5,-5.5) -- node[fill=white] {$\theta$} (-8.5, -5.5);
+        \draw[ultra thick, ->] (-6.5,-5.5) -- node[fill=white, above=3pt, font=\Large] {$\theta$} (-8, -5.5);
 
-        \draw[ultra thick, ->] (-11,-2.5) -- node[fill=white] {$V_\mathrm{out}(\theta)$} (-11, -1);
+        \draw[ultra thick, ->] (-8, 0.5) -- node[fill=white, above=3pt, font=\Large] {$V_\mathrm{adc}$} (-6.5, 0.5);
 
-        \draw[ultra thick, ->] (-8.5,0.5) -- node[fill=white] {$V_\mathrm{adc}$} (-6.5, 0.5);
+        \draw[ultra thick, ->, color=red, dashed] (1, -1.5) -- (1, -0.5) -- (4.5, -0.5) node[midway, above=3pt, font=\Large] {contact flag} -- (4.5, 1.5);
 
     \end{scope}
 \end{tikzpicture}
