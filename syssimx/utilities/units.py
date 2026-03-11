@@ -20,7 +20,7 @@ from pint import Quantity as PintQuantity
 from pint import Unit as PintUnit
 from pint import UnitRegistry
 
-ureg = UnitRegistry()
+ureg: UnitRegistry = UnitRegistry()
 ureg.formatter.default_format = "~P"
 ureg.autoconvert_offset_to_baseunit = True
 ureg.case_sensitive = True

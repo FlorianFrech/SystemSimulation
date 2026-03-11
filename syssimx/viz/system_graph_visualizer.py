@@ -321,6 +321,7 @@ class SystemGraphVisualizer:
         """
         self.system = system
         self.dot: Digraph | None = None
+        self._grouped_names: set[str] = set()
 
     def visualize(self, filename: str = "system_graph", format: str = "svg") -> None:
         """Build and render a Graphviz system graph.
@@ -432,7 +433,7 @@ class SystemGraphVisualizer:
         """
         if not self.dot:
             return
-        grouped_names = set()
+        grouped_names: set[str] = set()
         for group, comps in self.system.groups.items():
             with self.dot.subgraph(name=f"cluster_{group}") as cluster:
                 cluster.attr(
@@ -461,7 +462,7 @@ class SystemGraphVisualizer:
         """Add any components that were not placed in a group cluster."""
         if not self.dot:
             return
-        grouped_names = getattr(self, "_grouped_names", set())
+        grouped_names = self._grouped_names
         for comp_name, comp in self.system.components.items():
             if comp_name in grouped_names:
                 continue
