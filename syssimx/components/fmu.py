@@ -9,6 +9,9 @@ feedthrough evaluation.
 
 from __future__ import annotations
 
+import logging
+import shutil
+import time
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -37,6 +40,9 @@ def _require_fmpy() -> None:
             "Optional dependency 'fmpy' is required for FMUComponent. "
             "Install with: pip install syssimx[fmu] (or pip install fmpy)."
         ) from _FMPY_IMPORT_ERROR
+
+
+_LOG = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------------
@@ -610,13 +616,7 @@ class FMUComponent(CoSimComponent):
         After reset, the component can be reinitialized via ``initialize()``.
         """
         if self._instance is not None:
-            try:
-                self._instance.terminate()
-                self._instance.freeInstance()
-            except Exception:
-                pass  # Ignore errors during cleanup
-            finally:
-                self._instance = None
+            self._instance = None
 
         # Clear runtime state (including _is_initialized via super)
         super().reset()
