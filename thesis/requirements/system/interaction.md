@@ -1,13 +1,18 @@
 # Derived System Requirements: Interaction
 
-|U-ID   | SR-ID    | System Requirement | Rationale | Priority |
-|-------|----------|--------------------|-----------|----------|
-| UR_13 | SR_13_01 | The system should generate directed graphs representing components and their interconnections. | Graph-based representations allow intuitive inspection of signal flow, component dependencies, and feedback loops. | Should |
-| UR_13 | SR_13_02 | The system should visualize the hierarchical composition of subsystems through expandable/collapsible views. | Large systems benefit from abstraction layers. Allowing users to focus on relevant subsystems improves navigation and debugging. | Should |
-| UR_13 | SR_13_03 | The system should allow exporting the visual representation to a file (e.g., PNG, SVG, PDF). | External formats support documentation, presentations, and versioning of system architecture snapshots. | Should |
-| UR_14 | SR_14_01 | The system should provide real-time plotting of selected output variables during simulation. | Live graphs help users visually track system behavior over time and react quickly to unexpected dynamics. | Should |
-| UR_14 | SR_14_02 | The system should log simulation progress with time-stamped messages including solver status, time step, and convergence information. | Detailed logs facilitate debugging and performance analysis by providing insights into the simulation's execution. | Should |
-| UR_14 | SR_14_03 | The system should allow users to configure which signals or outputs are monitored during simulation. | Selective monitoring reduces performance overhead and avoids clutter, focusing the user’s attention on relevant signals. | Should |
-| UR_15 | SR_15_01 | The system should allow users to define and execute multiple simulation configurations. | This enables consistent experimentation by systematically varying model parameters, solvers, or subsystem definitions. | Should |
-| UR_15 | SR_15_02 | The system should support time series filtering, resampling, and statistical post-processing of simulation outputs. | These features enhance the analysis of simulation results, allowing users to derive meaningful insights and improve model accuracy. | Should |
-| UR_15 | SR_15_03 | The system should associate exported results with metadata such as model configuration, simulation settings, and timestamps. | Metadata provides context for results, enabling reproducibility and easier comparison across different simulation runs. | Should |
+The following system requirements derive from the interaction-related user requirements.
+They specify the technical capabilities that the *SysSimX* framework must provide for inspecting system structure, monitoring simulations, and accessing results for further analysis.
+The focus lies on structural transparency, diagnostics, and practical access to simulation data.
+
+| U-ID | SR-ID | System Requirement | Rationale | Priority |
+|------|-------|--------------------|-----------|----------|
+| UR_13 | SR_13_01 | The framework should generate a directed representation of the coupled system structure from components and their connections. | A structural graph helps users inspect dependencies and data flow. | Should |
+| UR_13 | SR_13_02 | The framework should visualize component groups, ports, signal connections, and event connections in the system graph. | A detailed graph view improves the interpretability of heterogeneous system models. | Should |
+| UR_13 | SR_13_03 | The framework should support exporting the generated system graph to external file formats. | Exported figures are useful for documentation, debugging, and reporting. | Should |
+| UR_14 | SR_14_01 | The framework should provide logging output for simulation progress and relevant execution events. | Execution feedback supports debugging and inspection of simulation behavior. | Should |
+| UR_14 | SR_14_02 | The framework should record component-level and system-level simulation histories during execution. | Stored histories are required for later inspection of dynamic behavior. | Should |
+| UR_14 | SR_14_03 | The framework should allow users to retrieve selected histories in structured programmatic form, including optional unit conversion. | Selective access to simulation data improves analysis workflows and reduces unnecessary post-processing effort. | Should |
+| UR_15 | SR_15_01 | The framework should provide result access in forms that support comparison across different model variants and simulation configurations. | Structured result access is required for repeatable comparison of simulation outcomes. | Should |
+| UR_15 | SR_15_02 | The framework should preserve component, port, and unit context together with recorded simulation data. | Comparative evaluation requires that recorded results remain interpretable after the simulation run. | Should |
+| UR_16 | SR_16_01 | The framework should support exporting simulation results to common external data formats. | External export is required for documentation and further analysis outside the framework. | Should |
+| UR_16 | SR_16_02 | The framework should support post-processing access to simulation results through dictionaries, arrays, or file-based exports. | Post-processing workflows require machine-readable access to recorded results. | Should |

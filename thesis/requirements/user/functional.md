@@ -1,20 +1,47 @@
 # Functional User Requirements
 
-| ID     | Category     | Requirement Description | Rationale | Priority |
-|--------|--------------|-------------------------|-----------|----------|
-| UR_01  | Modeling | The framework shall support the **component-based modeling of subsystems across multiple physical domains.** | Supporting multiple physical domains (e.g., electrical, mechanical, thermal) and control engineering (e.g., signal processing, control theory) is essential for simulating complex  systems that interact with the human body (e.g., musculoskeletal system). | Shall |
-| UR_02  | Modeling | The framework shall support the **use of units for all physical quantities.** | Explicit unit management helps to avoid modeling errors, supports consistency checks, and improves the clarity and correctness of physical models. | Shall |
-| UR_03  | Modeling | The framework shall support the **creation of virtual or atomic subsystems that encapsulate interconnected modules to enable hierarchical and modular system modeling.** | Connecting subsystems into a complete system enables hierarchical modeling and reflects the structure of the systems. It also enables reuse and simplifies verification by isolating functionality. | Shall |
-| UR_04  | Modeling | The framework should allow the **acausal equation-based modeling** of the component behavior. | Acausal modeling allows users to describe component behavior based on physical laws without prescribing the computational direction (input vs. output). This enables more flexible model reuse and better abstraction, especially in multi-domain physical systems. | Should |
-| UR_05  | Modeling | The framework shall enable the **causal equation-based modeling of the component behavior.** | Causal modeling enforces a defined computational direction (explicit inputs and outputs). It simplifies simulation execution and debugging, particularly for signal-processing or control-oriented systems where causality is naturally defined. | Shall |
-| UR_06 | Modeling | The framework shall support the **definition of component behavior using discrete-time or hybrid dynamics.** | Mechatronic systems (e.g., embedded controllers, digital electronics, switching systems) exhibit behavior that involves discrete events or combines continuous and discrete-time dynamics (hybrid systems). | Shall |
-| UR_07 | Modeling | The framework shall provide **templates for the creation of equation-based component models**. | Reusable templates simplify the modeling process and ensures consistency across models. | Shall |
-| UR_08 | Modeling | The framework shall allow the **reuse of components and subsystems with different configurations.** | Reusability enhances modeling efficiency, reduces redundancy, and promotes modularity. Supporting different configurations allows the same component or subsystem to be adapted for various simulation contexts without reimplementation. | Shall |
-| UR_09 | Heterogeneity | The framework shall enable the **integration of subsystem models developed using different modeling tools.** | Realistic mechatronic or cyber-physical systems often comprise parts designed with domain-specific tools (e.g., OpenModelica for physical systems, OpenSim for biomechanics, Simulink for control logic, FEM tools for structural analysis). A simulation framework must therefore support tool interoperability to allow co-simulation or model exchange. | Shall |
-| UR_10 | Heterogeneity | The framework should support the **combination of equation-based submodels and and other heterogeneous submodels.** | Some subsystems are best described with acausal equations (e.g., physical domains like mechanics or thermodynamics), while others may come from black-box models, real-time control systems, or specialized tools. Combining these allows for comprehensive and flexible system modeling. | Should |
-| UR_11 | Simulation | The framework shall enable the **numerical simulation of hybrid systems with both continuous and discrete-time behavior.** | Supporting hybrid systems is essential for simulating real-world mechatronic or cyber-physical systems accurately. | Shall |
-| UR_12 | Simulation | The framework shall **allow the user to configure and select solver types and step sizes for simulation.** | Providing users with the ability to configure solvers and step sizes is crucial for optimizing simulation performance and accuracy based on specific model requirements. Different system dynamics and simulation goals require different numerical solvers (e.g., explicit vs. implicit, fixed vs. adaptive step size). | Shall |
-| UR_13 | Interaction | The framework should provide a **visual representation of the system model and its hierarchical structure.** | Visual representations help users understand complex system interactions and hierarchies, facilitating better model development and communication among stakeholders. | Should |
-| UR_14 | Interaction | The framework should allow the user to **observe simulation progress through graphical and textual output.** | Monitoring simulation progress provides immediate feedback, helps detect runtime issues (e.g., divergence, discontinuities), and enhances user confidence. | Should |
-| UR_15 | Interaction | The framework should  allow the user to **compare simulation results across different configurations.** | Comparing simulation results helps users understand the impact of different modeling choices, parameters, or configurations on system behavior, facilitating better decision-making and optimization. | Should |
-| UR_16 | Interaction | The framework should support **result export and post-processing functionality.** | Exporting and analyzing simulation results outside the framework is often necessary for documentation, reporting, optimization, or further processing in external tools (e.g., Excel, Python, MATLAB). Post-processing enhances the usability of results and facilitates integration into engineering workflows. | Should |
+The functional user requirements describe the capabilities that a user expects from the overall heterogeneous hybrid system simulation workflow. They are formulated in a tool-agnostic way and focus on user needs rather than on concrete implementation details. For clarity, the requirements are grouped into four categories: modeling, heterogeneity, simulation, and interaction.
+
+## Modeling
+
+The modeling requirements describe how users shall be able to represent subsystems and assemble them into complete system models. The focus lies on modularity, explicit physical interfaces, and support for the main classes of models that are relevant for this thesis.
+
+| ID | Requirement | Priority | Rationale |
+|----|-------------|----------|-----------|
+| UR_01 | The overall workflow shall support component-based modeling of subsystems from different physical domains. | Shall | Complex mechatronic and cyber-physical systems are built from interacting subsystems from mechanics, electronics, control, and related domains. |
+| UR_02 | The overall workflow shall support explicit units for physical quantities at model interfaces and parameters. | Shall | Unit information improves clarity, enables consistency checks, and reduces modeling errors at subsystem interfaces. |
+| UR_03 | The overall workflow shall support hierarchical composition of atomic components and virtual subsystems. | Shall | Hierarchical composition reflects system structure, improves reuse, and keeps large models manageable. |
+| UR_04 | The overall workflow shall support equation-based modeling of subsystem behavior. | Shall | Equation-based modeling is required to represent multi-domain physical subsystems in a compact and physically meaningful form. |
+| UR_05 | The overall workflow shall support musculoskeletal modeling of biomechanical subsystems. | Shall | The target application domain includes biomechanical systems whose dynamics cannot be represented adequately by general-purpose lumped models alone. |
+| UR_06 | The overall workflow shall support continuum-mechanical modeling with spatial discretization for deformable subsystems. | Shall | Some subsystems require distributed models to capture deformation, stress, contact, and boundary effects. |
+| UR_07 | The overall workflow shall support subsystem models with continuous-time, discrete-time, and hybrid behavior. | Shall | Realistic mechatronic systems combine physical dynamics with sampled controllers, switching logic, and event-driven behavior. |
+| UR_08 | The overall workflow shall support reuse and parameterization of components and subsystems across different system configurations. | Shall | Reuse reduces modeling effort and enables structured comparison of alternative model variants and parameter sets. |
+
+## Heterogeneity
+
+The heterogeneity requirements describe the need to combine subsystem models that originate from different modeling paradigms and execution environments. These requirements define the interoperability scope of the workflow.
+
+| ID | Requirement | Priority | Rationale |
+|----|-------------|----------|-----------|
+| UR_09 | The overall workflow shall support the integration of subsystem models developed in different modeling environments. | Shall | Heterogeneous systems are commonly modeled with domain-specific tools, which makes interoperability a core requirement. |
+| UR_10 | The overall workflow shall support the combined use of equation-based, musculoskeletal, and continuum-mechanical subsystem models within one simulation setup. | Shall | The target systems require several specialized model classes that must interact consistently within one coupled workflow. |
+
+## Simulation
+
+The simulation requirements describe the capabilities that users need in order to execute the coupled system model. They cover hybrid system behavior, master-level coordination, and the configuration of simulation settings that affect the overall workflow.
+
+| ID | Requirement | Priority | Rationale |
+|----|-------------|----------|-----------|
+| UR_11 | The overall workflow shall enable the numerical simulation of heterogeneous hybrid systems with continuous and discrete behavior. | Shall | Accurate system analysis requires a workflow that can handle both continuous evolution and event-driven changes across coupled subsystems. |
+| UR_12 | The overall workflow shall allow users to select the co-simulation master algorithm, configure the macro step size, and provide tool-specific simulation settings where required. | Shall | Different coupled systems require different coordination schemes and simulation settings to balance robustness, accuracy, and runtime. |
+
+## Interaction
+
+The interaction requirements describe how users shall inspect the model structure, monitor simulations, and work with the resulting data. They focus on features that improve transparency, comparison, and practical usability of the workflow.
+
+| ID | Requirement | Priority | Rationale |
+|----|-------------|----------|-----------|
+| UR_13 | The overall workflow should provide a visual representation of the system model and its hierarchical structure. | Should | Visual inspection helps users understand dependencies, interfaces, and subsystem composition. |
+| UR_14 | The overall workflow should allow users to observe simulation progress through textual and graphical feedback. | Should | Runtime feedback supports debugging, monitoring, and early detection of numerical or modeling problems. |
+| UR_15 | The overall workflow should allow users to compare simulation results across model variants and configurations. | Should | Comparative analysis is required to assess modeling choices, parameter settings, and system behavior under different assumptions. |
+| UR_16 | The overall workflow should support result export and post-processing for further analysis and documentation. | Should | Simulation results are often processed further for reporting, validation, and external evaluation workflows. |

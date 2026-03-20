@@ -10,8 +10,6 @@ Using different models may have the following benefits:
 - FEM models especially in terms of deformable solid mechanics and FEA in this field are conducted to obtain information about local mechanical behavior of the system. The boundary conditions and loads are influenced by the whole system. For example, one does not apply a maximum torque to the pendulum and simulate a worst case hit with the wall, one either simulate the whole system behavior und the affects on the deformable body and its response back to other components. The absolute goal is to get a deeper understanding of the whole system.
 - So, system simualtion in general allows the behavioral study of a system which consists of coupled subsystems and one is interested on the interaction and behavior of each submodel for different scenarios. 
 
-
-
 I want to create a motivation description for the user, why one might create different models for the same physical thing like the pendulum, why the multi component is of ineterests when we want to swicth model during runtime, and why we want to switch (for the pendulum with contact, the contact phase can be modeled with highest detail using the FE method, while for the pure swing and the reaction of the sensors or pid might be sufficient to use a rigid-body pendulum model).
 Further, I am thinking about how to compare and validate the different pendulum models, since rigid- and deformable pendulum models in my implementation are similar but not 100% equivalent. My goal wal to make the FEM pendulum extremely stiff and compare it to the rigid body models.
 However, if more compliant materials needs to be simulated, the rigid-body assumptions create errors.
