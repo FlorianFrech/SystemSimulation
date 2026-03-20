@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/flori/source/repos/FlorianFrech/SystemSimulation -maxdepth 2 -type f -name *.toml -o -name *.cfg -o -name *.md -o -name Makefile)",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(python -u -c \":*)"
+    ]
+  }
+}

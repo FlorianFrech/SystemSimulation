@@ -68,4 +68,8 @@ hybrid_event_chain_system_graph
 *.fls
 *_latexmk
 demos/ControlledPendulum/artifacts/_fmu_compare/
+<<<<<<< Updated upstream
 memory/*
+=======
+thesis/literature/*
+>>>>>>> Stashed changes
