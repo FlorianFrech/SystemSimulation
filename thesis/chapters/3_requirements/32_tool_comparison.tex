@@ -1,0 +1,135 @@
+\section{Tool Comparison and Selection}
+
+The external tools used in this thesis were selected based on the requirements derived in the previous section. 
+The comparison is therefore not intended as a comprehensive survey of all available modeling and simulation environments.
+Instead, it focuses on those tools that were relevant for the required workflow and that were considered realistic candidates for integration into \emph{SysSimX}.
+For each modeling domain, the selected tool is justified with respect to the required capabilities, the integration effort, and the overall scope of the thesis.
+
+\subsection{Equation-Based Modeling}
+
+For the equation-based part of the workflow, the main distinction is between signal-based and equation-based modeling paradigms. 
+Signal-based modeling describes systems as directed chains of inputs and outputs.
+It is well suited for control logic, signal processing, and explicitly causal subsystem descriptions.
+Equation-based modeling, in contrast, describes the relations between physical quantities declaratively through equations.
+The computational direction is not fixed in advance, but is determined during model translation.
+This makes equation-based modeling particularly suitable for multi-domain physical systems with constraints and conservation laws.
+
+Within the considered tools, Simulink represents the signal-based approach, whereas Modelica and Simscape support acausal physical modeling.
+Simulink is based on directed block diagrams and is therefore natural for controllers, signal-flow architectures, and sampled logic ~\cite{noauthor_simulink_nodate}.
+Simscape extends this environment by adding acausal physical components and physical network semantics. However, Simscape remains embedded in the proprietary MATLAB/Simulink ecosystem and relies on explicit interface blocks when physical networks interact with signal-based control models ~\cite{noauthor_simscape_nodate}.
+
+Modelica follows a more general equation-based approach.
+It provides a dedicated language for object-oriented, multi-domain, and acausal modeling of physical systems. 
+In contrast to signal-based block modeling, subsystem behavior is formulated directly in terms of equations and connector relations ~\cite{Modelica_Fritzson}.
+This is well aligned with the requirements of the present thesis, since the workflow must support physically meaningful subsystem models, hierarchical composition, and later integration into a heterogeneous co-simulation framework.
+
+For the present work, Modelica was selected as the modeling formalism for equation-based subsystem models, and OpenModelica was selected as the corresponding open-source toolchain.
+The decisive reasons were the explicit support for equation-based and acausal modeling, the suitability for multi-domain physical systems, the availability of an open-source compiler, and the possibility to integrate the resulting models into the overall workflow through standard co-simulation interfaces.
+Simulink was considered relevant as a representative signal-based environment, and Simscape as an acausal physical extension within that environment.
+However, the thesis required an open and scriptable workflow centered on equation-based physical modeling rather than a proprietary block-diagram environment. For this reason, Modelica/OpenModelica was the more suitable choice.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Comparison of equation-based modeling candidates.}
+\label{tab:eq_tool_comparison}
+\begin{tabular}{p{2.2cm} p{2.5cm} p{5.0cm} p{4.0cm}}
+\toprule
+\textbf{Tool} & \textbf{Paradigm} & \textbf{Relevant Strengths} & \textbf{Main Limitation} \\
+\toprule
+Simulink
+& Signal-based, causal
+& \begin{itemize}[nosep,leftmargin=*,topsep=0pt]
+    \item Control logic and signal processing
+    \item Hierarchical block models
+    \item Wide industry adoption
+  \end{itemize}
+& Not centered on equation-based physical modeling \\
+\toprule
+Simscape
+& Acausal physical (within Simulink)
+& \begin{itemize}[nosep,leftmargin=*,topsep=0pt]
+    \item Physical network modeling
+    \item Combination with Simulink control
+  \end{itemize}
+& Proprietary MATLAB/Simulink ecosystem \\
+\toprule
+\textbf{Modelica}
+& Equation-based, acausal
+& \begin{itemize}[nosep,leftmargin=*,topsep=0pt]
+    \item Multi-domain physical modeling
+    \item Declarative equation formulation
+    \item Open-source toolchain (OpenModelica)
+    \item FMI export for co-simulation
+  \end{itemize}
+& Requires external toolchain for translation and execution \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% \begin{table}[h]
+% \centering
+% \caption{Relevant comparison of equation-based modeling candidates.}
+% \begin{tabular}{p{2.3cm} p{2.8cm} p{5.2cm} p{4.2cm}}
+% \toprule
+% \textbf{Tool} & \textbf{Paradigm} & \textbf{Relevant strengths} & \textbf{Main limitation for this thesis} \\
+% \midrule
+% Simulink & Signal-based, causal & Strong for control logic, signal processing, and hierarchical block models & Not centered on equation-based physical modeling \\
+% Simscape & Acausal physical modeling within Simulink & Physical network modeling, combination with Simulink control models & Embedded in proprietary MATLAB/Simulink environment \\
+% Modelica & Equation-based, acausal & Multi-domain physical modeling, declarative equations, open-source toolchain, suitable for co-simulation export & Requires external toolchain for translation and execution \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+\subsection{Musculoskeletal Modeling}
+
+For the musculoskeletal part of the workflow, the selected tool had to support articulated biomechanical models with joints, constraints, actuators, and forward dynamic simulation.
+In addition, the tool had to be accessible from Python and suitable for integration into a custom co-simulation framework.
+Since the thesis focuses on heterogeneous system integration rather than on benchmarking musculoskeletal modeling environments, the goal of this subsection is not to provide a comprehensive survey of all available tools, but to justify the selected tool with respect to the required capabilities.
+
+OpenSim was selected for this purpose.
+It is an open-source software platform for modeling, simulating, and analyzing musculoskeletal systems and dynamic movement.
+OpenSim provides forward dynamic simulation, a component-based biomechanical model structure, and programmatic access through its application programming interface ~\cite{OpenSim_Delp, seth_opensim_2018}.
+These properties make it suitable for representing biomechanical subsystems within the heterogeneous workflow considered in this thesis.
+
+From the perspective of framework integration, OpenSim offers three decisive advantages.
+First, it provides an established modeling environment for rigid-body and musculoskeletal dynamics, including joints, constraints, actuators, and contact-related elements.
+Second, it supports forward simulation of biomechanical models, which is required for coupling the subsystem to controllers and external components. Third, its Python interface enables direct integration into the \emph{SysSimX} architecture without requiring an intermediate proprietary execution environment.
+
+Other musculoskeletal modeling tools exist, including both research-oriented and commercial environments. However, a systematic comparison of such tools was outside the scope of this thesis. The selection of OpenSim was therefore based on its suitability for the required workflow, its open-source availability, and its practical integrability into the Python-based co-simulation framework.
+
+\subsection{Finite Element Modeling}
+
+For the finite element modeling part of the workflow, the selected tool had to support spatially discretized models, programmable definition of material laws and boundary conditions, and a level of flexibility that allows integration into a custom research-oriented co-simulation framework.
+In addition, the tool had to be accessible from Python, since the overall architecture of \emph{SysSimX} is implemented in Python and relies on backend adapters for coupling heterogeneous subsystem models.
+As in the musculoskeletal case, the purpose of this subsection is not to provide a comprehensive benchmark of finite element tools, but to justify the selected tool with respect to the requirements of the thesis.
+
+Netgen/NGSolve was selected for this purpose. It is an open-source finite element environment that combines mesh generation with a programmable finite element library ~\cite{schoberl_c11_nodate, schoberl_netgen_1997}. In contrast to solver environments that are primarily organized around graphical pre-processing and fixed analysis workflows, NGSolve provides direct programmatic access to the mathematical problem formulation, including finite element spaces, weak forms, loads, materials, boundary conditions, grid functions, and solver configuration.
+This makes it well suited for integrating finite element models, such as  continuum-mechanical subsystem models, into a custom co-simulation framework.
+
+From the perspective of framework integration, the decisive advantage of Netgen/NGSolve is its Python interface. It allows the finite element model to be assembled, parameterized, advanced, and queried directly from the same programming environment in which the co-simulation framework is implemented.
+This is particularly useful for the present work, where the finite element subsystem must be wrapped as a co-simulation component and coupled to equation-based and musculoskeletal subsystem models through a common interface.
+
+The selected tool also reflects the scope of the thesis.
+The goal was to demonstrate the integration of a finite element subsystem into a heterogeneous hybrid simulation workflow, not to perform an extensive comparative study of finite element platforms.
+Other open-source tools such as CalculiX~\cite{noauthor_calculix_nodate}, FEBio~\cite{maas_febio_2012}, or openCFS~\cite{schoder_opencfs_2025} were considered at a high level.
+However, for the present work, their integration paths were assessed as less direct for a Python-centered prototype workflow, for example due to less mature programmatic interfaces or a stronger focus on file-based pre-processing and execution.
+Netgen/NGSolve was therefore chosen because it combines strong finite element capabilities with direct scriptability and practical suitability for framework integration.
+
+A limitation of this choice is that NGSolve requires a comparatively strong mathematical understanding of finite element modeling, since many aspects of the model must be defined directly in code.
+This limitation was accepted because the thesis focuses on framework integration and controllable programmatic access rather than on interactive finite element model authoring.
+
+\subsection{Summary}
+
+In summary, the selected toolchain covers the three modeling domains required in this thesis: 
+
+\begin{itemize}
+    \item Modelica/OpenModelica for equation-based physical modeling,
+    \item OpenSim for musculoskeletal biomechanics, and
+    \item Netgen/NGSolve for continuum-mechanical finite element modeling.
+\end{itemize}
+
+Each tool was chosen because it satisfies the relevant domain-specific requirements while remaining sufficiently accessible for integration into a Python-based workflow.
+At the same time, no single existing environment covered the full combination of heterogeneous model integration, hybrid co-simulation, and unified orchestration required for this work.
+This gap motivated the development of the \emph{SysSimX} framework presented in the following chapters.

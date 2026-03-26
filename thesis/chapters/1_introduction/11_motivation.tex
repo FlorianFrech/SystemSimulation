@@ -1,0 +1,39 @@
+\section{Context and Motivation}
+\label{sec:motivation}
+
+Active mechatronic devices such as powered prostheses and exoskeletons consist of multiple interacting subsystems.
+These include mechanical structures, actuators, sensors, and embedded controllers.
+Together, they form tightly coupled multi-domain systems.
+Such systems are typical cyber-physical systems because computation and physical behavior are linked through sensing, actuation, and feedback \cite{lee_cyber_2008}.
+A change in one subsystem can influence the behavior of the whole device.
+For example, modifications in the control law, actuator design, or geometry of the mechanical structure can affect loads, stability, performance, and safety.
+For this reason, system-level simulation is needed already in early design phases, before physical prototypes are available \cite{VirtualEngineeringSystems}.
+
+For devices that interact with the human body, this challenge becomes even more demanding.
+A prosthetic knee or an active exoskeleton is not merely a technical device.
+Its function depends on the coupled dynamics of the device and the musculoskeletal system of the user.
+In addition, local structural effects such as compliance, deformation, and contact may become relevant in critical operating phases.
+Questions such as whether a controller remains stable during ground contact, how loads are transferred through compliant components, or how device forces interact with musculoskeletal system cannot be answered from isolated component analyses alone.
+They require virtual testing environments that represent both the technical system and its biomechanical context in a single, time-synchronous simulation \cite{eberle_biomechanical_2025}.
+
+In engineering practice, however, the required subsystem models are rarely created within a single tool.
+Mechanical and structural behavior is often derived from geometry-based models in computer-aided design and finite element analysis environments.
+Control-oriented, electrical, and other system-level subsystems are commonly formulated as one-dimensional equation-based models, for example in Modelica \cite{Modelica_Fritzson}.
+Musculoskeletal dynamics, in turn, are modeled in specialized biomechanics software such as OpenSim \cite{OpenSim_Delp}.
+These modeling environments serve different purposes, operate at different abstraction levels, and use different numerical representations.
+Modern system development therefore requires not only reusable models within individual domains, but also a practical way to integrate heterogeneous models into a coherent system-level simulation workflow.
+
+Co-simulation provides a natural integration strategy for such heterogeneous models.
+Each subsystem retains its domain-specific solver and model representation, while a master algorithm orchestrates data exchange at discrete communication points \cite{gomes_co-simulation_2019-1}.
+The Functional Mock-up Interface (FMI) standardizes the component interface for this purpose and is widely adopted in industry \cite{FMI2.0}.
+
+However, FMI defines the \emph{interface} to individual simulation components, but it does not prescribe how multiple components are orchestrated into a consistent system simulation \cite{gomes_co-simulation_2019-1}.
+Several challenges remain when heterogeneous models are coupled in practice.
+These challenges include determining a correct execution order when component outputs depend algebraically on inputs \cite{broman_requirements_2015}, detecting and resolving circular dependencies between components \cite{sicklinger_interface_2014}, and handling discrete events such as mechanical contact or discrete mode changes during otherwise continuous operation \cite{broman_determinate_2013,StepRevision_Cremona,cremona_hybrid_2019}.
+
+Moreover, different representations of the same physical subsystem involve different trade-offs between computational cost and the level of detail provided by the simulation.
+A rigid-body model computes global kinematics and kinetics efficiently, but it does not explicitly resolve local deformation or stress.
+An equivalent continuum-mechanical finite element model can resolve these local field quantities, but at significantly higher computational cost.
+In system simulation, this suggests that detailed models should be activated selectively.
+For example, the finite element representation may only be needed during contact phases in which local deformation is relevant, whereas a computationally inexpensive rigid-body model may be sufficient during free motion.
+To enable such selective model use, the simulation framework must support switching between alternative models of the same subsystem at runtime, together with consistent state transfer across model boundaries \cite{Choi2014}.

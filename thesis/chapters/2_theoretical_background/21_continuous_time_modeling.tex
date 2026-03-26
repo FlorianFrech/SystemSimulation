@@ -1,0 +1,148 @@
+\section{Continuous-Time System Modeling}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Dynamical Systems with Inputs and Outputs}
+A model is a mathematical representation of a real system.
+It is used to describe the system behavior and to answer questions by analysis or simulation.
+The same physical system can be represented by different models.
+The choice of model depends on the question of interest and on the required level of detail \cite{astrom_feedback_2008, karnopp_system_2012}.
+
+A dynamical system is a system whose behavior changes over time.
+In such systems, the effect of an action does not occur instantaneously.
+Instead, the future behavior depends on the current condition of the system and on external influences.
+Examples are mechanical motion, electrical circuits, and thermal processes \cite{astrom_feedback_2008}.
+
+In engineering, complex systems are usually described as compositions of smaller subsystems or components.
+Each component interacts with its environment through inputs and outputs.
+Inputs represent external influences acting on the component.
+Outputs represent variables that are provided to other components or to the environment.
+This input-output view is useful because it supports the modular description of larger systems from connected subsystems \cite{karnopp_system_2012}.
+
+In addition to inputs and outputs, a dynamical system is characterized by its state.
+The state is a set of variables that contains the information required to predict the future evolution of the system for a given input.
+The set of all possible states is called the state space.
+For physical systems, state variables often represent quantities such as position, velocity, momentum, or stored energy \cite{astrom_feedback_2008,karnopp_system_2012}.
+
+A common representation of continuous-time dynamical systems is the state-space form
+\begin{equation}
+    \dot{x} = f(x,u,t), \qquad y = h(x,u,t),
+\end{equation}
+where $x$ is the state vector, $u$ is the input vector, and $y$ is the output vector.
+The function $f$ describes the time evolution of the state.
+The function $h$ defines how the outputs are obtained from the state and the inputs.
+If the functions do not depend explicitly on time, the system is called time-invariant \cite{astrom_feedback_2008}.
+
+As a simple example, consider an RC circuit with input voltage $u(t)$ and capacitor voltage $v_C(t)$.
+The capacitor voltage stores the past effect of the input and is therefore a natural state variable.
+With
+\[
+x(t) = v_C(t),
+\]
+the system can be written as
+\begin{equation}
+    \dot{x} = -\frac{1}{RC}x + \frac{1}{RC}u,
+    \qquad
+    y = x.
+\end{equation}
+This is a continuous-time system with one state, one input, and one output.
+Its future behavior depends on the current capacitor voltage and on the applied input voltage.
+
+For linear time-invariant systems, the state-space form reduces to
+\begin{equation}
+    \dot{x} = Ax + Bu, \qquad y = Cx + Du,
+\end{equation}
+where $A$, $B$, $C$, and $D$ are constant matrices.
+This representation is widely used in systems and control theory.
+It also makes clear that the output may depend not only on the state, but also directly on the input through the matrix $D$.
+This property is important in co-simulation, because it is closely related to the concept of direct feedthrough discussed later in this thesis \cite{astrom_feedback_2008}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Ordinary and Differential-Algebraic Equations}
+
+Many continuous-time systems can be described by ordinary differential equations.
+In this case, the time derivative of the state is given explicitly as a function of the current state, the input, and time \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
+A general nonlinear ODE can be written as
+\begin{equation}
+    \dot{x} = f(x,u,t),
+\end{equation}
+where $x$ is the state vector and $u$ is the input vector.
+
+However, not all systems can be written naturally in explicit ODE form.
+In many physical and component-based models, additional algebraic constraints are present.
+These constraints may arise from constitutive relations, conservation laws, interface conditions, or the interconnection of subsystems \cite{css_cellier_kofman, karnopp_system_2012}.
+In such cases, the model is more naturally written as a differential-algebraic equation.
+
+A general DAE can be written in implicit form as
+\begin{equation}
+    F(t,z,\dot{z},u) = 0,
+\end{equation}
+where $z$ contains the model variables and $u$ denotes the input.
+In contrast to an ODE, the derivative is not given explicitly.
+Instead, differential and algebraic relations are stated together \cite{kunkel_differential-algebraic_2024}.
+
+A common semi-explicit form of a DAE is
+\begin{align}
+    \dot{x} &= f(x,w,u,t), \\
+    0 &= g(x,w,u,t),
+\end{align}
+where $x$ contains the differential states and $w$ contains algebraic variables.
+The first equation describes the time evolution of the states.
+The second equation imposes algebraic constraints that must hold at every time instant.
+This form is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
+
+In contrast to ODEs, a DAE does not in general admit arbitrary initial values.
+The initial state must be consistent with the algebraic constraints.
+In addition, DAEs are often classified by an index that reflects the structural difficulty of the problem.
+Higher-index systems are generally harder to analyse and simulate \cite{kunkel_differential-algebraic_2024}.
+
+DAEs are especially important in component-based and equation-based modelling.
+When subsystems are connected, additional interface equations are introduced.
+As a result, variables that appear to be independent in isolated subsystem models may become constrained in the coupled system.
+For this reason, DAE formulations are often more suitable than pure ODE formulations for multi-domain physical systems \cite{css_cellier_kofman,karnopp_system_2012}.
+
+This is particularly relevant for modern modeling and simulation workflows.
+Subsystem models are often created separately and then coupled through algebraic constraints.
+In such settings, it is usually preferable to treat the DAE directly rather than to transform it manually into an ODE \cite{kunkel_differential-algebraic_2024}.
+
+This distinction is relevant for the present thesis.
+Equation-based models exported as FMUs may contain direct dependencies and algebraic relations at their interfaces.
+These relations influence execution ordering, direct feedthrough analysis, and the treatment of algebraic loops in co-simulation.
+For this reason, ODE and DAE models form the mathematical basis for the system representations considered in \emph{SysSimX}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Direct Feedthrough and Interface Variables}
+
+When a system is decomposed into subsystems, each subsystem interacts with its environment through interface variables.
+These variables describe the quantities that cross the subsystem boundary.
+In a general systems view, they are represented as inputs and outputs.
+In physical systems, they may correspond to quantities such as force and velocity, voltage and current, or more abstract control and measurement signals \cite{karnopp_system_2012,astrom_feedback_2008}.
+
+The input-output view is useful because it allows complex systems to be described as networks of connected subsystems.
+Each subsystem can then be studied and implemented as a separate model, while the overall behavior is obtained from the interconnection of these models \cite{karnopp_system_2012,astrom_feedback_2008}.
+This is a central idea in component-based modeling and simulation.
+
+Consider a subsystem in state-space form
+\begin{equation}
+    \dot{x} = f(x,u,t), \qquad y = h(x,u,t),
+\end{equation}
+where $x$ is the state vector, $u$ is the input vector, and $y$ is the output vector.
+A subsystem has direct feedthrough if the current output depends directly on the current input.
+If the output depends only on the state, then no direct feedthrough is present.
+In the linear time-invariant case,
+\begin{equation}
+    \dot{x} = Ax + Bu, \qquad y = Cx + Du,
+\end{equation}
+direct feedthrough is present if the matrix $D$ is nonzero \cite{astrom_feedback_2008}.
+
+This distinction is important in interconnected systems.
+If the output of one subsystem depends instantaneously on its input, and this output is connected to the input of another subsystem, a zero-delay dependency is created.
+If such dependencies form a closed loop, the coupled system may no longer be representable as a pure ODE.
+Instead, algebraic equations must be solved together with the differential equations, which leads naturally to a DAE or an algebraic loop \cite{astrom_feedback_2008,css_cellier_kofman,kunkel_differential-algebraic_2024}.
+
+In component-based physical modeling, interface variables are therefore not only communication signals.
+They also define how subsystem equations are coupled across their boundaries.
+This is particularly relevant in equation-based and multi-domain models, where interface conditions may introduce algebraic constraints between connected subsystems \cite{css_cellier_kofman,karnopp_system_2012}.
+
+For the present thesis, direct feedthrough is an important structural property of simulation components.
+It determines whether current outputs can be evaluated independently of current inputs or whether instantaneous dependencies must be taken into account.
+This distinction is used later to derive execution order, identify zero-delay dependencies, and detect algebraic loops in coupled co-simulation systems.

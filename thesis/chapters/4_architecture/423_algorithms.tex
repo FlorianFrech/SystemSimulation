@@ -1,0 +1,11 @@
+\subsection{Algorithm Interface}
+\label{sec:algorithm_interface}
+
+When the user calls \texttt{system.run()}, the system advances in  macro steps of size~$\Delta t$.
+Each macro step is executed by the algorithm's \texttt{step(system, t, dt)} method, which advances all components from~$t$ to~$t + \Delta t$ by  stepping them in the computed execution order, propagating interface values, and, where required, resolving algebraic coupling or handling discrete events.
+This realizes a strategy-based design in which the system structure is independent of the chosen execution scheme.
+
+\syssimx{} provides algorithms that range from explicit parallel and sequential schemes to implicit algebraic-loop solvers and hybrid event-driven execution.
+The choice depends on the structural and dynamical properties of the system. When event indicators are present in any registered component, the framework automatically upgrades to the hybrid algorithm during initialization.
+All algorithms share the same system and component interfaces, so the user can change the coordination scheme without modifying the model definitions.
+The individual algorithms and their numerical procedures are described in Sections~\ref{sec:impl_master_algorithms} through~\ref{sec:impl_hybrid_algorithm}.

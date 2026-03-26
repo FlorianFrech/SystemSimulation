@@ -1,0 +1,70 @@
+\subsection{General System Modeling}
+\label{sec:req_general_modeling}
+
+The general system modeling requirements describe how users shall be able 
+to represent subsystems and assemble them into complete system models.
+They cover modularity, explicit physical interfaces, system assembly, and 
+support for hybrid dynamic behavior.
+These requirements are not specific to any particular modeling or 
+simulation backend.
+
+Table~\ref{tab:req_general_modeling} lists the user requirements together 
+with the derived system requirements for this category.
+
+\begin{longtable}{
+  >{\raggedright\arraybackslash}p{1.75cm} 
+  >{\raggedright\arraybackslash}p{13.25cm}}
+\caption{User and system requirements: General system modeling}
+\label{tab:req_general_modeling} \\
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\textbf{UR-01} & \textbf{The overall workflow shall support component-based 
+modeling, where each subsystem is represented as an independent, reusable, 
+and parameterizable component with explicit input and output interfaces.} \\
+\addlinespace[2pt]
+SR-01-01 & The framework shall provide a common component abstraction with 
+explicit input and output interfaces for representing subsystem models. \\
+SR-01-02 & The framework shall support parameterized instantiation of 
+components. \\
+\midrule
+
+\textbf{UR-02} & \textbf{The overall workflow shall support explicit physical 
+units for variables and parameters, including automatic 
+unit validation and conversion.} \\
+\addlinespace[2pt]
+SR-02-01 & The framework shall associate physical units with component 
+parameters and interface variables. \\
+SR-02-02 & The framework shall validate unit compatibility when connecting 
+interface variables or assigning parameter values. \\
+SR-02-03 & The framework shall support automatic conversion between 
+compatible units where required. \\
+\midrule
+
+\textbf{UR-03} & \textbf{The overall workflow shall support the assembly of 
+system models by connecting components.} \\
+\addlinespace[2pt]
+SR-03-01 & The framework shall support the assembly of system models from 
+interconnected components. \\
+SR-03-02 & The framework shall provide explicit signal and event connections 
+between component interfaces. \\
+\midrule
+
+\textbf{UR-04} & \textbf{The overall workflow shall support components with 
+continuous-time, discrete-time, and hybrid behavior.} \\
+\addlinespace[2pt]
+SR-04-01 & The framework shall support components with continuous-time, 
+discrete-time, and hybrid behavior behind the same component abstraction. \\
+SR-04-02 & The framework shall allow hybrid components to expose 
+event-related information required for discrete state changes and 
+re-initialization. \\
+
+\end{longtable}

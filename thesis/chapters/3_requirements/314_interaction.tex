@@ -1,0 +1,41 @@
+\subsection{Interaction}
+\label{sec:req_interaction}
+
+The interaction requirements describe how users inspect the assembled system  model and access simulation results.
+
+Table~\ref{tab:req_interaction} lists the user requirements together with 
+the derived system requirements for this category.
+
+\begin{longtable}{
+  >{\raggedright\arraybackslash}p{1.75cm} 
+  >{\raggedright\arraybackslash}p{13.25cm}}
+\caption{User and system requirements: Interaction}
+\label{tab:req_interaction} \\
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\textbf{UR-12} & \textbf{The overall workflow should provide a visual 
+representation of the system model and its dependency structure.} \\
+\addlinespace[2pt]
+SR-12-01 & The framework should generate a directed graph representation of 
+the coupled system structure from components and their connections. \\
+SR-12-02 & The framework should support exporting the generated system graph 
+to external file formats. \\
+\midrule
+
+\textbf{UR-13} & \textbf{The overall workflow should support the export of 
+simulation histories for further analysis and documentation.} \\
+\addlinespace[2pt]
+SR-13-01 & The framework should record component-level and system-level 
+simulation histories during execution. \\
+SR-13-02 & The framework should provide programmatic access to recorded 
+simulation histories in structured form. \\
+\end{longtable}

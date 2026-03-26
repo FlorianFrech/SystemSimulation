@@ -68,8 +68,27 @@ hybrid_event_chain_system_graph
 *.fls
 *_latexmk
 demos/ControlledPendulum/artifacts/_fmu_compare/
-<<<<<<< Updated upstream
-memory/*
-=======
 thesis/literature/*
->>>>>>> Stashed changes
+
+# LaTeX build artifacts
+thesis/*.aux
+thesis/**/*.aux
+thesis/*.bbl
+thesis/*.blg
+thesis/*.lof
+thesis/*.lot
+thesis/*.lol
+thesis/*.out
+thesis/*.toc
+thesis/*.synctex.gz
+thesis/*.fls
+thesis/*.fdb_latexmk
+thesis/main.pdf
+thesis/build/   
+
+# Python
+thesis/__pycache__/
+thesis/**/__pycache__/
+
+# Diagrams generated output (regenerate with PlantUML)
+thesis/diagrams/out/

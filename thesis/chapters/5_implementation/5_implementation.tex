@@ -1,0 +1,30 @@
+\chapter{Feature Implementation and Verification}
+\label{chap:implementation}
+
+The previous chapter introduced the architectural abstractions of \syssimx{}: the component interface, the system model, the algorithm strategy, and the multi-model component.
+This chapter describes how each of these abstractions is realized in software.
+It covers the concrete implementation of the framework's core features, from the port system that enforces interface contracts to the hybrid algorithm that handles discrete events during co-simulation.
+
+Each section addresses one feature of the framework and follows a common structure.
+It begins with a brief reference to the requirement that motivates the feature, then describes the implementation approach and the relevant technical details, and concludes with a verification example that demonstrates the feature in isolation.
+The full integration of all features is deferred to the case study in Chapter~\ref{chap:case_study}.
+
+The sections are ordered from foundational to advanced.
+Section~\ref{sec:impl_port_system} describes the typed, unit-aware port system that underlies all data exchange.
+Section~\ref{sec:impl_wrappers} presents the three backend-specific component wrappers that map external simulation tools to the common \texttt{CoSimComponent} interface.
+Section~\ref{sec:impl_structural} covers the graph-based structural analysis that derives execution order and detects algebraic loops from the system topology.
+Section~\ref{sec:impl_algebraic_loops} describes the iterative resolution of algebraic loops identified during structural analysis.
+Section~\ref{sec:impl_algorithms} introduces the master algorithms that advance the coupled system in time, building on the execution order and loop resolution from the preceding sections.
+Section~\ref{sec:impl_hybrid} extends the stepping logic with event detection, localization, and rollback for hybrid co-simulation.
+Section~\ref{sec:impl_multi_model} describes the multi-model switching mechanism with state adaptation and hysteresis.
+Finally, Section~\ref{sec:impl_visualization} presents the graph-based visualization of the system structure.
+
+\input{chapters/5_implementation/51_port_system}
+\input{chapters/5_implementation/52_co_sim_component}
+\input{chapters/5_implementation/52_component_wrappers}
+\input{chapters/5_implementation/53_structural_analysis}
+\input{chapters/5_implementation/54_algebraic_loops}
+\input{chapters/5_implementation/55_master_algorithms}
+\input{chapters/5_implementation/56_hybrid}
+\input{chapters/5_implementation/57_multi_component}
+\input{chapters/5_implementation/58_visualization}

@@ -1,0 +1,21 @@
+\section{Problem Statement and Research Gap}
+
+Equation-based simulation, musculoskeletal simulation, finite element analysis, and FMI-based co-simulation are well established within their respective domains.
+However, many mechatronic and biomechanical systems require these modeling paradigms to be combined within one system-level simulation workflow.
+In practice, such integration remains difficult.
+Existing approaches are strong either in standardized FMU-based coupling or in domain-specific analysis, but they provide only limited support for the unified integration of FMU models, musculoskeletal models, and finite-element models within one common simulation environment.
+
+This limitation becomes particularly relevant when heterogeneous tool coupling must also be combined with dependency-aware execution, algebraic-loop handling, hybrid event handling, and runtime switching between alternative subsystem models.
+In this area, a practical and reproducible workflow is still insufficiently addressed.
+As a result, the analysis of systems whose relevant physics and appropriate model representation change across operating phases remains inconvenient, for example when transitioning between free motion, human interaction, and contact-dominated behavior.
+
+This thesis addresses this methodological gap through the development and evaluation of the \textit{SysSimX} framework for heterogeneous hybrid system simulation.
+More specifically, the thesis makes the following contributions:
+
+\begin{itemize}
+    \item the definition of a unified component-based abstraction for heterogeneous subsystem models,
+    \item the development of a graph-based orchestration approach with dependency analysis, execution-order resolution, and algebraic-loop handling,
+    \item the integration of hybrid event handling within a common co-simulation workflow,
+    \item the introduction of a multi-model component concept for runtime switching between alternative subsystem models with consistent state synchronization, and
+    \item the implementation and evaluation of a controlled-pendulum case study combining FMU, OpenSim, and FEM models.
+\end{itemize}

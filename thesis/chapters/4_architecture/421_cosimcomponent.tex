@@ -1,0 +1,34 @@
+\subsection{CoSimComponent Interface}
+\label{sec:cosimcomponent}
+
+The abstract base class \texttt{CoSimComponent} defines the common interface that every simulation component in \syssimx{} must implement.
+It is the central contract between tool-specific model wrappers and the co-simulation framework, and allows components from different backends to be treated uniformly during initialization, time stepping, data exchange, and result collection (see Figure~\ref{fig:cosimcomponent_architecture}).
+
+\begin{figure}[H]
+  \centering
+  \vspace{-1em}
+  \includegraphics[width=0.95\textwidth]{figures/4_architecture/cosimcomponent.pdf}
+  \vspace{-1em}
+  \caption{Architectural overview of the abstract \texttt{CoSimComponent} interface in \syssimx{}. It combines a typed port interface, a uniform lifecycle, distinct mechanisms for physical state transfer and rollback, and optional capabilities for structural analysis and hybrid co-simulation.}
+  \vspace{-0.5em}    
+  \label{fig:cosimcomponent_architecture}
+\end{figure}
+
+A component exposes its system interface through typed input and output ports.
+Each port carries a declared type (real, integer, boolean, string, or event) and an optional physical unit.
+This makes coupling assumptions explicit at the interface level and allows the framework to validate type compatibility and unit consistency when connections are established.
+
+The component lifecycle follows a fixed sequence: construction, parameter configuration, initialization at the simulation start time, and then repeated participation in the simulation loop, where inputs are set, one macro step is performed, and outputs are updated, recorded in the history, and communicated to connected components.
+After the simulation completes, the component is released or reset for a subsequent run.
+This lifecycle gives the framework a uniform control flow across all component types and is enforced identically regardless of the underlying backend.
+
+The interface separates two forms of state handling.
+Physical state transfer exports the state in terms of physically meaningful quantities such as positions, velocities, or mode indicators and is used for inspection and for synchronization between alternative models of the same subsystem.
+Rollback state transfer captures and restores the exact internal solver state of a component and is used during hybrid event handling, where the simulation must return to an earlier time instant and re-advance.
+This distinction is essential because rollback requires tool-specific solver information that is generally not interpretable across different model representations.
+
+In addition to the required lifecycle methods, the interface defines optional capability hooks for structural analysis and hybrid co-simulation.
+The framework uses standardized capability checks and optional registrations to determine which advanced features a component provides.
+This keeps simple components lightweight while allowing hybrid and strongly coupled components to expose the additional information required by the system-level algorithms.
+
+% Remark: Has some overlap with the previous subsection on the additional methods which are implemented for hybrid-co simulation. 

@@ -1,0 +1,46 @@
+\section{Simulation Workflow}
+\label{sec:simulation_workflow}
+
+The previous sections introduced the architectural layers of \syssimx{} individually.
+This section shows how they come together in a typical user workflow.
+Listing~\ref{lst:workflow} illustrates the complete path from component instantiation to result retrieval.
+
+\begin{lstlisting}[
+  caption={Minimal workflow for defining and running a co-simulation 
+  in \syssimx{}.},
+  label={lst:workflow},
+  language=Python]
+from syssimx import System, Connection
+from syssimx.algorithms import GaussSeidelAlgorithm
+
+# 1. Instantiate components (each implements CoSimComponent)
+source = LinearSource(name="Source", a=1.0, b=0.0)
+integrator = Integrator(name="Integrator", x0=0.0)
+
+# 2. Assemble system and connect interfaces
+system = System(name="QuickstartSystem")
+system.add_component(source)
+system.add_component(integrator)
+system.add_connection(Connection(
+    src_comp="Source", src_port="y",
+    dst_comp="Integrator", dst_port="u",
+))
+
+# 3. Select algorithm, initialize, and run
+system.set_algorithm(GaussSeidelAlgorithm())
+system.initialize(t0=0.0)
+system.run(t0=0.0, tf=5.0, dt=0.1)
+
+# 4. Retrieve simulation results
+history = system.get_history()
+\end{lstlisting}
+
+The listing follows four phases: component instantiation, system assembly 
+with explicit connections, execution with a user-selected algorithm, and 
+result retrieval.
+Both \texttt{LinearSource} and \texttt{Integrator} implement the 
+\texttt{CoSimComponent} interface introduced in 
+Section~\ref{sec:component_interface}; any component that fulfills this 
+contract can participate in the workflow without modification.
+The \texttt{System} handles dependency analysis, execution-order 
+computation, and connection validation transparently during initialization.
