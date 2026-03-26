@@ -1,0 +1,31 @@
+@startuml CoSimComponent_Construction
+
+!include ../includes/sequence_theme.puml
+
+participant "User Code"              as User COLOR_USER
+participant "Component\n(Sub Class)" as Sub  COLOR_SUBCLASS
+participant "CoSimComponent\n(Base Class)" as Base COLOR_BASECLASS
+
+== Construction ==
+
+User -> Sub: **comp = Component(name, ...)**
+activate Sub
+
+Sub -> Base: super().__init__(name, ...)
+activate Base
+Base -> Base: Initialize port containers,\nparameters, history recorder
+Base --> Sub
+deactivate Base
+
+Sub -> Sub: Define input_specs, output_specs
+
+Sub -> Base: _initialize_ports_from_specs()
+activate Base
+note right: Create PortState objects\nfrom registered PortSpecs
+Base --> Sub
+deactivate Base
+
+Sub --> User
+deactivate Sub
+
+@enduml

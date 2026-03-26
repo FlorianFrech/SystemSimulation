@@ -1,0 +1,33 @@
+@startuml CoSimComponent_Stepping
+
+!include ../includes/sequence_theme.puml
+
+participant "Algorithm"              as Alg  COLOR_FRAMEWORK
+participant "Component\n(Sub Class)" as Sub  COLOR_SUBCLASS
+participant "CoSimComponent\n(Base Class)" as Base COLOR_BASECLASS
+
+== Simulation Step ==
+
+Alg -> Base: **do_step(t, dt)**
+activate Base
+
+Base -> Sub: **_do_step_internal(t, dt)**
+activate Sub
+note left: //abstract//\nAdvance internal solver\nfrom t to t+dt
+Sub --> Base
+deactivate Sub
+
+Base -> Base: Update time: t = t + dt
+
+Base -> Sub: **_update_output_states(t)**
+activate Sub
+note left: //abstract//\nWrite internal state\nto output ports
+Sub --> Base
+deactivate Sub
+
+Base -> Base: _record_outputs(t)
+
+Base --> Alg
+deactivate Base
+
+@enduml

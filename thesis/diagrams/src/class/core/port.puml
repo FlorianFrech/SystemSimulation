@@ -1,80 +1,58 @@
 @startuml Port
+!include ../../includes/thesis_theme.puml
+left to right direction
 
-skinparam classAttributeIconSize 0
-
-' ============================================================================
-' PORT CLASSES AND ENUMS
-' ============================================================================
-
-enum PortType <<str, Enum>> {
-    REAL = "real"
-    INT = "int"
-    BOOL = "bool"
-    STRING = "string"
+enum PortType <<StrEnum>> {
+    REAL
+    INT
+    BOOL
+    STRING
+    EVENT
 }
 
 enum Direction <<Literal>> {
-    "in"
-    "out"
+    in
+    out
 }
 
-class PortSpec<T> <<dataclass, frozen>> {
+class PortSpec {
     + name: str
     + type: PortType
     + direction: Direction
-    + unit: Optional[str] = None
-    + description: Optional[str] = None
+    + unit: optional unit
     --
-    + validate_value(value: Any): None
-    + {static} compatible(spec1: PortSpec, spec2: PortSpec): bool
+    + validate_value(...)
+    + compatible(...)
 }
 
-class PortState<T> <<dataclass>> {
-    + spec: PortSpec[T]
-    + value: Optional[Union[T, Quantity]] = None
-    + t_last: Optional[float] = None
-    + history: list[tuple[float, Union[T, Quantity]]]
+class PortState {
+    + spec: PortSpec
+    + value
+    + t_last: float | None
     --
-    + set(value: Union[T, Quantity], t: Optional[float]): None
-    + get(as_unit: Optional[str]): Union[T, Quantity, None]
+    + set(value, t=None)
+    + get(as_unit=None)
 }
 
-class Quantity <<from pint>> {
-    Physical quantity with units
-}
+PortSpec --> PortType : typed by
+PortSpec --> Direction : direction
+PortState *-- PortSpec : wraps
 
-' Relationships
-PortSpec --> PortType : uses
-PortSpec --> Direction : uses
-PortState *-- PortSpec : contains
-PortState --> Quantity : may contain
-PortSpec ..> Quantity : validates
-
-note right of PortSpec
-    Generic type T can be:
-    - float
-    - int
-    - bool
-    - str
-    
-    Immutable specification
-    of a component port
+note top of PortSpec
+  **Immutable** port contract:
+  name, type, direction, optional unit
 end note
 
-note right of PortState
-    Mutable state holding:
-    - Current value
-    - Last update time
-    - Historical values
-    
-    TODO: Add sample time
-    and variability support
+note top of PortState
+  **Mutable** runtime state:
+  current value and
+  last update timestamp
 end note
 
-note top of Quantity
-    From pint library (ureg)
-    Handles unit conversions
-    for REAL ports
+note bottom of PortState
+  REAL values may be stored as
+  pint quantities and converted
+  on set() and get()
 end note
 
 @enduml

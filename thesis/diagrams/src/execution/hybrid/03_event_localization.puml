@@ -1,6 +1,6 @@
 @startuml Event_Localization_Detail
 
-!include ../includes/common_styling.puml
+!include ../../includes/common_styling.puml
 
 title Phase 3: Event Localization via Bisection
 

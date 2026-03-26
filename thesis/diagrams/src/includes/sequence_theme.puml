@@ -1,0 +1,40 @@
+' thesis/diagrams/src/includes/sequence_theme.puml
+' Unified theme for CoSimComponent lifecycle sequence diagrams
+
+' --- Global ---
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam dpi 150
+skinparam roundcorner 5
+
+' --- Fonts ---
+skinparam defaultFontName "Sans-Serif"
+skinparam defaultFontSize 13
+skinparam defaultFontColor #333333
+
+' --- Sequence diagram layout ---
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceArrowColor #333333
+skinparam maxMessageSize 300
+skinparam participantPadding 50
+skinparam sequenceGroupBorderThickness 1.5
+skinparam sequenceGroupFontStyle bold
+skinparam sequenceGroupFontSize 13
+skinparam sequenceDividerFontSize 14
+skinparam sequenceDividerFontStyle bold
+skinparam sequenceDividerBackgroundColor #E8E8E8
+skinparam sequenceDividerBorderColor #999999
+skinparam sequenceLifeLineBorderColor #666666
+
+' --- Notes ---
+skinparam noteBackgroundColor #F7F7F7
+skinparam noteBorderColor #006699
+skinparam noteFontColor #333333
+skinparam noteFontSize 12
+skinparam noteShadowing false
+
+' --- Participant colors ---
+!define COLOR_USER      #E3F2FD
+!define COLOR_FRAMEWORK #e8f5f5
+!define COLOR_SUBCLASS  #FFF3E0
+!define COLOR_BASECLASS #F3E5F5

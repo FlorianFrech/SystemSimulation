@@ -1,6 +1,6 @@
 @startuml Event_Detection_Detail
 
-!include ../includes/common_styling.puml
+!include ../../includes/common_styling.puml
 
 title Phase 2: Event Detection Detail
 

@@ -1,0 +1,28 @@
+' thesis/diagrams/src/includes/thesis_theme.puml
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam dpi 150
+skinparam defaultFontSize 13
+skinparam padding 3
+skinparam nodesep 30
+skinparam ranksep 30
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam classFontColor #000000
+
+skinparam enumBackgroundColor #FFFFFF
+skinparam enumBorderColor #000000
+skinparam enumFontColor #000000
+
+skinparam noteBackgroundColor #F7F7F7
+skinparam noteBorderColor #006699
+skinparam noteFontColor #000000
+
+skinparam packageBorderColor #006699
+skinparam packageFontColor #006699
+
+skinparam stereotypeCBackgroundColor #D9EAF2
+skinparam stereotypeCBorderColor #006699

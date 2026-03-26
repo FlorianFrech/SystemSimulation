@@ -4,7 +4,21 @@
       "Bash(find /c/Users/flori/source/repos/FlorianFrech/SystemSimulation -maxdepth 2 -type f -name *.toml -o -name *.cfg -o -name *.md -o -name Makefile)",
       "Bash(pip install:*)",
       "Bash(python -c \":*)",
-      "Bash(python -u -c \":*)"
+      "Bash(python -u -c \":*)",
+      "Bash(java -jar /usr/local/bin/plantuml.jar -version)",
+      "Read(//home/flo/**)",
+      "Bash(plantuml -tpdf -o out/pdf/execution src/execution/lifecycle.puml)",
+      "Bash(mkdir -p out/png/execution)",
+      "Bash(plantuml -tpng -o out/png/execution src/execution/lifecycle.puml)",
+      "Bash(plantuml -tpng -o /tmp src/execution/lifecycle.puml)",
+      "Read(//tmp/**)",
+      "Bash(plantuml -tpng -o \"$PWD/out/png/execution\" src/execution/lifecycle.puml)",
+      "Bash(plantuml -tsvg -o /tmp src/execution/lifecycle.puml)",
+      "Bash(ls /tmp/*.png)",
+      "Bash(dpkg -l plantuml)",
+      "Bash(plantuml -tpng lifecycle_construction.puml -o out/)",
+      "Bash(plantuml -tpng lifecycle_initialization.puml -o out/)",
+      "Bash(plantuml -tpng lifecycle_stepping.puml -o out/)"
     ]
   }
 }

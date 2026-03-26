@@ -1,0 +1,85 @@
+@startuml CoSimComponent_Lifecycle
+
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 300
+skinparam participantPadding 60
+
+participant "User /\nSystem" as User
+participant "Concrete\nComponent" as Sub
+participant "CoSimComponent\n(Base Class)" as Base
+
+== Construction ==
+
+User -> Sub: **create(name, ...)**
+activate Sub
+
+Sub -> Base: super().__init__(name)
+activate Base
+Base -> Base: Initialize port containers,\nparameters, history recorder
+Base --> Sub
+deactivate Base
+
+Sub -> Sub: Define input_specs, output_specs
+Sub -> Sub: Define default parameters
+
+Sub -> Base: _initialize_ports_from_specs()
+activate Base
+note right: Create PortState objects\nfrom registered PortSpecs
+Base --> Sub
+deactivate Base
+
+Sub --> User
+deactivate Sub
+
+== Initialization ==
+
+User -> Base: **initialize(t0)**
+activate Base
+
+Base -> Base: Set time, create event ports
+
+Base -> Sub: **_initialize_component(t0)**
+activate Sub
+note left: //abstract//\nLoad model, configure solver,\nset initial state
+Sub --> Base
+deactivate Sub
+
+Base -> Base: _detect_direct_feedthrough()
+
+Base -> Sub: **_update_output_states(t0)**
+activate Sub
+note left: //abstract//\nWrite internal state\nto output ports
+Sub --> Base
+deactivate Sub
+
+Base -> Base: _record_outputs(t0)
+
+Base --> User
+deactivate Base
+
+== Simulation Step ==
+
+User -> Base: **do_step(t, dt)**
+activate Base
+
+Base -> Sub: **_do_step_internal(t, dt)**
+activate Sub
+note left: //abstract//\nAdvance internal solver\nfrom t to t+dt
+Sub --> Base
+deactivate Sub
+
+Base -> Base: Update time: t = t + dt
+
+Base -> Sub: **_update_output_states(t)**
+activate Sub
+Sub --> Base
+deactivate Sub
+
+Base -> Base: _record_outputs(t)
+
+Base --> User
+deactivate Base
+
+@enduml

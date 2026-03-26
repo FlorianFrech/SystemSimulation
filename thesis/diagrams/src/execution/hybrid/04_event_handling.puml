@@ -1,6 +1,6 @@
 @startuml Event_Handling_Detail
 
-!include ../includes/common_styling.puml
+!include ../../includes/common_styling.puml
 
 title Phase 5: Event Handling with Superdense Time
 

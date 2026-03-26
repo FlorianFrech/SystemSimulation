@@ -1,6 +1,6 @@
 @startuml Hybrid_CoSim_Compact
 
-!include ../includes/common_styling.puml
+!include ../../includes/common_styling.puml
 
 title Hybrid Co-Simulation Algorithm
 
