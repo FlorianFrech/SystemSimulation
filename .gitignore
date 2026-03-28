@@ -92,3 +92,7 @@ thesis/**/__pycache__/
 
 # Diagrams generated output (regenerate with PlantUML)
 thesis/diagrams/out/
+
+research/literature/*
+
+.claude/

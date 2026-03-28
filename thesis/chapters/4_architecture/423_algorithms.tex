@@ -1,5 +1,5 @@
 \subsection{Algorithm Interface}
-\label{sec:algorithm_interface}
+\label{sec:arch_algorithm}
 
 When the user calls \texttt{system.run()}, the system advances in  macro steps of size~$\Delta t$.
 Each macro step is executed by the algorithm's \texttt{step(system, t, dt)} method, which advances all components from~$t$ to~$t + \Delta t$ by  stepping them in the computed execution order, propagating interface values, and, where required, resolving algebraic coupling or handling discrete events.

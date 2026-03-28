@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 
@@ -38,9 +39,12 @@ def render_diagram(puml_file: Path, fmt: str, env: dict[str, str]) -> None:
     out_dir = OUT_ROOT / fmt_name / rel_parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    plantuml_cmd = shutil.which("plantuml")
+
+
     result = subprocess.run(
         [
-            "plantuml",
+            plantuml_cmd,
             f"-t{fmt}",
             str(puml_file),
             "-o",

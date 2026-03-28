@@ -18,7 +18,10 @@
       "Bash(dpkg -l plantuml)",
       "Bash(plantuml -tpng lifecycle_construction.puml -o out/)",
       "Bash(plantuml -tpng lifecycle_initialization.puml -o out/)",
-      "Bash(plantuml -tpng lifecycle_stepping.puml -o out/)"
+      "Bash(plantuml -tpng lifecycle_stepping.puml -o out/)",
+      "Bash(find \"c:\\\\Users\\\\flori\\\\source\\\\repos\\\\FlorianFrech\\\\SystemSimulation\\\\thesis\\\\chapters\"\" -type f -name \"*.tex \")",
+      "Bash(find . -type f -name \"*.tex\" -exec wc -l {} +)",
+      "Bash(sort -k2)"
     ]
   }
 }

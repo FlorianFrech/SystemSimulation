@@ -11,19 +11,13 @@ participant "CoSimComponent\n(Base Class)" as Base COLOR_BASECLASS
 User -> Sub: **comp = Component(name, ...)**
 activate Sub
 
-Sub -> Base: super().__init__(name, ...)
+Sub -> Base: super().~_~_init~_~_(name, ...)
 activate Base
 Base -> Base: Initialize port containers,\nparameters, history recorder
 Base --> Sub
 deactivate Base
 
-Sub -> Sub: Define input_specs, output_specs
-
-Sub -> Base: _initialize_ports_from_specs()
-activate Base
-note right: Create PortState objects\nfrom registered PortSpecs
-Base --> Sub
-deactivate Base
+Sub -> Sub: Populate input_specs, output_specs
 
 Sub --> User
 deactivate Sub

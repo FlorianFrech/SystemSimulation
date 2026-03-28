@@ -1,168 +1,191 @@
 \section{Component Interface}
 \label{sec:impl_component_interface}
 
-The \texttt{CoSimComponent} forms the central execution abstraction of \syssimx{}.
-It defines the uniform contract through which subsystem models are represented, initialized, advanced in time, and queried for outputs, independent of the concrete backend from which they originate.
-In this sense, the \texttt{CoSimComponent} is the common execution interface that allows heterogeneous subsystem models to be orchestrated identically by the system model and the master algorithms.
+The \texttt{CoSimComponent} base class implements the component contract introduced in Section~\ref{sec:architecture_cosimcomponent}.
+The port system from Section~\ref{sec:impl_port_system} provides the interface representation.
 
-This abstraction builds on the port system introduced in Section~\ref{sec:impl_port_system}.
-While the port system defines how typed and unit-aware interfaces are represented, the \texttt{CoSimComponent} defines how a component behaves at runtime.
-It therefore provides the bridge between static interface specification and executable co-simulation behavior.
-The following subsection explains its architectural role before the concrete lifecycle semantics are discussed in detail.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Design}
 
-\subsection{Architectural Role}
+\texttt{CoSimComponent} is implemented as an abstract base class following the template method pattern~\cite{gamma_design_1995}.
 
-\paragraph{Requirement Mapping.}
-The \texttt{CoSimComponent} directly contributes to SR-01-01 and SR-01-02 by representing subsystem models as reusable components with explicit interfaces and by enabling such components to be combined into one system model.
-It furthermore supports SR-09-03 and SR-10-01 by exposing a uniform lifecycle and interface contract for all integrated subsystem models, regardless of whether the underlying model originates from an FMI-based tool, a biomechanics environment, a continuum-mechanical solver, or an internal composite model.
-Optional extensions of the interface, such as rollback support and event-related hooks, also prepare the abstraction for hybrid behavior in the sense of SR-07-01 and SR-07-02.
-Their detailed algorithmic use is discussed later in Section~\ref{sec:impl_hybrid}.
+The base class defines three categories of methods, summarized in Table~\ref{tab:component_methods}.
 
-Architecturally, the \texttt{CoSimComponent} occupies the boundary between backend-specific model execution and framework-level orchestration.
-Upwards, it presents a stable and backend-independent interface to the \texttt{System} class and to the master algorithms.
-Downwards, it encapsulates tool-specific details such as solver setup, model loading, and native stepping calls inside subclass implementations.
-This separation is essential for the overall framework design, because it allows system assembly, structural analysis, execution-order computation, and result handling to operate on a common component abstraction rather than on backend-specific runtime objects.
-
-\paragraph{Template-Method Design.}
-The \texttt{CoSimComponent} is implemented as an abstract base class following the template method pattern~\cite{GoF}.
-In this design, the base class defines the invariant execution sequence of the component lifecycle, while backend-specific subclasses implement the hook methods that realize the actual model behavior.
-Public methods such as \texttt{initialize()} and \texttt{do\_step()} therefore establish the framework-controlled lifecycle, whereas protected methods such as \texttt{\_initialize\_component()}, \texttt{\_do\_step\_internal()}, and \texttt{\_update\_output\_states()} are delegated to the concrete subclass.
-
-This design has two consequences. First, generic framework concerns such as port-state management, time bookkeeping, history recording, and capability handling are centralized in the base class.
-Second, backend-specific wrappers remain focused on the translation between the common \syssimx{} contract and the concrete simulation tool.
-The result is a stable orchestration layer in which heterogeneous components can be scheduled, coupled, and monitored uniformly, even though their internal numerical realization differs substantially.
-
-\subsection{Runtime State}
-\paragraph{Identity and Organization.}
-\paragraph{Interface Representation.}
-\paragraph{Execution and History State.}
-\paragraph{Structural and Hybrid Metadata.}
-
-\subsection{Lifecycle Semantics}
-\paragraph{Construction.}
-\paragraph{Configuration.}
-\paragraph{Initialization.}
-\paragraph{Simulation Step.}
-\paragraph{Reset and Cleanup.}
-
-\subsection{Subclass Contract and Capability Extensions}
-\paragraph{Mandatory Hooks.}
-
-\subparagraph{Construction.}
-Figure~\ref{fig:impl_comp_construction} shows the construction sequence.
-The subclass constructor calls the base class constructor, which initializes the internal containers for ports, parameters, and history recording. The subclass then defines its input and output port specifications, describing the component interface in terms of variable names, data types, and physical units.
-Port states are created immediately from these specifications so that initial values can be propagated through connections before initialization begins.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{%
-      figures/5_implementation/CoSimComponent_Construction.pdf}
-    \caption{Delegation during component construction. The subclass
-      (orange) instantiates the base class (purple) to set up internal
-      containers, then defines the port specifications that describe
-      the component interface.}
-    \label{fig:impl_comp_construction}
-\end{figure}
-
-\subparagraph{Initialization.}
-The initialization sequence is shown in Figure~\ref{fig:impl_comp_initialization}.
-The base class exposes a single public \texttt{initialize(t0)} method.
-It sets the initial simulation time and then delegates to the abstract \texttt{\_initialize\_component()} hook, where the subclass performs model-specific setup such as loading a solver or configuring internal parameters.
-After this hook returns, the base class calls the abstract \texttt{\_update\_output\_states()} hook so that the subclass writes its initial internal state to the output ports.
-These initial outputs are recorded and become available to downstream components.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{%
-      figures/5_implementation/CoSimComponent_Initialization.pdf}
-    \caption{Delegation during component initialization. The base
-      class orchestrates the sequence; the subclass implements
-      \texttt{\_initialize\_component()} for model-specific setup and
-      \texttt{\_update\_output\_states()} to publish initial outputs.}
-    \label{fig:impl_comp_initialization}
-\end{figure}
-
-\subparagraph{Simulation Step.}
-Figure~\ref{fig:impl_comp_stepping} shows the delegation during a single macro time step.
-The algorithm calls \texttt{do\_step(t,\,dt)} on the base class, which delegates the actual computation to \texttt{\_do\_step\_internal()}.
-This abstract method advances the internal model state from~$t$ to~$t + dt$.
-After the hook returns, the base class updates the component time and invokes \texttt{\_update\_output\_states()} to refresh the output ports with the new state.
-The updated values are recorded in the component history for later retrieval.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{%
-      figures/5_implementation/CoSimComponent_Stepping.pdf}
-    \caption{Delegation during a simulation step. The algorithm
-      triggers \texttt{do\_step()} on the base class, which delegates
-      the computation to \texttt{\_do\_step\_internal()} and the
-      output update to \texttt{\_update\_output\_states()}.}
-    \label{fig:impl_comp_stepping}
-\end{figure}
-
-\subparagraph{Supporting Methods.}
-Beyond the three main phases, the base class provides methods for configuration and cleanup.
-Component parameters can be modified through \texttt{set\_parameters()} after construction.
-The subclass initialization must apply these values when setting up the internal model.
-After the simulation loop completes, results are available through the component history, which stores time-stamped output port values with their physical units.
-The \texttt{reset()} method restores default parameters and clears the history, enabling re-simulation with a different configuration without reconstructing the component.
-
-\paragraph{Optional Capabilities.}
-The base class distinguishes between methods that every subclass must implement and methods that are only required for advanced framework features.
-Table~\ref{tab:component_methods} summarizes this distinction.
+%
 \begin{table}[htbp]
-\centering
-\small
-\caption{Abstract and optional methods of \texttt{CoSimComponent}. 
-Abstract methods must be implemented by every subclass.
-Optional methods have default implementations that can be overridden to enable additional framework capabilities.}
-\label{tab:component_methods}
-\begin{tabular}{llp{6.5cm}}
-\toprule
-\textbf{Method} & \textbf{Contract} & \textbf{Purpose} \\
-\midrule
-\texttt{\_initialize\_component()} & Abstract & Subclass-specific initialization \\
-\texttt{\_do\_step\_internal()} & Abstract & Time step computation \\
-\texttt{\_update\_output\_states()} & Abstract & Write internal state to output ports \\
-\midrule
-\texttt{get\_state() / set\_state()} & Optional & Physical state transfer (multi-model switching) \\
-\texttt{snapshot\_state() / restore\_state()} & Optional &  Opaque state rollback (hybrid event localization) \\
-\texttt{evaluate\_outputs()} & Optional & Zero-step evaluation (algebraic loop resolution) \\
-\texttt{\_handle\_events\_internal()} & Optional & React to detected events \\
-\bottomrule
-\end{tabular}
+  \centering
+  \small
+  \caption{Role-based classification of \texttt{CoSimComponent} methods.
+  Template methods define the public lifecycle interface and fix the invariant execution skeleton.
+  Primitive operations are declared abstract and must be implemented by every subclass.
+  Hook operations have default implementations and may be overridden to enable additional framework capabilities.}
+  \label{tab:component_methods}
+  \begin{tabular}{llp{5.8cm}}
+    \toprule
+    \textbf{Method} & \textbf{Contract} & \textbf{Purpose} \\
+    \midrule
+    \texttt{initialize(t0)}                              & Template  & Component lifecycle startup \\
+    \texttt{do\_step(t, dt)}                             & Template  & Macro time step \\
+    \texttt{handle\_event(event\_names, t)}              & Template  & Event handling and output refresh \\
+    \midrule
+    \texttt{\_initialize\_component(t0)}                 & Primitive & Component-specific initialization \\
+    \texttt{\_do\_step\_internal(t, dt)}                 & Primitive & Time step computation \\
+    \texttt{\_update\_output\_states(t)}                 & Primitive & Write internal state to output ports \\
+    \midrule
+    \texttt{get\_state() / set\_state()}                 & Hook      & Physical state transfer \\
+    \texttt{snapshot\_state() / restore\_state()}        & Hook      & Opaque state rollback \\
+    \texttt{evaluate\_outputs(inputs, t)}                & Hook      & Zero-step output evaluation \\
+    \texttt{\_handle\_events\_internal(event\_names, t)} & Hook      & Event-driven state update \\
+    \texttt{reset()}                                     & Hook      & Clear state \\
+    \bottomrule
+  \end{tabular}
 \end{table}
 
-This design keeps simple components lightweight.
-A basic wrapper only needs to implement the three abstract lifecycle methods.
-Components that participate in algebraic loop resolution additionally override \texttt{evaluate\_outputs()} to support zero-step evaluation.
-Components that act as event sources implement \texttt{snapshot\_state()} and \texttt{restore\_state()} to enable state rollback for event localization.
-The framework detects these capabilities through introspection at initialization time, without requiring explicit capability flags.
+The three-tier method organization produces an inverted control flow.
+The co-simulation algorithm calls \texttt{do\_step()} on the base class, and the base class in turn calls into the subclass, not the other way around.
+Generic framework concerns such as port-state management, time bookkeeping, history recording, and capability detection are therefore implemented once in the base class and apply uniformly to all components, regardless of the underlying simulation backend.
 
-\paragraph{State Management.}
-The component interface provides two distinct state management mechanisms that serve different purposes:
-%
-\begin{itemize}[nosep]
-  \item \emph{Physical state transfer} 
-    (\texttt{get\_state / set\_state}): exports and imports 
-    human-readable physical variables (positions, velocities) as 
-    named quantities with units. The exported state is interpretable 
-    across different model implementations and is used for state 
-    transfer during runtime model switching 
-    (Section~\ref{sec:impl_multi_model}).
-  \item \emph{Rollback state} 
-    (\texttt{snapshot\_state / restore\_state}): captures and 
-    restores the complete opaque internal state, including 
-    solver-specific artifacts. This mechanism is used by the hybrid 
-    algorithm to revert components to a previous time during event 
-    localization (Section~\ref{sec:impl_hybrid}).
-\end{itemize}
-%
-These two mechanisms are intentionally separate.
-A physical state can be adapted and transferred to a different model.
-A rollback snapshot does not support this, as it may contain solver-specific data that is meaningless outside the originating component.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Runtime State}
 
+\paragraph{Identity and Organization.}
+Each component is assigned a unique \texttt{name} at construction, which serves as its primary identifier within the \texttt{System}.
+The name is used for connection definitions, dependency graph construction, error reporting, and history labeling.
+An optional \texttt{group} string allows components to be categorized for system graph visualization.
+
+\paragraph{Interface Representation.}
+The port interface is represented at two levels: immutable \emph{port specifications}
+(\texttt{input\_specs}, \texttt{output\_specs}) declared by the subclass at construction,
+and mutable \emph{port states} (\texttt{inputs}, \texttt{outputs}) instantiated from the
+specifications during initialization and updated on every simulation step
+(Section~\ref{sec:impl_port_system}).
+
+\paragraph{Execution and History State.}
+The current simulation time \texttt{t} is updated by the \texttt{do\_step()} template method after each successful step.
+The boolean flag \texttt{\_is\_initialized} prevents double initialization.
+The \texttt{history} attribute is a \texttt{ComponentHistory} instance that records time-stamped output port values after every step, enabling result retrieval after the simulation loop.
+
+\paragraph{Structural and Hybrid Metadata.}
+The \texttt{direct\_feedthrough} attribute maps each output port to the set of input ports it depends on algebraically.
+It is populated automatically by \texttt{\_detect\_direct\_feedthrough()} during initialization and consumed by the \texttt{System} to identify algebraic loops and determine execution order (Section~\ref{sec:impl_system}).
+Components that participate in hybrid simulation register zero-crossing functions in \texttt{event\_indicators} and external event subscriptions in \texttt{event\_subscriptions}.
+Additional metadata for event ordering and micro-step timing hints supports the hybrid algorithm and is described in Section~\ref{sec:impl_hybrid}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Lifecycle Semantics}
+
+\paragraph{Construction.}
+Figure~\ref{fig:impl_comp_construction} shows the construction sequence.
+The subclass constructor calls the base class constructor via \texttt{super().\_\_init\_\_()}, which allocates the internal containers for port specifications, parameters, and history recording.
+The subclass then populates \texttt{input\_specs} and \texttt{output\_specs} with \texttt{PortSpec} objects that declare the component interface.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Construction.pdf}
+  \caption{Delegation during component construction. The subclass calls the base class constructor to allocate internal containers, then defines the port specifications that describe the component interface.}
+  \label{fig:impl_comp_construction}
+\end{figure}
+
+\paragraph{Configuration.}
+Before initialization, the component can be configured via \texttt{set\_parameters()}.
+The method validates and stores keyword arguments into the \texttt{parameters} dictionary.
+Keys and value types are defined by each subclasswhich declare the available parameters, their defaults in \texttt{\_\_init\_\_}, and apply them inside \texttt{\_initialize\_component()}.
+
+\paragraph{Initialization.}
+The initialization sequence is shown in Figure~\ref{fig:impl_comp_initialization}.
+The template method \texttt{initialize(t0)} first records the initial simulation time and instantiates \texttt{PortState} objects from the port specifications.
+The template method then delegates to the primitive operation \texttt{\_initialize\_component()}, which performs all component-specific setup required before the simulation can start.
+After \texttt{\_initialize\_component()} returns, the base class detects direct feedthrough dependencies in the component's internal structure.
+The template method calls the primitive operation \texttt{\_update\_output\_states()} to update the \texttt{PortState} objects, and records these values to the component history.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Initialization.pdf}
+  \caption{Delegation during component initialization. The template method
+    \texttt{initialize()} orchestrates the sequence.
+    The subclass implements the primitive operations \texttt{\_initialize\_component()} for model-specific setup and \texttt{\_update\_output\_states()} to publish initial outputs.}
+  \label{fig:impl_comp_initialization}
+\end{figure}
+
+\paragraph{Simulation Step.}
+Figure~\ref{fig:impl_comp_stepping} shows the delegation during a single macro time step.
+The co-simulation algorithm calls the template method \texttt{do\_step(t,\,dt)}, which delegates the numerical computation to the primitive operation \texttt{\_do\_step\_internal()}.
+This method advances the internal model state from~$t$ to~$t + dt$.
+After \texttt{\_do\_step\_internal()} returns, the template method updates the component time and calls \texttt{\_update\_output\_states()} to refresh the output ports with the new state, then records the updated values in the component history.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Stepping.pdf}
+  \caption{Delegation during a simulation step. The template method
+    \texttt{do\_step()} delegates the computation to the primitive operation
+    \texttt{\_do\_step\_internal()} and the output update to
+    \texttt{\_update\_output\_states()}.}
+  \label{fig:impl_comp_stepping}
+\end{figure}
+
+\paragraph{Event Handling.}
+The template method \texttt{handle\_event(event\_names,\,t)} is called by the hybrid algorithm at event times (Section~\ref{sec:impl_hybrid}).
+It delegates the state update to the hook operation \texttt{\_handle\_events\_internal()}, then calls \texttt{\_update\_output\_states()} to refresh the output ports, and records the updated values in the component history.
+Components that do not participate in hybrid simulation inherit an empty default for \texttt{\_handle\_events\_internal()}, so the call is a no-op.
+
+\paragraph{Reset and Cleanup.}
+After the simulation loop, the hook operation \texttt{reset()} supports component reuse.
+It clears the simulation time, history buffer, and initialization flag, allowing the component to be re-initialized with \texttt{initialize()} for a new run.
+Subclasses extend the default implementation via \texttt{super().reset()} to
+additionally clear internal state.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
-\paragraph{Verification Setup.}
-\paragraph{Results.}
-\paragraph{Discussion.}
+
+The verification of \texttt{CoSimComponent} targets framework-level invariants that are independent of any backend.
+Lightweight mock subclasses, such as a pure-gain feedthrough component, a simple integrator, and minimal hybrid components, implement only the three primitive operations, keeping the tests focused on base-class behavior.
+
+Table~\ref{tab:cosimcomp_verification} summarizes the verified properties.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{Verified properties of \texttt{CoSimComponent}.
+    All tests use lightweight mock subclasses and target base-class
+    behavior independently of any simulation backend.}
+  \label{tab:cosimcomp_verification}
+  \begin{tabular}{p{6.5cm} p{7.5cm}}
+    \toprule
+    \textbf{Verified Property} & \textbf{Expected Outcome} \\
+    \midrule
+    Port specs exist after construction; port states only after \texttt{initialize()}
+      & Spec containers populated in \texttt{\_\_init\_\_}; \texttt{PortState} objects created during initialization \\
+    \addlinespace
+    \texttt{initialize()} is idempotent
+      & Second call is a no-op; internal state and time remain unchanged \\
+    \addlinespace
+    Template method order of \texttt{initialize()}
+      & Primitive operations called in sequence; initial outputs recorded in history \\
+    \addlinespace
+    Template method order of \texttt{do\_step()}
+      & Time updated after step; output ports refreshed and values recorded \\
+    \addlinespace
+    Parameter validation
+      & Compatible values accepted; wrong type and unknown name raise an exception \\
+    \addlinespace
+    Automatic feedthrough detection
+      & Algebraic dependencies identified by output perturbation; pure integrator reports none \\
+    \addlinespace
+    History recording
+      & Initial and stepped output values stored with correct timestamps \\
+    \addlinespace
+    \texttt{reset()} clears lifecycle state
+      & Time, history, and initialization flag cleared; component can be re-initialized \\
+    \addlinespace
+    Default hook ops raise \texttt{NotImplementedError}
+      & Calling \texttt{snapshot\_state()} or \texttt{restore\_state()} without override raises an exception \\
+    \addlinespace
+    Event port creation before and after \texttt{initialize()}
+      & Event output ports created at initialization or immediately if already initialized \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The tests confirm that \texttt{CoSimComponent} reliably enforces the component contract for any subclass.
+Port states are instantiated from specifications during initialization, the template methods maintain the correct delegation order, parameters are validated before use, and direct feedthrough metadata is gathered automatically.
+Hook operations, such as state transfer, rollback, and event handling, are intentionally excluded from this verification scope, as their correctness depends on the concrete model semantics provided by each backend wrapper.
