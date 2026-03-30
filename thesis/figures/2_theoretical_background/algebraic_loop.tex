@@ -1,0 +1,72 @@
+\documentclass[tikz, border=4pt]{standalone}
+\usepackage{tikz}
+\input{../6_case_study/controlled_pendulum/styles.tex}
+\usetikzlibrary{arrows.meta,patterns}
+
+\begin{document}
+
+% Parameter definitions
+\def\boxW{3}
+\def\boxH{2}
+
+\begin{tikzpicture}[
+    component/.style={
+        draw, rectangle, minimum width=2.6cm, minimum height=1.6cm,
+        fill=white, thick, align=center
+    },
+    conn/.style={-latex, thick},
+]
+
+% Draw grid for reference
+% \draw[dashed, step=0.5cm, help lines ] (-7,-3) grid (7,3);
+
+% Subsystem A
+\begin{scope}[shift={(-\boxW,0)}]
+    \draw[thick, fill=blue!20] (-\boxW/2, -\boxH/2) rectangle (\boxW/2, \boxH/2);
+    \node at (0,\boxH/3) {Subsystem $A$\\[2pt]};
+    \node at (0,0) {\footnotesize $\dot x_A\!=\!f_A(x_A,u_A, t)$};
+    \node at (0, -\boxH/4) {\footnotesize $y_A\!=\!h_A(x_A,u_A)$};
+\end{scope}
+
+% Subsystem B
+\begin{scope}[shift={(\boxW,0)}]
+    \draw[thick, fill=orange!20] (-\boxW/2, -\boxH/2) rectangle (\boxW/2, \boxH/2);
+    \node at (0,\boxH/3) {Subsystem $B$\\[2pt]};
+    \node at (0,0) {\footnotesize $\dot x_B\!=\!f_B(x_B,u_B, t)$};
+    \node at (0, -\boxH/4) {\footnotesize $y_B\!=\!h_B(x_B,u_B)$};
+\end{scope}
+
+% Connection A -> B
+\draw[thick, ->] (-\boxW/2,0) -- node[above] {\footnotesize $u_B = y_A$} (\boxW/2,0);
+
+% Connection B -> A
+\draw[thick, ->] (\boxW/2 + \boxW, 0)
+    --++ (0.5, 0)
+    --++ (0, -1.5)
+    -- node[midway, above] {\footnotesize $u_A = y_B$} ++(-3*\boxW -1, 0)
+    --++ (0, 1.5)
+    -- (-\boxW/2 - \boxW, 0);
+
+    
+
+
+
+
+% \node[component] (A) at (0,0) {Subsystem $A$\\[2pt]
+%     \footnotesize $y_A\!=\!h_A(x_A,u_A)$};
+% \node[component] (B) at (5.5,0) {Subsystem $B$\\[2pt]
+%     \footnotesize $y_B\!=\!h_B(x_B,u_B)$};
+
+% Forward connection: y_A -> u_B (top path)
+% \draw[conn] ([yshift=3mm]A.east)
+%     -- node[above, font=\small] {$u_B = y_A$}
+%     ([yshift=3mm]B.west);
+
+% Feedback connection: y_B -> u_A (bottom path)
+% \draw[conn] ([yshift=-3mm]B.west)
+%     -- ++(-.4,0) |- ++(0,-1.4) -| ++(-4.3,0)
+%     |- ([yshift=-3mm]A.east);
+% \node[font=\small] at (2.75,-1.7) {$u_A = y_B$};
+
+\end{tikzpicture}
+\end{document}

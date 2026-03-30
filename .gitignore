@@ -23,6 +23,7 @@ EnvSysSimX/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.claude/
 
 # Coverage / test reports
 .coverage
@@ -95,4 +96,4 @@ thesis/diagrams/out/
 
 research/literature/*
 
-.claude/
+claude/

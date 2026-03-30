@@ -3,6 +3,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dynamical Systems with Inputs and Outputs}
 \label{sec:theory_dynamical_systems}
+
+% In engineering, complex systems are usually described as compositions 
+% of smaller subsystems or components.
+% Each component interacts with its environment through inputs and 
+% outputs: inputs represent external influences, outputs represent 
+% variables provided to other components or to the environment.
+% This input-output view supports the modular description of larger 
+% systems from connected subsystems~\cite{karnopp_system_2012}.
+
+% In addition to inputs and outputs, a dynamical system is 
+% characterized by its state.
+% The state is the smallest set of variables that, together with the 
+% input and the initial condition, determines the future behavior of 
+% the system.
+% For physical systems, state variables often represent quantities 
+% associated with stored energy, such as position and velocity in 
+% mechanics or capacitor voltages in electrical 
+% systems~\cite{astrom_feedback_2008, karnopp_system_2012}.
+
 A model is a mathematical representation of a real system.
 It is used to describe the system behavior and to answer questions by analysis or simulation.
 The same physical system can be represented by different models.
@@ -20,22 +39,23 @@ Outputs represent variables that are provided to other components or to the envi
 This input-output view is useful because it supports the modular description of larger systems from connected subsystems \cite{karnopp_system_2012}.
 
 In addition to inputs and outputs, a dynamical system is characterized by its state.
-The state is a set of variables that contains the information required to predict the future evolution of the system for a given input.
+The state is the smallest set of variables that, together with the input and the initial condition, determines the future behavior of the system.
+State variables summarize the current internal condition of the system.
 The set of all possible states is called the state space.
-For physical systems, state variables often represent quantities such as position, velocity, momentum, or stored energy \cite{astrom_feedback_2008,karnopp_system_2012}.
+For physical systems, state variables often represent quantities associated with stored energy, such as position and velocity in mechanics, capacitor voltages and inductor currents in electrical systems, or temperatures in thermal systems \cite{astrom_feedback_2008,karnopp_system_2012}.
+System parameters such as mass, length, or inertia are not state variables, since they do not evolve dynamically during the simulation.
 
 A common representation of continuous-time dynamical systems is the state-space form
 \begin{equation}
-    \dot{x} = f(x,u,t), \qquad y = h(x,u,t),
+    \dot{x}(t) = f(x(t),u(t),t), \qquad y(t) = h(x(t),u(t),t),
 \end{equation}
-where $x$ is the state vector, $u$ is the input vector, and $y$ is the output vector.
-The function $f$ describes the time evolution of the state.
-The function $h$ defines how the outputs are obtained from the state and the inputs.
+where $x(t)$ is the state vector, $u(t)$ is the input vector, and $y(t)$ is the output vector.
+The function $f$ describes the time evolution of the state, while $h$ defines how the outputs are obtained from the state and the inputs.
 If the functions do not depend explicitly on time, the system is called time-invariant \cite{astrom_feedback_2008}.
+This explicit state-space form is typical for ordinary differential equation models.
+More general physical models may lead to implicit or differential-algebraic formulations.
 
-As a running example used throughout this chapter, we consider a rigid pendulum of
-rod length $L$, mass $m$, and moment of inertia $I$, driven by a torque
-$\tau$ at the hinge (Figure~\ref{fig:pendulum_simple}).
+As a running example used throughout this chapter, we consider a rigid pendulum with angular position $\theta$, angular velocity $\omega$, moment of inertia $I$, and an applied torque $\tau$ at the hinge (Figure~\ref{fig:pendulum_simple}). Let $L$ denote the distance from the hinge to the center of mass.
 
 \begin{figure}[htbp]
     \centering
@@ -43,26 +63,26 @@ $\tau$ at the hinge (Figure~\ref{fig:pendulum_simple}).
     \caption{Simple pendulum with torque input $\tau$, angle $\theta$, rod length $L$,
              mass $m$, and moment of inertia $I$.
              The system serves as a running example throughout
-             Chapter~\ref{chap:foundations}.}
+             Chapter~\ref{chap:theoretical_background}.}
     \label{fig:pendulum_simple}
 \end{figure}
 
-The angular position $\theta$ and angular velocity $\omega = \dot{\theta}$ are the natural state variables since they contain exactly the information required to predict the future motion for any given input torque.
-The equation of motion is $I\ddot{\theta} = \tau - mgL\sin\theta$.
-With $x = [\theta,\,\omega]^\top$, $u = \tau$, and $y = \theta$ gives the state-space form
-
+The angular position $\theta$ and angular velocity $\omega = \dot{\theta}$ are convenient state variables, since together they contain the information required to predict the future motion for a given input torque.
+The equation of motion is
+\begin{equation}
+    I\ddot{\theta} = \tau - m g L \sin\theta.
+\end{equation}
+With $x = [\theta,\omega]^\top$, $u=\tau$, and the output choice $y=\theta$, the state-space form becomes
 \begin{equation}
     \dot{x}_1 = x_2,
     \qquad
-    \dot{x}_2 = \frac{1}{I}\bigl(u - mgL\sin(x_1)\bigr),
+    \dot{x}_2 = \frac{1}{I}\bigl(u - m g L \sin(x_1)\bigr),
     \qquad
     y = x_1.
     \label{eq:pendulum_ode}
 \end{equation}
-The output $\theta$ depends only on the state $x_1$ and not directly on the current
-input $\tau$, so the system has no direct feedthrough.
-The structural property of direct feedthrough is developed further in
-Section~\ref{sec:theory_direct_feedthrough}.
+For the chosen output $y=\theta$, the output depends only on the state and not directly on the current input $\tau$.
+This structural property is referred to as direct feedthrough and is discussed further in Section~\ref{sec:theory_direct_feedthrough}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Ordinary and Differential-Algebraic Equations}
@@ -98,11 +118,6 @@ where $x$ contains the differential states and $w$ contains algebraic variables.
 The first equation describes the time evolution of the states, while the second equation imposes algebraic constraints that must hold at every time instant.
 This representation is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
 
-In contrast to ODEs, a DAE does not in general admit arbitrary initial values.
-The initial state must be consistent with the algebraic constraints.
-In addition, DAEs are often classified by an index that reflects the structural difficulty of the problem.
-Higher-index systems are generally harder to analyse and simulate \cite{kunkel_differential-algebraic_2024}.
-
 The pendulum introduced in Section~\ref{sec:theory_dynamical_systems} provides a simple example.
 In generalized coordinates, its dynamics are described by the ODE~\eqref{eq:pendulum_ode}.
 The same physical system can also be formulated in Cartesian coordinates $(q_x,\,q_y)$ for the bob position, related to the polar angle by $q_x = L\sin\theta$ and $q_y = -L\cos\theta$.
@@ -120,6 +135,34 @@ Here, $(q_x,q_y,v_x,v_y)$ are the position and velocity components and $F$ is th
 Equations~\eqref{eq:pendulum_dae_x}--\eqref{eq:pendulum_dae_vy} are differential equations, whereas \eqref{eq:pendulum_constraint} is an algebraic constraint.
 In the semi-explicit form introduced above, $(q_x,q_y,v_x,v_y)$ are the differential variables and $F$ is the algebraic variable.
 
+The structural difficulty of a DAE can be characterized by its \emph{differentiation index} which defines the minimum number of times the algebraic constraints must be differentiated with respect to time before the system can be reduced to an explicit ODE~\cite{kunkel_differential-algebraic_2024}.
+For the Cartesian pendulum, repeated differentiation of the length constraint~\eqref{eq:pendulum_constraint} reveals hidden constraints at each level:
+%
+\begin{align}
+    \text{position:} \quad
+        0 &= q_x^2 + q_y^2 - L^2,
+        \label{eq:dae_index3} \\
+    \text{velocity:} \quad
+        0 &= q_x\,v_x + q_y\,v_y,
+        \label{eq:dae_index2} \\
+    \text{acceleration:} \quad
+        0 &= v_x^2 + v_y^2
+             - \frac{FL}{m} - g\,q_y,
+        \label{eq:dae_index1} \\
+    \text{ODE:} \quad
+        \dot{F} &= -\frac{3mg}{L}\,v_y.
+        \label{eq:dae_index0}
+\end{align}
+%
+The velocity-level constraint~\eqref{eq:dae_index2} requires the velocity to be tangential to the circular path.
+The acceleration-level constraint~\eqref{eq:dae_index1} expresses the centripetal acceleration required to maintain the circular motion, which depends on the constraint force $F$.
+It also yields an explicit expression for the constraint force, $F = \tfrac{m}{L}(v_x^2 + v_y^2 - g\,q_y)$.
+Three differentiations are required to obtain the ODE~\eqref{eq:dae_index0} for the algebraic variable~$F$, so the Cartesian pendulum is a DAE of differentiation index~3.
+
+Equations~\eqref{eq:dae_index2} and~\eqref{eq:dae_index1} are \emph{hidden constraints} since they are not part of the original formulation but must be satisfied for the initial conditions to be consistent.
+A numerical solver that operates only on the original index-3 system may experience constraint drift, since the position-level constraint~\eqref{eq:dae_index3} is not explicitly enforced during integration.
+Modelica compilers address this by performing automatic index reduction, transforming the high-index DAE into an equivalent lower-index system that standard DAE solvers such as DASSL can handle~\cite{Modelica_Fritzson}.
+
 This formulation shows that the same physical system may appear either as an ODE or as a DAE, depending on the choice of variables and coordinates.
 The ODE form in generalized coordinates eliminates the geometric constraint explicitly.
 The Cartesian formulation retains the constraint and therefore leads naturally to a DAE.
@@ -129,7 +172,7 @@ In addition to such internal constraints, algebraic relations may also arise whe
 These connection-induced algebraic loops are introduced in the following subsection.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Direct Feedthrough and Interface Variables}
+\subsection{Direct Feedthrough and Algebraic Loops}
 \label{sec:theory_direct_feedthrough}
 
 Building on the input-output view introduced in Section~\ref{sec:theory_dynamical_systems}, consider a subsystem represented by
@@ -151,10 +194,9 @@ In the linear time-invariant case,
 direct feedthrough is present if the matrix $D$ is nonzero \cite{astrom_feedback_2008}.
 More generally, direct feedthrough is a structural property of the output relation $h(x,u,t)$.
 
-This distinction becomes important when subsystems are connected through their interfaces.
-If a subsystem output depends instantaneously on its input, then a connection introduces an immediate dependency between the connected variables.
-If such dependencies form a closed loop, the coupled system can no longer be evaluated by a simple sequential propagation of signals.
-Instead, the interface variables must satisfy a set of algebraic equations simultaneously.
+This distinction becomes important when subsystems are connected through interface variables, that is, variables which are exchanged across subsystem boundaries.
+Direct feedthrough alone does not imply an algebraic loop.
+An \emph{algebraic loop} arises only when direct input-output dependencies form a closed cycle, so that the interface variables at the same time instant depend on one another.
 
 A simple example is obtained by two interconnected subsystems
 \begin{align}
@@ -163,20 +205,29 @@ A simple example is obtained by two interconnected subsystems
     \dot{x}_B &= f_B(x_B,u_B,t),
     & y_B &= h_B(x_B,u_B,t),
 \end{align}
-with the interconnection conditions
+with the coupling conditions
 \begin{equation}
     u_A = y_B,
     \qquad
     u_B = y_A.
 \end{equation}
-If both $y_A$ and $y_B$ depend directly on the current inputs $u_A$ and $u_B$, then the coupled interface variables must be determined simultaneously.
+The structure of this mutual interconnection is illustrated in Figure~\ref{fig:algebraic_loop}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/2_theoretical_background/algebraic_loop.pdf}
+    \caption{Two mutually connected subsystems. If both output relations have direct feedthrough, the interface variables form an algebraic loop.}
+    \label{fig:algebraic_loop}
+\end{figure}
+
+If both $y_A$ and $y_B$ depend directly on the current inputs $u_A$ and $u_B$, then the coupling relations cannot be evaluated by simple sequential signal propagation.
+Instead, the interface variables must satisfy a set of algebraic equations simultaneously.
 The interconnection therefore introduces an algebraic loop.
 
 If, in contrast, at least one subsystem output depends only on its internal state, the instantaneous circular dependency is broken and the coupled system may be evaluated sequentially.
 Direct feedthrough is therefore an important structural property in interconnected continuous-time models.
-It determines whether interface equations merely transmit already available values or whether they introduce additional algebraic constraints across subsystem boundaries.
 
-Such interface-induced algebraic relations are conceptually distinct from the internal algebraic constraints discussed in Section~\ref{sec:theory_ode_dae}.
+Interface-induced algebraic relations are conceptually distinct from the internal algebraic constraints discussed in Section~\ref{sec:theory_ode_dae}.
 The Cartesian pendulum example contains an internal geometric constraint within a single model.
 By contrast, direct feedthrough concerns algebraic dependencies that arise from the interconnection of subsystems through their inputs and outputs.
 
