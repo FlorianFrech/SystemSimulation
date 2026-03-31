@@ -1,111 +1,96 @@
-\section{Co-Simulation Principles}
-\label{sec:theory_cosim}
+\section{Co-Simulation Principles and Algorithms}\label{sec:theory_co_simulation}
 
-Many cyber-physical systems cannot be modeled conveniently within a single tool chain.
-Instead, different subsystem models are created in domain-specific environments and later coupled for system-level analysis.
-Co-simulation addresses this situation by coordinating several subsystem simulators while preserving their local model representation and numerical solver \cite{gomes_co-simulation_2019-1}.
-The present section introduces the terminology and principles that are required for the later architecture and implementation chapters.
+\subsection{From Monolithic Simulation to Co-Simulation}
 
-\subsection{Terminology}
-\label{sec:theory_cosim_terminology}
+\paragraph{Classical (Monolithic) Simulation.}
+In the classical approach, all subsystem models are assembled within a single modeling environment into a global equation system.
+A single solver has access to the complete set of equations and can therefore enforce tight numerical consistency between all subsystem quantities at every time instant.
+Modelica is a representative example of this approach~\cite{Modelica_Fritzson}.
+All multi-domain subsystem descriptions are assembled into a single differential-algebraic equation system that is advanced by one solver.
+This approach is referred to as \emph{monolithic} simulation, and its result serves as the reference solution in the case study presented in Chapter~\ref{chap:case_study}.
 
-For the present thesis, it is useful to distinguish clearly between a \emph{monolithic simulation} and a \emph{co-simulation}.
-A monolithic simulation solves the coupled system as one global model.
-The individual subsystems may still be described in a modular way, but after translation they are handled by one simulation environment and one global numerical problem.
-Later in this thesis, the all-Modelica realization of the controlled pendulum serves as such a monolithic reference model.
+\paragraph{Strong Coupling (Model Exchange).}
+When subsystems originate from different modeling environments, each subsystem can be exported as model equations or as compiled code that evaluates them, without including an embedded solver.
+A host environment then assembles these representations and applies a single numerical method to the combined equation system.
+Because one solver processes all equations, it retains full knowledge of the coupled system and can apply consistent step-size control across all subsystems.
+This strategy is called \emph{strong coupling}.
+Its limitation is that the global solver must accommodate the numerical requirements of all subsystems simultaneously, which can force unnecessarily small step sizes when subsystems have markedly different time constants or stiffness properties.
 
-By contrast, a co-simulation solves the overall system in a \emph{partitioned} form.
-Each subsystem remains a separate simulation unit with its own state representation and usually its own solver.
-The subsystem simulators exchange coupling variables only at discrete communication points and are coordinated by an external master algorithm or orchestrator \cite{gomes_co-simulation_2019-1}.
+\paragraph{Weak Coupling (Co-Simulation).}
+Co-simulation adopts a fundamentally different strategy.
+Each subsystem retains its own dedicated solver, and subsystems exchange information only at discrete \emph{communication points} $T_0, T_1, \ldots$\,.
+A master algorithm orchestrates the coupled simulation.
+At each communication point $T_n$, the master collects the current outputs from all subsystems, distributes them as inputs to connected subsystems, and then commands each subsystem to advance independently to the next communication point $T_{n+1} = T_n + H$, where $H$ denotes the \emph{macro step size}.
+Between consecutive communication points, each subsystem integrates autonomously using its internal solver with a local \emph{micro step size} $h_i \leq H$.
+The master does not have access to the internal equations of any subsystem.
+Each subsystem acts as a black box that is characterized only by its inputs and outputs at communication points.
+This is the defining characteristic of \emph{weak coupling} and what distinguishes co-simulation from strong coupling.
+Weak coupling allows each subsystem to use a solver suited to its own dynamics, including different solver types, adaptive step sizes, and integration orders~\cite{gomes_co-simulation_2019}.
+The standardized component interface used in this thesis to realize co-simulation components is introduced in Section~\ref{sec:theory_fmi}.
 
-This thesis uses the following working definition:
-co-simulation is the coordinated execution of two or more coupled subsystem simulators that advance their local states independently between communication points and exchange input and output variables at these points.
-The term \emph{partitioned} is preferred here over \emph{distributed modeling}, because the relevant distinction is the structural separation of simulators, not whether the computation is physically distributed across processors or machines.
+\subsection{Mathematical Formulation of Co-Simulation}
+\paragraph{Subsystem Representation}
+    % - Each S_i as black-box dynamical system: ẋ_i = f_i(x_i, u_i, t), y_i = h_i(x_i, u_i, t)
+    % - Extends the continuous-time / hybrid model from ch. 21–22
+\paragraph{Coupling Variables and Communication Points}
+    %   - Interface: y_i connected to u_j via coupling condition λ
+    %   - Communication grid T_0, T_1, ..., T_n; macro step H
+    %   - Micro step h_i (internal to subsystem)
+\paragraph{Input Approximation Between Communication Points}
+    %   - Constant extrapolation (zero-order hold), polynomial extrapolation
+    %   - Connection to output derivatives (FMI capability)
 
-\subsection{Functional Mock-up Interface and Functional Mock-up Units}
-\label{sec:theory_fmi}
+\subsection{Co-Simulation Execution Strategies}
+\paragraph{Jacobi Scheme (Parallel / CPS)}
+    %   - All subsystems use T_n inputs → advance to T_{n+1} in parallel
+    %   - No within-step information propagation
+    %   - Pseudo-code / step equation
+\paragraph{Gauss-Seidel Scheme (Sequential / CSS)}
+    %   - Subsystems advance one after another
+    %   - Downstream components receive updated outputs within same step
+    %   - Component ordering problem
+\paragraph{Execution Order and Dependency Graph}
+%       - Directed graph G from connections; topological sort → generations
+%       - Zero-delay vs. delayed edges; SCC detection
 
-The Functional Mock-up Interface (FMI) is the dominant standardized interface for tool-independent model exchange and co-simulation \cite{FMI2.0}.
-An exported model that follows this standard is packaged as a \emph{Functional Mock-up Unit} (FMU).
-An FMU contains a machine-readable model description, binary code or source code for the exported model, and metadata such as variables, units, and causality information \cite{FMI2.0}.
+\subsection{Direct Feedthrough and Algebraic Loops in Co-Simulation}
+\paragraph{Direct Feedthrough at the Interface}
+    %   - Recast sec. 21 feedthrough in the co-simulation context
+    %   - A subsystem output at T_n depends directly on input at T_n
+\paragraph{Algebraic Loops Between Subsystems}
+    %   - SCC on zero-delay connection graph → algebraic loop
+    %   - Cannot be resolved by sequential evaluation alone
+\paragraph{Solving Algebraic Loops: Interface Jacobian (IJCSA)}
+    %   - Interface residual R(U) = U - Y(U)
+    %   - Newton iteration with finite-difference Jacobian J ≈ ∂R/∂U
+    %   - Convergence criterion, rollback requirement
+    %   - Reference: Sicklinger et al. 2014
 
-FMI distinguishes two interface types.
-In \emph{Model Exchange}, the FMU provides model equations and callback functions, while the importing environment supplies the numerical solver.
-In \emph{Co-Simulation}, the FMU contains its own time integration logic and is advanced by a master through calls such as \texttt{doStep} \cite{FMI2.0}.
-This distinction is fundamental.
-Model Exchange preserves a single global solver and is therefore closer to the monolithic simulation view, whereas Co-Simulation preserves subsystem-local solvers and fits the partitioned execution considered in this thesis.
+\subsection{Initialization of Coupled Systems}
+\paragraph{Consistent Initial Conditions}
+    %   - Generation-wise initialization following execution order
+    %   - Algebraic loops during initialization
 
-For \textit{SysSimX}, FMI is important as a component interface, not as a complete orchestration solution.
-The standard defines how an FMU exposes variables and lifecycle operations, but it does not prescribe how several coupled FMUs should be ordered, how algebraic loops should be resolved, or how hybrid events should be handled consistently across subsystem boundaries \cite{gomes_co-simulation_2019-1}.
-These orchestration questions remain the responsibility of the master algorithm.
+\subsection{Hybrid Co-Simulation}
+\paragraph{Events at the Co-Simulation Interface}
+    %   - Events inside a subsystem vs. events that cross the interface
+    %   - FMU early return / event signaling
+\paragraph{Event Detection and Time Localization}
+    %   - Bisection on event indicators g_j across macro step [T_n, T_{n+1}]
+    %   - Rollback requirement (snapshot/restore)
+\paragraph{Superdense Time in Co-Simulation}
+    %   - (t, n) tuple for ordering zero-duration event iterations
+    %   - Multiple microsteps at the same physical time T_e
+\paragraph{Event Handling and Restart}
+    %   - Component notification, state reset, reinitialize, resume
 
-\subsection{Orchestrated Co-Simulation and Communication Steps}
-\label{sec:theory_cosim_steps}
-
-In co-simulation, the coupled execution is organized on a communication grid
-\begin{equation}
-    t_0 < t_1 < \dots < t_k < t_{k+1} < \dots
-\end{equation}
-with communication step sizes
-\begin{equation}
-    H_k = t_{k+1} - t_k.
-\end{equation}
-At each communication point, subsystem outputs are exchanged and the master determines how the next interval is executed.
-Between two communication points, each subsystem advances with its own internal solver and may use several internal solver steps that are not visible at the system level \cite{gomes_co-simulation_2019-1,schierz_co-simulation_2012}.
-
-This separation between local integration and global communication is one of the defining features of co-simulation.
-The communication step is therefore not identical to the internal solver step.
-Within a communication interval, each subsystem usually receives an approximation of its input trajectory derived from the information available at the beginning of the interval.
-The simplest case is a piecewise constant input hold, but higher-order extrapolation or iterative correction are also possible \cite{petridis_test_2015,gomes_co-simulation_2019-1}.
-
-The algorithm that coordinates this process is often called the \emph{master algorithm}, \emph{orchestrator}, or \emph{coordinator}.
-Its responsibilities include advancing time, triggering subsystem steps, exchanging variables, and enforcing a valid execution order.
-The numerical properties of the coupled simulation depend not only on the participating subsystem solvers, but also on the communication step size, the input approximation scheme, and the chosen coupling strategy \cite{gomes_co-simulation_2019-1,sicklinger_interface_2014}.
-
-\subsection{Dependency Analysis and Execution Order}
-\label{sec:theory_dependency_analysis}
-
-The interconnection of subsystem inputs and outputs induces a dependency graph.
-Whether this graph can be evaluated sequentially depends on the direct-feedthrough properties introduced in Section~\ref{sec:theory_direct_feedthrough}.
-If a subsystem output depends directly on its current input, then the corresponding interface relation must be considered when determining the execution order at a communication point.
-
-If the direct-feedthrough dependency graph is acyclic, a valid sequential execution order can be obtained by topological sorting.
-This is the basic idea behind dependency analysis in co-simulation.
-It determines which components can be evaluated independently, which components must be executed before others, and whether circular instantaneous dependencies are present \cite{broman_requirements_2015}.
-
-Two basic non-iterative coupling patterns are commonly used.
-In a \emph{Jacobi-type} scheme, all subsystems start the communication interval from the same previously exchanged data and can therefore be stepped in parallel.
-In a \emph{Gauss-Seidel-type} scheme, subsystems are stepped sequentially within the communication point, so later subsystems may already consume outputs that were updated earlier in that same communication cycle \cite{petridis_test_2015}.
-Jacobi-type execution offers more parallelism, while Gauss-Seidel-type execution follows one-way dependencies more naturally and may improve accuracy or stability for suitable coupling structures.
-
-\subsection{Algebraic Loops in Coupled Systems}
-\label{sec:theory_cosim_algebraic_loops}
-
-If direct-feedthrough dependencies form a closed cycle, no acyclic execution order exists.
-The coupled system then contains an \emph{interface algebraic loop}.
-This notion is closely related to the algebraic loops introduced in Section~\ref{sec:theory_direct_feedthrough}, but here the loop occurs across subsystem boundaries and therefore directly affects orchestration.
-
-Interface algebraic loops are particularly important in co-simulation because the coupled equations are no longer solved by one monolithic solver.
-In a monolithic simulation, algebraic constraints can often be handled within a global nonlinear or differential-algebraic solve.
-In co-simulation, however, the solvers are encapsulated inside separate simulation units.
-As a result, the master cannot simply propagate signals once through the connection graph, but must either iterate over the coupled interface equations, introduce a tearing strategy, or reformulate the coupling problem \cite{sicklinger_interface_2014,broman_requirements_2015}.
-
-The presence of an algebraic loop is therefore not merely a numerical inconvenience.
-It is a structural property of the coupled system that constrains the admissible orchestration strategy.
-For the present thesis, this motivates the later separation between structural loop detection and numerical loop resolution in the framework.
-
-\subsection{Hybrid Co-Simulation and Event Handling}
-\label{sec:theory_hybrid_cosim}
-
-Many coupled systems are not purely continuous.
-Contacts, switching controllers, saturation effects, and mode-dependent subsystem models introduce discrete events in addition to continuous-time evolution.
-The hybrid-system concepts introduced in Section~\ref{sec:hybrid_system_representation} therefore also apply at the co-simulation level.
-
-Hybrid co-simulation becomes challenging because events may occur inside a communication interval rather than exactly at a communication point.
-If such an event is ignored until the end of the interval, the event time is shifted and the exchanged variables may become causally inconsistent.
-For this reason, hybrid co-simulation typically requires event detection, event localization in physical time, and a restart procedure once the event has been processed \cite{broman_determinate_2013,StepRevision_Cremona}.
-
-In addition, several discrete reactions may need to be ordered at the same physical time.
-This motivates the use of superdense time semantics, as discussed in the preceding section on hybrid simulation, where the physical event time and the logical ordering of event reactions are distinguished \cite{cremona_hybrid_2019,broman_determinate_2013}.
-From the perspective of orchestration, hybrid co-simulation therefore extends ordinary time stepping with rollback, step revision, and ordered event processing.
-These mechanisms are fundamental for the later \textit{SysSimX} algorithms, but their concrete implementation is deferred to Chapter~\ref{chap:implementation}.
+\subsection{The Functional Mock-up Interface (FMI)}
+\paragraph{FMU as a Co-Simulation Component}
+    %   - Black-box: doStep, getOutput, setInput
+    %   - Model description: causality, variability, dependency structure
+\paragraph{FMU Capability Flags Relevant to the Framework}
+    %   - canGetAndSetFMUState (rollback), providesOutputDerivatives,
+    %     hasEventMode, earlyReturn
+\paragraph{FMI and the syssimx Framework}
+    %   - How FMUComponent wraps the FMI C-API
+    %   - Connection from theory to implementation

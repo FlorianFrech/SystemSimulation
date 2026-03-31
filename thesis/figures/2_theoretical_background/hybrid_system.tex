@@ -1,0 +1,127 @@
+\documentclass[tikz, border=6pt]{standalone}
+\usepackage{tikz}
+\input{../6_case_study/controlled_pendulum/styles.tex}
+\usetikzlibrary{arrows.meta, patterns}
+
+% ---------------------------------------------------------------------------
+% Hybrid System Trajectory Diagram
+%
+% Illustrates the two variable types in a hybrid system at event time t_i:
+%
+%   x(t)  — continuous state
+%             Evolves smoothly between events.  At a reset event the state
+%             jumps instantaneously from x^-(t_i) to x^+(t_i).
+%
+%   q(t)  — discrete state
+%             Piecewise constant; changes only at event times.
+%             Open  circle = pre-event value  q^-(t_i)
+%             Filled circle = post-event value  q^+(t_i)
+%
+% Time grid: t_{i-1}, t_i (event), t_{i+1}
+% ---------------------------------------------------------------------------
+
+\begin{document}
+\begin{tikzpicture}[>=Stealth]
+
+% ---------------------------------------------------------------------------
+% Color aliases
+% ---------------------------------------------------------------------------
+\colorlet{xColor}{blue!75!black}
+\colorlet{qColor}{green!55!black}
+
+% ---------------------------------------------------------------------------
+% Axes
+% ---------------------------------------------------------------------------
+\draw[->, thick] (0.3, 0) -- (10.6, 0) node[right] {$t$};
+\draw[->, thick] (0.3, 0) -- (0.3, 7.0);
+
+% ---------------------------------------------------------------------------
+% Time-axis ticks and labels
+% ---------------------------------------------------------------------------
+\foreach \tx/\lbl in {2.0/{t_{i-1}}, 5.5/{t_i}, 9.0/{t_{i+1}}} {
+    \draw[thick] (\tx, 0.08) -- (\tx, -0.08);
+    \node[below, font=\small] at (\tx, -0.04) {$\lbl$};
+}
+
+% ---------------------------------------------------------------------------
+% Dashed vertical lines at grid points
+% ---------------------------------------------------------------------------
+\foreach \tx in {2.0, 5.5, 9.0} {
+    \draw[dashed, gray!60, thick] (\tx, -0.2) -- (\tx, 6.6);
+}
+
+% ===========================================================================
+%  DISCRETE STATE  q(t)  — lower band
+%  Piecewise constant; jumps only at event times.
+% ===========================================================================
+\node[left, qColor, font=\small\bfseries] at (0.35, 2.2) {$q(t)$};
+
+% Segment before t_{i-1}
+\draw[qColor, very thick] (0.45, 1.1) -- (2.0, 1.1);
+
+% Constant segment [t_{i-1}, t_i]
+\draw[qColor, very thick] (2.0, 1.1) -- (5.5, 1.1);
+
+% Open circle at q^-(t_i)
+\draw[qColor, very thick, fill=white] (5.5, 1.1) circle (2.5pt);
+
+% Constant segment [t_i, t_{i+1}] and beyond  (new level after jump)
+\draw[qColor, very thick] (5.5, 2.3) -- (10.3, 2.3);
+
+% Filled circle at q^+(t_i)
+\fill[qColor] (5.5, 2.3) circle (2.5pt);
+
+% Annotations
+\node[right=4pt, qColor, font=\footnotesize] at (5.5,  0.76) {$q^{-}(t_i)$};
+\node[right=4pt, qColor, font=\footnotesize] at (5.5,  2.55) {$q^{+}(t_i)$};
+
+% ===========================================================================
+%  CONTINUOUS STATE  x(t)  — upper band
+%  Smooth between events; reset at t_i causes instantaneous jump.
+% ===========================================================================
+\node[left, xColor, font=\small\bfseries] at (0.35, 5.5) {$x(t)$};
+
+% Extension before t_{i-1}
+\draw[xColor, very thick]
+    (0.45, 3.65)
+    .. controls (1.2, 3.75) and (1.7, 3.85) ..
+    (2.0, 3.9);
+
+% Smooth segment [t_{i-1}, t_i]  ending at  x^-(t_i)
+\draw[xColor, very thick]
+    (2.0, 3.9)
+    .. controls (3.0, 4.5) and (4.5, 5.1) ..
+    (5.5, 5.6);
+
+% Open circle at x^-(t_i)
+\draw[xColor, very thick, fill=white] (5.5, 5.6) circle (2.5pt);
+
+% Dashed vertical connector: visualises the instantaneous reset
+\draw[xColor, thick, dashed] (5.5, 5.6) -- (5.5, 3.8);
+
+% Filled circle at x^+(t_i)
+\fill[xColor] (5.5, 3.8) circle (2.5pt);
+
+% Smooth segment [t_i, t_{i+1}] departing from x^+(t_i)
+\draw[xColor, very thick]
+    (5.5, 3.8)
+    .. controls (6.7, 4.4) and (8.0, 5.0) ..
+    (9.0, 5.4);
+
+% Extension after t_{i+1}
+\draw[xColor, very thick]
+    (9.0, 5.4)
+    .. controls (9.6, 5.5) and (10.0, 5.55) ..
+    (10.3, 5.6);
+
+% Annotations
+\node[right=4pt, xColor, font=\footnotesize] at (5.5, 5.85) {$x^{-}(t_i)$};
+\node[right=4pt, xColor, font=\footnotesize] at (5.5, 3.48) {$x^{+}(t_i)$};
+
+% ---------------------------------------------------------------------------
+% Thin separator between bands (visual guide only)
+% ---------------------------------------------------------------------------
+\draw[black!20, thin] (0.4, 3.2) -- (10.3, 3.2);
+
+\end{tikzpicture}
+\end{document}
