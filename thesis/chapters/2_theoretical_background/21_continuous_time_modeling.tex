@@ -32,10 +32,9 @@ In such systems, the effect of an action does not occur instantaneously.
 Instead, the future behavior depends on the current condition of the system and on external influences.
 Examples are mechanical motion, electrical circuits, and thermal processes \cite{astrom_feedback_2008}.
 
-In engineering, complex systems are usually described as compositions of smaller subsystems or components.
-Each component interacts with its environment through inputs and outputs.
-Inputs represent external influences acting on the component.
-Outputs represent variables that are provided to other components or to the environment.
+In engineering, complex systems are usually described as compositions of smaller subsystems.
+Each subsystem interacts with its environment through inputs and outputs.
+Inputs represent external influences acting on it, and outputs represent variables that are provided to other subsystems or to the environment.
 This input-output view is useful because it supports the modular description of larger systems from connected subsystems \cite{karnopp_system_2012}.
 
 In addition to inputs and outputs, a dynamical system is characterized by its state.
@@ -47,7 +46,7 @@ System parameters such as mass, length, or inertia are not state variables, sinc
 
 A common representation of continuous-time dynamical systems is the state-space form
 \begin{equation}
-    \dot{x}(t) = f(x(t),u(t),t), \qquad y(t) = h(x(t),u(t),t),
+    \dot{x}(t) = f(x,u,t), \qquad y(t) = h(x,u,t),
 \end{equation}
 where $x(t)$ is the state vector, $u(t)$ is the input vector, and $y(t)$ is the output vector.
 The function $f$ describes the time evolution of the state, while $h$ defines how the outputs are obtained from the state and the inputs.
@@ -103,51 +102,52 @@ Such models are more naturally written as differential-algebraic equations.
 
 A general DAE can be written in implicit form as
 \begin{equation}
-    G(t,z,\dot{z},u) = 0,
+   0 = G(\dot{x}, x, z, u, t),
 \end{equation}
-where $z$ contains the model variables and $u$ denotes the input.
+where $x$ collects the differential variables, $z$ collects the algebraic variables, and $u$ denotes the input.
 In contrast to an ODE, the derivatives are not given explicitly.
 Instead, differential and algebraic relations are stated together \cite{kunkel_differential-algebraic_2024}.
 
 A common semi-explicit form of a DAE is
 \begin{align}
-    \dot{x} &= f(x,w,u,t), \\
-    0 &= g(x,w,u,t),
+    \dot{x} &= f(x,z,u,t),\label{eq:semi_DAE_derivative} \\
+    y &= h(x, z, u, t),\label{eq:semi_DAE_output} \\
+    0 &= g(x,z,u,t)\label{eq:semi_DAE_algebraic},
 \end{align}
-where $x$ contains the differential states and $w$ contains algebraic variables.
-The first equation describes the time evolution of the states, while the second equation imposes algebraic constraints that must hold at every time instant.
+where $x$ contains the differential state and $z$ contains the algebraic variables.
+The equation~\ref{eq:semi_DAE_derivative} describes the time evolution of the states, equation~\ref{eq:semi_DAE_output} defines the outputs, and equation~\ref{eq:semi_DAE_algebraic} imposes algebraic constraints that must hold at every time instant.
 This representation is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
 
 The pendulum introduced in Section~\ref{sec:theory_dynamical_systems} provides a simple example.
 In generalized coordinates, its dynamics are described by the ODE~\eqref{eq:pendulum_ode}.
-The same physical system can also be formulated in Cartesian coordinates $(q_x,\,q_y)$ for the bob position, related to the polar angle by $q_x = L\sin\theta$ and $q_y = -L\cos\theta$.
+The same physical system can also be formulated in Cartesian coordinates $(r_x,\,r_y)$ for the bob position, related to the polar angle by $r_x = L\sin\theta$ and $r_y = -L\cos\theta$.
 In this representation, the rigid rod introduces the geometric constraint that the bob must remain on a circle of radius $L$.
 
 Applying Newton's second law in the Cartesian directions and enforcing the rod rigidity yields \cite{Modelica_Fritzson}
 \begin{align}
-    m\dot{v}_x &= -\frac{q_x}{L}\,F,              \label{eq:pendulum_dae_x}\\
-    m\dot{v}_y &= -\frac{q_y}{L}\,F - mg,         \label{eq:pendulum_dae_y}\\
-    \dot{q}_x  &= v_x,                            \label{eq:pendulum_dae_vx}\\
-    \dot{q}_y  &= v_y,                            \label{eq:pendulum_dae_vy}\\
-    0          &= q_x^2 + q_y^2 - L^2.           \label{eq:pendulum_constraint}
+    m\dot{v}_x &= -\frac{r_x}{L}\,F,              \label{eq:pendulum_dae_x}\\
+    m\dot{v}_y &= -\frac{r_y}{L}\,F - mg,         \label{eq:pendulum_dae_y}\\
+    \dot{r}_x  &= v_x,                            \label{eq:pendulum_dae_vx}\\
+    \dot{r}_y  &= v_y,                            \label{eq:pendulum_dae_vy}\\
+    0          &= r_x^2 + r_y^2 - L^2.           \label{eq:pendulum_constraint}
 \end{align}
-Here, $(q_x,q_y,v_x,v_y)$ are the position and velocity components and $F$ is the scalar constraint force in the rod.
+Here, $(r_x,r_y,v_x,v_y)$ are the position and velocity components and $F$ is the scalar constraint force in the rod.
 Equations~\eqref{eq:pendulum_dae_x}--\eqref{eq:pendulum_dae_vy} are differential equations, whereas \eqref{eq:pendulum_constraint} is an algebraic constraint.
-In the semi-explicit form introduced above, $(q_x,q_y,v_x,v_y)$ are the differential variables and $F$ is the algebraic variable.
+In the semi-explicit form introduced above, $(r_x,r_y,v_x,v_y)$ are the differential variables and $F$ is the algebraic variable.
 
 The structural difficulty of a DAE can be characterized by its \emph{differentiation index} which defines the minimum number of times the algebraic constraints must be differentiated with respect to time before the system can be reduced to an explicit ODE~\cite{kunkel_differential-algebraic_2024}.
 For the Cartesian pendulum, repeated differentiation of the length constraint~\eqref{eq:pendulum_constraint} reveals hidden constraints at each level:
 %
 \begin{align}
     \text{position:} \quad
-        0 &= q_x^2 + q_y^2 - L^2,
+        0 &= r_x^2 + r_y^2 - L^2,
         \label{eq:dae_index3} \\
     \text{velocity:} \quad
-        0 &= q_x\,v_x + q_y\,v_y,
+        0 &= r_x\,v_x + r_y\,v_y,
         \label{eq:dae_index2} \\
     \text{acceleration:} \quad
         0 &= v_x^2 + v_y^2
-             - \frac{FL}{m} - g\,q_y,
+             - \frac{FL}{m} - g\,r_y,
         \label{eq:dae_index1} \\
     \text{ODE:} \quad
         \dot{F} &= -\frac{3mg}{L}\,v_y.
@@ -156,7 +156,7 @@ For the Cartesian pendulum, repeated differentiation of the length constraint~\e
 %
 The velocity-level constraint~\eqref{eq:dae_index2} requires the velocity to be tangential to the circular path.
 The acceleration-level constraint~\eqref{eq:dae_index1} expresses the centripetal acceleration required to maintain the circular motion, which depends on the constraint force $F$.
-It also yields an explicit expression for the constraint force, $F = \tfrac{m}{L}(v_x^2 + v_y^2 - g\,q_y)$.
+It also yields an explicit expression for the constraint force, $F = \tfrac{m}{L}(v_x^2 + v_y^2 - g\,r_y)$.
 Three differentiations are required to obtain the ODE~\eqref{eq:dae_index0} for the algebraic variable~$F$, so the Cartesian pendulum is a DAE of differentiation index~3.
 
 Equations~\eqref{eq:dae_index2} and~\eqref{eq:dae_index1} are \emph{hidden constraints} since they are not part of the original formulation but must be satisfied for the initial conditions to be consistent.

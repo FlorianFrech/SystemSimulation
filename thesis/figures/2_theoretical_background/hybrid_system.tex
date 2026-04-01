@@ -6,16 +6,16 @@
 % ---------------------------------------------------------------------------
 % Hybrid System Trajectory Diagram
 %
-% Illustrates the two variable types in a hybrid system at event time t_i:
+% Illustrates a generic event update in a hybrid system at event time t_i:
 %
-%   x(t)  — continuous state
-%             Evolves smoothly between events.  At a reset event the state
-%             jumps instantaneously from x^-(t_i) to x^+(t_i).
+%   x(t)  -- continuous state
+%             Evolves smoothly between events. In the example shown here,
+%             the event update resets the state from x^-(t_i) to x^+(t_i).
 %
-%   q(t)  — discrete state
-%             Piecewise constant; changes only at event times.
-%             Open  circle = pre-event value  q^-(t_i)
-%             Filled circle = post-event value  q^+(t_i)
+%   q(t)  -- discrete state
+%             Piecewise constant; may change only at event times.
+%             Open circle = pre-event value q^-(t_i)
+%             Filled circle = post-event value q^+(t_i)
 %
 % Time grid: t_{i-1}, t_i (event), t_{i+1}
 % ---------------------------------------------------------------------------
@@ -50,9 +50,11 @@
     \draw[dashed, gray!60, thick] (\tx, -0.2) -- (\tx, 6.6);
 }
 
+\node[font=\scriptsize, text=black!70] at (7.3, 6.3) {generic event update at $t_i$};
+
 % ===========================================================================
-%  DISCRETE STATE  q(t)  — lower band
-%  Piecewise constant; jumps only at event times.
+%  DISCRETE STATE  q(t)  -- lower band
+%  Piecewise constant; may jump at event times.
 % ===========================================================================
 \node[left, qColor, font=\small\bfseries] at (0.35, 2.2) {$q(t)$};
 
@@ -65,19 +67,19 @@
 % Open circle at q^-(t_i)
 \draw[qColor, very thick, fill=white] (5.5, 1.1) circle (2.5pt);
 
-% Constant segment [t_i, t_{i+1}] and beyond  (new level after jump)
+% Constant segment [t_i, t_{i+1}] and beyond (new level after update)
 \draw[qColor, very thick] (5.5, 2.3) -- (10.3, 2.3);
 
 % Filled circle at q^+(t_i)
 \fill[qColor] (5.5, 2.3) circle (2.5pt);
 
 % Annotations
-\node[right=4pt, qColor, font=\footnotesize] at (5.5,  0.76) {$q^{-}(t_i)$};
-\node[right=4pt, qColor, font=\footnotesize] at (5.5,  2.55) {$q^{+}(t_i)$};
+\node[right=4pt, qColor, font=\footnotesize] at (5.5, 0.76) {$q^{-}(t_i)$};
+\node[right=4pt, qColor, font=\footnotesize] at (5.5, 2.55) {$q^{+}(t_i)$};
 
 % ===========================================================================
-%  CONTINUOUS STATE  x(t)  — upper band
-%  Smooth between events; reset at t_i causes instantaneous jump.
+%  CONTINUOUS STATE  x(t)  -- upper band
+%  Smooth between events; the example update at t_i causes a state jump.
 % ===========================================================================
 \node[left, xColor, font=\small\bfseries] at (0.35, 5.5) {$x(t)$};
 
@@ -87,7 +89,7 @@
     .. controls (1.2, 3.75) and (1.7, 3.85) ..
     (2.0, 3.9);
 
-% Smooth segment [t_{i-1}, t_i]  ending at  x^-(t_i)
+% Smooth segment [t_{i-1}, t_i] ending at x^-(t_i)
 \draw[xColor, very thick]
     (2.0, 3.9)
     .. controls (3.0, 4.5) and (4.5, 5.1) ..
@@ -96,7 +98,7 @@
 % Open circle at x^-(t_i)
 \draw[xColor, very thick, fill=white] (5.5, 5.6) circle (2.5pt);
 
-% Dashed vertical connector: visualises the instantaneous reset
+% Dashed vertical connector: visualizes the instantaneous state update
 \draw[xColor, thick, dashed] (5.5, 5.6) -- (5.5, 3.8);
 
 % Filled circle at x^+(t_i)

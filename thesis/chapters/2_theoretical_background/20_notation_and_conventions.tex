@@ -1,0 +1,40 @@
+\section*{Notation and Conventions}
+\addcontentsline{toc}{section}{Notation and Conventions}
+\label{sec:notation_and_conventions}
+
+The following symbols are used consistently throughout this chapter.
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Symbol & Meaning \\
+        \midrule
+        $t$              & Physical time \\
+        $x(t)$           & Continuous state vector \\
+        $z(t)$           & Algebraic variable vector \\
+        $q(t)$           & Discrete mode or logic state \\
+        $u(t)$           & Input vector \\
+        $y(t)$           & Output vector \\
+        $f(\cdot)$       & State-transition map \\
+        $h(\cdot)$       & Output map \\
+        $g(\cdot)$       & Algebraic constraint function \\
+        $G(\cdot)$       & Implicit DAE residual \\
+        $\gamma_j(\cdot)$& Event indicator (zero-crossing function) \\
+        $t_e$            & Event time \\
+        $(\cdot)^-$      & Value immediately before an event \\
+        $(\cdot)^+$      & Value immediately after an event \\
+        $(t,\nu)$        & Superdense time; $\nu \in \mathbb{N}_0$ is the micro-step index \\
+        $i$              & Subsystem index \\
+        $T_k$            & Communication point $k$ \\
+        $H_k$            & Macro step size $H_k = T_{k+1} - T_k$ \\
+        $\Delta t_{i,r}$ & Internal step size of subsystem $i$ at local step $r$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Notation used throughout Chapter~\ref{chap:theoretical_background}.}
+    \label{tab:notation}
+\end{table}
+
+In the physical and mathematical discussion, the term \emph{subsystem} denotes a constituent part of the modeled system.
+In a tool-neutral co-simulation context, the executable software unit that encapsulates a subsystem model is called a \emph{simulation unit}.
+In \emph{SysSimX}, the concrete realization of this concept is called a \emph{component} and is implemented through the \texttt{CoSimComponent} interface.

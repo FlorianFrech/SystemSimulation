@@ -40,35 +40,24 @@
   
 \end{scope}
 
-% === Ghost pendulum at theta = -\ang ===
-\begin{scope}[rotate=-\ang, transparency group, opacity=0.35]
+% === Ghost pendulum at theta = 0 ===
+\begin{scope}[rotate=0, transparency group, opacity=0.35]
   \draw[thick, fill=brown!15] (-\W/2,0) rectangle (\W/2,-\L);
   \draw[thick, fill=gray!20] (0,-\L) circle(\R);
 \end{scope}
 
 % Vertical reference line (theta = 0)
-\draw[dash dot, thin] (0,0) -- (0,-1.05*\L);
+\draw[dash dot, thin] (0,0) -- (0,-\L);
 
 % Pendulum trajectory arc (full oscillation range)
-\draw[<->, dotted, thick] (-90-\ang:\L) arc (-90-\ang:-90+\ang:\L);
+\draw[<->, dotted, thick] (-90:\L) arc (-90:-90+\ang:\L);
+
+% Wall (impact surface at theta = 0, right edge at x = -R)
+\draw[supportSurface] (-\R-\wallW, -\L-\wallH/2) rectangle (-\R, -\L+\wallH/2);
+\draw[thick] (-\R, -\L-\wallH/2) -- (-\R, -\L+\wallH/2);
 
 % === Forces at pendulum head ===
 \coordinate (M) at (\ang-90:\L);
-
-% Bob Cartesian position label
-\node[below right=10pt, font=\small] at (M) {$(r_x,\,r_y)$};
-
-% === Constraint force F along rod toward hinge ===
-% Direction: from bob M toward hinge O (rod tension)
-\coordinate (Frod) at ($(M)+(\ang+90:{\R+\F})$);
-\draw[forceVector] (M) -- (Frod) node[below left=3pt] {$F$};
-
-% Gravity force (mg, straight down from head center)
-\coordinate (FG) at ($(M)+(-90:{\F+\R})$);
-\draw[forceVector] (M) -- (FG) node[right=1pt] {$-mg$};
-
-% Gravity direction indicator (general, on the left side)
-\draw[->, very thick, black!60] (-2, 0) -- (-2, -1) node[right=2pt] {$g$};
 
 % Angle theta at hinge (between vertical and rod midline)
 \coordinate (B) at (0,-1.5);
@@ -77,30 +66,15 @@
 % Length L annotation
 \node at (1.8, -1.3) {$L$};
 
+\node[below] at (\R, -\L-\R) {$\theta = \theta_\text{wall}$};
+
 % Revolute joint: classical triangle + small circle
 \draw[thick, fill=white] (-0.45,0.6) -- (0.45,0.6) -- (0,0) -- cycle;
 \draw[thick, fill=white] (O) circle(\W/2);
 
-% Drive torque at hinge
-\draw[<-, very thick, blue!70!black] (160:0.5) arc (160:70:0.5)
-node[left=18pt] {$\tau$};
-
 % --- Interface anchors (for wiring in assembly) ---
 \coordinate (pend-tau)   at (0, 0);     % torque input
 \coordinate (pend-theta) at (0, 0);     % angle output (same shaft)
-
-% --- Input / Output annotation ---
-\node[draw, rounded corners=3pt, fill=blue!5, align=left,
-      font=\small, inner sep=5pt] at (4.5, 0) {
-    \begin{tabular}{@{}ll@{}}
-    \textbf{Input:}  & $u = \tau$ \\[3pt]
-    \textbf{State:}  & $x = [\,\theta,\;\omega\,]^\top$ \\[3pt]
-    \textbf{Output:} & $y = \theta$
-    \end{tabular}
-};
-
-% === Cartesian coordinate axes at hinge (for DAE formulation) ===
-\pic at (0,0) {coordsys};
 
 \end{tikzpicture}
 

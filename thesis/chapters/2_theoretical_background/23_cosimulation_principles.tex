@@ -1,37 +1,30 @@
 \section{Co-Simulation Principles and Algorithms}\label{sec:theory_co_simulation}
 
 \subsection{From Monolithic Simulation to Co-Simulation}
+In a monolithic simulation, all subsystem models are formulated within a single modeling environment and assembled into one global equation system.
+A single solver advances the combined system and has access to all equations and variables at every time instant.
+Modelica-based simulation is a representative example of this approach~\cite{Modelica_Fritzson}.
 
-\paragraph{Classical (Monolithic) Simulation.}
-In the classical approach, all subsystem models are assembled within a single modeling environment into a global equation system.
-A single solver has access to the complete set of equations and can therefore enforce tight numerical consistency between all subsystem quantities at every time instant.
-Modelica is a representative example of this approach~\cite{Modelica_Fritzson}.
-All multi-domain subsystem descriptions are assembled into a single differential-algebraic equation system that is advanced by one solver.
-This approach is referred to as \emph{monolithic} simulation, and its result serves as the reference solution in the case study presented in Chapter~\ref{chap:case_study}.
+When subsystem models originate from different tools, they can be exported as equation representations and assembled by a host environment that provides a single solver for the combined system.
+This approach is called model exchange (sometimes referred to as \emph{strong coupling} in the literature).
+Because one solver processes all equations, it can enforce numerical consistency 
+across all subsystems.
+Its limitation is that the host solver must accommodate the requirements of all subsystems simultaneously~\cite{gomes_co-simulation_2019}.
 
-\paragraph{Strong Coupling (Model Exchange).}
-When subsystems originate from different modeling environments, each subsystem can be exported as model equations or as compiled code that evaluates them, without including an embedded solver.
-A host environment then assembles these representations and applies a single numerical method to the combined equation system.
-Because one solver processes all equations, it retains full knowledge of the coupled system and can apply consistent step-size control across all subsystems.
-This strategy is called \emph{strong coupling}.
-Its limitation is that the global solver must accommodate the numerical requirements of all subsystems simultaneously, which can force unnecessarily small step sizes when subsystems have markedly different time constants or stiffness properties.
+Co-simulation (sometimes referred to as \emph{weak coupling}) adopts a different strategy.
+Each simulation unit retains its own solver and advances autonomously between discrete communication points $T_k$.
+A master algorithm orchestrates the coupled execution.
+At each communication point, it collects outputs from all simulation units, distributes them as inputs to connected units, and commands each unit to advance to $T_{k+1}$.
+Between communication points, each simulation unit integrates independently with its internal step size $\Delta t_{i,r} \leq H_k$.
+The master algorithm has no access to the internal equations of any simulation unit.
+This black-box property is the defining characteristic of co-simulation and distinguishes it from model exchange~\cite{gomes_co-simulation_2019}.
 
-\paragraph{Weak Coupling (Co-Simulation).}
-Co-simulation adopts a fundamentally different strategy.
-Each subsystem retains its own dedicated solver, and subsystems exchange information only at discrete \emph{communication points} $T_0, T_1, \ldots$\,.
-A master algorithm orchestrates the coupled simulation.
-At each communication point $T_n$, the master collects the current outputs from all subsystems, distributes them as inputs to connected subsystems, and then commands each subsystem to advance independently to the next communication point $T_{n+1} = T_n + H$, where $H$ denotes the \emph{macro step size}.
-Between consecutive communication points, each subsystem integrates autonomously using its internal solver with a local \emph{micro step size} $h_i \leq H$.
-The master does not have access to the internal equations of any subsystem.
-Each subsystem acts as a black box that is characterized only by its inputs and outputs at communication points.
-This is the defining characteristic of \emph{weak coupling} and what distinguishes co-simulation from strong coupling.
-Weak coupling allows each subsystem to use a solver suited to its own dynamics, including different solver types, adaptive step sizes, and integration orders~\cite{gomes_co-simulation_2019}.
-The standardized component interface used in this thesis to realize co-simulation components is introduced in Section~\ref{sec:theory_fmi}.
 
 \subsection{Mathematical Formulation of Co-Simulation}
 \paragraph{Subsystem Representation}
-    % - Each S_i as black-box dynamical system: ẋ_i = f_i(x_i, u_i, t), y_i = h_i(x_i, u_i, t)
-    % - Extends the continuous-time / hybrid model from ch. 21–22
+
+
+
 \paragraph{Coupling Variables and Communication Points}
     %   - Interface: y_i connected to u_j via coupling condition λ
     %   - Communication grid T_0, T_1, ..., T_n; macro step H
