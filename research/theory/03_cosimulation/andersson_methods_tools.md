@@ -1,4 +1,4 @@
-methods_tools_co_simulation_andersson
+Andersson, C. (2016). *Methods and Tools for Co-Simulation of Dynamic Systems with the Functional Mock-up Interface* [Doctoral Thesis (monograph)].
 
 # **Summary:**
 

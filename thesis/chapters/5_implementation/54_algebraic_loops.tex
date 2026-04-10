@@ -1,3 +1,63 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Algebraic Loop Resolution}
 \label{sec:impl_algebraic_loops}
+
+This section describes the implementation of the iterative treatment of algebraic loops and addresses SR-11-03.
+The loop candidates themselves are provided by the structural analysis of Section~\ref{sec:impl_structural}, which identifies non-trivial strongly connected components in the zero-delay dependency graph.
+
+\paragraph{Scope within the execution flow.}
+In \syssimx{}, algebraic loops are not solved as a separate preprocessing step for the complete system.
+Instead, each non-trivial strongly connected component is resolved locally when its containing generation is prepared for execution.
+This local treatment is used by the Jacobi and Gauss--Seidel master algorithms described in Section~\ref{sec:impl_algorithms}.
+The global \texttt{IJCSAAlgorithm}, which solves the full interface system in one Newton iteration, is discussed separately in Section~\ref{sec:impl_algorithms}.
+
+\paragraph{Interface unknowns.}
+Consider one algebraic loop $A \subseteq I$ detected by the structural analysis.
+The implementation first collects all zero-delay destination input ports of components in $A$ whose drivers are also located in $A$.
+These ports form the vector of interface unknowns
+\begin{equation}
+    U_A = \bigl(u_1,\ldots,u_n\bigr)^\top.
+\end{equation}
+Zero-delay connections from components outside $A$ into the loop are treated as fixed known inputs during the local solve.
+
+\paragraph{Residual formulation.}
+For a trial vector $U_A$, the components in the loop are evaluated without advancing their internal state.
+The resulting outputs induce updated values on the connected loop inputs, denoted by $\Gamma_A(Y_A(U_A))$.
+The loop is therefore solved in residual form as
+\begin{equation}
+    \mathcal{R}(U_A) = U_A - \Gamma_A\!\bigl(Y_A(U_A)\bigr).
+\end{equation}
+A consistent interface state satisfies $\mathcal{R}(U_A)=0$.
+This is the implementation of the conceptual formulation introduced in Section~\ref{sec:cosim_algebraic_loops}, restricted here to one strongly connected component at a time.
+
+\paragraph{State-preserving output evaluation.}
+The local solver uses the hook method \texttt{evaluate\_outputs(inputs)} introduced in Section~\ref{sec:impl_component_interface}.
+For each iteration, the algorithm assembles a temporary input dictionary for every component in the strongly connected component.
+This dictionary contains the current guess for internal loop inputs together with the current values of all external zero-delay drivers.
+The method \texttt{evaluate\_outputs(inputs)} is then called on each participating component to recompute its outputs at the current communication point without performing a macro step.
+This is the implementation-level counterpart of the zero-step interface evaluation introduced in Chapter~\ref{chap:theoretical_background}.
+
+\paragraph{Initialization and Jacobian approximation.}
+The Newton iteration is initialized from the current values stored in the destination input ports.
+The present implementation approximates the interface Jacobian numerically by forward finite differences.
+For the $j$-th interface variable,
+\begin{equation}
+    J_{:,j} \approx \frac{\mathcal{R}(U_A + \varepsilon e_j) - \mathcal{R}(U_A)}{\varepsilon},
+\end{equation}
+with perturbation size $\varepsilon = 10^{-6}$.
+This choice keeps the solver independent of backend-specific derivative support and allows the same procedure to be applied uniformly to FMU, OpenSim, and FEM-based components.
+
+\paragraph{Newton update and convergence.}
+Given the current iterate $U_A^{(m)}$, the solver evaluates the residual $\mathcal{R}(U_A^{(m)})$ and the approximate Jacobian $J^{(m)}$, then solves
+\begin{equation}
+    J^{(m)} \Delta U_A^{(m)} = -\mathcal{R}(U_A^{(m)}),
+    \qquad
+    U_A^{(m+1)} = U_A^{(m)} + \Delta U_A^{(m)}.
+\end{equation}
+Iteration terminates when the Euclidean norm of the residual falls below the prescribed tolerance \texttt{tol} or when the maximum number of iterations \texttt{max\_iter} is reached.
+If the Jacobian is singular or the iteration fails to converge, the implementation raises a runtime error and aborts the current step.
+
+\paragraph{Commit of consistent inputs.}
+After convergence, the solved interface values are written back to the corresponding destination input ports of the participating components.
+The components themselves remain at the current communication point until the master algorithm performs the subsequent macro step.
+In this way, the algebraic loop is resolved before any component in the strongly connected component advances in time.

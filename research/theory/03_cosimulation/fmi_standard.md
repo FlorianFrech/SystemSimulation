@@ -1,4 +1,5 @@
-fmi_standard_302**  
+fmi_standard
+ 
 Common concepts of interface types:**
 
 - FMI Application Programming Interface (C)

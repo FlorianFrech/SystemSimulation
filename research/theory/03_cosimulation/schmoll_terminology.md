@@ -16,6 +16,7 @@ co_simulation_terminology_schmoll
     - Example: Modelica
     - Result of mode creating: a single multi-physical / multi-domain equation system describing the system
     - System Model is solved by a single equation solver
+    
 - **Strong / Tight Coupling:**
     
     - Subsystems are modeled in different modeling environments and exported/imported into a single program which solves the whole system model with a single solver

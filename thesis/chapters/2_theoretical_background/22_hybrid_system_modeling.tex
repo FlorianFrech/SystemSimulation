@@ -89,7 +89,7 @@ An event of type $j$ is triggered when the indicator crosses zero.
 
 For the pendulum-wall example, the wall contact defines the event indicator
 \begin{equation}
-    \gamma(\theta) = \theta - \theta_\text{wall}.
+    \gamma_\text{contact}(\theta) = \theta - \theta_\text{wall}.
 \end{equation}
 The event occurs when $\gamma = 0$ in the admissible direction
 ($\dot{\gamma} < 0$, i.e.\ the pendulum is moving toward the wall).
@@ -124,4 +124,4 @@ It only represents progress in the event iteration at fixed time $t$ \cite{broma
 
 Superdense time makes it possible to distinguish between the state before an event and the states after one or more discrete updates at the same physical time.
 Continuous integration resumes only after all event updates at the current physical time have been processed.
-This distinction is important for the present thesis, since the hybrid co-simulation algorithm introduced in Chapter~\ref{chap:implementation} first localizes an event in physical time and then performs ordered event handling at that same time instant.
+This distinction is important for the present thesis, since hybrid co-simulation requires ordered event processing at a single physical time instant, as described in Section~\ref{sec:cosim_hybrid}.

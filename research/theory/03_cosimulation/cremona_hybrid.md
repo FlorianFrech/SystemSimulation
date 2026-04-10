@@ -1,4 +1,4 @@
-hybrid_co_simulation_cremona
+Cremona, F., Lohstroh, M., Broman, D., Lee, E. A., Masin, M., & Tripakis, S. (2019). Hybrid co-simulation: It’s about time. Software & Systems Modeling, 18(3), 1655–1679. https://doi.org/10.1007/s10270-017-0633-6
 
 **Summary**
 

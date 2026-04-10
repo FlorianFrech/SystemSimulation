@@ -1,3 +1,14 @@
 # Custom Dictionary Words
+CVODE
+feedthrough
+Feedthrough
+Hookean
+hyperelasticity
+IJCSA
+microsteps
 Modelica
+Newmark
+Seidel
+Sicklinger
+Simbody
 SysSimX

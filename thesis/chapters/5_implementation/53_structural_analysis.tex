@@ -1,3 +1,65 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Structural Analysis and Execution Ordering}
 \label{sec:impl_structural}
+
+This section describes the implementation of the graph-based structural analysis and addresses SR-10-02, SR-10-03, and SR-11-02.
+The analysis derives the dependency metadata that is later consumed by the initialization routine and by the master algorithms.
+
+\paragraph{Stored Structural Metadata.}
+The results of the structural analysis are stored directly on the \texttt{System} instance.
+The attribute \texttt{graph} is a \texttt{networkx.MultiDiGraph} that contains all registered signal connections, including delayed ones.
+The attribute \texttt{\_dag} stores the zero-delay dependency structure used for ordering.
+Additional lookup tables, \texttt{\_incoming\_by\_dst} and \texttt{\_input\_sources}, map destination components and ports to their incoming drivers and are reused during input propagation.
+Detected algebraic loops are stored in \texttt{algebraic\_loops}, the mapping from component names to condensation nodes in \texttt{\_scc\_index}, and the final generation-based schedule in \texttt{execution\_order} together with \texttt{execution\_idx}.
+
+\paragraph{Full Connection Graph.}
+The routine \texttt{build\_graphs()} begins by clearing all previously cached structural metadata and inserting every registered component as a node of both graph representations.
+It then iterates over all signal connections.
+Each connection is recorded as an annotated edge in \texttt{graph} with the corresponding source and destination port names.
+During the same pass, the routine populates the incoming-connection maps that are later used by \texttt{System.\_set\_inputs\_for\_generation()}.
+If two different connections drive the same destination input port, the initialization is aborted with a runtime error.
+The framework therefore assumes single assignment for every input port.
+
+\paragraph{Construction of the Zero-Delay Graph.}
+Execution ordering depends only on instantaneous dependencies.
+For this reason, \texttt{build\_graphs()} constructs the auxiliary graph \texttt{\_dag} from those signal connections whose destination input participates in direct feedthrough of the receiving component.
+The implementation uses the \texttt{direct\_feedthrough} metadata introduced in Section~\ref{sec:impl_component_interface}, where each output port is associated with the set of input ports on which it depends algebraically.
+A connection from component~$j$ to component~$i$ becomes a zero-delay edge only if the connected destination input of~$i$ influences at least one output of~$i$ that is actually used by a downstream connection.
+This active-output filter avoids introducing ordering constraints from algebraic dependencies that do not propagate further through the coupled system.
+
+\paragraph{Detection of Algebraic Loops.}
+After the zero-delay graph has been constructed, the framework identifies its strongly connected components.
+Every strongly connected component with more than one node is stored as an algebraic loop in \texttt{algebraic\_loops}.
+In addition, a single node with a self-loop is treated as a one-component algebraic loop.
+This directly realizes SR-11-02 and provides the loop blocks later consumed by the iterative solver of Section~\ref{sec:impl_algebraic_loops}.
+
+\paragraph{Condensation and Generation Order.}
+The execution order is derived from the condensation of the zero-delay graph.
+The condensation graph replaces every strongly connected component by a single node and is therefore acyclic by construction.
+\syssimx{} computes topological generations on this condensed graph and then expands each condensed node back to the corresponding component names.
+The resulting schedule is stored in \texttt{execution\_order}.
+A generation may therefore contain either mutually independent components or the members of one algebraic loop that must be resolved locally before those components are advanced.
+The auxiliary dictionary \texttt{execution\_idx} stores the generation index of each component for later lookup.
+
+\paragraph{Delayed Producers.}
+After the condensation-based order has been obtained, the framework applies a post-processing step for components classified as delayed producers.
+A component is considered a delayed producer if it has no incoming or outgoing zero-delay edges, but still reaches at least one component that participates in zero-delay structure through the full connection graph.
+Such components are removed from earlier generations and appended as a final generation.
+In the present framework, this heuristic is used to place components whose outputs affect the strongly coupled part of the system only through delayed paths after the zero-delay structure has been resolved.
+This step is a scheduling choice of \syssimx{} rather than a general property of co-simulation theory.
+
+\paragraph{Use During Initialization.}
+Structural analysis is executed during \texttt{System.initialize(t0)} after port states have been created and direct-feedthrough metadata has been determined.
+The resulting \texttt{execution\_order} is then used generation by generation.
+For each generation, upstream output values are first propagated to the destination input ports, the components in that generation are initialized, algebraic loops contained entirely in that generation are resolved, and finally each component performs a zero-step to publish consistent outputs for downstream generations.
+This ensures that later generations are initialized with consistent upstream values.
+
+\paragraph{Use During Simulation.}
+The same structural metadata is reused during simulation.
+The Jacobi, Gauss--Seidel, and Hybrid algorithms all iterate over \texttt{execution\_order} and invoke the local algebraic-loop solver for every loop whose members are contained in the current generation.
+Structural analysis is therefore performed once at initialization and then serves as persistent orchestration metadata throughout the simulation run.
+
+\paragraph{Verification.}
+The structural analysis is verified through targeted system-level tests.
+Representative cases include rejection of multiple drivers for one input port, omission of delayed edges from the zero-delay graph, detection of mutual and self-loop algebraic dependencies, derivation of the expected condensed generation order, and relocation of delayed producers to the final generation.
+Together, these checks confirm that the graph-based metadata exposed by \texttt{System} is sufficient for consistent initialization and for the execution algorithms described in Section~\ref{sec:impl_algorithms}.

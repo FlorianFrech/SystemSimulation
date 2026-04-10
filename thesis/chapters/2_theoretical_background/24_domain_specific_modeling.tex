@@ -1,20 +1,191 @@
-\section{Domain-Specific Modelling Foundations}
+\section{Modeling Approaches}
+\label{sec:modeling_approaches}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Equation-Based Modelling with Modelica}
-\subsubsection{Principles of Acausal, Equation-Based Modeling}
-\subsubsection{Causal Component Interfaces}
-\subsubsection{FMU Export}
+The co-simulation framework developed in this thesis integrates subsystem models from three distinct modeling paradigms.
+These paradigms differ in their mathematical formulation, their abstraction level, and the type of equations they produce.
+This section characterizes each paradigm at the level needed to understand the component abstractions in Chapter~\ref{chap:architecture}, the wrapper implementations in Chapter~\ref{chap:implementation}, and the model configurations
+used in the case study (Chapter~\ref{chap:case_study}).
+The selection and justification of the specific tools used for each paradigm is given in Chapter~\ref{chap:requirements}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Musculoskeletal Modelling with OpenSim}
-\subsubsection{Kinematic Chains}
-\subsubsection{Forward Dynamics}
-\subsubsection{Hunt-Crossles Contact}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Equation-Based Modeling}
+\label{sec:modeling_equation_based}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Finite Element Analysis with NGSolve}
-\subsubsection{Deformable Body Dynamics}
-\subsubsection{Newmark Integration}
-\subsubsection{Torque Application}
-\subsubsection{Contact Modeling using the Penalty Method}
+Equation-based modeling describes physical systems through mathematical relations between variables.
+These relations may be algebraic equations, ordinary differential equations, or combinations of both, as introduced in Section~\ref{sec:theory_ode_dae}.
+It is the natural formulation for lumped-parameter, multi-domain systems whose behavior is governed by conservation laws and constitutive relations.
+
+Two sub-styles are distinguished by how computational causality is treated~\cite{Modelica_Fritzson}.
+In \emph{causal} modeling, the modeler prescribes a fixed input-output direction when formulating the subsystem.
+In \emph{acausal} modeling, the subsystem behavior is stated as equations without prescribing a computational direction.
+Causality is then determined by the modeling tool from the structure of the overall connected model.
+Both sub-styles produce the same classes of equations (ODE or DAE) after translation.
+
+In the acausal approach, individual subsystem models are composed through connection equations that relate interface variables of different subsystems.
+The modeling tool collects all equations and connection constraints, performs structural analysis and index reduction where needed, and  produces an executable model in ODE or DAE form.
+Modelica is the most prominent language for this approach~\cite{Modelica_Fritzson}.
+
+\paragraph{Interface Abstraction.}
+When an equation-based model is used as a simulation unit in co-simulation, its interface must be expressed through a fixed set of input and output variables.
+Inputs represent external quantities imposed on the subsystem, such as applied forces or prescribed trajectories.
+Outputs represent quantities provided to other subsystems, such as positions, velocities, or reaction forces.
+The internal state typically consists of generalized coordinates, velocities, and, for DAE models, algebraic variables.
+
+Whether a simulation unit exhibits direct feedthrough depends on the structure of the output equation: if the output depends on the current input in addition to the state, the unit has direct feedthrough on the corresponding port pair (Section~\ref{sec:cosim_formulation}).
+This structural property is determined at translation time and declared in the exported model metadata.
+
+\paragraph{Export as Simulation Unit.}
+An equation-based model can be exported as a Functional Mock-up Unit (FMU) conforming to the FMI standard introduced in Section~\ref{sec:cosim_fmi}.
+In FMI Co-Simulation mode, the FMU retains an internal solver and exposes only the standardized interface operators.
+The connection structure, execution order, and algebraic-loop handling are then managed by the master algorithm of the importing framework.
+
+\paragraph{Scope and Limitation.}
+Equation-based models operate at a lumped-parameter abstraction level.
+They represent the global behavior of physical subsystems efficiently but do not resolve spatially distributed quantities such as local deformation, stress fields, or distributed contact.
+When such spatial detail is required, complementary modeling approaches at a higher spatial resolution are needed.
+The concrete equation-based models used in the case study of this thesis are described in Chapter~\ref{chap:case_study}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Musculoskeletal Multibody Modeling}
+\label{sec:modeling_musculoskeletal}
+
+The mechanical behavior of the human body is commonly described by multibody models in which rigid segments represent bones and joints define the relative motion between them~\cite{OpenSim_Delp,seth_opensim_2018}.
+Such models are essential when the simulation must account for the biomechanical context of a technical device, for example a prosthesis or exoskeleton that interacts with the musculoskeletal system of the user.
+
+\paragraph{Equations of Motion.}
+A multibody model formulated in generalized coordinates
+$q \in \mathbb{R}^{n_q}$ leads to a second-order ODE of the form
+\begin{equation}
+    \ddot{q}
+    = M(q)^{-1}
+      \bigl\{
+        \tau
+        - C(q,\dot{q})
+        - G(q)
+        + F
+      \bigr\},
+    \label{eq:multibody_eom}
+\end{equation}
+where $M(q)$ is the configuration-dependent mass matrix, $C$ collects velocity-dependent (Coriolis and centrifugal) forces, $G$ collects gravitational forces, $\tau$ denotes joint torques, and $F$ represents external generalized
+forces~\cite{OpenSim_Delp,seth_opensim_2018}.
+In state-space form with $x = [q,\,\dot{q}]^\top$, this is an ODE system of the kind introduced in Section~\ref{sec:theory_dynamical_systems}.
+
+\paragraph{Muscle-Tendon Actuation.}
+In musculoskeletal models, forces are not necessarily prescribed directly.
+Muscles are modeled as specialized force elements whose output depends on internal activation and contraction dynamics.
+Muscle activation~$a$ is governed by a first-order excitation dynamics, and the muscle fibre length~$l$ evolves according to a contraction model.
+These additional dynamics introduce internal states beyond the generalized coordinates and velocities, so the full state vector of a musculoskeletal model is
+$x = [q,\,\dot{q},\,a,\,l]^\top$~\cite{OpenSim_Delp}.
+Joint torques due to muscles are then obtained from the muscle forces
+through configuration-dependent moment arms.
+
+\paragraph{Interface Abstraction.}
+When a musculoskeletal model is wrapped as a simulation unit for co-simulation, the interface is defined in terms of external quantities.
+Typical inputs are applied forces or torques, and typical outputs are joint kinematics or reaction forces.
+Whether the simulation unit exhibits direct feedthrough depends on the choice of output variables.
+If an output is obtained by integrating the equations of motion, such as a joint position or velocity, it depends on the accumulated state rather than on the current input, and no direct feedthrough is present on that port pair.
+If an output reflects a quantity that depends algebraically on the current input, such as the generalized acceleration in Equation~\eqref{eq:multibody_eom}, direct feedthrough exists.
+The structural property therefore depends on the interface design of the simulation unit, not on the modeling paradigm alone.
+
+
+\paragraph{Scope and Limitation.}
+Multibody models represent the skeleton as a system of rigid segments.
+They capture global kinematics and kinetics efficiently but do not resolve spatially distributed quantities such as local deformation, stress, or strain within individual segments.
+When such spatial detail is required, for example to analyze structural loading or compliant contact, a continuum-mechanical model is needed as a complement.
+The specific musculoskeletal model and its concrete integration into the framework are described in the case study (Chapter~\ref{chap:case_study}) and the wrapper implementation (Chapter~\ref{chap:implementation}), respectively.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Continuum-Mechanical Modeling}
+\label{sec:modeling_continuum}
+
+The modeling approaches introduced so far operate at a lumped-parameter abstraction level since they describe subsystem behavior through a finite set of generalized coordinates without resolving spatial distributions within the subsystem geometry.
+When local quantities such as deformation, stress, or strain must be resolved explicitly, a continuum-mechanical formulation is required.
+
+\paragraph{From PDE to ODE.}
+Continuum-mechanical models describe the motion and deformation of solid bodies through partial differential equations defined on a spatial domain~$\Omega$.
+In structural dynamics, the governing equation in the reference configuration takes the general form
+\begin{equation}
+    \rho_0\,\ddot{u}
+    = \nabla \cdot P + b
+    \qquad \text{in } \Omega,
+    \label{eq:continuum_balance}
+\end{equation}
+where $u(X,t)$ is the displacement field, $\rho_0$ is the reference density, $P$ is the first Piola--Kirchhoff stress tensor derived from a constitutive law, and $b$ collects body forces~\cite{knothe_finite_2017}.
+Boundary conditions prescribe either displacements (Dirichlet) or tractions (Neumann) on parts of the boundary~$\partial\Omega$.
+
+The finite element method discretizes the spatial domain into elements and approximates the displacement field by a finite set of nodal degrees of freedom~$d(t)$.
+This spatial semi-discretization transforms the PDE into a large system of ordinary differential equations in the nodal unknowns:
+\begin{equation}
+    M\,\ddot{d} + f_{\mathrm{int}}(d) = f_{\mathrm{ext}}(t),
+    \label{eq:fem_semidiscrete}
+\end{equation}
+where $M$ is the mass matrix, $f_{\mathrm{int}}$ collects the internal forces derived from the constitutive law, and $f_{\mathrm{ext}}$ collects the external loads and boundary contributions~\cite{knothe_finite_2017}.
+For nonlinear material behavior or large deformations, $f_{\mathrm{int}}$ is a nonlinear function of the current displacement, so the system requires iterative solution at each time step.
+The resulting ODE systems are typically stiff and of high dimension compared to lumped-parameter models, which motivates the use of implicit time integration schemes.
+
+\paragraph{Interface Abstraction.}
+When a finite element model is wrapped as a simulation unit for co-simulation, the interface is defined through boundary quantities rather than through the full set of internal degrees of freedom.
+Typical inputs are prescribed forces or displacements applied at specific boundary regions.
+Typical outputs are reaction forces, displacements, or derived field quantities evaluated at selected boundary nodes or regions.
+
+Whether direct feedthrough is present depends on the time integration scheme and the choice of interface variables.
+In implicit time integration, the displacement at the end of a step depends on the forces applied during that step, so a boundary force input can influence a displacement output at the same communication point.
+This is in contrast to multibody models with explicit integration, where kinematic outputs typically depend only on the accumulated state.
+The feedthrough structure of the finite element simulation unit must therefore be declared according to the actual input-output dependency, as discussed in
+Section~\ref{sec:cosim_formulation}.
+
+\paragraph{Scope and Limitation.}
+Continuum-mechanical models provide spatial resolution that lumped-parameter approaches cannot offer.
+They can resolve local deformation, stress concentrations, and distributed contact behavior within a subsystem geometry.
+This capability comes at significantly higher computational cost per time step, both because of the large number of degrees of freedom and because of the iterative nonlinear solves required at each step.
+For this reason, continuum-mechanical models are typically not used for the entire duration of a system-level simulation but are activated selectively during phases in which spatial detail is required.
+The concrete finite element model, including the constitutive law, time integration scheme, and contact formulation, is described in the case study (Chapter~\ref{chap:case_study}).
+The wrapper that maps the finite element solver interface to the co-simulation component abstraction is described in Chapter~\ref{chap:implementation}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Complementarity of Modeling Approaches}
+\label{sec:modeling_complementarity}
+
+The three modeling paradigms introduced in the preceding subsections operate at different abstraction levels and produce different types of equations.
+Table~\ref{tab:modeling_complementarity} summarizes these differences.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Paradigm}
+            & \textbf{Abstraction}
+            & \textbf{Strength}
+            & \textbf{Gap} \\
+        \midrule
+        Equation-based
+            & Lumped-parameter
+            & Multi-domain system-level
+            & No spatial resolution \\
+        Multibody biomechanics
+            & Lumped-parameter
+            & Musculoskeletal dynamics
+            & No local deformation \\
+        Continuum mechanics
+            & Spatially distributed
+            & Local field quantities
+            & High computational cost \\
+        \bottomrule
+    \end{tabular}
+    \caption{Complementary roles of the three modeling paradigms used
+             in this thesis.
+             Each paradigm covers aspects that the others cannot
+             provide efficiently.}
+    \label{tab:modeling_complementarity}
+\end{table}
+
+Equation-based models describe multi-domain system behavior efficiently at the lumped-parameter level but cannot resolve spatial distributions within a subsystem geometry.
+Multibody models extend this capability to articulated musculoskeletal systems but retain the rigid-body assumption.
+Continuum-mechanical models resolve spatially distributed quantities at high fidelity but at a computational cost that makes them impractical for full system-level simulation over extended time horizons.
+
+No single paradigm covers all relevant aspects of the biomechatronic systems considered in this thesis.
+A prosthesis or exoskeleton simulation that must account for control logic, musculoskeletal interaction, and local structural effects requires subsystem models from all three paradigms within one coupled simulation.
+The co-simulation principles introduced in Section~\ref{sec:theory_co_simulation} provide the coupling mechanism that enables such heterogeneous integration: each
+subsystem model retains its own solver and exchanges data with the others only at discrete communication points.
+The framework architecture that realizes this integration is presented in Chapter~\ref{chap:architecture}.

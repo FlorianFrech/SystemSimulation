@@ -2,11 +2,22 @@
 
 ## Purpose
 
-This file defines the mathematical notation used consistently throughout the thesis.
-The goal is not to mirror Python variable names literally, but to establish a stable
-conceptual mapping between the theory chapters and the *SysSimX* implementation.
+This document is the single source of truth for mathematical notation in the thesis.
+It defines the symbols that should be used consistently across Chapter 2 and in later theory-facing references.
 
-## General Principles
+The current co-simulation notation is aligned to:
+
+- `thesis/chapters/2_theoretical_background/23_cosimulation_principles.tex`
+
+The notation table in:
+
+- `thesis/chapters/2_theoretical_background/20_notation_and_conventions.tex`
+
+should be derived from this document rather than maintained independently.
+
+---
+
+# 1. General Principles
 
 - A **system** is decomposed into **subsystems** indexed by $i$.
 - Continuous-time variables are functions of physical time $t$.
@@ -16,33 +27,96 @@ conceptual mapping between the theory chapters and the *SysSimX* implementation.
 - Inputs and outputs are denoted by $u(t)$ and $y(t)$.
 - Communication points in co-simulation are indexed by $k$.
 - Superdense-time microstep indices are denoted by $\nu$.
+- Vectors are denoted by symbols such as $x$, $z$, $u$, and $y$; individual components are written with subscripts.
 
-Vectors are denoted by symbols such as $x$, $z$, $u$, and $y$; individual components
-are written with subscripts.
+## Time-argument convention
 
-## Indices and Time
+The time argument $(t)$ is declared in prose on first introduction and may be omitted inside equations when the time dependence is clear from context.
+It should be written explicitly when a named time instant such as $t_0$, $T_k$, or $t_e$ is discussed.
+
+---
+
+# 2. Global Symbols
+
+## 2.1 Indices and Time
 
 | Symbol | Meaning | Usage |
 |--------|---------|-------|
 | $t$ | Physical time | Continuous-time and hybrid evolution |
-| $t_e$ | Event time | Time at which an event occurs |
-| $i$ | Subsystem or component index | Co-simulation and coupled models |
-| $j$ | Event or indicator index | Hybrid-system event definitions |
+| $t_e$ | Event time | Hybrid systems and hybrid co-simulation |
+| $i$ | Subsystem index | General subsystem or simulation-unit indexing |
+| $j$ | Event or indicator index | Event definitions |
 | $k$ | Communication-point index | Co-simulation |
-| $\nu$ | Superdense-time microstep index | Hybrid event ordering at fixed physical time |
+| $\nu$ | Superdense-time microstep index | Ordering of discrete updates at fixed physical time |
 | $T_k$ | Communication point $k$ | Co-simulation communication grid |
-| $H_k = T_{k+1} - T_k$ | Macro step size | Communication interval |
-| $H$ | Constant macro step size | Use only when the communication step is fixed |
-| $\Delta t_{i,r}$ | Internal step size of subsystem $i$ at local step $r$ | Micro-stepping inside a subsystem |
+| $H_k = T_{k+1}-T_k$ | Macro step size | Communication interval in co-simulation |
+| $H$ | Generic requested step duration | Simulation-unit interface or generic co-simulation operator |
+| $\Delta t_{i,r}$ | Internal step size of subsystem $i$ at local step $r$ | Internal stepping between communication points |
 
-## Continuous-Time and DAE Models
+## 2.2 Continuous-Time and DAE Models
 
-The time argument $(t)$ is declared in prose on first introduction and omitted
-inside equations. It is written explicitly only when a named time instant
-$(t_0, T_k, t_e)$ is referenced.
+| Symbol | Meaning | Usage |
+|--------|---------|-------|
+| $x(t)$ | Continuous or differential state vector | ODE and DAE models |
+| $z(t)$ | Algebraic variable vector | DAE and hybrid models |
+| $u(t)$ | Input vector | Continuous, hybrid, and co-simulation models |
+| $y(t)$ | Output vector | Continuous, hybrid, and co-simulation models |
+| $f(\cdot)$ | State-transition map | Explicit ODE or semi-explicit DAE |
+| $h(\cdot)$ | Output map | Continuous and hybrid models |
+| $g(\cdot)$ | Algebraic constraint function | Semi-explicit DAE |
+| $G(\cdot)$ | Implicit DAE residual form | Implicit DAE and hybrid mode-dependent dynamics |
 
+## 2.3 Hybrid-System Symbols
 
-### Explicit state-space form
+| Symbol | Meaning | Usage |
+|--------|---------|-------|
+| $q(t)$ | Discrete mode or discrete state | Hybrid systems |
+| $\gamma_j(\cdot)$ | Event indicator / zero-crossing function | Hybrid systems and hybrid co-simulation |
+| $R_j(\cdot)$ | Continuous-state reset map | Hybrid systems |
+| $\delta_j(\cdot)$ | Discrete-state update map | Hybrid systems |
+| $(\cdot)^-$ | Value immediately before an event | Hybrid systems |
+| $(\cdot)^+$ | Value immediately after an event | Hybrid systems |
+| $(t,\nu)$ | Superdense time | Hybrid simulation semantics |
+
+## 2.4 Co-Simulation Symbols
+
+| Symbol | Meaning | Usage |
+|--------|---------|-------|
+| $I$ | Finite index set of simulation units | Co-simulation scenario |
+| $\mathsf{SU}_i$ | Abstract simulation unit representation | Co-simulation theory |
+| $\mathcal{S}_i$ | Internal state space of simulation unit $i$ | Co-simulation theory |
+| $\mathcal{U}_i$ | Set of input ports of simulation unit $i$ | Co-simulation theory |
+| $\mathcal{Y}_i$ | Set of output ports of simulation unit $i$ | Co-simulation theory |
+| $\mathcal{V}_i$ | Value domain of the ports of simulation unit $i$ | Co-simulation theory |
+| $s_i(T_k)$ | Internal state of simulation unit $i$ at communication point $T_k$ | Execution-strategy discussion |
+| $\operatorname{set}_i$ | Input staging operator of simulation unit $i$ | Simulation-unit interface |
+| $\operatorname{get}_i$ | Output query operator of simulation unit $i$ | Simulation-unit interface |
+| $\operatorname{step}_i$ | Time-advancement operator of simulation unit $i$ | Simulation-unit interface |
+| $F_i$ | Direct-feedthrough relation of simulation unit $i$ | Structural analysis |
+| $\mathcal{C}$ | Co-simulation scenario | Co-simulation theory |
+| $\mathcal{L}$ | Set of directed port connections | Co-simulation scenario |
+| $\mathcal{U}$ | Global set of indexed input ports | Co-simulation scenario |
+| $\mathcal{Y}$ | Global set of indexed output ports | Co-simulation scenario |
+| $\Gamma_i$ | Coupling operator mapping outputs to the inputs of simulation unit $i$ | Co-simulation theory |
+| $\Gamma_A$ | Coupling operator restricted to one algebraic loop | Algebraic-loop theory |
+| $\hat{u}_i(t)$ | Extrapolated input of simulation unit $i$ between communication points | Co-simulation |
+| $\mathcal{R}(\cdot)$ | Interface residual for algebraic-loop consistency | Co-simulation algebraic loops |
+| $U_A$ | Stacked interface inputs of one algebraic loop | Co-simulation algebraic loops |
+| $Y_A(U_A)$ | Interface outputs induced by a trial input vector $U_A$ | Co-simulation algebraic loops |
+
+## 2.5 Structural-Analysis Symbols
+
+| Symbol | Meaning | Usage |
+|--------|---------|-------|
+| $G=(V,E)$ | Directed dependency graph | Structural analysis |
+| $j \rightarrow i$ | Directed dependency edge from simulation unit $j$ to simulation unit $i$ | Structural analysis |
+| $A \subseteq I$ | Set of simulation units participating in one algebraic loop | Structural analysis and algebraic-loop theory |
+
+---
+
+# 3. Canonical Forms
+
+## 3.1 Explicit state-space form
 
 A continuous-time subsystem is written as
 
@@ -52,21 +126,7 @@ $$
 y(t) = h(x(t),u(t),t).
 $$
 
-Here:
-
-- $x(t)$ is the differential state
-- $u(t)$ is the input
-- $y(t)$ is the output
-- $f$ is the state-transition map
-- $h$ is the output map
-
-### Implicit and semi-explicit DAE form
-
-A general implicit DAE is written as
-
-$$
-0 = G(\dot{x}(t),x(t),z(t),u(t),t).
-$$
+## 3.2 Semi-explicit DAE form
 
 A semi-explicit DAE is written as
 
@@ -78,14 +138,7 @@ $$
 y(t) = h(x(t),z(t),u(t),t).
 $$
 
-Here:
-
-- $x(t)$ are differential states
-- $z(t)$ are algebraic variables
-- $g(\cdot)$ denotes algebraic constraints
-- $G(\cdot)$ denotes an implicit DAE residual form
-
-## Hybrid-System Notation
+## 3.3 Hybrid subsystem form
 
 A hybrid subsystem is represented by
 
@@ -93,31 +146,15 @@ $$
 \bigl(q(t),x(t),z(t),u(t),y(t)\bigr),
 $$
 
-where:
-
-- $q(t)$ is the discrete mode or discrete state
-- $x(t)$ is the continuous state
-- $z(t)$ are algebraic variables
-- $u(t)$ is the input
-- $y(t)$ is the output
-
-Between events, the active mode defines the continuous-time model:
+and between events follows
 
 $$
-0 = G_{q(t)}(\dot{x}(t),x(t),z(t),u(t),t),
+0 = G_q(\dot{x},x,z,u,t),
 \qquad
-y(t) = h_{q(t)}(x(t),z(t),u(t),t).
+y = h_q(x,z,u,t).
 $$
 
-Event indicators are denoted by
-
-$$
-\gamma_j(x(t),z(t),q(t),u(t),t).
-$$
-
-An event occurs when $\gamma_j = 0$.
-
-Event update maps are written as
+At an event time $t_e$, the update maps are written as
 
 $$
 x^{+} = R_j(x^{-},z^{-},q^{-},u^{-},t_e),
@@ -125,113 +162,116 @@ x^{+} = R_j(x^{-},z^{-},q^{-},u^{-},t_e),
 q^{+} = \delta_j(x^{-},z^{-},q^{-},u^{-},t_e).
 $$
 
-Superdense time is represented by
+## 3.4 Simulation-unit abstraction
+
+At co-simulation level, subsystem $i$ is represented by
 
 $$
-(t,\nu),
+\mathsf{SU}_i =
+\left\langle
+\mathcal{S}_i,\,
+\mathcal{U}_i,\,
+\mathcal{Y}_i,\,
+\operatorname{set}_i,\,
+\operatorname{get}_i,\,
+\operatorname{step}_i
+\right\rangle.
 $$
 
-where $t$ is the physical time and $\nu$ orders multiple discrete updates at the
-same physical time.
+## 3.5 Co-simulation scenario
 
-## Co-Simulation Notation
-
-Subsystem $i$ is described by
+A co-simulation scenario is written as
 
 $$
-\dot{x}_i(t) = f_i(x_i(t),z_i(t),u_i(t),t),
+\mathcal{C} =
+\left\langle
+I,\;
+\{\mathsf{SU}_i\}_{i \in I},\;
+\mathcal{L},\;
+\{F_i\}_{i \in I}
+\right\rangle.
+$$
+
+## 3.6 Coupling relation
+
+At a communication point $T_k$, the coupling relation is written as
+
+$$
+u_i(T_k) = \Gamma_i\!\bigl(y_1(T_k),\ldots,y_N(T_k)\bigr).
+$$
+
+## 3.7 Input extrapolation
+
+For zero-order hold, the extrapolated input is written as
+
+$$
+\hat{u}_i(t) = u_i(T_k),
 \qquad
-0 = g_i(x_i(t),z_i(t),u_i(t),t),
-\qquad
-y_i(t) = h_i(x_i(t),z_i(t),u_i(t),t).
+t \in [T_k,T_{k+1}).
 $$
 
-At communication points $T_k$, subsystem outputs are exchanged through coupling relations.
-A generic coupling operator is written as
+## 3.8 Algebraic-loop residual
+
+For one algebraic loop $A \subseteq I$, the interface residual is written as
 
 $$
-u(T_k) = \Gamma(y(T_k)).
+\mathcal{R}(U_A) = U_A - \Gamma_A\!\bigl(Y_A(U_A)\bigr).
 $$
 
-If needed, interface residuals for algebraic-loop resolution are written as
+---
 
-$$
-\mathcal{R}(U) = 0,
-$$
+# 4. Reserved Symbols and Naming Rules
 
-where $U$ denotes the stacked interface unknowns.
-
-Direct feedthrough means that the current output $y_i(T_k)$ depends directly on the
-current input $u_i(T_k)$.
-
-An algebraic loop is present when direct feedthrough dependencies create a closed cycle
-of simultaneous interface equations.
-
-## Reserved Symbols
-
-To avoid collisions, the following conventions are fixed.
+The following conventions are fixed.
 
 - $q$ is reserved for the discrete mode or discrete state.
 - $z$ is reserved for algebraic variables.
 - $g(\cdot)$ is reserved for algebraic constraints.
+- $G(\cdot)$ is reserved for implicit residual formulations.
 - $\gamma_j(\cdot)$ is reserved for event indicators.
 - $k$ is reserved for communication-point indices.
 - $\nu$ is reserved for superdense-time microstep indices.
 - $R_j$ is reserved for event reset maps.
+- $\delta_j$ is reserved for discrete-state update maps.
 - $\mathcal{R}$ is reserved for algebraic-loop residuals.
-- $h(\cdot)$ is reserved for output maps.
-- Therefore internal subsystem step sizes are not denoted by $h_i$, but by $\Delta t_{i,r}$.
+- Internal subsystem step sizes are denoted by $\Delta t_{i,r}$, not by $h_i$.
+- The abstract simulation-unit symbol is $\mathsf{SU}_i$, not $\Sigma_i$.
 
-## Local Example Conventions
-
-To avoid collisions with the global notation, local coordinates in examples should not
-reuse reserved symbols.
+## Local example conventions
 
 - Do not use $q_x,q_y$ for Cartesian pendulum coordinates because $q$ is reserved for the discrete mode.
 - Prefer $r_x,r_y$ or $p_x,p_y$ for Cartesian position coordinates.
 
-## Mapping from Thesis Notation to Implementation
+---
+
+# 5. Mapping from Thesis Notation to Implementation
 
 | Thesis concept | Thesis symbol | Implementation name |
 |---------------|---------------|---------------------|
 | Physical time | $t$ | `t` |
 | Initial time | $t_0$ | `t0` |
 | Final time | $t_f$ | `tf` |
-| Current communication interval | $H_k$ or $T_{k+1}-T_k$ | `dt` in `System.run()` and `Algorithm.step()` |
-| Left and right interval boundary | $T_k$, $T_{k+1}$ | `t_left`, `t_right` in `HybridAlgorithm` |
+| Macro step size | $H_k$ or $T_{k+1}-T_k$ | `dt` in `System.run()` and `Algorithm.step()` |
 | Continuous state | $x_i$ | backend-internal state, exposed via `get_state()` / `set_state()` |
 | Algebraic variables | $z_i$ | backend-internal variables, usually not explicit in `CoSimComponent` |
 | Input | $u_i$ | `inputs`, `set_inputs()` |
 | Output | $y_i$ | `outputs`, `get_outputs()` |
 | Discrete mode | $q_i$ | backend-specific mode variables |
-| Event indicator | $\gamma_{i,j}$ | `event_indicators[name]` |
-| Direct feedthrough relation | direct dependency of $y_i$ on $u_i$ | `direct_feedthrough` |
-| Communication-point index | $k$ | implicit in simulation loop, not stored explicitly |
+| Event indicator | $\gamma_{j}$ or $\gamma_{i,j}$ | `event_indicators[name]` |
+| Direct feedthrough relation | $F_i$ | `direct_feedthrough` |
+| Communication-point index | $k$ | implicit in simulation loop |
 | Superdense-time index | $\nu$ | `DenseTime.micro` |
 | Superdense time | $(t,\nu)$ | `DenseTime(t, micro)` |
-| Execution generations | conceptual ordered sets | `execution_order` |
-| Algebraic loops | SCCs of zero-delay dependency graph | `algebraic_loops` |
+| Execution generations | ordered generation sets | `execution_order` |
+| Algebraic loops | cycle / loop block in zero-delay graph | `algebraic_loops` |
 | Master algorithm | orchestration method | `system.algorithm` |
 
-## Practical Naming Rules
+---
 
-- Keep `t`, `t0`, `tf`, and `dt` in Python code. They are idiomatic and already stable.
-- Keep `inputs`, `outputs`, `direct_feedthrough`, `event_indicators`, `execution_order`,
-  and `algebraic_loops` in the implementation.
-- Use $z$ in theory-facing notes, derivations, and future math-heavy code comments for
-  algebraic variables; avoid introducing a competing generic variable $w$.
-- Do not use bare $n$ for superdense microsteps in theory text. Use $\nu$.
-- In theory text, reserve $q$ for discrete modes only.
-- In theory text, use $\gamma_j$ for event indicators and $g$ only for algebraic constraints.
-- In theory text, use $G_q$ for implicit hybrid dynamics, not $F_q$, to avoid conflicts
-  with force notation in mechanical examples.
+# 6. Practical Usage Rules
 
-## Immediate Thesis-Level Cleanup Targets
-
-The most important notation harmonizations for the current draft are:
-
-1. Replace $w$ by $z$ for algebraic variables.
-2. Replace $g_j$ by $\gamma_j$ for event indicators.
-3. Replace $(t,n)$ by $(t,\nu)$ for superdense time.
-4. Replace $q_x,q_y$ by $r_x,r_y$ or $p_x,p_y$ in the Cartesian pendulum example.
-5. Replace $F_q$ by $G_q$ in the hybrid-system equations.
+- Use the symbols in this document as the default notation for Chapter 2.
+- If a local subsection introduces additional symbols, define only the symbols that are new in that subsection.
+- If a symbol listed here is not used anymore in the thesis text, remove it from this document before regenerating the Chapter 2 notation table.
+- Do not duplicate symbol choices in `research/guideline.md`; that file should refer here instead.
+- When a theory subsection is revised, update this document first if the notation actually changes.
