@@ -175,6 +175,25 @@
     morestring=[b]",                         % Strings enclosed by double quotes
 }
 
+% For Modelica specific settings
+\lstdefinelanguage{Modelica}{
+    morekeywords={model, end, parameter, constant, equation, initial, algorithm,
+                  when, then, if, else, elseif, for, while, connect, der,
+                  Real, Integer, Boolean, String, input, output, protected,
+                  public, partial, extends, within, reinit, annotation},
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    sensitive=true,
+}
+
+\lstdefinestyle{modelica}{
+    language=Modelica,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red},
+}
+
+
 % Paragraph settings
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}

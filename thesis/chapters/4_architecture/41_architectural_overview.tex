@@ -35,7 +35,9 @@ The framework treats these tools as black-box backends and interacts with them e
 
 \paragraph{Adapter layer.}
 The adapter layer wraps each tool-specific API in a class that implements the common  \texttt{CoSimComponent} interface.
-\texttt{FMUComponent} maps FMI function calls to the component lifecycle, while \texttt{OpenSimComponent} and \texttt{FEMComponent} do the same for OpenSim and NGSolve, respectively.
+\texttt{FMUComponent} maps FMI function calls to the component lifecycle.
+\texttt{OpenSimComponent} wraps OpenSim in the same way.
+For finite element models, \texttt{FEMComponent} marks the adapter slot but contributes minimal shared logic, since each FE model defines its own discretization, material law, and time integration scheme (Section~\ref{sec:impl_fem}).
 As a result, every subsystem model, regardless of its origin, exposes the same interface for initialization, time stepping, input and output exchange, and state access.
 This realizes the principle of a \emph{tool-agnostic core with backend adapters}.
 All tool-specific code is confined to the adapter boundary, and the layers above can treat heterogeneous models uniformly.

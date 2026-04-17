@@ -32,7 +32,6 @@ For tool interoperability, the Functional Mock-up Interface (FMI) standard has b
 It provides a standardized way to package and exchange simulation models across tools and therefore plays a central role in component-based simulation workflows \cite{gomes_co-simulation_2019-1}.
 
 Equation-based tools and FMI-based components provide a strong basis for system simulation.
-However, they do not cover all domain-specific modeling needs equally well.
 
 %=================================================
 \subsection{Domain-Specific Simulation Environments}
@@ -51,7 +50,7 @@ In this way, OpenSim enables analyses that are highly relevant for human-device 
 
 A second example is finite element analysis.
 Finite element models are used when spatially distributed effects must be resolved explicitly.
-This includes deformation, stress, strain, and contact phenomena.
+This includes deformation, stress, strain, and complex contact phenomena.
 Such information cannot usually be obtained from lumped-parameter rigid-body models alone.
 Finite element methods solve partial differential equations on a spatial discretization of the geometry and therefore provide a much higher level of local detail \cite{knothe_finite_2017}.
 This is important when compliant components, structural loading, or local contact behavior must be analyzed.
@@ -69,16 +68,16 @@ A practical system simulation framework must therefore be able to integrate both
 %=================================================
 \subsection{Co-Simulation Frameworks and Orchestration}
 Co-simulation enables the coupled simulation of subsystem models that originate from different tools.
-In this setting, each subsystem keeps its own model representation and, in many cases, its own numerical solver.
+In this setting, each subsystem keeps its own model representation and its own numerical solver.
 The coupled simulation is coordinated through data exchange at communication points.
-This makes co-simulation a natural approach for heterogeneous system simulation.
+This makes co-simulation a natural approach for heterogeneous system simulation~\cite{gomes_co-simulation_2019-1}.
 
 The most important standard in this area is the Functional Mock-up Interface (FMI) \cite{FMI2.0,FMI3.0}.
 FMI defines a standardized interface for simulation components called Functional Mock-up Units (FMUs).
 An importing environment creates FMU instances and calls their standardized interface functions.
 In the case of Model Exchange, the importing tool provides the numerical solver and performs the integration.
 In the case of Co-Simulation, the FMU typically advances its own internal solver and exchanges values only at communication points.
-FMI 3 further extends this concept through Scheduled Execution and explicit clock-based mechanisms for discrete-time behavior and event-oriented interaction \cite{FMI3.0}.
+FMI~3.0 further extends this concept through Scheduled Execution and explicit clock-based mechanisms for discrete-time behavior and event-oriented interaction \cite{FMI3.0}.
 
 Building on FMI, several frameworks have been developed to orchestrate coupled FMU execution.
 Standalone tools such as OMSimulator provide FMI-based composition and execution environments with scripting and graphical support \cite{noauthor_omsimulator_nodate}.
@@ -86,17 +85,16 @@ INTO-CPS Maestro provides another orchestration environment for FMI-based co-sim
 These tools show that FMI-based co-simulation is well established at the level of standardized component coupling.
 
 Within the Python ecosystem, several libraries address FMI at different abstraction levels.
-FMPy provides lightweight support for loading, inspecting, validating, and simulating FMUs \cite{noauthor_home_nodate}.
+FMPy provides lightweight support for loading, inspecting, validating, and simulating FMUs \cite{dassault_systemes__catia-systems_fmpy_2026}.
 PyFMI offers a more simulation-oriented Python interface for Model Exchange and Co-Simulation FMUs \cite{andersson_pyfmi_nodate}.
 Research-oriented tools such as CoFmuPy further show that lightweight Python-based co-simulation environments can be built around FMI-compliant components \cite{friedrich_cofmupy_nodate}.
 Taken together, these tools show that FMI-based orchestration is mature for FMU-centric workflows.
-This is especially true when subsystem models are available through standardized component interfaces.
 
 At the same time, the scope of most existing co-simulation frameworks remains strongly FMU-centered.
 Their direct interoperability is strongest when subsystem models are available as FMI-compliant components.
 Models from tools that do not naturally export FMUs, such as musculoskeletal simulation environments or finite element solvers, usually require custom wrappers or tool-specific interfaces.
 In addition, FMI standardizes the component interface, but it does not by itself solve all orchestration problems at system level.
-Questions such as execution order, algebraic-loop handling, hybrid event handling, and runtime switching between alternative subsystem models remain the responsibility of the importing framework.
+Challenges such as resolving execution order, algebraic loops, discrete events, and runtime switching between alternative subsystem models remain the responsibility of the importing framework.
 For this reason, current co-simulation frameworks provide an essential basis for interoperability.
 However, they do not fully address the broader requirements of heterogeneous hybrid system simulation.
 
@@ -121,7 +119,7 @@ The problem becomes even more difficult when several events interact or when one
 
 This challenge has been discussed extensively in the co-simulation literature.
 In particular, the representation of time, event handling, and rollback capabilities have been identified as central issues for deterministic and robust hybrid co-simulation ~\cite{StepRevision_Cremona, broman_requirements_2015, cremona_hybrid_2019}.
-FMI 3 extends FMI 2 with additional concepts that are relevant in this context, including clocks, Event Mode, and Scheduled Execution \cite{FMI3.0}.
+FMI~3.0 extends FMI~2.0 with additional concepts that are relevant in this context, including clocks, event mode, and scheduled execution \cite{FMI3.0}.
 These additions improve the representation of sampled and event-driven behavior.
 However, the standard alone does not solve the full orchestration problem.
 The importing framework must still implement the system-level logic for event detection, event localization, state consistency, and continuation after events.

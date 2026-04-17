@@ -5,11 +5,7 @@
 This section describes the implementation of the port system, which addresses SR-01-01 and SR-02-01 to SR-02-03.
 The port system defines the interface through which components exchange data and is used throughout the framework for connection validation and runtime value propagation.
 
-% --- THEORY / BACKGROUND (0.5-1 page, optional) ---
-% - input / output representation of models
-% - types of involved signal in CPS
-
-As introduced in Chapter~\ref{chap:foundations}, subsystems in a  co-simulation are modeled using the input-output view, where each subsystem interacts with its environment through explicitly defined interface variables.
+As introduced in Chapter~\ref{chap:theoretical_background}, subsystems in a  co-simulation are modeled using the input-output view, where each subsystem interacts with its environment through explicitly defined interface variables.
 In the context of cyber-physical systems, these variables may represent physical quantities such as forces or velocities, or more abstract signals such as control commands.
 In \syssimx{}, interface variables are represented through ports.
 

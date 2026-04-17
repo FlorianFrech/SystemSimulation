@@ -1,26 +1,9 @@
 \section{Continuous-Time System Modeling}
+\label{sec:21_continuous_time}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dynamical Systems with Inputs and Outputs}
-\label{sec:theory_dynamical_systems}
-
-% In engineering, complex systems are usually described as compositions 
-% of smaller subsystems or components.
-% Each component interacts with its environment through inputs and 
-% outputs: inputs represent external influences, outputs represent 
-% variables provided to other components or to the environment.
-% This input-output view supports the modular description of larger 
-% systems from connected subsystems~\cite{karnopp_system_2012}.
-
-% In addition to inputs and outputs, a dynamical system is 
-% characterized by its state.
-% The state is the smallest set of variables that, together with the 
-% input and the initial condition, determines the future behavior of 
-% the system.
-% For physical systems, state variables often represent quantities 
-% associated with stored energy, such as position and velocity in 
-% mechanics or capacitor voltages in electrical 
-% systems~\cite{astrom_feedback_2008, karnopp_system_2012}.
+\label{sec:211_dynamical_systems}
 
 A model is a mathematical representation of a real system.
 It is used to describe the system behavior and to answer questions by analysis or simulation.
@@ -32,37 +15,36 @@ In such systems, the effect of an action does not occur instantaneously.
 Instead, the future behavior depends on the current condition of the system and on external influences.
 Examples are mechanical motion, electrical circuits, and thermal processes \cite{astrom_feedback_2008}.
 
-In engineering, complex systems are usually described as compositions of smaller subsystems.
+Complex systems are  described as compositions of smaller subsystems.
 Each subsystem interacts with its environment through inputs and outputs.
 Inputs represent external influences acting on it, and outputs represent variables that are provided to other subsystems or to the environment.
-This input-output view is useful because it supports the modular description of larger systems from connected subsystems \cite{karnopp_system_2012}.
+This input-output view supports the modular description of larger systems from connected subsystems \cite{karnopp_system_2012}.
 
 In addition to inputs and outputs, a dynamical system is characterized by its state.
 The state is the smallest set of variables that, together with the input and the initial condition, determines the future behavior of the system.
-State variables summarize the current internal condition of the system.
+State variables represent the current internal state of the system.
 The set of all possible states is called the state space.
-For physical systems, state variables often represent quantities associated with stored energy, such as position and velocity in mechanics, capacitor voltages and inductor currents in electrical systems, or temperatures in thermal systems \cite{astrom_feedback_2008,karnopp_system_2012}.
+In physical systems, state variables often represent quantities related to stored energy.
+For example, in mechanics, they might be position and velocity, in electrical systems, they might be capacitor voltages and inductor currents, and in thermal systems, they might be temperature ~\cite{astrom_feedback_2008,karnopp_system_2012}.
 System parameters such as mass, length, or inertia are not state variables, since they do not evolve dynamically during the simulation.
 
 A common representation of continuous-time dynamical systems is the state-space form
 \begin{equation}
-    \dot{x}(t) = f(x,u,t), \qquad y(t) = h(x,u,t),
+    \dot{x}(t) = f(x,u,t), \qquad y(t) = h(x,u,t), \qquad x(t_0) = x_0,
 \end{equation}
-where $x(t)$ is the state vector, $u(t)$ is the input vector, and $y(t)$ is the output vector.
+where $x(t)$ is the state vector, $u(t)$ is the input vector, and $y(t)$ is the output vector, and $x_0$ is the initial state at time $t_0$.
 The function $f$ describes the time evolution of the state, while $h$ defines how the outputs are obtained from the state and the inputs.
+Together with a given input trajectory $u(t)$, the initial condition $x_0$ uniquely determines the future state evolution.
 If the functions do not depend explicitly on time, the system is called time-invariant \cite{astrom_feedback_2008}.
 This explicit state-space form is typical for ordinary differential equation models.
 More general physical models may lead to implicit or differential-algebraic formulations.
 
-As a running example used throughout this chapter, we consider a rigid pendulum with angular position $\theta$, angular velocity $\omega$, moment of inertia $I$, and an applied torque $\tau$ at the hinge (Figure~\ref{fig:pendulum_simple}). Let $L$ denote the distance from the hinge to the center of mass.
+As a running example used throughout this chapter, we consider a rigid pendulum with angular position $\theta$, angular velocity $\omega$, moment of inertia $I$, and an applied torque $\tau$ at the hinge (see Figure~\ref{fig:pendulum_simple}). Let $L$ denote the distance from the hinge to the center of mass.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/2_theoretical_background/pendulum_simple.pdf}
-    \caption{Simple pendulum with torque input $\tau$, angle $\theta$, rod length $L$,
-             mass $m$, and moment of inertia $I$.
-             The system serves as a running example throughout
-             Chapter~\ref{chap:theoretical_background}.}
+    \caption{Simple pendulum with torque input $\tau$, angle $\theta$, rod length $L$, mass $m$, and moment of inertia $I$.}
     \label{fig:pendulum_simple}
 \end{figure}
 
@@ -71,21 +53,24 @@ The equation of motion is
 \begin{equation}
     I\ddot{\theta} = \tau - m g L \sin\theta.
 \end{equation}
+
 With $x = [\theta,\omega]^\top$, $u=\tau$, and the output choice $y=\theta$, the state-space form becomes
 \begin{equation}
     \dot{x}_1 = x_2,
     \qquad
     \dot{x}_2 = \frac{1}{I}\bigl(u - m g L \sin(x_1)\bigr),
     \qquad
-    y = x_1.
+    y = x_1,
+    \qquad
+    x(t_0) = \begin{bmatrix}\theta_0 \\ \omega_0\end{bmatrix}.
     \label{eq:pendulum_ode}
 \end{equation}
 For the chosen output $y=\theta$, the output depends only on the state and not directly on the current input $\tau$.
-This structural property is referred to as direct feedthrough and is discussed further in Section~\ref{sec:theory_direct_feedthrough}.
+This structural property is referred to as direct feedthrough and is discussed further in Section~\ref{sec:213_direct_feedthrough}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Ordinary and Differential-Algebraic Equations}
-\label{sec:theory_ode_dae}
+\label{sec:212_ode_dae}
 
 Many continuous-time systems can be described by ordinary differential equations.
 In this case, the time derivative of the state is given explicitly as a function of the current state, the input, and time \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
@@ -115,10 +100,10 @@ A common semi-explicit form of a DAE is
     0 &= g(x,z,u,t)\label{eq:semi_DAE_algebraic},
 \end{align}
 where $x$ contains the differential state and $z$ contains the algebraic variables.
-The equation~\ref{eq:semi_DAE_derivative} describes the time evolution of the states, equation~\ref{eq:semi_DAE_output} defines the outputs, and equation~\ref{eq:semi_DAE_algebraic} imposes algebraic constraints that must hold at every time instant.
+The equation~\eqref{eq:semi_DAE_derivative} describes the time evolution of the states, equation~\eqref{eq:semi_DAE_output} defines the outputs, and equation~\eqref{eq:semi_DAE_algebraic} imposes algebraic constraints that must hold at every time instant.
 This representation is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
 
-The pendulum introduced in Section~\ref{sec:theory_dynamical_systems} provides a simple example.
+The pendulum introduced in Section~\ref{sec:211_dynamical_systems} provides a simple example.
 In generalized coordinates, its dynamics are described by the ODE~\eqref{eq:pendulum_ode}.
 The same physical system can also be formulated in Cartesian coordinates $(r_x,\,r_y)$ for the bob position, related to the polar angle by $r_x = L\sin\theta$ and $r_y = -L\cos\theta$.
 In this representation, the rigid rod introduces the geometric constraint that the bob must remain on a circle of radius $L$.
@@ -163,7 +148,7 @@ Equations~\eqref{eq:dae_index2} and~\eqref{eq:dae_index1} are \emph{hidden const
 A numerical solver that operates only on the original index-3 system may experience constraint drift, since the position-level constraint~\eqref{eq:dae_index3} is not explicitly enforced during integration.
 Modelica compilers address this by performing automatic index reduction, transforming the high-index DAE into an equivalent lower-index system that standard DAE solvers such as DASSL can handle~\cite{Modelica_Fritzson}.
 
-This formulation shows that the same physical system may appear either as an ODE or as a DAE, depending on the choice of variables and coordinates.
+This formulation shows that the same physical system may appear either as an ODE or as a DAE, depending on the choice of variables and coordinate system.
 The ODE form in generalized coordinates eliminates the geometric constraint explicitly.
 The Cartesian formulation retains the constraint and therefore leads naturally to a DAE.
 This distinction is important in physical modeling, where algebraic constraints often arise directly from the chosen representation.
@@ -173,9 +158,9 @@ These connection-induced algebraic loops are introduced in the following subsect
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Direct Feedthrough and Algebraic Loops}
-\label{sec:theory_direct_feedthrough}
+\label{sec:213_direct_feedthrough}
 
-Building on the input-output view introduced in Section~\ref{sec:theory_dynamical_systems}, consider a subsystem represented by
+Building on the input-output view introduced in Section~\ref{sec:211_dynamical_systems}, consider a subsystem represented by
 \begin{equation}
     \dot{x} = f(x,u,t),
     \qquad
@@ -227,8 +212,8 @@ The interconnection therefore introduces an algebraic loop.
 If, in contrast, at least one subsystem output depends only on its internal state, the instantaneous circular dependency is broken and the coupled system may be evaluated sequentially.
 Direct feedthrough is therefore an important structural property in interconnected continuous-time models.
 
-Interface-induced algebraic relations are conceptually distinct from the internal algebraic constraints discussed in Section~\ref{sec:theory_ode_dae}.
+Interface-induced algebraic relations are conceptually distinct from the internal algebraic constraints discussed in Section~\ref{sec:212_ode_dae}.
 The Cartesian pendulum example contains an internal geometric constraint within a single model.
 By contrast, direct feedthrough concerns algebraic dependencies that arise from the interconnection of subsystems through their inputs and outputs.
 
-These structural properties, direct feedthrough and the resulting algebraic loops, are used in later sections to derive the execution order and to detect and resolve algebraic dependencies in coupled co-simulation systems.
+These structural properties, direct feedthrough and the resulting algebraic loops, are used in sections~\ref{sec:233_cosim_structural_analysis} to derive the execution order and to detect and resolve algebraic dependencies in coupled co-simulation systems.

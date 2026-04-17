@@ -1,90 +1,68 @@
 @startuml FMUComponent
-
-' ============================================================================
-' STYLING
-' ============================================================================
-
-skinparam classAttributeIconSize 0
-skinparam padding 2
-skinparam defaultFontSize 10
-skinparam classFontSize 11
-skinparam nodesep 40
-skinparam ranksep 40
-
-' Color scheme - clean white background
-skinparam backgroundColor white
-
-' Remove yellow/red default colors
-skinparam shadowing false
-
+!include ../../includes/thesis_theme.puml
 left to right direction
 
-' ============================================================================
-' FMU COMPONENT CLASS
-' ============================================================================
+abstract class CoSimComponent {
+    + initialize(t0)
+    + do_step(t, dt)
+    + evaluate_outputs(inputs, t)
+    --
+    # _initialize_component(t0)
+    # _do_step_internal(t, dt)
+    # _update_output_states(t)
+}
 
-class FMUComponent <<CoSimComponent>>{
-    + state: Dict[str, Any]
+class FMUComponent {
+    + name: str
     - _path: str
     - _md: ModelDescription
-    - _md_vars: Dict[str, ModelVariable]
-    - _instance: Optional[FMU2Slave]
-    - _unzipdir: Optional[str]
-    - _vrs_in: Dict[str, int]
-    - _vrs_out: Dict[str, int]
-    ==
-    + __init__(name, fmu_path, group)
-    .. Build ..
-    - _build_port_specs()
-    - _build_value_reference_map()
-    .. Init ..
-    # _initialize_component(t0)
-    - _apply_parameters_starts()
-    - _apply_input_starts()
-    .. Config ..
-    + set_parameters(**parameters)
-    .. I/O ..
+    - _instance: FMU2Slave
+    + direct_feedthrough
+    --
     + set_inputs(signals, t)
     + get_outputs()
-    # _update_output_states(t)
-    .. Step ..
+    + get_state() / set_state(state, t)
+    --
+    # _initialize_component(t0)
     # _do_step_internal(t, dt)
-    .. State ..
-    + set_state(state, t)
-    + get_state()
-    + reset()
+    # _update_output_states(t)
+    + evaluate_outputs(inputs, t)
 }
 
 class ModelDescription <<fmpy>> {
-    + guid: str
-    + fmiVersion: str
     + modelVariables
+    + outputs (ModelStructure)
     + coSimulation
-}
-
-class ModelVariable <<fmpy>> {
-    + name: str
-    + valueReference: int
-    + causality: str
-    + type: str
-    + unit: Optional[str]
-    + _python_type: type
 }
 
 class FMU2Slave <<fmpy>> {
     + instantiate()
-    + setupExperiment(startTime)
-    + enterInitializationMode()
-    + exitInitializationMode()
+    + setupExperiment / enter/exit InitializationMode
     + doStep(t, dt)
-    + setReal/Integer/Boolean/String()
-    + getReal/Integer/Boolean/String()
+    + get*() / set*()
     + reset()
 }
 
-' Layout: FMUComponent on left, everything else to the right
-FMUComponent -down-> ModelDescription: has
-FMUComponent -down-> FMU2Slave: has
-ModelDescription -down-> ModelVariable: has
+CoSimComponent <|-- FMUComponent
+FMUComponent --> ModelDescription : parses once\n(construction)
+FMUComponent --> FMU2Slave : owns\n(runtime)
+
+note top of FMUComponent
+  **Adapter** from an FMI 2.0
+  Co-Simulation FMU to the
+  CoSimComponent contract.
+end note
+
+note bottom of ModelDescription
+  Source of ports, parameters,
+  units, value references, and
+  direct-feedthrough dependencies.
+end note
+
+note bottom of FMU2Slave
+  Runtime proxy to the FMU
+  binary. All FMI calls are
+  batched per base type.
+end note
 
 @enduml

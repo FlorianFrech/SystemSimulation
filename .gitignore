@@ -98,3 +98,5 @@ research/literature/*
 
 claude/
 CLAUDE.md
+*.sto
+*.mot

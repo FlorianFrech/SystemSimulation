@@ -1,8 +1,9 @@
 \section{Hybrid System Modeling}
+\label{sec:22_hybrid_system}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hybrid System Representation}
-\label{sec:hybrid_system_representation}
+\label{sec:221_hybrid_system_representation}
 
 To analyze and simulate the hybrid systems introduced in Section~\ref{sec:intro_sota}, a formal representation is needed that captures both the continuous dynamics and the discrete transitions.
 
@@ -32,11 +33,12 @@ Here, $x^{-}$ and $q^{-}$ denote the values immediately before the event, and $x
 This representation treats switching events and reset events uniformly.
 A pure switching event is the special case $x^{+} = x^{-}$, so only the active mode or equations change.
 A reset event is the case in which $R_j(\cdot)$ changes one or more continuous states instantaneously.
-From the viewpoint of simulation, both cases are handled in the same way: the event is localized, the update maps are evaluated, and the post-event model is re-initialized.
+From the viewpoint of simulation, both cases are handled in the same way.
+The event is localized, the update maps are evaluated, and the post-event model is re-initialized.
 \emph{SysSimX} follows this unified interpretation and does not distinguish algorithmically between these event effects.
 The continuous state trajectory is therefore piecewise continuous, while the discrete state is piecewise constant \cite{van_der_schaft_introduction_2000,branicky_general_1995}.
 
-The pendulum example introduced in Section~\ref{sec:theory_dynamical_systems} can be extended to a hybrid system. The pendulum is in this case assumed to start swinging freely from an initial angle and hits a rigid wall at $\theta = \theta_\text{wall}$, modeled as an ideal elastic impact (see Figure~\ref{fig:pendulum_wall}).
+The pendulum example introduced in Section~\ref{sec:211_dynamical_systems} can be extended to a hybrid system. The pendulum is in this case assumed to start swinging freely from an initial angle $theta_0$ with initial velocity $\omega_0$ and hits a rigid wall at $\theta = \theta_\text{wall}$, modeled as an ideal elastic impact (see Figure~\ref{fig:pendulum_wall}).
 
 \begin{figure}[htbp]
     \centering
@@ -74,6 +76,7 @@ No discrete variables are involved, and the pendulum is governed by the same equ
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Events, Zero-Crossings, and State Re-Initialization}
+\label{sec:222_events_zerocrossing}
 
 A central challenge in hybrid simulation is the consistent detection and handling of discrete events.
 Two common trigger classes are distinguished.
@@ -91,7 +94,7 @@ For the pendulum-wall example, the wall contact defines the event indicator
 \begin{equation}
     \gamma_\text{contact}(\theta) = \theta - \theta_\text{wall}.
 \end{equation}
-The event occurs when $\gamma = 0$ in the admissible direction
+The event occurs when $\gamma = 0$ in the defined event trigger direction
 ($\dot{\gamma} < 0$, i.e.\ the pendulum is moving toward the wall).
 The resulting trajectories are shown in Figure~\ref{fig:pendulum_wall_trajectory}.
 
@@ -100,13 +103,14 @@ The simulator first detects that a zero-crossing occurred within a time interval
 It then localizes the event time inside this interval with a root-finding procedure.
 This avoids integrating across a discontinuity without resolving its time of occurrence \cite{andersson_omola_1990,cellier_combined_1986}.
 
-Once the event time $t_e$ has been found, the event update maps introduced in Section~\ref{sec:hybrid_system_representation} are evaluated.
+Once the event time $t_e$ has been found, the event update maps introduced in Section~\ref{sec:221_hybrid_system_representation} are evaluated.
 This step is the same for pure switching events and for events that reset continuous states.
 The resulting post-event state must satisfy the active continuous and algebraic equations before simulation can continue.
 This step is called state re-initialization or restart \cite{andersson_omola_1990,urquia_moraleda_modeling_2018}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Time Semantics in Hybrid Simulation}
+\label{sec:223_hybrid_time_semantics}
 
 When several discrete updates occur at the same physical instant, a real-valued time axis is insufficient to order them.
 This occurs, for example, when one event triggers another event immediately, or when several event conditions become active at the same instant \cite{urquia_moraleda_modeling_2018}.
@@ -124,4 +128,4 @@ It only represents progress in the event iteration at fixed time $t$ \cite{broma
 
 Superdense time makes it possible to distinguish between the state before an event and the states after one or more discrete updates at the same physical time.
 Continuous integration resumes only after all event updates at the current physical time have been processed.
-This distinction is important for the present thesis, since hybrid co-simulation requires ordered event processing at a single physical time instant, as described in Section~\ref{sec:cosim_hybrid}.
+This distinction is important for the present thesis, since hybrid co-simulation requires ordered event processing at a single physical time instant, as described in Section~\ref{sec:236_cosim_hybrid}.

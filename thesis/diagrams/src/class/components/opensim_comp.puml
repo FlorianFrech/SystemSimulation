@@ -1,94 +1,81 @@
 @startuml OpenSimComponent
-
-' ============================================================================
-' STYLING
-' ============================================================================
-
-skinparam classAttributeIconSize 0
-skinparam padding 2
-skinparam defaultFontSize 10
-skinparam classFontSize 11
-skinparam nodesep 40
-skinparam ranksep 40
-
-' Color scheme - clean white background
-skinparam backgroundColor white
-
-' Remove yellow/red default colors
-skinparam shadowing false
-
+!include ../../includes/thesis_theme.puml
 left to right direction
 
-' ============================================================================
-' OPENSIM COMPONENT CLASS
-' ============================================================================
-
-class OpenSimComponent <<CoSimComponent>> {
-    + model: osim.Model
-    + manager: osim.Manager
-    + state: osim.State
-    + parameters: Dict[str, Any]
-    - path: str
+abstract class CoSimComponent {
+    + initialize(t0)
+    + do_step(t, dt)
+    + evaluate_outputs(inputs, t)
     --
-    + integrator_method: IntegratorMethod
-    + integrator_accuracy: float = 1e-6
-    + internal_dt: float = 1e-4
-    ==
-    + __init__(name, osim_model_path, group)
-    .. Init ..
+    # _initialize_component(t0)
+    # _do_step_internal(t, dt)
+    # _update_output_states(t)
+}
+
+abstract class OpenSimComponent {
+    + name: str
+    + parameters: dict
+    - _path: str
+    # model: osim.Model
+    # state: osim.State
+    # manager: osim.Manager
+    --
+    + integrator_method
+    + integrator_accuracy
+    + internal_dt
+    --
     # _finalize_model(t0)
     + realize()
-    .. Reset ..
     + reset()
-    .. Coordinate Helpers ..
-    + get_coordinate_value(coord_name): float
-    + get_coordinate_speed(coord_name): float
-    + get_coordinate_acceleration(coord_name): float
-    + set_coordinate_value(coord_name, value)
-    + set_coordinate_speed(coord_name, value)
-    - _find_coordinate(name): osim.Coordinate
+    --
+    + get_coordinate_value(name)
+    + get_coordinate_speed(name)
+    + get_coordinate_acceleration(name)
+    + set_coordinate_value(name, v)
+    + set_coordinate_speed(name, v)
 }
 
-class Model <<opensim>> {
-    + initSystem(): State
-    + getCoordinateSet(): CoordinateSet
-    + realizeDynamics(state)
-    + realizeAcceleration(state)
-    + realizeVelocity(state)
-    + realizePosition(state)
+class "Model" as OsimModel <<opensim>> {
+    + initSystem() : State
+    + getCoordinateSet()
+    + realizePosition/Velocity/
+        Dynamics/Acceleration(state)
 }
 
-class Manager <<opensim>> {
+class "Manager" as OsimManager <<opensim>> {
     + setIntegratorMethod(method)
-    + setIntegratorAccuracy(accuracy)
+    + setIntegratorAccuracy(acc)
     + initialize(state)
-    + integrate(time)
+    + integrate(t)
 }
 
-class State <<opensim>> {
+class "State" as OsimState <<opensim>> {
     + setTime(t)
-    + getTime(): float
+    + getTime()
 }
 
-class Coordinate <<opensim>> {
-    + getName(): str
-    + getValue(state): float
-    + getSpeedValue(state): float
-    + getAccelerationValue(state): float
-    + setValue(state, value)
-    + setSpeedValue(state, value)
-}
+CoSimComponent <|-- OpenSimComponent
+OpenSimComponent --> OsimModel   : owns\n(musculoskeletal model)
+OpenSimComponent --> OsimManager : owns\n(Simbody integrator)
+OpenSimComponent --> OsimState   : owns\n(realization cache)
 
+note top of OpenSimComponent
+  **Base wrapper** for OpenSim models.
+  Concrete subclasses assemble the model
+  and declare ports in their own
+  _initialize_component.
+end note
 
-' Layout: OpenSimComponent on left, OpenSim classes to the right
-OpenSimComponent -down-> Model
-OpenSimComponent -down-> Manager
-OpenSimComponent -left-> State
+note bottom of OsimModel
+  Multibody system of bodies,
+  joints, forces, and muscle
+  actuators (Simbody backend).
+end note
 
-Model -left-> Coordinate
-Manager -left-> State
-
-' Force vertical arrangement
-Manager -[hidden]down- State
+note bottom of OsimManager
+  Drives Simbody's numerical
+  integrator between communication
+  points.
+end note
 
 @enduml

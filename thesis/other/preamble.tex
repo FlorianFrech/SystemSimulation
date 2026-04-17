@@ -8,6 +8,16 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{float}
+% Numbered, captioned code listings (used by \begin{listing} ... \end{listing})
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[
+    fileext=lol,
+    listname={List of Listings},
+    name=Listing,
+    placement=htbp,
+    within=chapter,
+]{listing}
+
 \usepackage{svg}
 
 % Page Geometry
