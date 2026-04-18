@@ -167,19 +167,29 @@ class FEMPendulum(FEMComponent):
     # Initialization helper methods
     # ----------------------------------------------------------------------------
     def _setup_material_law(self):
+        from .material_laws import NeoHookeanMaterial, SVKMaterial
+
         self.E_p, self.E_w = self.mat_params.E_pendulum, self.mat_params.E_wall
         self.nu_p, self.nu_w = self.mat_params.nu_pendulum, self.mat_params.nu_wall
         self.rho_p, self.rho_w = self.mat_params.rho_pendulum, self.mat_params.rho_wall
 
-        self._material_pendulum = NeoHookeanMaterial(self.E_p, self.nu_p)
-        self._deformation_gradient_p = self._material_pendulum.C
-        self._psi_p = self._material_pendulum.psi
-        self._PK2_neo_hookean_p = self._material_pendulum.PK2_neo_hookean
+        model = getattr(self.mat_params, "model", "neo_hookean")
 
-        self._material_wall = NeoHookeanMaterial(self.E_w, self.nu_w)
+        _material_cls = {"neo_hookean": NeoHookeanMaterial, "svk": SVKMaterial}
+        if model not in _material_cls:
+            raise ValueError(f"Unknown material model '{model}'. Choose 'neo_hookean' or 'svk'.")
+
+        self._material_pendulum = _material_cls[model](self.E_p, self.nu_p)
+        self._material_wall     = _material_cls[model](self.E_w, self.nu_w)
+
+        # These are the hooks used in _setup_bilinear_form — interface is identical
+        self._deformation_gradient_p = self._material_pendulum.C
+        self._psi_p                  = self._material_pendulum.psi
+        self._cauchy_stress_p        = self._material_pendulum.cauchy_stress
+        self._von_mises_p            = self._material_pendulum.von_mises
+
         self._deformation_gradient_w = self._material_wall.C
-        self._psi_w = self._material_wall.psi
-        self._PK2_neo_hookean_w = self._material_wall.PK2_neo_hookean
+        self._psi_w                  = self._material_wall.psi
 
     def _create_mesh(self):
         self._mesh = build_mesh(self.geom_params, self.mesh_params, self._with_contact)
@@ -245,7 +255,7 @@ class FEMPendulum(FEMComponent):
         (self._u, self._q), (self._v, self._p) = self._fes.TnT()
 
         # Scalar H1 space for stress in pendulum
-        self._S = MatrixValued(
+        self._S_cauchy = MatrixValued(
             H1(
                 self._mesh,
                 order=self.mesh_params.mesh_order,
@@ -253,7 +263,7 @@ class FEMPendulum(FEMComponent):
             )
         )
         # Scalar H1 space for stress norm visualization
-        self._S_norm = H1(
+        self._V_vm = H1(
             self._mesh,
             order=self.mesh_params.mesh_order,
             definedon=self._mesh.Materials("pendulum"),
@@ -269,14 +279,14 @@ class FEMPendulum(FEMComponent):
         self._gf_vold = GridFunction(self._fes)  # Previous velocity
         self._gf_aold = GridFunction(self._fes)  # Previous acceleration
 
-        self._gf_sigma = GridFunction(self._S)  # Stress
-        self._gf_sigma_norm = GridFunction(self._S_norm)  # Stress norm (scalar)
+        self._gf_cauchy_stress = GridFunction(self._S_cauchy)  # Stress
+        self._gf_von_mises = GridFunction(self._V_vm)  # Stress norm (scalar)
 
         # Time series storage
         self._gf_u_history = GridFunction(self._V, multidim=0)
         self._gf_v_history = GridFunction(self._V, multidim=0)
-        self._gf_stress_history = GridFunction(self._S, multidim=0)
-        self._gf_sigma_norm_history = GridFunction(self._S_norm, multidim=0)
+        self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
+        self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
 
     def _initialize_contact(self):
         """
@@ -737,12 +747,14 @@ class FEMPendulum(FEMComponent):
                         )
 
                 # Compute stress
-                self._gf_sigma.Interpolate(self._PK2_neo_hookean_p(self._gf_u.components[0]))
-                self._gf_sigma_norm.Set(Norm(self._gf_sigma))
+                u_cur = self._gf_u.components[0]
+                self._gf_cauchy_stress.Interpolate(self._cauchy_stress_p(u_cur))      # Cauchy stress tensor
+                self._gf_von_mises.Set(self._von_mises_p(u_cur))             # von Mises scalar
 
                 # Add current state to time series history for visualization
                 self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                self._gf_sigma_norm_history.AddMultiDimComponent(self._gf_sigma_norm.vec)
+                self._gf_von_mises_history.AddMultiDimComponent(self._gf_von_mises.vec)
+                self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
 
                 if self.anim_params.animate:
                     self.scene.Redraw()
@@ -762,7 +774,7 @@ class FEMPendulum(FEMComponent):
                 if name == "tau":
                     self.set_drive_torque(value)
         
-        # Update acting torque
+        # Update acting torque 
         drive_torque = self._get_applied_drive_torque()
         gravity_torque = self._gravity_torque_fem()
         total_torque = drive_torque - gravity_torque
@@ -826,12 +838,12 @@ class FEMPendulum(FEMComponent):
         self._gf_uold.vec[:] = 0
         self._gf_vold.vec[:] = 0
         self._gf_aold.vec[:] = 0
-        self._gf_sigma.vec[:] = 0
-        self._gf_sigma_norm.vec[:] = 0
+        self._gf_cauchy_stress.vec[:] = 0
+        self._gf_von_mises.vec[:] = 0
         self._gf_u_history = GridFunction(self._V, multidim=0)
         self._gf_v_history = GridFunction(self._V, multidim=0)
-        self._gf_stress_history = GridFunction(self._S, multidim=0)
-        self._gf_sigma_norm_history = GridFunction(self._S_norm, multidim=0)
+        self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
+        self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
 
     # ----------------------------------------------------------------------------
     # Helpers for diagnostics and visualization
@@ -982,9 +994,9 @@ class FEMPendulum(FEMComponent):
         Initialize the stress visualization scene.
         """
         self.scene = Draw(
-            Norm(self._gf_sigma),
+            self._gf_von_mises,
             self._mesh,
-            "displacement",
+            "von_mises_stress",
             deformation=self._gf_u.components[0],
             show=True,
         )
@@ -1054,20 +1066,20 @@ class FEMPendulum(FEMComponent):
         """
         if settings is None:
             settings = {"Multidim": {"speed": 15}}
-        if not hasattr(self, "_gf_sigma_norm_history") or len(self._gf_sigma_norm_history.vecs) == 0:
+        if not hasattr(self, "_gf_von_mises_history") or len(self._gf_von_mises_history.vecs) == 0:
             raise RuntimeError(
                 f"{self.name}: No stress history recorded. "
                 "Run with anim_params.animate=True to collect history."
             )
         Draw(
-            self._gf_sigma_norm_history,
+            self._gf_von_mises_history,
             self._mesh,
             interpolation_multidim=True,
             deformation=self._gf_u_history,
             animate=True,
             autoscale=False,
             min=0,
-            max=np.max([v.FV().NumPy().max() for v in self._gf_sigma_norm_history.vecs]),
+            max=np.max([v.FV().NumPy().max() for v in self._gf_von_mises_history.vecs]),
             settings=settings,
         )
 

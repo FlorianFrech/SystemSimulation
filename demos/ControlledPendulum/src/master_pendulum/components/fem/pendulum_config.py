@@ -67,14 +67,16 @@ class MaterialParameters:
 
     def __init__(
         self,
+        model="svk", # or "svk"
         E_pendulum=70e9,
         nu_pendulum=0.2,
         rho_pendulum=2700,
         E_wall=210e9,
         nu_wall=0.3, #0.2
         rho_wall=7850,
-        thickness=0.1, #0.1
+        thickness=0.01,  # thin (plane-stress assumption)
     ):
+        self.model = model
         self.E_pendulum = E_pendulum
         self.nu_pendulum = nu_pendulum
         self.rho_pendulum = rho_pendulum

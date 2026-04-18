@@ -13,7 +13,7 @@ This sequence builds a nonlinear, deformable pendulum model step by step using N
 
 Main takeaways across the three notebooks:
 
-- The pendulum is modeled as a 2D hyperelastic body (Neo-Hookean, plane strain) with nonlinear elastodynamics.
+- The pendulum is modeled as a thin 2D hyperelastic body (Neo-Hookean, plane stress) with nonlinear elastodynamics. The 2D reduction is used for reduced computational cost.
 - A hinge-like pivot is enforced with a mixed FE formulation (`VectorH1 + NumberSpace`) using mean-zero displacement constraints on the rotation edge.
 - Time integration is performed with Newmark-style updates and nonlinear solves (`Variation(...)` + Newton minimization).
 - A rigid-body proxy angle is extracted from the deformable solution for interpretation and verification.
