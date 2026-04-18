@@ -200,7 +200,21 @@ Finite element analysis provides this capability by discretizing the geometry in
 This subsection describes how a continuum-mechanical model is cast into a form suitable for time integration and how the resulting simulation unit is embedded in the co-simulation framework.
 The pendulum of Section~\ref{sec:211_dynamical_systems} serves again as a running example, now formulated as a deformable body.
 
-\paragraph{Kinematics and Balance Laws.}
+\paragraph{Kinematics.}
+A body is described by the collection of material points in space.
+The reference configuration $\Omage$ of a body describes the initial, undeformed configuration.
+A deformation of the body occurs due to external forces acting on the body.
+The deformation is described by the function $\phi: \Omega \to \mathbb{R}^3$ and gives the position of the material point $x \in \Omega$ of the reference configuration after deformation.
+A displacement describes the difference $u(x) = \phi(x) - x$.
+The boundary of a body is denoted by $\partial \Omega$.
+
+\paragraph{Hyperelastic Constitutive Law.}
+
+\paragraph{Stress Measures.}
+
+\paragraph{Variational Formulation and Equilibrium}
+
+\paragraph{}
 Let $\Omega \subset \mathbb{R}^d$ with $d \in \{2,3\}$ denote the reference configuration of the body, with boundary $\partial\Omega = \overline{\Gamma_D \cup \Gamma_N}$ and $\Gamma_D \cap \Gamma_N = \emptyset$.
 The motion is described by a deformation map $\varphi(\mathbf{X},t) : \Omega \times [0,T] \to \mathbb{R}^d$ and the associated displacement field $\mathbf{u}(\mathbf{X},t) = \varphi(\mathbf{X},t) - \mathbf{X}$.
 Differentiation with respect to the reference coordinates yields the deformation gradient
