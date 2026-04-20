@@ -53,16 +53,13 @@ class EventConnection:
         src_port: Name of the event (must match event indicator name on source)
         dst_comp: Name of the component that handles the event
         dst_port: Name of the event input port on the target (for visualization)
-        direction: Zero-crossing direction (-1: falling, 0: both, +1: rising)
-                   If None, uses the direction from the source's event indicator.
     """
 
     src_comp: str
     src_port: str
     dst_comp: str
     dst_port: str
-    direction: int | None = None  # If None, inherit from event indicator
-
+    
     @property
     def event_name(self) -> str:
         """Name of the event (same as src_port)."""

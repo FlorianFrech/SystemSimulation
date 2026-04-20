@@ -3,14 +3,15 @@
 \label{sec:impl_system}
 
 The \texttt{System} class assembles individual components into a running co-simulation scenario.
-It implements the system abstraction introduced in Section~\ref{sec:architecture_system_connections} and addresses requirements SR-04-01 to SR-04-03 and SR-05-01 (system composition, connection validation, and lifecycle orchestration).
+It implements the system abstraction introduced in Section~\ref{sec:architecture_system_connections} and realizes SR-03-01 and SR-03-02 (UR-03).
+The event-connection functionality additionally supports the event-related interaction required by SR-04-02 (UR-04).
 
 Figure~\ref{fig:impl_system_class} gives a class-level overview of the implementation objects involved in system composition and execution.
 The structural analysis that derives the execution order from the registered connections is deferred to Section~\ref{sec:impl_structural}, and the master algorithms that consume this order are described in Section~\ref{sec:impl_algorithms}.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.9textwidth]{diagrams/out/pdf/class/system/System.pdf}
+    \includegraphics[width=0.85\textwidth]{diagrams/out/pdf/class/system/System.pdf}
     \caption{Class-level overview of the \texttt{System} abstraction in \syssimx. The diagram shows how the \texttt{System} manages components, stores signal and event connections, and delegates stepping to an \texttt{Algorithm}.}
     \label{fig:impl_system_class}
 \end{figure}
@@ -45,7 +46,6 @@ Table~\ref{tab:system_state} summarizes the persistent state maintained by a \te
 
 Components are registered with \texttt{add\_component()} before any connection can reference them.
 Registration enforces that each component name is unique within the system and rejects additions after \texttt{initialize()} has been called, which keeps the structural analysis valid for the entire simulation run.
-If the component declares a \texttt{group}, it is additionally appended to the corresponding list in \texttt{groups} and used by the grouped layout of the system-graph visualization (Section~\ref{sec:impl_visualization}).
 The component's history is registered with the system-level \texttt{SystemHistory} instance so that results from all components can be retrieved through a single call to \texttt{get\_history()} after the simulation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -56,28 +56,27 @@ It stores the source component name, the source output port name, the destinatio
 The dataclass is frozen and hashable, which allows connections to be used directly as set elements and dictionary keys during graph construction and duplicate detection.
 
 \paragraph{Validation.}
-The method \texttt{add\_connection()} delegates to the private \texttt{\_validate\_connection()} routine before appending the connection.
-Validation performs four checks in sequence.
-First, both referenced components must already be registered with the system.
-Second, the source port must be declared as an output of the source component and the destination port as an input of the destination component.
-Third, the two port specifications must be compatible in the sense of \texttt{PortSpec.compatible()} introduced in Section~\ref{sec:impl_port_system}, which requires an exact data-type match and, for \texttt{REAL} ports, dimensionally compatible units.
-Fourth, the exact quadruple of source component, source port, destination component, and destination port must not already be present in the connection list.
+A system registers a signal connection via the method \texttt{add\_connection()}.
+The method first delegates to the private \texttt{\_validate\_connection()} routine before appending the connection.
+Validation checks four conditions, namely the existence of both referenced components, the existence of the named ports on those components, compatibility of the two port specifications, and the absence of an exact duplicate connection.
+Two port specifications are compatible in the sense of \texttt{PortSpec.compatible()} introduced in Section~\ref{sec:impl_port_system} if they have the same data type and, for \texttt{REAL} ports, dimensionally compatible units in the Pint sense.
 A failure in any of these checks raises the corresponding exception before the connection is stored, so the system cannot reach the initialization stage with structurally invalid or ambiguous couplings.
 
 \paragraph{Single Assignment.}
-At most one connection may drive any given input port.
-This rule is checked during graph construction rather than during registration, because it depends on the combined set of connections rather than on any individual connection.
-When two connections target the same destination input, \texttt{build\_graphs()} (Section~\ref{sec:impl_structural}) aborts with a \texttt{RuntimeError}.
-Together with the per-connection validation, this guarantees a unique source for every consumed input port.
+Each input port may be driven by at most one signal connection.
+This invariant is enforced during connection registration.
+The method \texttt{add\_connection()} rejects a new connection if another registered connection already targets the same destination component and input port.
+This guarantees a unique source for every consumed input port.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Event Connections}
 
 Hybrid scenarios use \texttt{EventConnection} to register a directed link from an event indicator of a source component to an event-handling target component.
-The source port identifies the registered event indicator and the destination port identifies the event input of the target that appears in the system graph.
-The connection optionally carries a zero-crossing direction that overrides the direction declared on the source's event indicator.
+The source port identifies the registered event indicator, and the destination port identifies the event input of the target that appears in the system graph.
+The zero-crossing direction is not part of the connection.
+It is defined once by the source component's event indicator and inherited by the generated event subscription.
 
-The method \texttt{add\_event\_connection()} validates the connection, auto-subscribes the target, and updates the internal routing table from source event to target components.
+The method \texttt{add\_event\_connection()} validates the connection, auto-subscribes the target, and updates the internal routing table from event source to target components.
 The subscription is realized by appending a matching \texttt{Event} object to the target's \texttt{event\_subscriptions} list, which is the structure consumed by the hybrid algorithm of Section~\ref{sec:impl_hybrid}.
 If a matching subscription is already present, it is not duplicated, so the same subscription can be expressed through manual registration or through \texttt{add\_event\_connection()} without conflicting entries on the target.
 A duplicate event connection itself, however, is rejected at registration time.
@@ -100,9 +99,22 @@ Once all components and connections are registered, the system is driven through
 \texttt{initialize(t0)} first performs the component classification and algorithm selection described above.
 It then triggers the construction of port states for all components and computes their direct-feedthrough structure, which is required before the structural analysis can build the zero-delay dependency graph.
 The structural analysis of Section~\ref{sec:impl_structural} is invoked next and produces the execution order together with the list of algebraic loops.
-Initialization then proceeds generation by generation.
-For each generation, upstream output values are propagated into the input port states, the components in the generation are initialized, algebraic loops contained in the generation are resolved through the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}, and each component finally performs a zero-step to publish consistent outputs for downstream generations.
+Initialization then proceeds generation by generation, as illustrated in Figure~\ref{fig:impl_system_initialization}.
+For each generation, upstream output values are first propagated into the input port states.
+The components in the generation are then initialized.
+If the generation contains an algebraic loop, the corresponding SCC is resolved through the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}.
+Finally, each component performs a zero-step to publish outputs for downstream generations.
+Processing generations in topological order therefore guarantees that every component sees coherent initial inputs derived from the already-initialized upstream components.
 Registration of further components or connections is no longer allowed after this point.
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.6\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
+  \caption[System initialization sequence.]{Sequence of operations executed by \texttt{System.initialize(t0)}.
+    After classification, port preparation, and structural analysis, the system iterates over the execution order and, for each generation, propagates upstream outputs, initializes the contained components, resolves any algebraic loops, and performs a zero-step.
+    The zero-step publishes direct-feedthrough outputs so that later generations are initialized with consistent input values.}
+  \label{fig:impl_system_initialization}
+\end{figure}
 
 \paragraph{Run.}
 \texttt{run(t0, tf, dt)} drives the coupled simulation by repeatedly delegating to the algorithm's \texttt{step()} method.
@@ -110,59 +122,60 @@ The stepping loop advances the time pointer in fixed macro steps of size \texttt
 All orchestration details that depend on the chosen algorithm, such as input propagation between components, algebraic-loop iteration, and event localization, are owned by the algorithm (Section~\ref{sec:impl_algorithms}) and not by the \texttt{System} itself.
 
 \paragraph{Reset.}
-\texttt{reset()} clears the aggregated history, resets every component through its own \texttt{reset()} hook, and returns the system to the pre-initialization state, so that a new \texttt{initialize()} call can be issued.
-The component list, connection list, and selected algorithm are retained, so repeated runs of the same scenario require no re-registration.
+\texttt{reset()} releases the runtime state of the system without removing its structural definition.
+It clears the aggregated history, resets all registered components through their own \texttt{reset()} hooks, and marks the system as not initialized.
+The registered components, signal connections, event connections, and selected algorithm are retained, so the same scenario can be initialized and executed again without rebuilding the system configuration.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The verification of \texttt{System} targets the contract exposed by its registration and orchestration routines.
-It uses lightweight mock components, including a pure-gain feedthrough component, a simple integrator, and minimal hybrid source and listener components.
-Table~\ref{tab:system_verification} summarizes the verified properties.
+The feature verified here is the \emph{registration contract} of the \texttt{System}.
+This contract is a single behavioral invariant.
+Only structurally valid and unambiguous configurations may reach the initialization stage, and every registration attempt either augments the structural definition or is rejected before any state is mutated.
+The contract is exposed through three entry points that share the same acceptance-and-rejection logic, namely signal-connection registration, event-connection registration, and the lifecycle boundary enforced by \texttt{initialize()}.
+A minimal verification of this feature therefore has to exercise all three entry points in a single scenario.
+Each row of Table~\ref{tab:system_verification} corresponds to one of them.
+The scenario uses lightweight mock components.
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Verified properties of \texttt{System}.
-    All tests use lightweight mock components and target registration, validation, and orchestration independently of any backend.}
+  \caption{Minimal verification scenario for the \texttt{System} registration contract.
+    The three rows correspond to the three entry points through which the contract is exposed.
+    They are exercised in one scenario because they share the same acceptance-and-rejection semantics.}
   \label{tab:system_verification}
-  \begin{tabular}{p{6.5cm} p{7.5cm}}
+  \begin{tabular}{p{3.8cm} p{5.0cm} p{5.0cm}}
     \toprule
-    \textbf{Verified Property} & \textbf{Expected Outcome} \\
+    \textbf{Verified aspect} & \textbf{Minimal setup} & \textbf{Observed result} \\
     \midrule
-    Duplicate component names
-      & \texttt{add\_component()} raises \texttt{ValueError} on re-registration \\
+    Signal connection registration
+      & Three simple feedthrough components are registered.
+        A valid connection from \texttt{A.y} to \texttt{C.u} is added.
+        A second connection from \texttt{B.y} to the same input \texttt{C.u} is attempted.
+      & The first connection is stored.
+        The second connection is rejected with a \texttt{ValueError}.
+        This confirms that each input port has a unique driver. \\
     \addlinespace
-    Registration after initialization
-      & Further \texttt{add\_component()} calls raise \texttt{RuntimeError} \\
+
+    Event connection registration
+      & A hybrid source declares an event indicator.
+        A hybrid listener declares a matching event input.
+        An \texttt{EventConnection} links the source indicator to the listener input.
+      & The target component receives exactly one matching event subscription.
+        The subscription direction is inherited from the source event indicator.
+        The connection itself only represents event routing. \\
     \addlinespace
-    Connection to unknown component
-      & \texttt{add\_connection()} raises \texttt{ValueError} before the connection is stored \\
-    \addlinespace
-    Connection to unknown port
-      & \texttt{add\_connection()} raises \texttt{KeyError} identifying the missing port \\
-    \addlinespace
-    Port type or unit mismatch
-      & \texttt{add\_connection()} raises \texttt{TypeError} with a descriptive message \\
-    \addlinespace
-    Duplicate signal connection
-      & Second \texttt{add\_connection()} call for the same quadruple raises \texttt{ValueError} \\
-    \addlinespace
-    Event connection with unknown indicator
-      & \texttt{add\_event\_connection()} raises \texttt{KeyError} and leaves the target's subscription list unchanged \\
-    \addlinespace
-    Event connection auto-subscription
-      & Successful \texttt{add\_event\_connection()} appends exactly one matching \texttt{Event} to the target's subscriptions \\
-    \addlinespace
-    Default algorithm
-      & A newly constructed system exposes a \texttt{GaussSeidelAlgorithm} instance \\
-    \addlinespace
-    Algorithm auto-upgrade
-      & A system with at least one event source selects \texttt{HybridAlgorithm} at \texttt{initialize()}, overriding any prior choice \\
+
+    Lifecycle protection
+      & The system is initialized after component and connection registration.
+        A further component registration is attempted after initialization.
+      & Initialization stores the system time and marks the system as initialized.
+        Further component registration is rejected.
+        The structural definition is therefore fixed for the simulation run. \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The tests confirm that \texttt{System} enforces the registration contract and the connection rules before any simulation starts.
-Invalid component references, incompatible port pairs, and duplicate registrations are rejected at the earliest possible stage, and the algorithm selection automatically reflects the presence of hybrid components.
-Structural-analysis properties, such as execution-order derivation and algebraic-loop detection, are verified separately in Section~\ref{sec:impl_structural}.
+The scenario confirms that the registration contract is enforced uniformly across its three entry points.
+The system rejects ambiguous or late structural changes before simulation starts, and event routing is configured through \texttt{EventConnection} while the event semantics remain owned by the source-side event indicator.
+Structural-analysis properties are verified separately in Section~\ref{sec:impl_structural}.

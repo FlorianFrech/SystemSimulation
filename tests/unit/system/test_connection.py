@@ -200,8 +200,8 @@ class TestEventConnection:
         ec_set = {ec1, ec2}
         assert len(ec_set) == 1
 
-    def test_direction_default_none(self):
-        """Test that direction defaults to None."""
+    def test_event_connection_has_no_direction_field(self):
+        """Test that EventConnection only describes routing, not event semantics."""
         event_conn = EventConnection(
             src_comp="SourceComp",
             src_port="event",
@@ -209,43 +209,18 @@ class TestEventConnection:
             dst_port="handler",
         )
 
-        assert event_conn.direction is None
+        assert not hasattr(event_conn, "direction")
 
-    def test_direction_rising(self):
-        """Test event connection with rising direction."""
-        event_conn = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=1,
-        )
-
-        assert event_conn.direction == 1
-
-    def test_direction_falling(self):
-        """Test event connection with falling direction."""
-        event_conn = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=-1,
-        )
-
-        assert event_conn.direction == -1
-
-    def test_direction_both(self):
-        """Test event connection with both directions."""
-        event_conn = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=0,
-        )
-
-        assert event_conn.direction == 0
+    def test_event_connection_rejects_direction_argument(self):
+        """Test that zero-crossing direction is not configured on EventConnection."""
+        with pytest.raises(TypeError, match="direction"):
+            EventConnection(
+                src_comp="SourceComp",
+                src_port="event",
+                dst_comp="TargetComp",
+                dst_port="handler",
+                direction=1,
+            )
 
     def test_key_method(self):
         """Test that key() returns unique tuple identifier."""
@@ -254,70 +229,9 @@ class TestEventConnection:
             src_port="event",
             dst_comp="TargetComp",
             dst_port="handler",
-            direction=1,
         )
 
         key = event_conn.key()
 
         assert key == ("SourceComp", "event", "TargetComp", "handler")
         assert isinstance(key, tuple)
-
-    def test_key_excludes_direction(self):
-        """Test that key() does not include direction (same connection, different direction)."""
-        ec1 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=1,
-        )
-        ec2 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=-1,
-        )
-
-        # Keys should be equal (direction not part of key)
-        assert ec1.key() == ec2.key()
-        # But the connections themselves differ due to direction
-        assert ec1 != ec2
-
-    def test_equality_with_different_directions(self):
-        """Test that connections with different directions are not equal."""
-        ec1 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=1,
-        )
-        ec2 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=None,
-        )
-
-        assert ec1 != ec2
-
-    def test_equality_with_same_directions(self):
-        """Test that connections with same directions are equal."""
-        ec1 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=1,
-        )
-        ec2 = EventConnection(
-            src_comp="SourceComp",
-            src_port="event",
-            dst_comp="TargetComp",
-            dst_port="handler",
-            direction=1,
-        )
-
-        assert ec1 == ec2

@@ -1,0 +1,107 @@
+\documentclass[tikz,border=5pt]{standalone}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,fit,positioning,backgrounds,shapes.geometric}
+
+\tikzset{
+  component/.style={
+    rectangle,
+    draw=blue!50!black,
+    fill=blue!12,
+    rounded corners=2pt,
+    minimum width=20mm,
+    minimum height=20mm,
+    inner sep=0pt
+  },
+  port/.style={
+    rectangle,
+    draw=black,
+    fill=white,
+    minimum width=7.5mm,
+    minimum height=7.5mm,
+    inner sep=0pt,
+    font=\bfseries\small
+  },
+  inactiveport/.style={
+    port,
+    fill=gray!10,
+    draw=gray!65,
+    dashed,
+    text=gray!70!black
+  },
+  connection/.style={
+    thick,
+    ->,
+    >=Latex
+  },
+  directfeedthrough/.style={
+    ->,
+    thick,
+    dashed,
+    red!75!black
+  }
+}
+
+\newcommand{\arrowlegend}[1]{%
+  \begin{scope}[shift={#1}]
+    \draw[->, dashed, thick, red!75!black] (0,0) -- (0.7,0);
+    \node[anchor=west, font=\scriptsize] at (0.75,0) {direct feedthrough};
+    \draw[->, thick, black] (3.3,0) -- (4.0,0);
+    \node[anchor=west, font=\scriptsize] at (4.05,0) {connection};
+  \end{scope}%
+}
+
+\begin{document}
+\begin{tikzpicture}[>=Latex]
+  \draw[help lines, step=0.5] (-0.5,-0.5) grid (7,5.5);
+
+  % Component A
+  \begin{scope}[shift={(0,3)}]
+    \draw[component] (0,0) rectangle (2.5,2.5);
+    \node[anchor=north, font=\Large\bfseries] at (1.25,2.45) {A};
+    \node[port] (A-u1) at (0.375,1.5) {u1};
+    \node[port] (A-y1) at (2.125,1.5) {y1};
+  \end{scope}
+
+  % Component B
+  \begin{scope}[shift={(3.5,3)}]
+    \draw[component] (0,0) rectangle (2.5,2.5);
+    \node[anchor=north, font=\Large\bfseries] at (1.25,2.45) {B};
+    \node[port] (B-u1) at (0.375,1.5) {u1};
+    \node[port] (B-u2) at (0.375,0.5) {u2};
+    \node[port] (B-y1) at (2.125,1.5) {y1};
+    \node[port] (B-y2) at (2.125,0.5) {y2};
+    \draw[directfeedthrough] (B-u1) -- (B-y1);
+    \draw[directfeedthrough] (B-u2) -- (B-y2);
+  \end{scope}
+
+  % Component C
+  \begin{scope}[shift={(3.5,0)}]
+    \draw[component] (0,0) rectangle (2.5,2.5);
+    \node[anchor=north, font=\Large\bfseries] at (1.25,2.45) {C};
+    \node[port] (C-y1) at (0.375,1.5) {y1};
+    \node[port] (C-y2) at (0.375,0.5) {y2};
+    \node[port] (C-u1) at (2.125,1.5) {u1};
+    \node[port] (C-u2) at (2.125,0.5) {u2};
+    \draw[directfeedthrough] (C-u1) -- (C-y1);
+    \draw[directfeedthrough] (C-u2) -- (C-y2);
+  \end{scope}
+
+  % Component D
+  \begin{scope}[shift={(0,0)}]
+    \draw[component] (0,0) rectangle (2.5,2.5);
+    \node[anchor=north, font=\Large\bfseries] at (1.25,2.45) {D};
+    \node[port] (D-y1) at (0.375,0.5) {y1};
+    \node[port] (D-u1) at (2.125,0.5) {u1};
+  \end{scope}
+
+  \draw[connection] (A-y1) -- (B-u1);
+  \draw[connection] (B-y1) --++(1.375,0) --++(0,-4) -- (C-u2);
+  \draw[connection] (B-y2) --++(0.375+0.5,0) --++(0,-2) --(C-u1);
+  \draw[connection] (C-y1) --++(-0.375-0.5,0) --++(0,2) -- (B-u2);
+  \draw[connection] (C-y2) -- (D-u1);
+  \draw[connection] (D-y1) --++(-0.375-0.5,0) --++(0,4) -- (A-u1);
+
+  \arrowlegend{(0, -0.25)}
+\end{tikzpicture}
+\end{document}

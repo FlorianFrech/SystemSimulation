@@ -1,0 +1,186 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Structural Analysis and Execution Ordering}
+\label{sec:impl_structural}
+
+This section describes the implementation of the structural analysis introduced in Section~\ref{sec:233_cosim_structural_analysis}.
+The implementation realizes SR-10-02 and SR-10-03 under UR-10, and SR-11-02 under UR-11.
+It derives persistent graph metadata from the registered components, signal connections, and direct-feedthrough information.
+This metadata is later consumed by coupled initialization and by the master algorithms.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Inputs and Stored Metadata}
+\label{sec:impl_structural_inputs}
+
+Structural analysis is a pure function of information already registered with the \texttt{System}.
+Its inputs are the registered components in \texttt{components}, the signal connections in \texttt{connections}, and the direct-feedthrough metadata each component exposes through \texttt{direct\_feedthrough} after feedthrough detection.
+An auxiliary input is the set of \emph{active outputs}, that is, the output ports that are actually referenced by at least one outgoing connection.
+This set is recomputed from the connection list and controls the active-output filter of Section~\ref{sec:impl_structural_graph}.
+
+All results of the structural analysis are stored directly on the \texttt{System} instance so that the master algorithms and the initialization loop can read them without recomputation.
+Table~\ref{tab:structural_metadata} lists the stored fields, the routine that produces them, and their purpose.
+The attribute \texttt{\_dag} is called the \emph{zero-delay graph} throughout this section because it may contain cycles before algebraic-loop condensation.
+It becomes acyclic only once each strongly connected component is collapsed into a single node during the computation of the execution order.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \caption{Structural metadata stored on a \texttt{System} instance.
+    All fields are populated during \texttt{initialize(t0)} and remain valid for the rest of the simulation run.}
+  \label{tab:structural_metadata}
+  \begin{tabular}{p{3.2cm} p{3.6cm} p{7.0cm}}
+    \toprule
+    \textbf{Attribute} & \textbf{Produced by} & \textbf{Purpose} \\
+    \midrule
+    \texttt{graph}
+      & \texttt{build\_graphs()}
+      & Full \texttt{MultiDiGraph} of all registered signal connections, including delayed ones. Used for visualization and for delayed-producer detection. \\
+    \addlinespace
+    \texttt{\_dag}
+      & \texttt{build\_graphs()}
+      & Zero-delay dependency graph restricted to connections whose destination input participates in active direct feedthrough. May contain cycles before condensation. \\
+    \addlinespace
+    \texttt{\_incoming\_by\_dst}
+      & \texttt{build\_graphs()}
+      & Incoming connections keyed by destination component. Used during input propagation. \\
+    \addlinespace
+    \texttt{\_input\_sources}
+      & \texttt{build\_graphs()}
+      & Mapping from destination component and port to the unique driving connection. Used by \texttt{\_set\_inputs\_for\_generation()}. \\
+    \addlinespace
+    \texttt{algebraic\_loops}
+      & \texttt{build\_graphs()}
+      & List of strongly connected components of the zero-delay graph with more than one node, plus one-component self-loops. Consumed by the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}. \\
+    \addlinespace
+    \texttt{\_scc\_index}
+      & \texttt{compute\_execution\_order()}
+      & Mapping from component name to the condensation-node identifier it belongs to. \\
+    \addlinespace
+    \texttt{execution\_order}
+      & \texttt{compute\_execution\_order()}
+      & Generation-based schedule after condensation and delayed-producer post-processing. Each entry is a list of component names executed together. \\
+    \addlinespace
+    \texttt{execution\_idx}
+      & \texttt{compute\_execution\_order()}
+      & Mapping from component name to its generation index in \texttt{execution\_order}. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Graph Construction}
+\label{sec:impl_structural_graph}
+
+Graph construction is performed by \texttt{build\_graphs()} and produces both the full connection graph and the zero-delay graph in a single pass over the registered connections.
+It consists of four steps.
+The first step clears any previously cached structural metadata so that a repeated call on the same system yields a well-defined result.
+The second step adds every registered component as a node of both \texttt{graph} and \texttt{\_dag}, which guarantees that isolated components remain visible in the metadata even if they have no incoming or outgoing signal connections.
+The third step collects the active-output set through \texttt{collect\_active\_outputs()}.
+This set contains, for each component, those output ports that are referenced by at least one outgoing signal connection and is used as a filter during zero-delay edge insertion.
+
+\paragraph{Full Connection Graph.}
+The fourth step iterates over all signal connections.
+Every connection is added to \texttt{graph} as an annotated multi-edge whose \texttt{src\_port} and \texttt{dst\_port} attributes identify the connected ports.
+The same pass also populates the input-lookup maps \texttt{\_incoming\_by\_dst} and \texttt{\_input\_sources}.
+Both maps are consumed later by \texttt{System.\_set\_inputs\_for\_generation()} to propagate upstream outputs into the input port states of the current generation.
+
+\paragraph{Zero-Delay Graph and Active-Output Filter.}
+Execution ordering only depends on instantaneous dependencies, so \texttt{\_dag} is built from a strict subset of the connections that enter \texttt{graph}.
+A signal connection from component $A$ to component $B$ is added to \texttt{\_dag} if and only if the connected destination port of $B$ participates in the direct feedthrough of at least one \emph{active} output of $B$.
+This condition is evaluated against the \texttt{direct\_feedthrough} mapping of component $B$, which is produced during feedthrough detection (Section~\ref{sec:impl_component_interface}) and lists, for each output port, the set of input ports on which it depends algebraically.
+The active-output restriction is what distinguishes the \syssimx{} zero-delay graph from the purely conceptual version shown in Section~\ref{sec:233_cosim_structural_analysis}.
+A feedthrough path through component $B$ only contributes an ordering constraint if its output is actually consumed by another component, because an unused output cannot influence the coupled dynamics.
+The filter therefore removes ordering constraints that would otherwise be imposed by sink-like outputs without changing the simulation semantics.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Algebraic Loop Detection}
+\label{sec:impl_structural_loops}
+
+Once the zero-delay graph has been assembled, \texttt{build\_graphs()} identifies the subsets of components that participate in an instantaneous cyclic dependency.
+Section~\ref{sec:233_cosim_algebraic_loops} has already established that each such subset corresponds to a strongly connected component of the zero-delay graph.
+This implementation reuses that result directly through \texttt{networkx.strongly\_connected\_components()}, which returns every maximal strongly connected subset of \texttt{\_dag}.
+
+\paragraph{Multi-Component Loops.}
+Any strongly connected component with more than one node is stored as an algebraic loop in the attribute \texttt{algebraic\_loops}.
+Each entry is a list of component names that collectively form one loop block.
+The ordering inside a block is not semantically relevant at this stage, because the IJCSA solver of Section~\ref{sec:impl_algebraic_loops} treats the block as an unordered set of unknowns and equations.
+
+\paragraph{Single-Component Self-Loops.}
+A one-component algebraic loop arises when an output of a single component depends instantaneously on one of its own inputs through an outer connection that feeds the component's output back into its own input.
+Such a configuration produces a self-loop in \texttt{\_dag}.
+The first pass over the strongly connected components does not recognize this case because a single node always forms a strongly connected component of size one.
+A second explicit pass iterates over all nodes, checks whether the node carries a self-loop edge in \texttt{\_dag}, and, if so, appends the corresponding singleton list to \texttt{algebraic\_loops}.
+From the perspective of the master algorithm a self-loop is a regular loop block with one participant.
+This unified representation realizes SR-11-02 and allows the iterative solver to apply the same IJCSA iteration scheme to multi-component and one-component loops without special casing.
+
+\paragraph{Consumers of the Loop Information.}
+Two later stages of the pipeline consume \texttt{algebraic\_loops}.
+The condensation step of Section~\ref{sec:impl_structural_condensation} uses the strongly connected components of \texttt{\_dag} to collapse each loop into a single condensed node before the topological generations are computed.
+The initialization loop of \texttt{System.initialize(t0)} and every master algorithm subsequently iterate over \texttt{algebraic\_loops} for each generation and hand loops whose members are contained entirely in the current generation to the IJCSA solver.
+The detection pass described here is therefore performed once during structural analysis and its result remains valid for the rest of the simulation run.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Condensation and Execution Order}
+\label{sec:impl_structural_condensation}
+
+The zero-delay graph may contain directed cycles, so a topological sort cannot be applied to it directly.
+Section~\ref{sec:233_cosim_structural_analysis} has shown that collapsing every strongly connected component into a single node yields the condensed graph, which is acyclic by construction.
+The routine \texttt{compute\_execution\_order()} implements this idea on \texttt{\_dag} and then derives the generation-based schedule that the master algorithms consume.
+
+\paragraph{Condensation.}
+The condensation is obtained through \texttt{networkx.condensation()}.
+The result is a directed acyclic graph whose nodes are integer identifiers of the strongly connected components of \texttt{\_dag} and whose edges reflect the inter-component dependencies that survive the collapse.
+The returned mapping from original component names to condensation identifiers is inverted once and stored in two auxiliary structures.
+The mapping \texttt{\_scc\_index} records, for each component, the identifier of the strongly connected component it belongs to and is used during initialization and during loop resolution to locate a component's loop block.
+A second local dictionary stores the reverse direction, that is, the sorted list of component names contained in each condensation node.
+It is only needed during execution-order construction and is discarded afterwards.
+
+\paragraph{Topological Generations.}
+The acyclic condensed graph is passed to \texttt{networkx.topological\_generations()}, which returns a sequence of sets of condensation nodes such that all dependencies of a set have already been satisfied by earlier sets.
+Each set is one \emph{generation} in the sense of Section~\ref{sec:233_cosim_structural_analysis}.
+\syssimx{} expands every condensation identifier back to its constituent component names and stores the resulting generations as a list of lists in \texttt{execution\_order}.
+The component names inside a generation are sorted alphabetically so that the schedule is deterministic and independent of the registration order.
+A generation therefore contains either a set of mutually independent components, which can in principle be advanced in parallel, or the members of one algebraic loop, which must be resolved locally before the generation is considered advanced.
+
+\paragraph{Index Lookup.}
+The auxiliary dictionary \texttt{execution\_idx} is built in the same pass and maps every component name to the zero-based index of the generation that owns it.
+This index is queried by the master algorithms when they need to decide whether a given component is upstream of another without traversing \texttt{\_dag}.
+Because both \texttt{execution\_order} and \texttt{execution\_idx} are rebuilt in every invocation, a repeated call on the same system reflects the current state of connections and direct-feedthrough metadata.
+
+\paragraph{Post-Processing.}
+The schedule produced by the topological generations is the structurally correct order of execution, but it does not yet account for the \syssimx{}-specific placement of delayed producers.
+That adjustment is described in Section~\ref{sec:impl_structural_delayed} and is applied as the final step of \texttt{compute\_execution\_order()} before the routine returns.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Delayed Producer Post-Processing}
+\label{sec:impl_structural_delayed}
+
+The condensation-based schedule of Section~\ref{sec:impl_structural_condensation} captures every ordering constraint that follows from instantaneous dependencies.
+Some components, however, have no zero-delay edges at all and yet reach the strongly coupled part of the system through purely delayed connections.
+A typical example is an actuator component whose output influences the plant dynamics only through a downstream integrator.
+The topological generations treat such components as isolated and place them arbitrarily early in the schedule.
+This is correct with respect to zero-delay dependencies, but it advances the component before the loop block that it ultimately feeds has produced a consistent output for the current step.
+\syssimx{} therefore applies a post-processing step that relocates those components to the end of the schedule.
+The step is a scheduling choice of the framework and not a general property of co-simulation theory.
+
+\paragraph{Delayed-Producer Criterion.}
+A component is classified as a delayed producer if two conditions are satisfied simultaneously.
+First, it must have neither incoming nor outgoing edges in the zero-delay graph \texttt{\_dag}, so it contributes no algebraic feedthrough to the coupled dynamics.
+Second, it must still reach at least one component with zero-delay structure through the full connection graph \texttt{graph}, which means that its outputs influence the coupled part of the system through a sequence that contains at least one delayed edge.
+The predicate \texttt{is\_delayed\_producer()} evaluates both conditions and short-circuits as soon as a reachable zero-delay node is found.
+
+\paragraph{Relocation Step.}
+The routine \texttt{move\_delayed\_producers\_to\_last\_generation()} collects all components for which the predicate is true, removes them from their original generations, and appends them as an additional final generation that is sorted alphabetically for determinism.
+Empty generations that may arise from the removal are dropped so the schedule stays compact.
+The auxiliary index \texttt{execution\_idx} is rebuilt after the relocation so that every component's generation index remains consistent with \texttt{execution\_order}.
+If no component satisfies the predicate, the schedule is left unchanged, which is the common case for scenarios without delayed producers.
+
+
+\subsection{Use by Initialization and Master Algorithms}
+\label{sec:impl_structural_use}
+
+The metadata produced in the preceding subsections is computed once at the start of \texttt{System.initialize(t0)} and then consumed read-only for the rest of the simulation run.
+The initialization loop of Section~\ref{sec:impl_system} iterates over \texttt{execution\_order} generation by generation, uses \texttt{\_input\_sources} to propagate upstream outputs into the current generation, and hands every entry of \texttt{algebraic\_loops} whose members are contained entirely in that generation to the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}.
+The Jacobi, Gauss--Seidel, and Hybrid algorithms of Section~\ref{sec:impl_algorithms} reuse the same metadata during stepping and additionally query \texttt{execution\_idx} when they need to compare the positions of two components in the schedule.
+The structural analysis is therefore a one-shot preprocessing stage whose output defines a fixed orchestration contract between \texttt{System} and the master algorithms for the remainder of the run.
+
+\subsection{Verification}

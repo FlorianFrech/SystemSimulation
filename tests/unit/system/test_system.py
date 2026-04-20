@@ -797,32 +797,8 @@ class TestEventConnections:
         assert listener.event_subscriptions[0].name == "trigger"
         assert listener.event_subscriptions[0].source == "Source"
 
-    def test_add_event_connection_uses_connection_direction(self):
-        """Test that direction from EventConnection overrides indicator direction."""
-        sys = System(name="DirectionOverride")
-        source = HybridSource(name="Source", x0=0.0, v=1.0, t0=0.0)
-        source.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)  # Rising
-        listener = HybridListener(name="Listener", x0=0.0, v=1.0, t0=0.0)
-
-        sys.add_component(source)
-        sys.add_component(listener)
-
-        # Override direction to falling (-1)
-        sys.add_event_connection(
-            EventConnection(
-                src_comp="Source",
-                src_port="trigger",
-                dst_comp="Listener",
-                dst_port="v_invert",
-                direction=-1,
-            )
-        )
-
-        # Subscription should use overridden direction
-        assert listener.event_subscriptions[0].direction == -1
-
-    def test_add_event_connection_uses_indicator_direction_when_none(self):
-        """Test that direction defaults to indicator direction when connection direction is None."""
+    def test_add_event_connection_uses_indicator_direction(self):
+        """Test that subscription direction is inherited from the source indicator."""
         sys = System(name="IndicatorDirection")
         source = HybridSource(name="Source", x0=0.0, v=1.0, t0=0.0)
         source.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)  # Rising
@@ -837,11 +813,9 @@ class TestEventConnections:
                 src_port="trigger",
                 dst_comp="Listener",
                 dst_port="v_invert",
-                direction=None,  # Should use indicator's direction
             )
         )
 
-        # Subscription should use indicator direction
         assert listener.event_subscriptions[0].direction == 1
 
     def test_add_event_connection_missing_source_raises_valueerror(self):

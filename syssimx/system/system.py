@@ -403,11 +403,8 @@ class System:
         target = self.components[connection.dst_comp]
         event_name = connection.event_name
 
-        # Get direction from connection or from event indicator
-        if connection.direction is not None:
-            direction = connection.direction
-        else:
-            direction = source.event_indicators[event_name].direction
+        # Get direction from event indicator
+        direction = source.event_indicators[event_name].direction
 
         # Create Event object for subscription (source, name, direction)
         event = Event(name=event_name, source=connection.src_comp, direction=direction)

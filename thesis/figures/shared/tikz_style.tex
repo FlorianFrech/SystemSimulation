@@ -1,0 +1,97 @@
+\definecolor{sxTeal}{HTML}{005B5B}
+\definecolor{sxPortPurple}{HTML}{7A1B78}
+\definecolor{sxSignalOrange}{HTML}{E46C2A}
+\definecolor{sxFeedRed}{HTML}{C51B2B}
+\definecolor{sxPanelGray}{HTML}{E6E6E6}
+\definecolor{sxSoftBlue}{HTML}{E9F2F7}
+
+\tikzset{
+  sx/base/.style={
+    x=1cm,
+    y=1cm,
+    >=Latex,
+    font=\sffamily
+  },
+  sx/panel/.style={
+    draw=black!85,
+    densely dotted,
+    line width=1.0pt,
+    rounded corners=1pt,
+    fill=sxPanelGray
+  },
+  sx/data panel/.style={
+    draw=black!85,
+    densely dotted,
+    line width=1.0pt,
+    rounded corners=1pt,
+    fill=white
+  },
+  sx/panel title/.style={
+    draw=sxTeal,
+    fill=sxTeal,
+    text=white,
+    minimum height=0.48cm,
+    font=\sffamily\bfseries\large,
+    inner xsep=4pt
+  },
+  sx/component/.style={
+    rectangle,
+    draw=sxTeal,
+    fill=sxTeal,
+    text=white,
+    minimum width=1.85cm,
+    minimum height=1.25cm,
+    rounded corners=2pt,
+    font=\sffamily\bfseries\large
+  },
+  sx/port/.style={
+    rectangle,
+    draw=sxPortPurple,
+    fill=sxPortPurple,
+    text=white,
+    minimum size=4.2mm,
+    inner sep=0pt,
+    font=\sffamily\bfseries\small
+  },
+  sx/connection/.style={
+    -{Latex[length=2.6mm,width=2.0mm]},
+    draw=sxSignalOrange,
+    line width=1.05pt
+  },
+  sx/feedthrough/.style={
+    -{Latex[length=2.3mm,width=1.8mm]},
+    draw=sxFeedRed,
+    densely dotted,
+    line width=0.95pt
+  },
+  sx/legend box/.style={
+    draw=black!40,
+    fill=white,
+    rounded corners=2pt,
+    line width=0.6pt
+  },
+  sx/data text/.style={
+    anchor=north west,
+    align=left,
+    font=\sffamily\small
+  },
+  sx/data heading/.style={
+    font=\sffamily\bfseries\small
+  }
+}
+
+\newcommand{\sxPanelTitle}[3]{%
+  \node[sx/panel title, minimum width=#3] at #1 {#2};%
+}
+
+\newcommand{\sxComponent}[3]{%
+  \node[sx/component] (#1) at #2 {#3};%
+}
+
+\newcommand{\sxPort}[3]{%
+  \node[sx/port] (#1) at #2 {#3};%
+}
+
+\newcommand{\sxdataheading}[1]{%
+  \textbf{#1}%
+}
