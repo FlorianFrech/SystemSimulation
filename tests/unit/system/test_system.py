@@ -164,6 +164,23 @@ class TestSystemConnections:
         with pytest.raises(ValueError, match="Duplicate connection"):
             sys.add_connection(conn)
 
+    def test_add_connection_rejects_second_driver_for_same_input(self):
+        """Test that each input port can only have one driving connection."""
+        sys = System(name="TestSystem")
+        comp_a = SimpleGain(name="GainA", gain=2.0)
+        comp_b = SimpleGain(name="GainB", gain=3.0)
+        comp_c = SimpleGain(name="GainC", gain=4.0)
+        sys.add_component(comp_a)
+        sys.add_component(comp_b)
+        sys.add_component(comp_c)
+
+        sys.add_connection(Connection("GainA", "y", "GainC", "u"))
+
+        with pytest.raises(ValueError, match="Input port already connected"):
+            sys.add_connection(Connection("GainB", "y", "GainC", "u"))
+
+        assert len(sys.connections) == 1
+
     def test_multiple_connections_chain(self):
         """Test creating a chain of connections."""
         sys = System(name="ChainSystem")
@@ -463,7 +480,7 @@ class TestGraphBuildingAdvanced:
         assert "C" in sys.execution_idx
 
     def test_multiple_drivers_same_input_raises(self):
-        """Test that multiple drivers for same input port raises RuntimeError."""
+        """Test that graph construction defensively rejects multiple input drivers."""
         sys = System(name="MultiDriver")
         comp_a = SimpleGain(name="A", gain=1.0)
         comp_b = SimpleGain(name="B", gain=1.0)
@@ -472,9 +489,10 @@ class TestGraphBuildingAdvanced:
         for comp in [comp_a, comp_b, comp_c]:
             sys.add_component(comp)
 
-        # Both A and B try to drive C.u
-        sys.add_connection(Connection("A", "y", "C", "u"))
-        sys.add_connection(Connection("B", "y", "C", "u"))
+        # Bypass add_connection() to verify the graph-level guard still catches
+        # inconsistent connection lists created internally or by deserialization.
+        sys.connections.append(Connection("A", "y", "C", "u"))
+        sys.connections.append(Connection("B", "y", "C", "u"))
 
         with pytest.raises(RuntimeError, match="Multiple drivers"):
             sys.build_graphs()

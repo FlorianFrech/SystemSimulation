@@ -264,16 +264,27 @@ class System:
                 f"-> {c.dst_comp}.{c.dst_port} ({dst_ps.type}, {dst_unit})"
             )
 
-        # 5) duplicate check
+        # 5) duplicate and single-assignment checks
         for existing in self.connections:
-            if (
+            same_source = (
                 existing.src_comp == c.src_comp
                 and existing.src_port == c.src_port
-                and existing.dst_comp == c.dst_comp
+            )
+            same_destination = (
+                existing.dst_comp == c.dst_comp
                 and existing.dst_port == c.dst_port
-            ):
+            )
+
+            if same_source and same_destination:
                 raise ValueError(
                     f"Duplicate connection: {c.src_comp}.{c.src_port} -> {c.dst_comp}.{c.dst_port}"
+                )
+
+            if same_destination:
+                raise ValueError(
+                    f"Input port already connected: {c.dst_comp}.{c.dst_port} is already driven by "
+                    f"{existing.src_comp}.{existing.src_port}; cannot also connect "
+                    f"{c.src_comp}.{c.src_port}."
                 )
 
     def add_connection(self, connection: Connection) -> None:
