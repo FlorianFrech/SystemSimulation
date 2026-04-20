@@ -1,3 +1,5 @@
+Gamma, E. (Ed.). (1995). Design patterns: Elements of reusable object-oriented software. Addison-Wesley.
+
 # Design Patterns: Template Methods
 
 ## Intent

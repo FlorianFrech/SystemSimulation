@@ -34,14 +34,16 @@ Each tool provides its own solver, model representation, and programmatic Python
 The framework treats these tools as black-box backends and interacts with them exclusively through their respective APIs.
 
 \paragraph{Adapter layer.}
-The adapter layer wraps each tool-specific API in a class that implements the common  \texttt{CoSimComponent} interface.
-\texttt{FMUComponent} maps FMI function calls to the component lifecycle.
-\texttt{OpenSimComponent} wraps OpenSim in the same way.
-For finite element models, \texttt{FEMComponent} marks the adapter slot but contributes minimal shared logic, since each FE model defines its own discretization, material law, and time integration scheme (Section~\ref{sec:impl_fem}).
-As a result, every subsystem model, regardless of its origin, exposes the same interface for initialization, time stepping, input and output exchange, and state access.
+The adapter layer wraps tool-specific APIs behind the common \texttt{CoSimComponent} interface.
+The depth of these adapters depends on the structure provided by the backend.
+\texttt{FMUComponent} is the strongest adapter, because FMI already provides a standardized co-simulation interface and a machine-readable model description.
+It can derive ports, parameters, value references, and structural dependencies from the FMU metadata.
+\texttt{OpenSimComponent} provides a thinner adapter.
+OpenSim offers a common runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}, but ports and model assembly remain specific to each musculoskeletal model.
+\texttt{FEMComponent} is only a lightweight base for finite-element components.
+It collects common FE-related attributes, but the concrete component defines the discretization, material law, boundary conditions, solver state, and time integration scheme.
+Despite these different abstraction levels, all adapters expose the same component contract to the layers above.
 This realizes the principle of a \emph{tool-agnostic core with backend adapters}.
-All tool-specific code is confined to the adapter boundary, and the layers above can treat heterogeneous models uniformly.
-The adapter layer is designed to be extensible. Additional backends can be integrated by providing a new adapter class without modifying the layers above.
 
 \paragraph{Core abstractions.}
 The core abstraction layer defines the modeling primitives of the framework.
@@ -59,14 +61,14 @@ Each port carries a declared type and physical unit, and connections are validat
 The \texttt{MultiComponent} class extends this layer to the case where several interchangeable models represent the same physical subsystem, providing a single external interface while managing multiple internal realizations with consistent state synchronization.
 
 \paragraph{System orchestration.}
-The \texttt{System} class assembles components and connections into a complete co-simulation model.
+The \texttt{System} class assembles components and connections into a complete co-simulation scenario.
 It validates port compatibility, constructs the dependency graph, derives a topologically sorted execution order, identifies direct-feedthrough dependencies, and detects algebraic loops through strongly connected component analysis.
 These structural properties are computed automatically during initialization and made available to the execution algorithms.
 This layer embodies the \emph{separation of model and orchestration}.
-Components are responsible for their own state integration and output evaluation, while the \texttt{System} class handles all system-level structural concerns.
+Components are responsible for their own state integration and output evaluation, while the \texttt{System} class handles all system-level concerns.
 
 \paragraph{Execution layer.}
-The execution layer at the top of the framework contains the master algorithms that advance the coupled system in time.
+The execution layer contains the master algorithms that advance the coupled system in time.
 An algorithm receives a \texttt{System} instance and steps all components from the current communication time~$t$ to~$t + \Delta t$, managing input propagation, output collection, and, where required, iterative resolution of algebraic loops or detection, localization, and handling of discrete events.
 The same system model can be executed with different algorithms without modifying the component implementations or the system definition.
 This realizes the principle of \emph{pluggable execution algorithms}.
@@ -74,5 +76,3 @@ The framework delegates all stepping logic to interchangeable algorithm objects,
 
 \paragraph{Supporting services.}
 In addition to the main layers, the framework provides supporting services for unit handling, recording of port and component histories during simulation, and graph-based visualization of the system structure.
-
-% The following sections describe each of the core abstractions in detail, beginning with the \texttt{CoSimComponent} interface.

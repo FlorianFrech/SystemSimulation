@@ -12,13 +12,13 @@ The port system from Section~\ref{sec:impl_port_system} provides the interface r
 The base class defines three categories of methods, summarized in Table~\ref{tab:component_methods}.
 
 %
-\begin{table}[htbp]
+\begin{table}[!htbp]
   \centering
   \small
   \caption{Role-based classification of \texttt{CoSimComponent} methods.
   Template methods define the public lifecycle interface and fix the invariant execution skeleton.
   Primitive operations are declared abstract and must be implemented by every subclass.
-  Hook operations have default implementations and may be overridden to enable additional framework capabilities.}
+  Hook operations are optional override points, some provide a default no-op implementation, while others raise \texttt{NotImplementedError} until a subclass opts in.}
   \label{tab:component_methods}
   \begin{tabular}{llp{5.8cm}}
     \toprule
@@ -54,14 +54,11 @@ The name is used for connection definitions, dependency graph construction, erro
 An optional \texttt{group} string allows components to be categorized for system graph visualization.
 
 \paragraph{Interface Representation.}
-The port interface is represented at two levels: immutable \emph{port specifications}
-(\texttt{input\_specs}, \texttt{output\_specs}) declared by the subclass at construction,
-and mutable \emph{port states} (\texttt{inputs}, \texttt{outputs}) instantiated from the
-specifications during initialization and updated on every simulation step
-(Section~\ref{sec:impl_port_system}).
+The port interface is represented at two levels
+Immutable \emph{port specifications} (\texttt{input\_specs}, \texttt{output\_specs}) are declared by the subclass at construction, and mutable \emph{port states} (\texttt{inputs}, \texttt{outputs}) are instantiated from the specifications during initialization and updated on every simulation step (Section~\ref{sec:impl_port_system}).
 
 \paragraph{Execution and History State.}
-The current simulation time \texttt{t} is updated by the \texttt{do\_step()} template method after each successful step.
+The current simulation time \texttt{t} is updated by the \texttt{do\_step()} after each successful step.
 The boolean flag \texttt{\_is\_initialized} prevents double initialization.
 The \texttt{history} attribute is a \texttt{ComponentHistory} instance that records time-stamped output port values after every step, enabling result retrieval after the simulation loop.
 
@@ -79,32 +76,40 @@ Figure~\ref{fig:impl_comp_construction} shows the construction sequence.
 The subclass constructor calls the base class constructor via \texttt{super().\_\_init\_\_()}, which allocates the internal containers for port specifications, parameters, and history recording.
 The subclass then populates \texttt{input\_specs} and \texttt{output\_specs} with \texttt{PortSpec} objects that declare the component interface.
 
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Construction.pdf}
+  \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Construction.pdf}
   \caption{Delegation during component construction. The subclass calls the base class constructor to allocate internal containers, then defines the port specifications that describe the component interface.}
   \label{fig:impl_comp_construction}
 \end{figure}
 
 \paragraph{Configuration.}
-Before initialization, the component can be configured via \texttt{set\_parameters()}.
+A component is configured via \texttt{set\_parameters()} befor initialization.
 The method validates and stores keyword arguments into the \texttt{parameters} dictionary.
-Keys and value types are defined by each subclasswhich declare the available parameters, their defaults in \texttt{\_\_init\_\_}, and apply them inside \texttt{\_initialize\_component()}.
+Keys and value types are defined by each subclass which declare the available parameters, their defaults parameters, and apply them inside \texttt{\_initialize\_component()}.
 
 \paragraph{Initialization.}
 The initialization sequence is shown in Figure~\ref{fig:impl_comp_initialization}.
-The template method \texttt{initialize(t0)} first records the initial simulation time and instantiates \texttt{PortState} objects from the port specifications.
-The template method then delegates to the primitive operation \texttt{\_initialize\_component()}, which performs all component-specific setup required before the simulation can start.
-After \texttt{\_initialize\_component()} returns, the base class detects direct feedthrough dependencies in the component's internal structure.
-The template method calls the primitive operation \texttt{\_update\_output\_states()} to update the \texttt{PortState} objects, and records these values to the component history.
+The template method \texttt{initialize(t0)} is idempotent.
+If the component has already been initialized, the method returns immediately and leaves the existing runtime state unchanged.
+Otherwise, the base class first stores the initial simulation time~\texttt{t0}.
+It then creates \texttt{PortState} objects from the declared input and output \texttt{PortSpec} objects.
+After the regular ports have been instantiated, the base class creates event output ports for all event indicators that were registered before initialization.
 
-\begin{figure}[htbp]
+The template method then delegates to the primitive operation \texttt{\_initialize\_component(t0)}, which performs all component-specific setup required before the simulation can start.
+After this model-specific initialization has completed, the base class detects direct feedthrough dependencies in the component's input-output structure.
+It then calls \texttt{\_update\_output\_states(t0)} to publish the initial outputs, records these values in the component history via \texttt{\_record\_outputs(t0)}, and finally marks the component as initialized.
+
+
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Initialization.pdf}
+  \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Initialization.pdf}
   \caption{Delegation during component initialization. The template method
-    \texttt{initialize()} orchestrates the sequence.
-    The subclass implements the primitive operations \texttt{\_initialize\_component()} for model-specific setup and \texttt{\_update\_output\_states()} to publish initial outputs.}
-  \label{fig:impl_comp_initialization}
+    \texttt{initialize()} performs the idempotency check, creates regular
+    and event ports, delegates model-specific setup to
+    \texttt{\_initialize\_component()}, detects direct feedthrough, publishes
+    initial outputs through \texttt{\_update\_output\_states()}, and records
+    the initial output values.}
 \end{figure}
 
 \paragraph{Simulation Step.}
@@ -113,9 +118,9 @@ The co-simulation algorithm calls the template method \texttt{do\_step(t,\,dt)},
 This method advances the internal model state from~$t$ to~$t + dt$.
 After \texttt{\_do\_step\_internal()} returns, the template method updates the component time and calls \texttt{\_update\_output\_states()} to refresh the output ports with the new state, then records the updated values in the component history.
 
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Stepping.pdf}
+  \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Stepping.pdf}
   \caption{Delegation during a simulation step. The template method
     \texttt{do\_step()} delegates the computation to the primitive operation
     \texttt{\_do\_step\_internal()} and the output update to

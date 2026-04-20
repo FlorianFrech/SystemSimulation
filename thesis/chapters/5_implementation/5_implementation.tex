@@ -1,20 +1,34 @@
 \chapter{Feature Implementation and Verification}
 \label{chap:implementation}
 
-The previous chapter introduced the architectural abstractions of \syssimx{}: the component interface, the system model, the algorithm strategy, and the multi-model component.
-This chapter describes how each of these abstractions is realized in software.
-It covers the concrete implementation of the framework's core features, from the port system that enforces interface contracts to the hybrid algorithm that handles discrete events during co-simulation.
+Chapter~\ref{chap:architecture} introduced the main architectural abstractions of \syssimx{}.
+These include the component interface, the system model, the algorithm strategy, and the multi-model component.
+This chapter describes how these abstractions are implemented and verified.
+It covers the core framework features that realize the architecture in software.
+The chapter starts with the port system and continues through the component interface, backend wrappers, system orchestration, execution algorithms, hybrid co-simulation, and multi-model switching.
 
-Each section addresses one feature of the framework and follows a common structure.
-It begins with a brief reference to the requirement that motivates the feature, then describes the implementation approach and the relevant technical details, and concludes with a verification example that demonstrates the feature in isolation.
-The full integration of all features is deferred to the case study in Chapter~\ref{chap:case_study}.
+Each section focuses on one framework feature.
+It first states the requirement addressed by the feature.
+It then explains the implementation approach and the relevant technical details.
+Each section also summarizes the verification used to check the implemented behavior in isolation.
+The full interaction of the implemented features is evaluated in the case study in Chapter~\ref{chap:case_study}.
 
 The sections are ordered from foundational to advanced.
 Section~\ref{sec:impl_port_system} describes the typed, unit-aware port system that underlies all data exchange.
 Section~\ref{sec:impl_wrappers} presents the three backend-specific component wrappers that map external simulation tools to the common \texttt{CoSimComponent} interface.
-Section~\ref{sec:impl_structural} covers the graph-based structural analysis that derives execution order and detects algebraic loops from the system topology.
-Section~\ref{sec:impl_algebraic_loops} describes the iterative resolution of algebraic loops identified during structural analysis.
-Section~\ref{sec:impl_algorithms} introduces the master algorithms that advance the coupled system in time, building on the execution order and loop resolution from the preceding sections.
+Section~\ref{sec:impl_structural} describes the structural analysis of the
+coupled system.
+It builds the zero-delay dependency graph, identifies strongly connected
+components, detects algebraic loops, and derives an execution order.
+Section~\ref{sec:impl_algebraic_loops} describes how algebraic loops are
+resolved once they have been identified by the structural analysis.
+It focuses on the local iteration problem inside an instantaneous dependency
+cycle.
+Section~\ref{sec:impl_algorithms} describes the master algorithms that advance
+the coupled system by macro time steps.
+These algorithms use the execution order computed by the structural analysis.
+They delegate algebraic loop resolution to the mechanism described in the
+preceding section.
 Section~\ref{sec:impl_hybrid} extends the stepping logic with event detection, localization, and rollback for hybrid co-simulation.
 Section~\ref{sec:impl_multi_model} describes the multi-model switching mechanism with state adaptation and hysteresis.
 Finally, Section~\ref{sec:impl_visualization} presents the graph-based visualization of the system structure.
@@ -22,9 +36,10 @@ Finally, Section~\ref{sec:impl_visualization} presents the graph-based visualiza
 \input{chapters/5_implementation/51_port_system}
 \input{chapters/5_implementation/52_co_sim_component}
 \input{chapters/5_implementation/53_component_wrappers}
-\input{chapters/5_implementation/53_structural_analysis}
-\input{chapters/5_implementation/54_algebraic_loops}
-\input{chapters/5_implementation/55_master_algorithms}
-\input{chapters/5_implementation/56_hybrid}
-\input{chapters/5_implementation/57_multi_component}
-\input{chapters/5_implementation/58_visualization}
+\input{chapters/5_implementation/54_system.tex}
+\input{chapters/5_implementation/54_structural_analysis}
+\input{chapters/5_implementation/55_algebraic_loops}
+\input{chapters/5_implementation/56_master_algorithms}
+\input{chapters/5_implementation/57_hybrid}
+\input{chapters/5_implementation/58_multi_component}
+\input{chapters/5_implementation/59_visualization}

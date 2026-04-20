@@ -16,7 +16,7 @@ We use the pendulum introduced in Section~\ref{sec:211_dynamical_systems} as a r
 
 \paragraph{Modelica Realization.}
 Listing~\ref{lst:modelica_pendulum} shows a minimal Modelica realization of the pendulum.
-The model declares the physical parameters $m$, $L$, and $J$, the gravitational constant $g$, and the initial conditions $\theta_0$ and $\omega_0$.
+The model declares the physical parameters $m$, $L$, and $I$, the gravitational constant $g$, and the initial conditions $\theta_0$ and $\omega_0$.
 Its interface consists of the input torque $\tau$ and the two outputs $\theta$ and $\omega$.
 The \texttt{equation} section states the two ordinary differential equations already given in Equation~\eqref{eq:pendulum_ode} without prescribing a computational direction.
 
@@ -75,7 +75,8 @@ The access rules follow directly from the Modelica variability classes of Listin
 Constants are fixed and never settable.
 Parameters are writable during the configuration and initialization phases and are frozen once advancement begins.
 Inputs are writable at each communication point during advancement.
-Outputs are read-only and are refreshed at the end of each communication step.
+Outputs are read-only interface variables.
+They are available at communication points and, if direct feedthrough is present, may have to be recomputed after input values are changed.
 Internal variables outside the declared interface are not part of the contract.
 
 The direct feedthrough structure fixed at translation time is exposed as contract metadata that the master algorithm can query before the first step, providing the relation $F_i$ defined in Section~\ref{sec:232_cosim_formulation}.
@@ -195,153 +196,173 @@ The wrapper implementation in Section~\ref{sec:impl_opensim} follows this divisi
 Section~\ref{sec:intro_sota} introduced finite element analysis as a way to resolve spatially distributed effects that lumped-parameter models cannot capture.
 The equation-based and musculoskeletal approaches of the preceding subsections predict global kinematics and kinetics efficiently but do not resolve quantities within the subsystem geometry.
 When local deformation, stress, or distributed contact must be evaluated explicitly, a spatially resolved formulation is required.
-Finite element analysis provides this capability by discretizing the geometry into elements and approximating the solution field over that mesh.
+Finite element analysis provides this capability by discretizing the geometry into elements and approximating the solution field over that mesh~\cite{knothe_finite_2017}.
 
-This subsection describes how a continuum-mechanical model is cast into a form suitable for time integration and how the resulting simulation unit is embedded in the co-simulation framework.
-The pendulum of Section~\ref{sec:211_dynamical_systems} serves again as a running example, now formulated as a deformable body.
+This subsection gives the continuum-mechanical and numerical concepts needed for the finite element pendulum used later in this thesis.
+It focuses on kinematics, hyperelastic material behavior, the weak form of elastodynamics, spatial semi-discretization, and implicit time integration.
+Pendulum-specific choices such as the geometry, pivot constraint, torque application, contact penalty, and stress visualization are described in the case study and implementation chapters.
 
 \paragraph{Kinematics.}
-A body is described by the collection of material points in space.
-The reference configuration $\Omage$ of a body describes the initial, undeformed configuration.
-A deformation of the body occurs due to external forces acting on the body.
-The deformation is described by the function $\phi: \Omega \to \mathbb{R}^3$ and gives the position of the material point $x \in \Omega$ of the reference configuration after deformation.
-A displacement describes the difference $u(x) = \phi(x) - x$.
-The boundary of a body is denoted by $\partial \Omega$.
-
-\paragraph{Hyperelastic Constitutive Law.}
-
-\paragraph{Stress Measures.}
-
-\paragraph{Variational Formulation and Equilibrium}
-
-\paragraph{}
-Let $\Omega \subset \mathbb{R}^d$ with $d \in \{2,3\}$ denote the reference configuration of the body, with boundary $\partial\Omega = \overline{\Gamma_D \cup \Gamma_N}$ and $\Gamma_D \cap \Gamma_N = \emptyset$.
-The motion is described by a deformation map $\varphi(\mathbf{X},t) : \Omega \times [0,T] \to \mathbb{R}^d$ and the associated displacement field $\mathbf{u}(\mathbf{X},t) = \varphi(\mathbf{X},t) - \mathbf{X}$.
-Differentiation with respect to the reference coordinates yields the deformation gradient
+Let $\Omega_0 \subset \mathbb{R}^d$, with $d \in \{2,3\}$, denote the reference configuration of a body.
+A deformation map $\boldsymbol{\varphi} : \Omega_0 \to \mathbb{R}^d$ assigns each material point $\mathbf{X} \in \Omega_0$ its current position.
+The displacement field is the difference between current and reference position,
 \begin{equation}
-  \mathbf{F}(\mathbf{X},t) \;=\; \nabla \varphi \;=\; \mathbf{I} + \nabla \mathbf{u},
-  \label{eq:fem_F}
+    \mathbf{u}(\mathbf{X}) = \boldsymbol{\varphi}(\mathbf{X}) - \mathbf{X}.
 \end{equation}
-and the symmetric right Cauchy--Green tensor $\mathbf{C} = \mathbf{F}^\top \mathbf{F}$, from which the Green--Lagrange strain $\mathbf{E} = \tfrac{1}{2}(\mathbf{C} - \mathbf{I})$ follows.
-
-Conservation of linear momentum, expressed in the reference configuration, yields the strong form
+The deformation gradient
 \begin{equation}
-  \rho_0 \, \ddot{\mathbf{u}} \;=\; \nabla \cdot \mathbf{P} + \mathbf{b}_0
-  \qquad \text{in } \Omega \times (0,T],
-  \label{eq:fem_strong}
+    \mathbf{F} = \nabla_0 \boldsymbol{\varphi}
+    = \mathbf{I} + \nabla_0 \mathbf{u}
+    \label{eq:fem_deformation_gradient}
 \end{equation}
-where $\rho_0$ is the reference mass density, $\mathbf{P}$ the first Piola--Kirchhoff stress, and $\mathbf{b}_0$ a body-force density per unit reference volume.
-The formulation is closed by boundary and initial conditions
+describes the local change of line elements.
+A feasible deformation preserves orientation, which requires $J = \det \mathbf{F} > 0$.
+The right Cauchy--Green tensor and the Green--Lagrange strain tensor are
 \begin{equation}
-  \mathbf{u} = \hat{\mathbf{u}} \text{ on } \Gamma_D, \qquad
-  \mathbf{P} \mathbf{N} = \hat{\mathbf{t}}_0 \text{ on } \Gamma_N, \qquad
-  \mathbf{u}(\cdot,0) = \mathbf{u}_0, \quad \dot{\mathbf{u}}(\cdot,0) = \mathbf{v}_0,
-  \label{eq:fem_bcs}
+    \mathbf{C} = \mathbf{F}^{\top}\mathbf{F},
+    \qquad
+    \mathbf{E} = \frac{1}{2}(\mathbf{C}-\mathbf{I}).
+    \label{eq:fem_strain_measures}
 \end{equation}
-with $\mathbf{N}$ the outward unit normal on $\partial\Omega$.
-Equations~\eqref{eq:fem_strong}--\eqref{eq:fem_bcs} form the initial-boundary-value problem of nonlinear elastodynamics.
-Its closure requires a constitutive relation linking $\mathbf{P}$ to $\mathbf{F}$, which is the subject of the next paragraph.
+If $\mathbf{C} = \mathbf{I}$, the deformation is a rigid-body motion and should not create elastic strain.
+This objectivity, also called frame indifference, is important for pendulum motion because large parts of the motion may be close to a rigid rotation while the elastic strain remains small~\cite{braess_finite_2007,kruzik_mathematical_2019}.
 
-\paragraph{Hyperelastic Constitutive Law.}
-A material is called hyperelastic if the stress derives from a scalar strain-energy density $W$ that depends on the deformation through $\mathbf{F}$ alone.
-The first Piola--Kirchhoff stress then follows from
+\paragraph{Constitutive Relation and Stress Measures.}
+A material is called hyperelastic if the stored deformation energy can be described point-wise by a strain-energy density $W$.
+In the reference configuration, the deformation energy can be written as
 \begin{equation}
-  \mathbf{P}(\mathbf{F}) \;=\; \frac{\partial W}{\partial \mathbf{F}},
-  \qquad
-  \mathbf{S}(\mathbf{C}) \;=\; 2\,\frac{\partial W}{\partial \mathbf{C}},
-  \qquad
-  \mathbf{P} \;=\; \mathbf{F}\,\mathbf{S},
-  \label{eq:fem_PK}
-\end{equation}
-where $\mathbf{S}$ is the symmetric second Piola--Kirchhoff stress.
-
-For isotropic materials, material-frame indifference and the Rivlin--Ericksen representation theorem imply that $W$ depends on $\mathbf{C}$ only through its principal invariants $I_1 = \operatorname{tr}\mathbf{C}$, $I_2 = \tfrac{1}{2}[(\operatorname{tr}\mathbf{C})^2 - \operatorname{tr}(\mathbf{C}^2)]$, and $I_3 = \det \mathbf{C} = J^2$ with $J = \det \mathbf{F}$.
-A simple and widely used instance is the compressible Neo-Hookean model,
-\begin{equation}
-  W_{\mathrm{NH}}(\mathbf{F}) \;=\; \tfrac{\mu}{2}\bigl(I_1 - d\bigr) \;-\; \mu\,\ln J \;+\; \tfrac{\lambda}{2}\,(\ln J)^2,
-  \label{eq:fem_NH}
-\end{equation}
-which reduces to linear isotropic elasticity in the small-strain limit.
-The Lamé parameters are related to Young's modulus $E$ and Poisson's ratio $\nu$ through $\lambda = E\nu / [(1+\nu)(1-2\nu)]$ and $\mu = E / [2(1+\nu)]$, so that a constitutive law stated in terms of $(E,\nu)$ can be used interchangeably with one stated in terms of $(\lambda,\mu)$.
-The pendulum case study of Chapter~\ref{chap:case_study} uses~\eqref{eq:fem_NH} with parameters chosen to mimic a stiff but deformable rod.
-
-\paragraph{Variational Structure and Galerkin Discretization.}
-Testing the strong form~\eqref{eq:fem_strong} with a virtual displacement $\mathbf{v}$ from the space of admissible variations
-$V = \{\mathbf{v} \in [H^1(\Omega)]^d : \mathbf{v} = \mathbf{0} \text{ on } \Gamma_D\}$
-and integrating by parts yields the weak form of nonlinear elastodynamics.
-For each $t \in (0,T]$ one seeks $\mathbf{u}(\cdot,t) \in V_D$, with $V_D$ the corresponding trial space satisfying the Dirichlet data, such that
-\begin{equation}
-  \int_\Omega \rho_0\, \ddot{\mathbf{u}} \cdot \mathbf{v} \, \mathrm{d}V
-  \;+\;
-  \int_\Omega \mathbf{P}(\mathbf{F}) : \nabla \mathbf{v} \, \mathrm{d}V
-  \;=\;
-  \int_\Omega \mathbf{b}_0 \cdot \mathbf{v} \, \mathrm{d}V
-  \;+\;
-  \int_{\Gamma_N} \hat{\mathbf{t}}_0 \cdot \mathbf{v} \, \mathrm{d}A
-  \qquad \forall\, \mathbf{v} \in V.
-  \label{eq:fem_weak}
-\end{equation}
-For hyperelastic materials equation~\eqref{eq:fem_weak} is the first variation of the action functional $\Pi[\mathbf{u}] = \int_0^T \bigl(\tfrac{1}{2}\int_\Omega \rho_0 |\dot{\mathbf{u}}|^2\,\mathrm{d}V - \int_\Omega W(\mathbf{F})\,\mathrm{d}V + \langle \mathbf{b}_0,\mathbf{u}\rangle + \langle \hat{\mathbf{t}}_0, \mathbf{u}\rangle_{\Gamma_N}\bigr) \mathrm{d}t$, which connects the weak form to Hamilton's principle.
-
-A Galerkin discretization replaces $V$ and $V_D$ by finite-dimensional subspaces $V^h \subset V$ and $V_D^h \subset V_D$ spanned by a set of nodal shape functions $\{N^a\}_{a=1}^N$ associated with a mesh $\mathcal{T}^h$ of~$\Omega$.
-The trial field is expressed as $\mathbf{u}^h(\mathbf{X},t) = \sum_{a=1}^N N^a(\mathbf{X})\, \mathbf{U}_a(t)$, with the nodal coefficients $\mathbf{U}_a(t)$ collected in a vector $\mathbf{U}(t) \in \mathbb{R}^n$.
-Inserting $\mathbf{u}^h$ into~\eqref{eq:fem_weak} and requiring it to hold for every basis function $\mathbf{v}^h = N^a \mathbf{e}_i$ yields the semi-discrete system of ordinary differential equations
-\begin{equation}
-  \mathbf{M}\, \ddot{\mathbf{U}}(t) \;+\; \mathbf{F}_{\mathrm{int}}\bigl(\mathbf{U}(t)\bigr) \;=\; \mathbf{F}_{\mathrm{ext}}(t),
-  \label{eq:fem_semidiscrete}
-\end{equation}
-with the symmetric positive-definite mass matrix $\mathbf{M}$, the nonlinear internal-force vector $\mathbf{F}_{\mathrm{int}}(\mathbf{U}) = \int_\Omega \mathbf{P}(\mathbf{F}(\mathbf{U})) : \nabla \mathbf{N}\,\mathrm{d}V$, and the external-force vector $\mathbf{F}_{\mathrm{ext}}(t)$ assembled from body and boundary contributions.
-
-The semi-discrete problem~\eqref{eq:fem_semidiscrete} is nonlinear in $\mathbf{U}$ whenever the constitutive law or the kinematic relation $\mathbf{F}(\mathbf{U})$ is nonlinear, so that a direct transformation to a linear algebraic system as in the linear-elastic case is no longer possible.
-Each time step therefore requires the solution of a nonlinear root-finding problem, typically by Newton's method, whose Jacobian is the consistent tangent stiffness $\mathbf{K}_T(\mathbf{U}) = \partial \mathbf{F}_{\mathrm{int}} / \partial \mathbf{U}$.
-Under standard assumptions of Lipschitz continuity and monotonicity of the underlying nonlinear form~\cite{kochmann_introfea}, Newton's method converges quadratically toward the solution.
-Pointwise kinematic constraints such as hinge or interface conditions are incorporated by augmenting the variational problem with Lagrange multipliers $\boldsymbol{\lambda}$ enforcing the constraint equations $\mathbf{g}(\mathbf{U}) = \mathbf{0}$, which leads to an enlarged saddle-point system in $(\mathbf{U}, \boldsymbol{\lambda})$.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\paragraph{From PDE to Semi-Discrete Dynamics.}
-The starting point is the balance of linear momentum in the reference configuration.
-For a deformable solid occupying the reference domain $\Omega_0$, the balance equation reads
-\begin{equation}
-    \rho_0 \, \ddot{u}(X,t)
+    E_{\mathrm{def}}(\mathbf{u})
     =
-    \operatorname{Div} P + b_0
-    \qquad \text{in } \Omega_0,
+    \int_{\Omega_0} W(\mathbf{C}(\mathbf{u}))\,\mathrm{d}V .
+    \label{eq:fem_deformation_energy}
 \end{equation}
-where $u(X,t)$ denotes the displacement field, $\rho_0$ is the reference density, $P$ is the first Piola--Kirchhoff stress tensor, and $b_0$ is the body force per unit reference volume.
-The boundary conditions prescribe either displacements on $\Gamma_u$ or tractions on $\Gamma_t$.
+For objective materials, the energy depends on the deformation through $\mathbf{C}=\mathbf{F}^{\top}\mathbf{F}$.
+For isotropic materials, the Rivlin--Ericksen theorem states that this dependence can be expressed through invariants of the strain tensor~\cite{braess_finite_2007,kruzik_mathematical_2019}.
 
-After deriving the weak form, the displacement field is approximated by finite element shape functions, so that the continuum problem is represented by a finite set of nodal degrees of freedom $d(t)$.
-This spatial semi-discretization yields the nonlinear semi-discrete equations of motion
+The second Piola--Kirchhoff stress is obtained from the strain-energy density by
 \begin{equation}
-    M\,\ddot{d} + f_{\mathrm{int}}(d) = f_{\mathrm{ext}}(t),
+    \mathbf{S}
+    =
+    2\,\frac{\partial W}{\partial \mathbf{C}},
+    \label{eq:fem_pk2}
 \end{equation}
-where $M$ is the mass matrix, $f_{\mathrm{int}}$ collects the internal forces induced by deformation, and $f_{\mathrm{ext}}$ contains external loads and boundary contributions.
-Depending on the formulation, additional damping, contact, or constraint terms may appear.
-For nonlinear constitutive behavior or large deformations, $f_{\mathrm{int}}$ depends nonlinearly on $d$, so each time step generally requires the solution of a nonlinear system.
-Because semi-discrete finite element models are high-dimensional and often stiff, implicit time integration is frequently advantageous, although explicit schemes are also widely used for transient contact and impact problems.
+and the first Piola--Kirchhoff stress follows as
+\begin{equation}
+    \mathbf{P} = \mathbf{F}\mathbf{S}.
+    \label{eq:fem_pk1}
+\end{equation}
 
-\paragraph{Pendulum as Deformable Body.}
-The pendulum of Section~\ref{sec:211_dynamical_systems} can also be realized as a finite element model.
-The rigid rod and point mass are replaced by a two-dimensional continuum body with finite thickness, discretized into a mesh of triangular elements.
-A hyperelastic constitutive law, here Neo-Hookean, defines the relation between deformation and internal stress without the small-strain limitation of linear elasticity.
-The pin joint is replaced by a hinge constraint that enforces zero mean displacement on the pivot edge while leaving rotation free.
-Gravity enters as a distributed body force over the domain, and an applied torque is realized as a boundary traction on the pivot edge.
-Because the model resolves the full displacement field rather than a single generalized coordinate, scalar output quantities such as the pendulum angle must be recovered by projection.
-A rigid-body proxy angle is obtained by projecting the displacement field onto a rigid rotation, providing an output that is comparable to the generalized coordinate~$\theta$ of the lumped-parameter formulations.
-The specific material parameters, mesh resolution, time integration scheme, and contact formulation are described in the case study (Chapter~\ref{chap:case_study}).
+The first Piola--Kirchhoff stress appears naturally in the reference-configuration weak form.
+The Cauchy stress in the current configuration is obtained by the push-forward
+\begin{equation}
+    \boldsymbol{\sigma}
+    =
+    \frac{1}{J}\mathbf{F}\mathbf{S}\mathbf{F}^{\top}.
+    \label{eq:fem_cauchy_stress}
+\end{equation}
+This stress measure is used for physically interpretable stress quantities, for example von Mises stress.
+
+\paragraph{Variational Formulation and Elastodynamics.}
+The static elasticity problem can be stated as an energy minimization problem.
+For a displacement space $V$ with prescribed Dirichlet boundary conditions on $\Gamma_D$, the total potential energy consists of the deformation energy and the potential of external volume and boundary forces,
+\begin{equation}
+    \mathcal{J}(\mathbf{u})
+    =
+    \int_{\Omega_0} W(\mathbf{C}(\mathbf{u}))\,\mathrm{d}V
+    -
+    \int_{\Omega_0} \mathbf{f}\cdot\mathbf{u}\,\mathrm{d}V
+    -
+    \int_{\Gamma_N} \mathbf{g}\cdot\mathbf{u}\,\mathrm{d}A .
+    \label{eq:fem_total_energy}
+\end{equation}
+At an equilibrium point, the first variation of $\mathcal{J}$ vanishes for all admissible virtual displacements.
+Equivalently, the internal virtual work equals the external virtual work.
+In the linear variational setting this leads to a bilinear form and a linear form, and existence and uniqueness are classically characterized by the Lax--Milgram theorem~\cite{kochmann_introduction_2025}.
+
+For the dynamic case, the balance of linear momentum in the reference configuration gives the strong form of nonlinear elastodynamics,
+\begin{equation}
+    \rho_0 \ddot{\mathbf{u}}
+    =
+    \nabla_0 \cdot \mathbf{P} + \mathbf{b}
+    \qquad \text{in } \Omega_0 ,
+    \label{eq:fem_strong_elastodynamics}
+\end{equation}
+where $\rho_0$ is the density in the reference configuration and $\mathbf{b}$ is a body force per unit reference volume.
+The problem is completed by Dirichlet boundary conditions on $\Gamma_D$, Neumann boundary conditions on $\Gamma_N$, and initial conditions for displacement and velocity.
+Multiplying the strong form by a test function $\mathbf{v}$ and integrating over $\Omega_0$ yields the weak form
+\begin{equation}
+    \int_{\Omega_0} \rho_0 \ddot{\mathbf{u}}\cdot\mathbf{v}\,\mathrm{d}V
+    +
+    \int_{\Omega_0} \mathbf{P}:\nabla_0 \mathbf{v}\,\mathrm{d}V
+    =
+    \int_{\Omega_0} \mathbf{b}\cdot\mathbf{v}\,\mathrm{d}V
+    +
+    \int_{\Gamma_N} \mathbf{t}_0\cdot\mathbf{v}\,\mathrm{d}A .
+    \label{eq:fem_weak_elastodynamics}
+\end{equation}
+This weak form can also be interpreted through the principle of virtual work or, in dynamics, through the stationary action principle~\cite{kochmann_introduction_2025}.
+
+\paragraph{Spatial Semi-Discretization.}
+The finite element method replaces the infinite-dimensional displacement space by a finite-dimensional interpolation space.
+With shape functions $N^a(\mathbf{X})$, the displacement field is approximated as
+\begin{equation}
+    \mathbf{u}^h(\mathbf{X},t)
+    =
+    \sum_{a=1}^{n_{\mathrm{n}}}
+    N^a(\mathbf{X})\,\mathbf{U}^a(t),
+    \label{eq:fem_interpolation}
+\end{equation}
+where $\mathbf{U}^a(t)$ are nodal unknowns and $n_{\mathrm{n}}$ is the number of nodes.
+Inserting this approximation into the weak form and testing with all basis functions yields the semi-discrete equations of motion~\cite{kochmann_introduction_2025}
+\begin{equation}
+    \mathbf{M}\ddot{\mathbf{U}}(t)
+    +
+    \mathbf{F}_{\mathrm{int}}(\mathbf{U}(t))
+    =
+    \mathbf{F}_{\mathrm{ext}}(t).
+    \label{eq:fem_semidiscrete}
+\end{equation}
+Here, $\mathbf{M}$ is the consistent mass matrix, $\mathbf{F}_{\mathrm{int}}$ collects the internal forces from the stress term, and $\mathbf{F}_{\mathrm{ext}}$ collects body forces and boundary tractions.
+For nonlinear material laws or large-deformation kinematics, $\mathbf{F}_{\mathrm{int}}$ depends nonlinearly on the displacement vector.
+
+\paragraph{Time Integration and Nonlinear Solution.}
+After spatial semi-discretization, a time integration scheme is required to advance the nodal displacements, velocities, and accelerations.
+The Newmark method is an implicit time-integration scheme for second-order structural dynamics problems.
+In the average-acceleration form used here, the update relations are~\cite{newmark_method_1959,kochmann_introduction_2025}
+\begin{align}
+    \frac{\mathbf{U}^{n+1}-\mathbf{U}^n}{\Delta t}
+    &=
+    \frac{\dot{\mathbf{U}}^n+\dot{\mathbf{U}}^{n+1}}{2},
+    \label{eq:fem_newmark_displacement}
+    \\
+    \frac{\dot{\mathbf{U}}^{n+1}-\dot{\mathbf{U}}^n}{\Delta t}
+    &=
+    \frac{\ddot{\mathbf{U}}^n+\ddot{\mathbf{U}}^{n+1}}{2}.
+    \label{eq:fem_newmark_velocity}
+\end{align}
+These equations can be rearranged so that the unknown velocity and acceleration at the new time step are expressed in terms of the unknown displacement $\mathbf{U}^{n+1}$.
+The time-discrete problem is therefore solved by first finding $\mathbf{U}^{n+1}$, typically with Newton's method, and then updating $\dot{\mathbf{U}}^{n+1}$ and $\ddot{\mathbf{U}}^{n+1}$ from the Newmark relations.
+This is the numerical pattern used by the finite element pendulum component.
+
+\paragraph{Relation to the Pendulum Model.}
+The pendulum of Section~\ref{sec:211_dynamical_systems} can also be represented as a deformable body.
+In this formulation, the rigid rod and point mass are replaced by a continuum body whose motion is described by the displacement field $\mathbf{u}(\mathbf{X},t)$ rather than by a single generalized coordinate.
+Loads such as gravity and actuation enter as volume or boundary forces, and the material law determines how deformation produces internal stress.
+Because the finite element model resolves a spatial displacement field, scalar interface quantities such as the pendulum angle must be obtained by projection onto a rigid-body proxy.
+This projection makes the finite element pendulum comparable to the lumped-parameter and musculoskeletal pendulum models at the co-simulation interface level.
+The concrete geometry, mesh, material parameters, constraints, contact formulation, and stress post-processing are described in the case study and implementation chapters.
 
 \paragraph{Interface Abstraction.}
 When a finite element model is wrapped as a simulation unit for co-simulation, the interface is defined through boundary quantities rather than through the full set of internal degrees of freedom.
 Typical inputs are prescribed forces or displacements applied at specific boundary regions.
 Typical outputs are reaction forces, displacements, or derived field quantities evaluated at selected boundary nodes or regions.
 Outputs may also be projections of the spatially distributed solution onto scalar quantities.
-For the pendulum, the rigid-body proxy angle introduced above projects the full displacement field onto a single scalar~$\theta$ that is comparable to the generalized coordinate of the lumped-parameter formulations.
-This projection is what makes the finite element pendulum interchangeable with its rigid-body and musculoskeletal counterparts at the co-simulation interface level.
 
-Whether direct feedthrough is present depends on the time integration scheme and the choice of interface variables.
-In implicit time integration, the displacement at the end of a step depends on the forces applied during that step, so a boundary force input can influence a displacement output at the same communication point.
+Whether direct feedthrough is present depends on the component interface semantics rather than on the time integrator alone.
+If an output is recomputed from the current input values without advancing time, the corresponding input-output dependency is instantaneous.
+If the input affects the solution only through the next time step, the dependency is dynamic and does not constrain the evaluation order at the current communication point.
 This is in contrast to multibody models with explicit integration, where kinematic outputs typically depend only on the accumulated state.
-The feedthrough structure of the finite element simulation unit must therefore be declared according to the actual input-output dependency, as discussed in Section~\ref{sec:cosim_formulation}.
+The feedthrough structure of the finite element simulation unit must therefore be declared according to the actual input-output dependency, as discussed in Section~\ref{sec:232_cosim_formulation}.
 
 \paragraph{Simulation-Unit Contract.}
 Like musculoskeletal models (Section~\ref{sec:242_modeling_musculoskeletal}), finite element models do not expose a standardized interface descriptor.
@@ -353,9 +374,9 @@ Each model defines its own constitutive law, spatial discretization, time integr
 A finite element simulation unit therefore implements the component lifecycle directly against the base interface, without an intermediate abstraction layer.
 The port specification, stepping logic, and state-access routines are entirely model-specific.
 
-State snapshots for rollback require storing the full set of grid-function vectors that represent the current and previous time-step solution.
-The volume of snapshot data is proportional to the number of mesh degrees of freedom, which is substantially larger than for lumped-parameter models.
-The concrete mapping from finite element artefacts to the component contract is described in Section~\ref{sec:impl_fem}.
+State snapshots for rollback require storing the discrete solution state and any time-integration history needed to restart the step consistently.
+The amount of snapshot data scales with the number of finite element degrees of freedom and is therefore substantially larger than for lumped-parameter models.
+The concrete realization for the finite element pendulum is described in Section~\ref{sec:impl_fem}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Complementarity of Modeling Approaches}
@@ -369,7 +390,7 @@ Table~\ref{tab:modeling_complementarity} summarizes these differences.
     \small
     \begin{tabular}{llll}
         \toprule
-        \textbf{approach}
+        \textbf{Approach}
             & \textbf{Abstraction}
             & \textbf{Strength}
             & \textbf{Gap} \\
@@ -401,7 +422,7 @@ Continuum-mechanical models resolve spatially distributed quantities at high fid
 
 No single approach covers all relevant aspects of the biomechatronic systems considered in this thesis.
 A prosthesis or exoskeleton simulation that must account for control logic, musculoskeletal interaction, and local structural effects requires subsystem models from all three approaches within one coupled simulation.
-The co-simulation principles introduced in Section~\ref{sec:theory_co_simulation} provide the coupling mechanism that enables such heterogeneous integration: each
+The co-simulation principles introduced in Section~\ref{sec:23_co_simulation} provide the coupling mechanism that enables such heterogeneous integration: each
 subsystem model retains its own solver and exchanges data with the others only at discrete communication points.
 The framework architecture that realizes this integration is presented in Chapter~\ref{chap:architecture}.
 
@@ -414,7 +435,8 @@ Three ideas recur throughout the subsequent chapters.
 First, the behavior of a coupled system is determined not only by the individual subsystem models but also by the structural properties of their interconnection -- direct feedthrough, algebraic loops, and the dependency graph -- which dictate whether a sequential evaluation is admissible or whether simultaneous resolution is required.
 Second, heterogeneous subsystem models retain their own solvers and exchange data only at discrete communication points.
 The master algorithm orchestrates this exchange without access to the internal equations of the simulation units.
-Third, no single modeling approach covers all aspects of a biomechatronic system which is the combination of equation-based, multibody, and continuum-mechanical models within one coupled simulation is a necessity rather than a convenience.
+Third, no single modeling approach covers all aspects of a biomechatronic system.
+The combination of equation-based, multibody, and continuum-mechanical models within one coupled simulation is therefore a necessity rather than a convenience.
 
 These three ideas motivate the requirements developed in
 Chapter~\ref{chap:requirements} and the architectural decisions

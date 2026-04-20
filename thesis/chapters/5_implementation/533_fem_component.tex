@@ -1,91 +1,23 @@
-\subsection{Finite-Element Components}
+\subsection{Finite-Element Model Wrapper}
 \label{sec:impl_fem}
+  
+Finite-element models are integrated through the same \texttt{CoSimComponent} contract as the other component types.
+The framework provides a lightweight \texttt{FEMComponent} base class for this purpose.
+This class derives from \texttt{CoSimComponent}.
+It only collects common attributes that are useful for FE implementations.
+These include geometry, mesh data, finite-element spaces, grid functions, forms, solver handles, and visualization state.
 
-% --- MOTIVATION ---
-This subsection describes how finite-element (FE) models are integrated into \syssimx{}.
-It addresses requirement SR-03-03 (integration of finite-element simulation tools).
-In contrast to Sections~\ref{sec:impl_fmu} and~\ref{sec:impl_opensim}, the FE case does not introduce a new backend wrapper class. The reason is an explicit design decision discussed below: no intermediate abstraction between
-\texttt{CoSimComponent} and concrete FE components is justified at the current scope of the framework, and introducing one would be a speculative abstraction without empirical support.
+The class does not implement a generic finite-element backend wrapper.
+It does not define ports from a descriptor file.
+It does not prescribe a mesh format, weak form, material law, boundary condition, time integrator, or solver state representation.
+These choices depend on the concrete FE formulation.
+They are therefore implemented by the concrete FE component.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Design Decision: No Dedicated FEM Base Class}
+The controlled-pendulum case study uses \texttt{FEMPendulum}.
+This component derives from \texttt{FEMComponent} and implements the actual NGSolve model.
+It defines the port interface, constructs the finite-element spaces and grid functions, assembles the nonlinear problem, dvances the model in time, and maps the FE state to the exposed pendulum outputs.
+State transfer and rollback are also implemented by \texttt{FEMPendulum}, because they depend on the selected time integration scheme and on the grid function vectors that must be restored.
 
-The FMU and OpenSim wrappers (Sections~\ref{sec:impl_fmu}, \ref{sec:impl_opensim}) are justified by a concrete source of reuse.
-\texttt{FMUComponent} derives its added value from the FMI 2.0 Co-Simulation \emph{standard}: ports, parameters, value references, and direct-feedthrough metadata can be obtained automatically from every standards-conformant \texttt{modelDescription.xml}, so the wrapper is reused verbatim across all concrete FMUs.
-\texttt{OpenSimComponent} derives its added value from a \emph{shared runtime pattern}: every OpenSim-backed component instantiates the same \texttt{Model}/\texttt{Manager}/\texttt{State} triplet, advances it through staged realization, and exposes model variables through the same \texttt{Coordinate} accessors. The helpers factored into the base class
-are consumed by every concrete subclass.
-
-The finite-element case exhibits neither source of reuse.
-There is no cross-backend interface standard analogous to FMI, and no runtime API pattern that is shared across concrete FE components: each FE model declares its own function spaces, bilinear and linear forms, boundary conditions, material laws, and time-integration schemes.
-These choices are bound to the physics of the problem, not to the framework, and their signatures do not generalize. Within the case study of this thesis a single FE component is realized---the FE pendulum described in Chapter~\ref{chap:case_study}---so there is no second implementation from which a common base could be distilled empirically. Introducing a dedicated \texttt{FEMComponent} base class at this point would amount to a single-implementation interface, i.e.\ an abstraction without a second instance to justify it. Following the principle of extracting
-abstractions \emph{a posteriori} from repeated concrete use rather than designing them \emph{a priori}, the framework deliberately does not provide such a class.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{FE Components as Direct CoSimComponent Subclasses}
-
-FE components in \syssimx{} therefore subclass \texttt{CoSimComponent} directly and implement the primitive and hook operations of the component contract on top of their chosen FE library.
-Concretely, the case-study component in Section~\ref{sec:case_study_fem_pendulum} uses \texttt{NGSolve}~\cite{ngsolve} as its backend and maps the component lifecycle onto NGSolve constructs as summarized in Table~\ref{tab:fem_mapping}. The mapping is recorded here to document the pattern, it is not enforced by a base class.
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{Typical correspondence between FE artefacts and the
-           \texttt{CoSimComponent} contract, as realized by the
-           NGSolve-based FE pendulum of Chapter~\ref{chap:case_study}.
-           The mapping is a recommended pattern, not a framework-enforced
-           interface.}
-  \label{tab:fem_mapping}
-  \begin{tabular}{p{6.3cm} p{7.5cm}}
-    \toprule
-    \textbf{FE artefact} & \textbf{\texttt{CoSimComponent} element} \\
-    \midrule
-    Geometry, mesh, finite-element spaces, grid functions
-      & Component attributes; constructed in
-        \texttt{\_initialize\_component(t0)} \\
-    \addlinespace
-    Bilinear and linear forms, assembled system
-      & Component attributes; assembled once during initialization or
-        refreshed per step, as required by the formulation \\
-    \addlinespace
-    Time integrator (e.g.\ Newmark, implicit Euler)
-      & Body of \texttt{\_do\_step\_internal(t, dt)} \\
-    \addlinespace
-    External loads, boundary-condition coefficients
-      & Input \texttt{PortSpec} entries; applied to the linear form at
-        step start \\
-    \addlinespace
-    Measured field quantities (tip displacement, reaction force, $\ldots$)
-      & Output \texttt{PortSpec} entries; evaluated from the solution in
-        \texttt{\_update\_output\_states()} \\
-    \addlinespace
-    Material and discretization parameters
-      & Entries in the component's \texttt{parameters} dictionary \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-Direct feedthrough is handled through the default perturbation-based detector inherited from \texttt{CoSimComponent}
-(Section~\ref{sec:impl_component_interface}).
-FE components are in practice not directly feedthrough: loads applied at a communication
-point propagate to measured fields only through the next solver step, so the detector correctly reports the absence of instantaneous dependencies.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{State Access and Rollback Boundary}
-
-State access in an FE component exposes degree-of-freedom vectors or derived field quantities through \texttt{get\_state()} and \texttt{set\_state()}, following the same dictionary-based convention as the FMU and OpenSim wrappers.
-The granularity of what is exposed---nodal values, selected modal coefficients, or only aggregate quantities---is a model-specific choice and is therefore decided by each concrete FE component rather than by a base class.
-
-Rollback for the hybrid algorithm (Section~\ref{sec:impl_hybrid}) is not provided generically.
-FE components participate in hybrid scenarios only when their concrete implementation supports snapshotting of the solver state; for the case study this is realized in the FE pendulum through duplication of the current grid-function vectors and is described in Section~\ref{sec:case_study_fem_pendulum}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Verification}
-
-Because no framework-level FE abstraction is introduced in this subsection, there is no backend-agnostic behaviour to verify in isolation.
-Verification of the concrete FE component used in this thesis is part of the case study and is reported in Section~\ref{sec:case_study_fem_pendulum}, where the FE pendulum is exercised both stand-alone and as part of the coupled controlled-pendulum system.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{Outlook}
-
-Should further FE backends be integrated in future work---for example a second library or a fundamentally different formulation such as isogeometric analysis---the shared parts of their adapters could be extracted into a common \texttt{FEMComponent} base class at that point.
-Extracting the abstraction from two or more concrete components, rather than anticipating it from one, is consistent with the framework's overall design discipline and is recorded as future work in Chapter~\ref{chap:outlook}.
+The reusable behavior of \texttt{FEMComponent} is therefore intentionally small.
+Its implementation documents the framework entry point for FE-based components.
+The numerical formulation and verification of the concrete FE pendulum are part of the controlled-pendulum case study in Chapter~\ref{chap:case_study}.

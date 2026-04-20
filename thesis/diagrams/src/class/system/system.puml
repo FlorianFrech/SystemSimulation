@@ -1,200 +1,78 @@
 @startuml System
+!include ../../includes/thesis_theme.puml
 
-' ============================================================================
-' STYLING
-' ============================================================================
-
-skinparam classAttributeIconSize 0
-skinparam padding 2
-skinparam defaultFontSize 10
-skinparam classFontSize 11
-skinparam nodesep 30
-skinparam ranksep 20
-
-' Color scheme - clean white background
-skinparam backgroundColor white
-
-' Remove yellow/red default colors
-skinparam shadowing false
+left to right direction
+skinparam nodesep 25
+skinparam ranksep 45
 
 ' ============================================================================
 ' SYSTEM CLASS
 ' ============================================================================
-
 class System {
     + name: str
-    + components: Dict[str, CoSimComponent]
-    + connections: List[Connection]
-    + graph: nx.MultiDiGraph
-    - _dag: nx.DiGraph
-    --
-    + groups: Dict[str, List[CoSimComponent]]
-    + execution_order: List[List[str]]
-    + execution_idx: Dict[str, int]
-    ==
-    + __init__(name)
-    .. Component Management ..
-    + add_component(component)
-    .. Connection Management ..
-    + add_connection(connection)
-    - _validate_connection(c)
-    .. Graph Building ..
-    + build_graphs()
-    + compute_execution_order()
-    .. Simulation Lifecycle ..
-    + initialize(t0)
-    + step(t, dt)
-    + run(t0, tf, dt)
-    .. Internal Helpers ..
-    - _get_latest_values(comp_name, port_name, delay_steps): Any
-    - _set_inputs_for_generation(gen, t)
-}
-
-class Connection <<dataclass>> {
-    + src_comp: str
-    + src_port: str
-    + dst_comp: str
-    + dst_port: str
-    + delay: int = 0
-    + unit: Optional[str] = None
-}
-
-class CoSimComponent <<ABC>> {
-    + name: str
-    + label: str
-    + group: Optional[str]
     + t: float
-    + input_specs: Dict[str, PortSpec]
-    + output_specs: Dict[str, PortSpec]
-    + inputs: Dict[str, PortState]
-    + outputs: Dict[str, PortState]
+    + is_initialized: bool
     --
+    + algorithm: Algorithm
+    + history: SystemHistory
+    ==
+    .. Registration ..
+    + add_component(component)
+    + add_connection(connection)
+    + add_event_connection(connection)
+    .. Algorithm ..
+    + set_algorithm(algorithm)
+    .. Lifecycle ..
     + initialize(t0)
-    + do_step(t, dt)
-    + set_inputs(signals, t)
-    + get_outputs()
+    + run(t0, tf, dt)
+    + reset()
+    + get_history(): dict
 }
 
-class PortSpec <<port.py>> {
-    + name: str
-    + type: PortType
-    + direction: Direction
-    + unit: Optional[str]
-    --
-    + {static} compatible(spec1, spec2): bool
+' ============================================================================
+' CONNECTION DATACLASSES (forced into one column)
+' ============================================================================
+together {
+    abstract class CoSimComponent <<ABC>>
+
+    class Connection <<dataclass>> {
+        + src_comp, src_port: str
+        + dst_comp, dst_port: str
+        --
+        + key(): tuple
+    }
+
+    class EventConnection <<dataclass>> {
+        + src_comp, src_port: str
+        + dst_comp, dst_port: str
+        + direction: Optional[int]
+        --
+        + key(): tuple
+        + event_name, target_comp: str
+    }
+
+
+    abstract class Algorithm <<ABC>> {
+        + step(system, t, dt)
+    }
 }
 
-class PortState <<port.py>> {
-    + spec: PortSpec
-    + value: Optional[Any]
-    + t_last: Optional[float]
-    + history: list[tuple[float, value]]
-    --
-    + set(value, t)
-    + get(as_unit): value
+' ============================================================================
+' REFERENCED ABSTRACTIONS (forced into one column)
+' ============================================================================
+together {
+
 }
 
-class MultiDiGraph <<networkx>> {
-    All connections including
-    delayed dependencies
-}
+' ============================================================================
+' RELATIONS
+' ============================================================================
+System "1" o--> "*" CoSimComponent   : manages
+System "1" o--> "*" Connection       : contains
+System "1" o--> "*" EventConnection  : contains
+System "1"  -->  "1" Algorithm       : delegates stepping
 
-class DiGraph <<networkx>> {
-    Zero-delay connections
-    only (DAG)
-}
-
-' Layout: System on left, related classes to the right
-System o-right-> "many" CoSimComponent : manages
-System o-right-> "many" Connection : contains
-System -down-> MultiDiGraph : full graph
-System -down-> DiGraph : zero-delay DAG
-
-CoSimComponent o-right-> "many" PortSpec
-CoSimComponent o-right-> "many" PortState
-PortState *-right-> PortSpec
-
-Connection .up.> CoSimComponent : references
-Connection .up.> PortSpec : validates
-
-' Vertical arrangement
-MultiDiGraph -[hidden]down- DiGraph
-PortSpec -[hidden]down- PortState
-
-' note right of System
-'     **Co-Simulation Orchestrator**
-    
-'     Manages system of interconnected
-'     components with:
-'     - Component registry
-'     - Validated connections
-'     - Dependency graphs
-'     - Execution scheduling
-    
-'     **Two Graphs:**
-'     - graph: All connections (Multi-DiGraph)
-'     - _dag: Zero-delay only (DiGraph)
-' end note
-
-' note bottom of System
-'     **Execution Algorithm:**
-    
-'     1. **Build Graphs:**
-'        - Add nodes for all components
-'        - Add edges for all connections
-'        - Zero-delay edges -> DAG
-'        - Validate no cycles in DAG
-    
-'     2. **Compute Order:**
-'        - Topological generations from DAG
-'        - Components in same generation
-'          can execute in parallel
-    
-'     3. **Simulation Step:**
-'        Phase 1: Set inputs for all gens
-'        Phase 2: Do step for all gens
-    
-'     **Delay Handling:**
-'     - delay=0: Use current value
-'     - delay>0: Use history buffer
-' end note
-
-' note top of Connection
-'     **Dataclass**
-    
-'     Represents signal flow
-'     between component ports.
-    
-'     delay=0: Direct dependency
-'     delay>0: Breaks algebraic loop
-' end note
-
-' note top of MultiDiGraph
-'     **NetworkX Graph**
-    
-'     Full system topology with
-'     edge attributes:
-'     - src_port, dst_port
-'     - delay
-'     - unit
-' end note
-
-' note top of DiGraph
-'     **NetworkX DAG**
-    
-'     Computational dependencies
-'     (zero-delay connections only).
-    
-'     Used for:
-'     - Cycle detection
-'     - Execution order
-'     - Parallelization
-' end note
-
-' note right of CoSimComponent
-'     Components are grouped by
-'     optional 'group' attribute
-'     for organized management
-' end note
+Connection      ..> CoSimComponent : references by name
+EventConnection ..> CoSimComponent : references by name
 
 @enduml

@@ -1,34 +1,46 @@
 \subsection{CoSimComponent Interface}
 \label{sec:architecture_cosimcomponent}
 
-The abstract base class \texttt{CoSimComponent} defines the common interface that every simulation component in \syssimx{} must implement.
-It is the central contract between tool-specific model wrappers and the co-simulation framework, and allows components from different backends to be treated uniformly during initialization, time stepping, data exchange, and result collection (see Figure~\ref{fig:cosimcomponent_architecture}).
+The abstract base class \texttt{CoSimComponent} defines the contract that every simulation component in \syssimx{} must respect.
+It is the boundary between tool-specific model wrappers and the co-simulation framework and allows components from different backends to be treated uniformly during initialization, time stepping, data exchange, and result collection.
+The shape of the contract follows directly from the co-simulation formulation of Section~\ref{sec:232_cosim_formulation}.
+The master algorithm requires uniform stepping, type- and unit-aware coupling, a declared input-output dependency structure, and, for hybrid scenarios, the ability to roll a component back to an earlier time instant.
+Figure~\ref{fig:cosimcomponent_architecture} summarizes the resulting interface.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \vspace{-1em}
   \includegraphics[width=0.95\textwidth]{figures/4_architecture/cosimcomponent.pdf}
   \vspace{-1em}
   \caption{Architectural overview of the abstract \texttt{CoSimComponent} interface in \syssimx{}. It combines a typed port interface, a uniform lifecycle, distinct mechanisms for physical state transfer and rollback, and optional capabilities for structural analysis and hybrid co-simulation.}
-  \vspace{-0.5em}    
+  \vspace{-0.5em}
   \label{fig:cosimcomponent_architecture}
 \end{figure}
 
+\paragraph{Typed Port Interface.}
 A component exposes its system interface through typed input and output ports.
-Each port carries a declared type (real, integer, boolean, string, or event) and an optional physical unit.
-This makes coupling assumptions explicit at the interface level and allows the framework to validate type compatibility and unit consistency when connections are established.
+Each port carries a declared data type and an optional physical unit, which makes coupling assumptions explicit at the interface level and lets the framework validate type compatibility and unit consistency when connections are established (Section~\ref{sec:architecture_system_connections}).
 
-The component lifecycle follows a fixed sequence: construction, parameter configuration, initialization at the simulation start time, and then repeated participation in the simulation loop, where inputs are set, one macro step is performed, and outputs are updated, recorded in the history, and communicated to connected components.
-After the simulation completes, the component is released or reset for a subsequent run.
-This lifecycle gives the framework a uniform control flow across all component types and is enforced identically regardless of the underlying backend.
+\paragraph{Lifecycle and Inversion of Control.}
+The interface prescribes a fixed lifecycle consisting of construction, parameter configuration, initialization at the simulation start time, repeated participation in the simulation loop, and finalization or reset.
+This lifecycle is owned by the framework rather than by the concrete component.
+The base class fixes the invariant execution skeleton, and the backend-specific subclass supplies only the model-specific operations invoked by this skeleton.
+This template-method arrangement follows the design pattern of~\cite{gamma_design_1995} and has two consequences.
+Generic framework concerns such as port-state management, time bookkeeping, history recording, and capability detection are implemented once and apply uniformly to all components.
+Backend wrappers can focus on model-specific behavior without duplicating framework logic.
 
+\paragraph{Declared Structural and Hybrid Metadata.}
+Beyond inputs, outputs, and parameters, the interface requires each component to declare the information that the master algorithm needs at the system level.
+The direct-feedthrough structure reports which outputs depend algebraically on which inputs within a single communication step and is consumed by the system to determine the execution order and to detect algebraic loops (Section~\ref{sec:architecture_system_connections}).
+Components that participate in hybrid simulation additionally declare zero-crossing event indicators and subscriptions to events produced by other components, which allows the hybrid algorithm of Section~\ref{sec:arch_algorithm} to locate, order, and dispatch events across the coupled system.
+
+\paragraph{State Handling.}
 The interface separates two forms of state handling.
-Physical state transfer exports the state in terms of physically meaningful quantities such as positions, velocities, or mode indicators and is used for inspection and for synchronization between alternative models of the same subsystem.
-Rollback state transfer captures and restores the exact internal solver state of a component and is used during hybrid event handling, where the simulation must return to an earlier time instant and re-advance.
-This distinction is essential because rollback requires tool-specific solver information that is generally not interpretable across different model representations.
+Physical state transfer exports the state in semantically meaningful quantities such as positions, velocities, or mode indicators and is used for inspection and for synchronization between alternative models of the same subsystem.
+Rollback state transfer captures and restores the internal solver state of a component opaquely and is used during hybrid event handling, where the simulation must return to an earlier time instant and re-advance.
+This separation is necessary because rollback relies on tool-specific solver information that is generally not interpretable across different model representations, whereas physical state must remain transferable between them.
 
-In addition to the required lifecycle methods, the interface defines optional capability hooks for structural analysis and hybrid co-simulation.
-The framework uses standardized capability checks and optional registrations to determine which advanced features a component provides.
-This keeps simple components lightweight while allowing hybrid and strongly coupled components to expose the additional information required by the system-level algorithms.
-
-% Remark: Has some overlap with the previous subsection on the additional methods which are implemented for hybrid-co simulation. 
+\paragraph{Opt-in Capabilities.}
+Not every component must support every feature of the contract.
+The lifecycle operations are mandatory, whereas physical and rollback state transfer, zero-step output evaluation, and event handling are optional.
+This keeps simple components lightweight and confines the additional complexity to those components that genuinely participate in strongly coupled or hybrid scenarios.

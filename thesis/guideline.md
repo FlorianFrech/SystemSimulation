@@ -39,6 +39,7 @@ Do not let one chapter absorb the function of another.
 - Keep terminology consistent across chapters.
 - Use only figures that directly improve understanding.
 - Remove or rewrite any figure whose caption and visual logic no longer match the text.
+- Do not make sentences separated with ":" or ";". Use separate sentences instead. Keep sentences short and clear.
 
 ## 1.4 Cross-reference and consistency rules
 
