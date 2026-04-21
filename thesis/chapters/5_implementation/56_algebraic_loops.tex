@@ -2,62 +2,104 @@
 \section{Algebraic Loop Resolution}
 \label{sec:impl_algebraic_loops}
 
-This section describes the implementation of the iterative treatment of algebraic loops and addresses SR-11-03.
-The loop candidates themselves are provided by the structural analysis of Section~\ref{sec:impl_structural}, which identifies non-trivial strongly connected components in the zero-delay dependency graph.
+This section addresses SR-11-03 and is the implementation counterpart of the algebraic-loop theory introduced in Section~\ref{sec:cosim_algebraic_loops}.
+Section~\ref{sec:impl_structural} already identifies every algebraic loop as a strongly connected component of the zero-delay graph and assigns it to one generation of \texttt{execution\_order}.
+When the master algorithm reaches such a generation, \syssimx{} must produce mutually consistent interface values before any component in the loop block performs its macro step.
+The present section explains how the local solver \pyfn{solve\_algebraic\_scc\_ijcsa()} realizes this consistency check on a single strongly connected component.
+The global Newton iteration over all interface unknowns of the system is provided by \texttt{IJCSAAlgorithm} and is discussed as a master algorithm in Section~\ref{sec:impl_algorithms}.
 
-\paragraph{Scope within the execution flow.}
-In \syssimx{}, algebraic loops are not solved as a separate preprocessing step for the complete system.
-Instead, each non-trivial strongly connected component is resolved locally when its containing generation is prepared for execution.
-This local treatment is used by the Jacobi and Gauss--Seidel master algorithms described in Section~\ref{sec:impl_algorithms}.
-The global \texttt{IJCSAAlgorithm}, which solves the full interface system in one Newton iteration, is discussed separately in Section~\ref{sec:impl_algorithms}.
-
-\paragraph{Interface unknowns.}
-Consider one algebraic loop $A \subseteq I$ detected by the structural analysis.
-The implementation first collects all zero-delay destination input ports of components in $A$ whose drivers are also located in $A$.
-These ports form the vector of interface unknowns
+\paragraph{SCC-local Data.}
+The local solver operates on a single strongly connected component $\mathcal{L}$ and reuses the structural metadata stored on the \texttt{System} instance.
+From the zero-delay connections incident to $\mathcal{L}$ it derives four artifacts that together define the local interface problem.
+The first artifact is the vector of interface unknowns
 \begin{equation}
-    U_A = \bigl(u_1,\ldots,u_n\bigr)^\top.
+    U_{\mathcal{L}} = \bigl(u_1,\ldots,u_n\bigr)^\top,
 \end{equation}
-Zero-delay connections from components outside $A$ into the loop are treated as fixed known inputs during the local solve.
+which collects every destination input port of a zero-delay connection whose source and destination components both belong to $\mathcal{L}$.
+The second artifact is a map \pyfn{driver\_for\_input} that resolves each entry of $U_{\mathcal{L}}$ to the source output port that drives it inside $\mathcal{L}$.
+The third artifact is the set of internal connections, which are the zero-delay edges with both endpoints in $\mathcal{L}$ and which couple the unknowns through component outputs.
+The fourth artifact is the set of external incoming connections, which are zero-delay edges that enter $\mathcal{L}$ from components in earlier generations.
+Their driver outputs are read once at the current communication point and kept fixed during the local solve, so they contribute known right-hand-side values rather than additional unknowns.
 
-\paragraph{Residual formulation.}
-For a trial vector $U_A$, the components in the loop are evaluated without advancing their internal state.
-The resulting outputs induce updated values on the connected loop inputs, denoted by $\Gamma_A(Y_A(U_A))$.
-The loop is therefore solved in residual form as
+\paragraph{Residual via Zero-Step Evaluation.}
+For a trial vector $U_{\mathcal{L}}$ the solver assembles a temporary input dictionary for every component in $\mathcal{L}$ from the entries of $U_{\mathcal{L}}$ and the fixed external values.
+It then calls \pyfn{evaluate\_outputs(inputs)} on each component, which returns the output values at the current communication point without advancing the internal state.
+Routing the returned outputs through \pyfn{driver\_for\_input} yields the induced interface vector $\widehat{U}_{\mathcal{L}}(U_{\mathcal{L}})$ and the residual
 \begin{equation}
-    \mathcal{R}(U_A) = U_A - \Gamma_A\!\bigl(Y_A(U_A)\bigr).
+    \mathcal{R}_{\mathcal{L}}(U_{\mathcal{L}}) = U_{\mathcal{L}} - \widehat{U}_{\mathcal{L}}(U_{\mathcal{L}}),
 \end{equation}
-A consistent interface state satisfies $\mathcal{R}(U_A)=0$.
-This is the implementation of the conceptual formulation introduced in Section~\ref{sec:cosim_algebraic_loops}, restricted here to one strongly connected component at a time.
+which matches the fixed-point form of Section~\ref{sec:cosim_algebraic_loops} restricted to $\mathcal{L}$.
+A consistent loop state is reached when $\|\mathcal{R}_{\mathcal{L}}\|_2$ falls below the solver tolerance.
+Because \pyfn{evaluate\_outputs()} is side-effect free, the residual can be sampled at arbitrarily many trial vectors per macro step without corrupting component state.
 
-\paragraph{State-preserving output evaluation.}
-The local solver uses the hook method \texttt{evaluate\_outputs(inputs)} introduced in Section~\ref{sec:impl_component_interface}.
-For each iteration, the algorithm assembles a temporary input dictionary for every component in the strongly connected component.
-This dictionary contains the current guess for internal loop inputs together with the current values of all external zero-delay drivers.
-The method \texttt{evaluate\_outputs(inputs)} is then called on each participating component to recompute its outputs at the current communication point without performing a macro step.
-This is the implementation-level counterpart of the zero-step interface evaluation introduced in Chapter~\ref{chap:theoretical_background}.
-
-\paragraph{Initialization and Jacobian approximation.}
-The Newton iteration is initialized from the current values stored in the destination input ports.
-The present implementation approximates the interface Jacobian numerically by forward finite differences.
-For the $j$-th interface variable,
+\paragraph{Newton Iteration.}
+The iteration is initialized from the values currently stored in the destination input ports of $\mathcal{L}$, which are the most recent consistent inputs from the previous macro step.
+Each iteration approximates the interface Jacobian column-wise by forward finite differences,
 \begin{equation}
-    J_{:,j} \approx \frac{\mathcal{R}(U_A + \varepsilon e_j) - \mathcal{R}(U_A)}{\varepsilon},
+    J^{(m)}_{:,j} \approx
+    \frac{
+        \mathcal{R}_{\mathcal{L}}\!\bigl(U_{\mathcal{L}}^{(m)} + \varepsilon e_j\bigr)
+        - \mathcal{R}_{\mathcal{L}}\!\bigl(U_{\mathcal{L}}^{(m)}\bigr)
+    }{\varepsilon},
+    \qquad \varepsilon = 10^{-6},
 \end{equation}
-with perturbation size $\varepsilon = 10^{-6}$.
-This choice keeps the solver independent of backend-specific derivative support and allows the same procedure to be applied uniformly to FMU, OpenSim, and FEM-based components.
+and applies the standard Newton update $U_{\mathcal{L}}^{(m+1)} = U_{\mathcal{L}}^{(m)} - \bigl(J^{(m)}\bigr)^{-1}\mathcal{R}_{\mathcal{L}}(U_{\mathcal{L}}^{(m)})$.
+The loop terminates when $\|\mathcal{R}_{\mathcal{L}}\|_2<\texttt{tol}$.
+If the Jacobian is singular or the residual fails to converge within \texttt{max\_iter} iterations, the solver aborts the current macro step with a runtime error rather than committing inconsistent inputs.
 
-\paragraph{Newton update and convergence.}
-Given the current iterate $U_A^{(m)}$, the solver evaluates the residual $\mathcal{R}(U_A^{(m)})$ and the approximate Jacobian $J^{(m)}$, then solves
-\begin{equation}
-    J^{(m)} \Delta U_A^{(m)} = -\mathcal{R}(U_A^{(m)}),
-    \qquad
-    U_A^{(m+1)} = U_A^{(m)} + \Delta U_A^{(m)}.
-\end{equation}
-Iteration terminates when the Euclidean norm of the residual falls below the prescribed tolerance \texttt{tol} or when the maximum number of iterations \texttt{max\_iter} is reached.
-If the Jacobian is singular or the iteration fails to converge, the implementation raises a runtime error and aborts the current step.
+\paragraph{Commit of Consistent Inputs.}
+After convergence the solver writes the solved entries of $U_{\mathcal{L}}$ back to the corresponding destination input ports through \pyfn{inputs[dst].set(value, t)}, so the loop inputs are mutually consistent at the current communication point while the component states are still unchanged.
+The active master algorithm then performs the subsequent macro step on the basis of these committed values.
 
-\paragraph{Commit of consistent inputs.}
-After convergence, the solved interface values are written back to the corresponding destination input ports of the participating components.
-The components themselves remain at the current communication point until the master algorithm performs the subsequent macro step.
-In this way, the algebraic loop is resolved before any component in the strongly connected component advances in time.
+\paragraph{Verification.}
+The verification scenario of Figure~\ref{fig:algebraic_loop_verification} consists of a constant source, two subtractors, and one integrator.
+The labels on the ports define the notation used below.
+The \texttt{Source} emits $s=1$.
+The two subtractors \texttt{Inner} and \texttt{Outer} are direct-feedthrough components with output equation $d_o=p_o-n_o$ and $d=p-n$ respectively.
+The \texttt{Integrator} advances $\dot{x}=u$ with $x(0)=0$ and has no feedthrough.
+Five connections close the topology, namely $s\to p_o$, $d_o\to p$, $d\to u$, the self-connection $d\to n$, and the feedback $x\to n_o$, which is delayed because the integrator carries no feedthrough from $u$ to $x$.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.9\linewidth]{figures/5_implementation/algebraic_loop/algebraic_loop_verification.pdf}
+    \caption{Verification scenario for algebraic loops. The dashed red rectangle marks the SCC node set $\mathcal{L}=\{\texttt{Inner}\}$. Wire routing is purely visual and does not indicate SCC membership.}
+    \label{fig:algebraic_loop_verification}
+\end{figure}
+
+The self-connection $d\to n$ is the only zero-delay cycle, so the structural analysis stores a single SCC $\mathcal{L}=\{\texttt{Inner}\}$.
+For the local solve, $n$ is the only interface unknown and the edge $d_o\to p$ appears as the one external incoming connection held fixed at the current communication point.
+At $t=0$ the integrator output is zero, so the external value reduces to $p=s-x=1$.
+The local problem collapses to the scalar fixed-point equation $n=p-n$ with analytical solution $n=d=\tfrac{1}{2}p=0.5$.
+
+\begin{listing}[htbp]
+\begin{lstlisting}[
+    basicstyle=\ttfamily\footnotesize,
+    frame=single,
+    backgroundcolor=\color{black!3},
+    breaklines=true,
+    columns=fullflexible,
+    xleftmargin=0pt
+]
+Solving algebraic SCC ['Inner']:
+  Interface inputs:                [('Inner', 'neg')]
+  Internal zero-delay connections: [('Inner', 'diff', 'Inner', 'neg')]
+  External zero-delay inputs:      [('Outer', 'diff', 'Inner', 'pos')]
+  Initial guess for Inner.neg = -0.001
+Starting IJCSA iterations:
+  Iteration 0: u = [-0.001]
+    Residual for Inner.neg: -1.0019999999999998
+    Jacobian J = [[2.]]
+    Correction du = [0.501]
+  Iteration 1: u = [0.5]
+    Residual for Inner.neg: 8.243e-11
+  Converged in 1 iterations.
+Committed solved input Inner.neg = 0.5000000000412155
+\end{lstlisting}
+\caption{IJCSA debug log of the verification scenario. The solver identifies the local interface problem and converges to the analytical solution in one Newton step.}
+\label{lst:ijcsa_verification_log}
+\end{listing}
+
+Listing~\ref{lst:ijcsa_verification_log} confirms the expected local interface problem.
+The solver identifies one interface unknown, one internal self-connection, and one external incoming zero-delay input.
+Starting from the initial guess, it converges to $n=0.5$ in one Newton step and commits the value before the macro step.
+This agrees with the analytical solution and verifies the SCC-local loop solve.

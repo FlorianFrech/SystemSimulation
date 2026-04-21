@@ -109,7 +109,7 @@ Registration of further components or connections is no longer allowed after thi
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.6\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
+  \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
   \caption[System initialization sequence.]{Sequence of operations executed by \texttt{System.initialize(t0)}.
     After classification, port preparation, and structural analysis, the system iterates over the execution order and, for each generation, propagates upstream outputs, initializes the contained components, resolves any algebraic loops, and performs a zero-step.
     The zero-step publishes direct-feedthrough outputs so that later generations are initialized with consistent input values.}

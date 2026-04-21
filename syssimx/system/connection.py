@@ -59,7 +59,7 @@ class EventConnection:
     src_port: str
     dst_comp: str
     dst_port: str
-    
+
     @property
     def event_name(self) -> str:
         """Name of the event (same as src_port)."""

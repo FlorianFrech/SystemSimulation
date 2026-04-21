@@ -45,15 +45,17 @@
 \newcommand{\arrowlegend}[1]{%
   \begin{scope}[shift={#1}]
     \draw[->, dashed, thick, red!75!black] (0,0) -- (0.7,0);
-    \node[anchor=west, font=\scriptsize] at (0.75,0) {direct feedthrough};
-    \draw[->, thick, black] (3.3,0) -- (4.0,0);
-    \node[anchor=west, font=\scriptsize] at (4.05,0) {connection};
+    \node[anchor=west, font=\small] at (0.75,0) {direct feedthrough};
+    \draw[->, thick, black] (3.8,0) -- (4.5,0);
+    \node[anchor=west, font=\small] at (4.55,0) {connection};
   \end{scope}%
 }
 
 \begin{document}
 \begin{tikzpicture}[>=Latex]
-  \draw[help lines, step=0.5] (-0.5,-0.5) grid (7,5.5);
+  % Force identical bounding box across all four panels
+  \useasboundingbox (-1, -1) rectangle (7.5, 6);
+  %\draw[help lines, step=0.5] (-1,-1) grid (7.5,6);
 
   % Component A
   \begin{scope}[shift={(0,3)}]
@@ -102,6 +104,6 @@
   \draw[connection] (C-y2) -- (D-u1);
   \draw[connection] (D-y1) --++(-0.375-0.5,0) --++(0,4) -- (A-u1);
 
-  \arrowlegend{(0, -0.25)}
+  \arrowlegend{(0, -0.5)}
 \end{tikzpicture}
 \end{document}

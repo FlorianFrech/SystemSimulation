@@ -17,8 +17,9 @@
     placement=htbp,
     within=chapter,
 ]{listing}
-
 \usepackage{svg}
+\usepackage{seqsplit}
+
 
 % Page Geometry
 \usepackage[top=2.5cm,bottom=2.5cm,outer=2cm,inner=2.5cm]{geometry}
@@ -33,3 +34,4 @@
 
 % Thesis-wide custom commands
 \newcommand{\syssimx}{\emph{SysSimX}}
+\newcommand{\pyfn}[1]{\texttt{\seqsplit{#1}}}

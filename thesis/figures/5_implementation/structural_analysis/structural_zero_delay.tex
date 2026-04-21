@@ -5,7 +5,7 @@
 
 \tikzset{
   filtered/.style={
-    thick,
+    very thick,
     ->,
     >=Latex,
     draw=black!30,
@@ -23,7 +23,7 @@
     circle,
     draw=blue!50!black,
     fill=blue!12,
-    minimum size=12mm,
+    minimum size=10mm,
     inner sep=0pt,
     font=\Large\bfseries
   },
@@ -33,12 +33,12 @@
     dashed,
     fill=gray!10,
     text=black!45,
-    minimum size=12mm,
+    minimum size=10mm,
     inner sep=0pt,
     font=\Large\bfseries
   },
   connection/.style={
-    thick,
+    very thick,
     ->,
     >=Latex
   },
@@ -47,30 +47,32 @@
     line width=0.3pt,
     fill=white,
     rounded corners=1.5pt,
-    font=\small,
     inner sep=3pt,
     outer sep=3pt
   },
   every edge quotes/.append style=glabel
 }
+\def\nodeSep{3cm}
 
 \begin{document}
 \begin{tikzpicture}
-  %\draw[help lines, step=0.5] (-1,-1) grid (6,4);
+  % Force identical bounding box across all four panels
+  \useasboundingbox (-1, -1) rectangle (4, 4);
+  %\draw[help lines, step=0.5] (-1,-1) grid (4,4);
 
   % SCC highlight (merge of panel c)
-  \draw[sccbox] (2.25,-0.75) rectangle (3.75, 3.75);
-  \node[text=red!70!black] at (3,3.75) [anchor=south, font=\large\bfseries] {SCC};
+  \draw[sccbox] (\nodeSep-0.75cm,-0.75) rectangle (\nodeSep+0.75cm, \nodeSep+0.75cm);
+  \node[text=red!70!black] at (1,\nodeSep/2) [anchor=west, font=\large\bfseries] {SCC};
 
-  % Nodes placed in the same 2x2 quadrants as the input-data panel
-  \node[gnode] (A) at (0,3) {A};
-  \node[gnode] (B) at (3,3) {B};
-  \node[gnode ghost] (D) at (0,0) {D};
-  \node[gnode] (C) at (3,0) {C};
+    % Nodes placed in the same 2x2 quadrants as the input-data panel
+    \node[gnode] (A) at (0,\nodeSep)        {A};
+    \node[gnode] (B) at (\nodeSep,\nodeSep) {B};
+    \node[gnode ghost] (D) at (0,0)               {D};
+    \node[gnode] (C) at (\nodeSep,0)        {C};
 
   % Surviving zero-delay edges
   \draw[connection] (A) edge[bend left=0] (B);
-  \draw[connection] (B) edge[bend left=20, "×2"{above, font=\small}] (C);
+  \draw[connection] (B) edge[bend left=20, "×2"{above}] (C);
   \draw[connection] (C) edge[bend left=20] (B);
 
   % Filtered-out edge
