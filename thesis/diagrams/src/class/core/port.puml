@@ -49,10 +49,4 @@ note top of PortState
   last update timestamp
 end note
 
-note bottom of PortState
-  REAL values may be stored as
-  pint quantities and converted
-  on set() and get()
-end note
-
 @enduml

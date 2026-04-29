@@ -42,7 +42,7 @@ Table~\ref{tab:fmu_mapping} lists the correspondence between FMI artefacts and t
            abstractions. The mapping is computed once during
            \texttt{FMUComponent} construction.}
   \label{tab:fmu_mapping}
-  \begin{tabular}{p{6.3cm} p{7.5cm}}
+  \begin{tabular}{p{7.5cm} p{7.5cm}}
     \toprule
     \textbf{FMI artefact} & \textbf{\syssimx{} abstraction} \\
     \midrule
@@ -99,7 +99,7 @@ The wrapper realizes this state machine by implementing the primitive and hook o
 After the template method \texttt{initialize()} returns, the initial outputs are available in the \texttt{PortState} objects and recorded in the component history (Section~\ref{sec:impl_component_interface}).
 
 \paragraph{Stepping.}
-\texttt{\_do\_step\_internal(t, dt)} reduces to a single call to \texttt{doStep(currentCommunicationPoint=$t$, communicationStepSize=$dt$)}.
+\texttt{\_do\_step\_internal(t, dt)} reduces to a single call to \pyfn{doStep(currentCommunicationPoint=$t$, communicationStepSize=$dt$)}.
 All surrounding bookkeeping, such as time advancement, output refresh, and history recording, is handled by the template method \texttt{do\_step()} of the base class, so the wrapper itself contributes only the numerical advancement.
 
 \paragraph{Output Refresh.}
@@ -133,14 +133,14 @@ The verification of \texttt{FMUComponent} targets the mapping from FMI artefacts
 A small purpose-built FMU with two real inputs, two real outputs, one boolean parameter, and a declared feedthrough dependency is used as the test subject.
 Table~\ref{tab:fmu_verification} lists the verified properties.
 
-\begin{table}[htbp]
+\begin{table}[t]
   \centering
   \small
   \caption{Verified properties of \texttt{FMUComponent}. All tests use a
            purpose-built FMI~2.0 Co-Simulation FMU with a known model
            structure.}
   \label{tab:fmu_verification}
-  \begin{tabular}{p{6.5cm} p{7.5cm}}
+  \begin{tabular}{p{6.5cm} p{8.5cm}}
     \toprule
     \textbf{Verified property} & \textbf{Expected outcome} \\
     \midrule

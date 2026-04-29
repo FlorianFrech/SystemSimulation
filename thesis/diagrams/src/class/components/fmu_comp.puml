@@ -47,22 +47,22 @@ CoSimComponent <|-- FMUComponent
 FMUComponent --> ModelDescription : parses once\n(construction)
 FMUComponent --> FMU2Slave : owns\n(runtime)
 
-note top of FMUComponent
-  **Adapter** from an FMI 2.0
-  Co-Simulation FMU to the
-  CoSimComponent contract.
-end note
+' note top of FMUComponent
+'   **Adapter** from an FMI 2.0
+'   Co-Simulation FMU to the
+'   CoSimComponent contract.
+' end note
 
-note bottom of ModelDescription
-  Source of ports, parameters,
-  units, value references, and
-  direct-feedthrough dependencies.
-end note
+' note bottom of ModelDescription
+'   Source of ports, parameters,
+'   units, value references, and
+'   direct-feedthrough dependencies.
+' end note
 
-note bottom of FMU2Slave
-  Runtime proxy to the FMU
-  binary. All FMI calls are
-  batched per base type.
-end note
+' note bottom of FMU2Slave
+'   Runtime proxy to the FMU
+'   binary. All FMI calls are
+'   batched per base type.
+' end note
 
 @enduml

@@ -40,6 +40,10 @@ Do not let one chapter absorb the function of another.
 - Use only figures that directly improve understanding.
 - Remove or rewrite any figure whose caption and visual logic no longer match the text.
 - Do not make sentences separated with ":" or ";". Use separate sentences instead. Keep sentences short and clear.
+- Prefer short, plain sentences over long compound ones. If a sentence has more than two commas, split it into two sentences.
+- Avoid fancy or abstract words when a plain one works. Examples of words to avoid unless strictly necessary: *manifestation*, *paradigm*, *mechanism*, *articulate*, *facilitate*. Prefer concrete verbs and direct phrasing.
+- Do not chain multiple explanatory clauses with commas when two sentences express the same idea more clearly.
+- Academic register is still required. Do not use colloquialisms or contractions.
 
 ## 1.4 Cross-reference and consistency rules
 

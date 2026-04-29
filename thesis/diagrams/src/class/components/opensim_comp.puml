@@ -2,6 +2,9 @@
 !include ../../includes/thesis_theme.puml
 left to right direction
 
+skinparam Nodesep 10
+skinparam Ranksep 40
+
 abstract class CoSimComponent {
     + initialize(t0)
     + do_step(t, dt)
@@ -28,18 +31,13 @@ abstract class OpenSimComponent {
     + realize()
     + reset()
     --
-    + get_coordinate_value(name)
-    + get_coordinate_speed(name)
-    + get_coordinate_acceleration(name)
-    + set_coordinate_value(name, v)
-    + set_coordinate_speed(name, v)
+    + set/get coordinate pos, vel, acc
 }
 
 class "Model" as OsimModel <<opensim>> {
     + initSystem() : State
     + getCoordinateSet()
-    + realizePosition/Velocity/
-        Dynamics/Acceleration(state)
+    + realizeStage()
 }
 
 class "Manager" as OsimManager <<opensim>> {
@@ -50,32 +48,31 @@ class "Manager" as OsimManager <<opensim>> {
 }
 
 class "State" as OsimState <<opensim>> {
-    + setTime(t)
-    + getTime()
+    + set/get time
 }
 
 CoSimComponent <|-- OpenSimComponent
-OpenSimComponent --> OsimModel   : owns\n(musculoskeletal model)
-OpenSimComponent --> OsimManager : owns\n(Simbody integrator)
-OpenSimComponent --> OsimState   : owns\n(realization cache)
+OpenSimComponent --> OsimModel   : owns\n model
+OpenSimComponent --> OsimManager : owns\n integrator
+OpenSimComponent --> OsimState   : owns\n realization\n cache
 
-note top of OpenSimComponent
-  **Base wrapper** for OpenSim models.
-  Concrete subclasses assemble the model
-  and declare ports in their own
-  _initialize_component.
-end note
+' note top of OpenSimComponent
+'   **Base wrapper** for OpenSim models.
+'   Concrete subclasses assemble the model
+'   and declare ports in their own
+'   _initialize_component.
+' end note
 
-note bottom of OsimModel
-  Multibody system of bodies,
-  joints, forces, and muscle
-  actuators (Simbody backend).
-end note
+' note bottom of OsimModel
+'   Multibody system of bodies,
+'   joints, forces, and muscle
+'   actuators (Simbody backend).
+' end note
 
-note bottom of OsimManager
-  Drives Simbody's numerical
-  integrator between communication
-  points.
-end note
+' note bottom of OsimManager
+'   Drives Simbody's numerical
+'   integrator between communication
+'   points.
+' end note
 
 @enduml

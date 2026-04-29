@@ -1,75 +1,34 @@
-@startuml GaussSeidel_Algorithm
+@startuml Gauss_Seidel_Algorithm
 
-skinparam backgroundColor white
-skinparam sequenceArrowThickness 2
-skinparam roundcorner 5
-skinparam maxMessageSize 300
-skinparam participantPadding 100
-skinparam wrapWidth 0
-skinparam maxMessageSize 500
+!include ../includes/sequence_theme.puml
 
-participant "Master/\nOrchestrator" as Master
-participant "SU₁\n(Gen 0)" as SU1
-participant "SU₂\n(Gen 1)" as SU2
+hide footbox
 
-== Gauss-Seidel Co-Simulation: One Step t → t+dt ==
+skinparam defaultFontSize 11
+skinparam participantPadding 18
+skinparam maxMessageSize 120
 
-Master -> Master: **For each generation sequentially**
+participant "Master" as M COLOR_FRAMEWORK
+participant "Gen i" as G COLOR_SUBCLASS
+participant "SCC\nsolver" as S COLOR_BASECLASS
 
-note over Master: **Generation 0: Process SU₁**
+== Interleaved Generation Pass ==
 
-Master -> SU1: **1. Set inputs** from connections
-activate SU1
-note right: Use outputs from\nprevious time step
-SU1 --> Master: inputs set
-deactivate SU1
+loop for gen in execution_order
+    M -> G: _set_inputs_for_\ngeneration(gen, t)
 
-alt SU₁ in algebraic loop
-    Master -> SU1: **2. Solve algebraic loop** (IJCSA)
-    activate SU1
-    note right: Interface-Newton iteration\nto resolve coupling
-    SU1 --> Master: converged
-    deactivate SU1
+    alt if gen contains loop
+        M -> S: solve_algebraic_scc_\nijcsa(loop, t)
+        S --> M: consistent inputs
+    end
+
+    M -> G: do_step(t, dt)\nfor all components
+    G --> M: outputs stored\nat t + dt
 end
 
-Master -> SU1: **3. Execute time step** do_step(t, dt)
-activate SU1
-SU1 -> SU1: Integrate t → t+dt
-SU1 -> SU1: Update outputs at t+dt
-SU1 --> Master: Y₁(t+dt) available
-deactivate SU1
-
-note over Master: **Generation 1: Process SU₂**
-
-Master -> SU2: **1. Set inputs** from connections
-activate SU2
-note right: Use **fresh** Y₁(t+dt)\nfrom SU₁
-SU2 --> Master: inputs set
-deactivate SU2
-
-alt SU₂ in algebraic loop
-    Master -> SU2: **2. Solve algebraic loop** (IJCSA)
-    activate SU2
-    SU2 --> Master: converged
-    deactivate SU2
-end
-
-Master -> SU2: **3. Execute time step** do_step(t, dt)
-activate SU2
-SU2 -> SU2: Integrate t → t+dt
-SU2 -> SU2: Update outputs at t+dt
-SU2 --> Master: Y₂(t+dt) available
-deactivate SU2
-
-Master -> Master: All generations complete\nt ← t + dt
-
-' note over Master, SU2
-' **Gauss-Seidel Properties:**
-' • Sequential execution by generation
-' • Later components use updated outputs from earlier ones
-' • Reduced phase lag compared to Jacobi
-' • No parallelism within generation
-' • Algebraic loops solved via IJCSA before time step
+' note right of M
+' Later generations see fresh outputs
+' from earlier generations within the same macro step.
 ' end note
 
 @enduml

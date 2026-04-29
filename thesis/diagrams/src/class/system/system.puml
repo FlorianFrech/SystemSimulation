@@ -3,7 +3,7 @@
 
 left to right direction
 skinparam nodesep 25
-skinparam ranksep 45
+skinparam ranksep 30
 
 ' ============================================================================
 ' SYSTEM CLASS
@@ -14,19 +14,17 @@ class System {
     + is_initialized: bool
     --
     + algorithm: Algorithm
-    + history: SystemHistory
     ==
     .. Registration ..
-    + add_component(component)
-    + add_connection(connection)
-    + add_event_connection(connection)
+    + add_component(comp)
+    + add_connection(conn)
+    + add_event_connection(ev_conn)
     .. Algorithm ..
     + set_algorithm(algorithm)
     .. Lifecycle ..
     + initialize(t0)
     + run(t0, tf, dt)
     + reset()
-    + get_history(): dict
 }
 
 ' ============================================================================
@@ -45,10 +43,8 @@ together {
     class EventConnection <<dataclass>> {
         + src_comp, src_port: str
         + dst_comp, dst_port: str
-        + direction: Optional[int]
         --
         + key(): tuple
-        + event_name, target_comp: str
     }
 
 
@@ -58,21 +54,15 @@ together {
 }
 
 ' ============================================================================
-' REFERENCED ABSTRACTIONS (forced into one column)
-' ============================================================================
-together {
-
-}
-
-' ============================================================================
 ' RELATIONS
 ' ============================================================================
-System "1" o--> "*" CoSimComponent   : manages
-System "1" o--> "*" Connection       : contains
-System "1" o--> "*" EventConnection  : contains
-System "1"  -->  "1" Algorithm       : delegates stepping
+System "1" o-up-> "*" CoSimComponent   : manages
+System "1"  -up->  "1" Algorithm       : delegates stepping
+System "1" o-down-> "*" Connection       : contains
+System "1" o-down-> "*" EventConnection  : contains
 
-Connection      ..> CoSimComponent : references by name
-EventConnection ..> CoSimComponent : references by name
+
+' Connection      ..> CoSimComponent : references by name
+' EventConnection ..> CoSimComponent : references by name
 
 @enduml

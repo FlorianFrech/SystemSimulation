@@ -18,7 +18,7 @@ Figure~\ref{fig:impl_opensim_class} shows the class-level relationship between \
 Unlike \texttt{FMUComponent} (Section~\ref{sec:impl_fmu}), \texttt{OpenSimComponent} is itself an \emph{abstract base} since OpenSim models do not expose a standardized interface descriptor analogous to \texttt{modelDescription.xml}, so ports, parameters, and the model-assembly steps must be declared by a concrete subclass that targets a specific musculoskeletal model.
 The base class provides the infrastructure that is common to every OpenSim component.
 
-\begin{figure}[htbp]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/class/components/OpenSimComponent.pdf}
   \caption{Class diagram of the OpenSim wrapper.
@@ -44,7 +44,7 @@ Unlike the FMU case, the mapping is authored once per concrete subclass rather t
            abstractions. The mapping is established by the concrete
            subclass during construction and initialization.}
   \label{tab:opensim_mapping}
-  \begin{tabular}{p{6.3cm} p{7.5cm}}
+  \begin{tabular}{p{6.5cm} p{8.5cm}}
     \toprule
     \textbf{OpenSim artefact} & \textbf{\syssimx{} abstraction} \\
     \midrule
@@ -126,14 +126,14 @@ The generic base class does not override \texttt{snapshot\_state()} or \texttt{r
 Because \texttt{OpenSimComponent} is an abstract base, verification is performed through a minimal concrete subclass that wraps a simple single-degree-of-freedom pendulum model (one body, one pin joint, one torque actuator).
 Table~\ref{tab:opensim_verification} lists the verified properties.
 
-\begin{table}[htbp]
+\begin{table}[t]
   \centering
   \small
   \caption{Verified properties of \texttt{OpenSimComponent}. All tests
            use a minimal single-degree-of-freedom pendulum model driven
            by a coordinate actuator.}
   \label{tab:opensim_verification}
-  \begin{tabular}{p{6.5cm} p{7.5cm}}
+  \begin{tabular}{p{6cm} p{8.5cm}}
     \toprule
     \textbf{Verified property} & \textbf{Expected outcome} \\
     \midrule

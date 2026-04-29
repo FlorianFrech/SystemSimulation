@@ -2,6 +2,8 @@
 
 !include ../includes/sequence_theme.puml
 
+hide footbox
+
 participant "User Code"              as User COLOR_USER
 participant "Component\n(Sub Class)" as Sub  COLOR_SUBCLASS
 participant "CoSimComponent\n(Base Class)" as Base COLOR_BASECLASS

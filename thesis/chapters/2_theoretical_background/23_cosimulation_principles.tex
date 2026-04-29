@@ -303,6 +303,21 @@ A consistent coupling state satisfies
 \end{equation}
 where $\Gamma_A$ denotes the coupling relation restricted to the ports participating in the loop.
 
+Two consequences follow from this formulation.
+First, simple fixed-point substitution $U_A^{(k+1)}=\Gamma_A\!\bigl(Y_A(U_A^{(k)})\bigr)$ converges only when the loop gain is contractive.
+Contractivity here means that the spectral radius of the loop-gain Jacobian $\partial(\Gamma_A\!\circ\!Y_A)/\partial U_A$ is strictly less than one.
+This condition is not met in most coupled scenarios of practical interest.
+A Newton-type treatment of $\mathcal{R}(U_A)=0$ instead requires only local regularity of the interface Jacobian $\partial\mathcal{R}/\partial U_A$.
+Local regularity means that this Jacobian has nonzero determinant at the solution and is therefore invertible.
+It is a strictly weaker condition than contractivity and is the default approach in~\cite{sicklinger_interface_2014}.
+The Newton update reads
+\begin{equation}
+    U_A^{(k+1)} = U_A^{(k)} - \left(\frac{\partial\mathcal{R}}{\partial U_A}\right)^{-1}\!\mathcal{R}\!\bigl(U_A^{(k)}\bigr).
+    \label{eq:cosim_interface_newton}
+\end{equation}
+Second, every evaluation of $Y_A(U_A)$ corresponds to a zero-step call on each simulation unit in $A$ with internal states frozen at the current communication point.
+The zero-step operator $\operatorname{step}_i(\cdot,0)$ introduced in Section~\ref{sec:232_cosim_formulation} is the conceptual counterpart of this frozen-state evaluation.
+
 This formulation makes explicit that algebraic-loop treatment acts only on interface variables and does not require access to the internal equations of the participating simulation units.
 In the present thesis, algebraic loops are resolved by an interface Jacobian-based procedure~\cite{sicklinger_interface_2014}.
 The concrete realization used in \syssimx{}, including the SCC-local formulation, numerical Jacobian approximation, and convergence handling, is described in Chapter~\ref{chap:implementation}.

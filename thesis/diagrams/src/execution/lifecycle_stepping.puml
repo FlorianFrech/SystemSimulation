@@ -2,6 +2,8 @@
 
 !include ../includes/sequence_theme.puml
 
+hide footbox
+
 participant "Algorithm"              as Alg  COLOR_FRAMEWORK
 participant "Component\n(Sub Class)" as Sub  COLOR_SUBCLASS
 participant "CoSimComponent\n(Base Class)" as Base COLOR_BASECLASS

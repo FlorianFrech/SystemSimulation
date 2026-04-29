@@ -46,6 +46,8 @@ Each iteration approximates the interface Jacobian column-wise by forward finite
 and applies the standard Newton update $U_{\mathcal{L}}^{(m+1)} = U_{\mathcal{L}}^{(m)} - \bigl(J^{(m)}\bigr)^{-1}\mathcal{R}_{\mathcal{L}}(U_{\mathcal{L}}^{(m)})$.
 The loop terminates when $\|\mathcal{R}_{\mathcal{L}}\|_2<\texttt{tol}$.
 If the Jacobian is singular or the residual fails to converge within \texttt{max\_iter} iterations, the solver aborts the current macro step with a runtime error rather than committing inconsistent inputs.
+The Jacobian becomes singular when the loop-gain eigenvalue approaches one, for example for an identity feedback $y=u$ or a unit-gain cycle.
+Finite-difference noise at discontinuities can produce the same condition numerically.
 
 \paragraph{Commit of Consistent Inputs.}
 After convergence the solver writes the solved entries of $U_{\mathcal{L}}$ back to the corresponding destination input ports through \pyfn{inputs[dst].set(value, t)}, so the loop inputs are mutually consistent at the current communication point while the component states are still unchanged.

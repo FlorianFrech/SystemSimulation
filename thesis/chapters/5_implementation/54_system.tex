@@ -9,7 +9,7 @@ The event-connection functionality additionally supports the event-related inter
 Figure~\ref{fig:impl_system_class} gives a class-level overview of the implementation objects involved in system composition and execution.
 The structural analysis that derives the execution order from the registered connections is deferred to Section~\ref{sec:impl_structural}, and the master algorithms that consume this order are described in Section~\ref{sec:impl_algorithms}.
 
-\begin{figure}[!htbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=0.85\textwidth]{diagrams/out/pdf/class/system/System.pdf}
     \caption{Class-level overview of the \texttt{System} abstraction in \syssimx. The diagram shows how the \texttt{System} manages components, stores signal and event connections, and delegates stepping to an \texttt{Algorithm}.}
@@ -21,7 +21,7 @@ The structural analysis that derives the execution order from the registered con
 
 Table~\ref{tab:system_state} summarizes the persistent state maintained by a \texttt{System} instance.
 
-\begin{table}[!htbp]
+\begin{table}[t]
   \centering
   \small
   \caption{Core \texttt{System} attributes and their implementation purpose.}
@@ -107,7 +107,7 @@ Finally, each component performs a zero-step to publish outputs for downstream g
 Processing generations in topological order therefore guarantees that every component sees coherent initial inputs derived from the already-initialized upstream components.
 Registration of further components or connections is no longer allowed after this point.
 
-\begin{figure}[!htbp]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
   \caption[System initialization sequence.]{Sequence of operations executed by \texttt{System.initialize(t0)}.

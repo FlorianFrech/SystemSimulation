@@ -86,102 +86,6 @@ It must be read together with the following documents.
 - End with a short description of how initialization and master algorithms consume the metadata.
 - Use one focused verification example.
 
-### Implementation Inputs
-- Registered components from `System.components`.
-- Signal connections from `System.connections`.
-- Direct-feedthrough metadata from each component.
-- Active output usage derived from outgoing signal connections.
-
-### Stored Metadata
-- Prefer a table with the columns `Attribute`, `Produced by`, and `Purpose`.
-- Include `graph`, `_dag`, `_incoming_by_dst`, `_input_sources`, `algebraic_loops`, `_scc_index`, `execution_order`, and `execution_idx`.
-- Describe `_dag` as the zero-delay graph.
-- Do not call `_dag` a DAG before condensation.
-- It may contain cycles before algebraic loop condensation.
-- The attribute names in this table are the tags used by the worked implementation-level example.
-
-### Graph Construction
-- Explain that `build_graphs()` first clears cached structural metadata.
-- Explain that all registered components become nodes of both graph representations.
-- Explain that every registered signal connection becomes an annotated edge of the full connection graph.
-- Explain that `_incoming_by_dst` and `_input_sources` are populated for input propagation.
-- Describe the multiple-driver check as a defensive graph-construction guard.
-- The primary single-assignment check belongs to the `System and Connections` section.
-- Explain the active-output filter explicitly.
-- State that a zero-delay edge is added only when the connected destination input affects an output that is used by a downstream connection.
-
-### Algebraic Loops and Execution Order
-- State that SCCs are computed on the zero-delay graph.
-- Store multi-node SCCs as algebraic loops.
-- Treat a self-loop as a one-component algebraic loop.
-- Condense the zero-delay graph after loop detection.
-- Compute topological generations on the condensed graph.
-- Expand each condensed node back to component names.
-- Store the result in `execution_order` and `execution_idx`.
-
-### Delayed Producers
-- Keep this part short.
-- State that delayed producer handling is a `syssimx` scheduling choice.
-- Do not present it as a general property of co-simulation theory.
-- Explain only that components which feed zero-delay structure through delayed paths can be moved to a final generation.
-
-### Figure Guidance
-- The section uses two complementary figures.
-- The first is the implementation pipeline diagram.
-- Place it after the stored metadata table and before graph construction.
-- The pipeline figure should show inputs, `build_graphs()`, `compute_execution_order()`, and stored outputs.
-- The inputs should be components, connections, and direct-feedthrough metadata.
-- The outputs should include the full graph, zero-delay graph, input lookup maps, algebraic loops, and execution order.
-- The pipeline figure should show that later initialization and master algorithms consume the stored metadata.
-- The second figure is a worked implementation-level example of the same scenario used in the Chapter 2 structural-analysis figure.
-- The reuse is deliberate, so that the reader transfers intuition from Chapter 2 to the implementation level.
-- The caption must state explicitly that this is the same scenario as the Chapter 2 figure, refined to the implementation level.
-- The worked example must expose implementation artifacts that are not visible in the Chapter 2 figure.
-- Do not duplicate the Chapter 2 conceptual structural-analysis figure.
-- Do not create another conceptual dependency graph for this section.
-- The conceptual dependency graph belongs to Chapter 2.
-
-#### Worked Example: Required Implementation Details
-- Draw edges at port level, not at component level, in the panels that represent port-level structures.
-- Label every port-level edge with the concrete source and destination port names.
-- Render the direct-feedthrough map of each component as a literal dictionary next to the component node.
-- Include at least one component whose direct-feedthrough dictionary is empty.
-- The scenario must be constructed so that this component is detected as a delayed producer by `is_delayed_producer()` and relocated to the final generation by `move_delayed_producers_to_last_generation()`.
-- Without a visible delayed-producer relocation, the worked example does not earn its place in the section.
-- Tag each panel with the name of the stored metadata attribute it corresponds to.
-- Example tags are `graph`, `_dag`, `algebraic_loops`, `execution_order`, and `execution_idx`.
-- Render `execution_order` and `execution_idx` as literal data, not only as a colored generation diagram.
-
-#### Worked Example: Panel Plan
-- Panel (a) shows the input data.
-- Panel (a) contains the component set, the connection list, and the direct-feedthrough dictionaries.
-- Panel (a) must include at least one component with an empty direct-feedthrough dictionary.
-- Panel (a) must show at least one connection that enters the no-feedthrough component and one connection that leaves it toward a zero-delay node, so that the delayed-producer criterion of `is_delayed_producer()` is satisfied.
-- Panel (b1) shows the full connection graph `graph`.
-- Panel (b1) uses port-labeled edges.
-- Panel (b1) must preserve parallel edges, because `graph` is a `MultiDiGraph`.
-- Panel (b2) shows the zero-delay graph `_dag` after feedthrough composition and the active-output filter.
-- Edges that appear in (b1) but are absent in (b2) are the teaching moment and must remain visible as ghosted edges.
-- Ghosted edges include those dropped because the receiving component has no feedthrough and those dropped because the contributing output is inactive.
-- The no-feedthrough component must be rendered in a visually distinct style in (b2), so the reader sees that it is not part of `_dag` even though it remains a registered component.
-- Panel (b2) component-level edges do not carry port-pair labels, because `_dag` is a `DiGraph` and port information has been abstracted away.
-- Panel (b2) may annotate a coalesced edge that represents multiple parallel connections from (b1) with a multiplicity hint.
-- Panel (c) highlights the SCC on `_dag` and tags it as `algebraic_loops`.
-- Panel (c) may be merged into panel (b2) by drawing the SCC boundary directly on `_dag` if space is tight.
-- Panels (b1) and (b2) must never be merged.
-- Panel (d) shows the condensed graph with topological generations.
-- Panel (d) must render two successive states of `execution_order`: the result of plain topological generations on the condensed graph, and the result after `move_delayed_producers_to_last_generation()`.
-- The transition between the two states must be labeled with the post-processing step, so the reader sees the relocation as an explicit operation rather than an artifact of topological sorting.
-- Panel (d) additionally renders the final `execution_order` and `execution_idx` as literal data structures.
-
-#### Figure Ordering and Placement
-- Place the pipeline figure before the worked example.
-- Place the pipeline figure after the stored metadata table and before the graph construction subsection.
-- Place the worked example after the graph construction subsection.
-- The worked example may be referenced from subsequent subsections on algebraic loop detection and execution order.
-- Do not place the worked example before the pipeline figure.
-
-
 ### Verification
 - Use one minimal verification example.
 - A suitable example is a two-component algebraic loop made from direct-feedthrough gain components.
@@ -191,3 +95,90 @@ It must be read together with the following documents.
 - Do not list every structural-analysis unit test.
 - Do not verify IJCSA convergence in this section.
 - Solver convergence belongs to the algebraic-loop solver section.
+
+---
+
+## Section Guidance for Master Algorithms
+
+### Role
+- This section is the implementation counterpart of the execution-strategy theory in Chapter 2.
+- It also builds on the algorithm interface of Chapter 4.
+- It should explain how `syssimx` orchestrates one macro step for the continuous master algorithms.
+- It should cover `JacobiAlgorithm`, `GaussSeidelAlgorithm`, and `IJCSAAlgorithm`.
+- It should exclude hybrid event handling.
+- Hybrid execution belongs to the hybrid section.
+
+### Boundary Rules
+- Do not repeat the strategy-pattern explanation from Chapter 4.
+- Do not restate the conceptual Jacobi and Gauss--Seidel theory from Chapter 2.
+- Do not restate the structural-analysis logic from the previous section.
+- Do not restate the local Newton procedure from the algebraic-loop section.
+- Focus on orchestration logic, data flow, and the differences between the concrete algorithm classes.
+
+### Recommended Structure
+- Start with a short opening paragraph.
+- State that structural analysis already provides `execution_order` and `algebraic_loops`.
+- State that the algebraic-loop section already defines the SCC-local solver.
+- Add one short subsection on shared metadata.
+- Add one subsection for the Jacobi algorithm.
+- Add one subsection for the Gauss--Seidel algorithm.
+- Add one subsection for the global IJCSA algorithm.
+- End with one short verification subsection.
+
+### Shared Metadata
+- All three continuous algorithms consume the same system metadata after `System.initialize()`.
+- The relevant items are `execution_order`, `algebraic_loops`, and `_set_inputs_for_generation()`.
+- Do not emphasize `execution_idx` in this section.
+- It is not part of the main orchestration path of these three algorithms.
+- State clearly that the algorithms consume existing metadata rather than rebuilding it.
+
+### Jacobi Algorithm
+- Explain the two-phase implementation of `JacobiAlgorithm.step()`.
+- First all generations receive staged inputs.
+- Then every loop block contained in a generation is solved locally.
+- Only after all generations are prepared do the components perform `do_step(t, dt)`.
+- State explicitly that later generations do not see fresh outputs from earlier generations within the same macro step.
+- State explicitly that the current implementation preserves Jacobi semantics but does not execute the system in parallel.
+
+### Gauss--Seidel Algorithm
+- Explain the generation-wise pipeline of `GaussSeidelAlgorithm.step()`.
+- For each generation the algorithm stages inputs, solves local loop blocks, and immediately steps the generation.
+- Later generations therefore see updated outputs from earlier generations in the same macro step.
+- Present this as the key implementation difference to Jacobi.
+- Do not re-explain the local IJCSA Newton iteration here.
+
+### Global IJCSA Algorithm
+- Explain that `IJCSAAlgorithm.step()` first solves the complete zero-delay interface system through `solve_global_interface_ijcsa()`.
+- Mention `collect_global_interface_unknowns()` as the entry point for building the global unknown vector and driver map.
+- Explain that the residual is evaluated with frozen component states through `evaluate_outputs()`.
+- After convergence the interface values are committed.
+- The components then perform their macro steps in the existing `execution_order`.
+- State explicitly that the global solve does not eliminate the later stepping order.
+
+### Comparison Guidance
+- Use one compact table instead of long repeated prose.
+- Good comparison rows are input staging, scope of interface solve, visibility of updated outputs inside a macro step, and possible parallelism.
+- Keep this comparison at implementation level.
+- Do not repeat the conceptual properties already covered in Chapter 2.
+
+### Figure Guidance
+- Do not use three full sequence diagrams in the thesis.
+- They are too detailed for the purpose of this section.
+- Prefer one compact comparison figure for Jacobi and Gauss--Seidel.
+- This figure should show only the order of setting inputs, solving loop blocks, and stepping components.
+- Add a separate figure for global IJCSA only if the prose is still unclear.
+- If such a figure is used, it should emphasize the two phases of the algorithm.
+- The first phase is the global interface solve.
+- The second phase is the time stepping of the components.
+- The existing PlantUML diagrams can serve as drafting material.
+- They should be simplified before inclusion in the thesis.
+- Avoid duplicating the theory figures from Chapter 2.
+
+### Verification
+- Use one simple direct-feedthrough scenario to compare Jacobi and Gauss--Seidel.
+- `docs/03_core_tutorials/02_intermediate/01_comparing_algorithms.ipynb` is a suitable source.
+- Verify that Gauss--Seidel uses fresh within-step outputs and reduces the phase lag relative to Jacobi.
+- If global IJCSA is included in the verification, use a separate minimal looped scenario or explain briefly why its result matches the local-loop treatment on the chosen example.
+- Keep the verification focused on orchestration behavior.
+- Do not repeat the algebraic-loop solver verification from the previous section.
+- Do not list every algorithm test.

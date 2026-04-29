@@ -1,0 +1,45 @@
+@startuml Hybrid_Step
+
+!include ../../includes/sequence_theme.puml
+
+hide footbox
+
+skinparam defaultFontSize 10
+skinparam participantPadding 14
+skinparam maxMessageSize 300
+
+participant "System"            as Sys COLOR_FRAMEWORK
+participant "HybridAlgorithm" as H   COLOR_BASECLASS
+participant "Event Sources"    as Src COLOR_SUBCLASS
+participant "Listeners"         as Lis COLOR_SUBCLASS
+
+== Hybrid Macro Step ==
+
+Sys -> H: **step(self, t, dt)**
+activate H
+
+note over H: t_left = t; t_right = t + dt
+
+loop #F7F7F7 while t_left < t_right
+
+    H -> H: 1) prepare inputs: GS pass + local SCC solve
+    H -> Src: 2) detect crossings: snapshot -> trial -> restore
+
+    alt #EEF8EE no crossing
+        H -> H: 3) Gauss-Seidel step to t_right
+    else #FFF3E8 crossing
+        H -> H: 3) locate event time: bisection + rollback
+        H -> H: 4) step system to t_event
+
+        loop #F3E8FA 5) superdense microsteps at t_event
+            H -> Lis: handle current events
+            H -> H: update after event: prepare inputs + check cascades
+        end
+    end
+
+end
+
+deactivate H
+H --> Sys
+
+@enduml

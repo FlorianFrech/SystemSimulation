@@ -1,117 +1,38 @@
-@startuml Jacobi_Step
+@startuml Jacobi_Algorithm
 
-skinparam backgroundColor white
-skinparam sequenceArrowThickness 2
-skinparam roundcorner 5
-skinparam maxMessageSize 300
-skinparam participantPadding 100
-skinparam wrapWidth 0
-skinparam maxMessageSize 500
+!include ../includes/sequence_theme.puml
 
-actor User
-participant "System" as System
-participant "Connection\nManager" as Connection
-participant "Component A\n(Gen 0)" as CompA
-participant "Component B\n(Gen 1)" as CompB
-participant "IJCSA Solver" as Solver
+hide footbox
 
-== Jacobi Co-Simulation Step: step_jacobi(t, dt) ==
+skinparam defaultFontSize 11
+skinparam participantPadding 18
+skinparam maxMessageSize 120
 
-User -> System: **step_jacobi(t, dt)**
-activate System
+participant "Master" as M COLOR_FRAMEWORK
+participant "Gen i" as G COLOR_SUBCLASS
+participant "SCC\nsolver" as S COLOR_BASECLASS
 
-note over System: **Phase 1: Set ALL Inputs**\n(for all generations)
+== Phase 1: Prepare All Generations ==
 
-loop for each generation in execution_order
+loop for gen in execution_order
+    M -> G: _set_inputs_for_\ngeneration(gen, t)
 
-    System -> System: generation=[CompA,CompB,...]
-    
-    note over System: **1.1: Get signals from connections**
-    
-    System -> Connection: get_incoming_connections(CompB)
-    activate Connection
-    Connection -> CompA: outputs['y'].get()
-    note right: Read from PortState\n(delayed or current)
-    CompA --> Connection: value
-    Connection --> System: {port: value}
-    deactivate Connection
-    
-    System -> CompB: **set_inputs(signals,t)**
-    activate CompB
-    CompB -> CompB: inputs['u'].set(value,t)
-    note right: Store in PortState\n(does NOT compute yet)
-    CompB --> System: inputs set
-    deactivate CompB
-    
-    note over System: **1.2: Check for algebraic loops**
-    
-    alt generation contains algebraic loop SCC
-        System -> Solver: **_solve_algebraic_scc_ijcsa(scc,t)**
-        activate Solver
-        
-        note over Solver: Interface-Newton iteration\nto resolve algebraic coupling
-        
-        loop until convergence
-            Solver -> CompA: evaluate_outputs(inputs,t)
-            activate CompA
-            CompA -> CompA: compute with dt=0
-            CompA --> Solver: output values
-            deactivate CompA
-            
-            Solver -> CompB: evaluate_outputs(inputs,t)
-            activate CompB
-            CompB -> CompB: compute with dt=0
-            CompB --> Solver: output values
-            deactivate CompB
-            
-            Solver -> Solver: compute residual R=U-Y(U)
-            Solver -> Solver: compute Jacobian J=dR/dU
-            Solver -> Solver: solve J*ΔU=-R
-            Solver -> Solver: U+=ΔU
-        end
-        
-        Solver -> CompA: set_inputs(converged_U,t)
-        Solver -> CompB: set_inputs(converged_U,t)
-        
-        Solver --> System: algebraic loop solved
-        deactivate Solver
-        
-        note right: All interface values\nconsistent at time t
+    alt if gen contains loop
+        M -> S: solve_algebraic_scc_\nijcsa(loop, t)
+        S --> M: consistent inputs
     end
-
 end
 
-note over System: **Phase 2: Compute ALL Steps**\n(for all generations)
+== Phase 2: Step All Generations ==
 
-loop for each generation in execution_order
-
-    System -> System: generation = [CompA,CompB,...]
-    
-    loop for each component in generation
-        System -> CompA: **do_step(t,dt)**
-        activate CompA
-        CompA -> CompA: _do_step_internal(t,dt)
-        note right: FMU doStep / FEM solve\nOpenSim integrate / etc.\nwith t: t -> t+dt
-        CompA -> CompA: t = t + dt
-        CompA -> CompA: _update_output_states(t+dt)
-        note right: Write new outputs\n+ append to history
-        CompA --> System: step complete
-        deactivate CompA
-    end
-    
+loop for gen in execution_order
+    M -> G: do_step(t, dt)\nfor all components
+    G --> M: outputs stored\nat t + dt
 end
 
-System --> User: step complete
-deactivate System
-
-' note over System
-' **Key Differences from Gauss-Seidel:**
-' - Phase 1 and Phase 2 are FULLY separated
-' - All inputs set before ANY computation
-' - Components in same generation can be
-'   computed in parallel (Phase 2)
-' - Algebraic loops still solved via IJCSA
-'   in Phase 1 for consistency
+' note right of M
+' No fresh outputs from earlier generations
+' are visible within the same macro step.
 ' end note
 
 @enduml
