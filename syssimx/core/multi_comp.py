@@ -293,11 +293,10 @@ class MultiComponent(CoSimComponent):
     def _register_models(self) -> None:
         """Register all sub-components in the models dictionary.
 
-        Subclasses must override this method to populate ``self.models``
-        with the available simulation models. Each model is associated
-        with a string key (mode) that identifies it.
-
-        Called automatically during ``_initialize_component()``.
+        Subclasses must populate ``self.models`` before initialization.
+        This can be done by calling ``_register_models()`` from the subclass
+        constructor or by assigning ``self.models`` directly when the internal
+        components are created.
 
         Raises:
             NotImplementedError: If not overridden by subclass.
@@ -378,7 +377,7 @@ class MultiComponent(CoSimComponent):
 
         This method orchestrates the initialization sequence:
 
-        1. Calls ``_register_models()`` to populate the models registry
+        1. Expects ``self.models`` to contain the registered models
         2. Validates that ``initial_mode`` exists in the registry
         3. Calls ``_pre_initialize_models()`` for parameter synchronization
         4. Initializes all registered sub-components at time ``t0``
@@ -391,8 +390,7 @@ class MultiComponent(CoSimComponent):
             t0: Initial simulation time in seconds.
 
         Raises:
-            RuntimeError: If no models are registered after calling
-                ``_register_models()``.
+            RuntimeError: If no models are registered before initialization.
             ValueError: If ``initial_mode`` is not in the models registry.
 
         Note:
@@ -404,7 +402,7 @@ class MultiComponent(CoSimComponent):
             :meth:`_post_initialize`: Post-initialization setup hook
         """
         if not self.models:
-            raise RuntimeError(f"{self.name}: No models registered in _register_models()")
+            raise RuntimeError(f"{self.name}: No models registered before initialization")
 
         if self.active_mode not in self.models:
             raise ValueError(

@@ -1,4 +1,4 @@
-@startuml MultiComponent_Switching
+@startuml MasterPendulumSwitching
 
 ' Color scheme - clean white background
 skinparam backgroundColor white

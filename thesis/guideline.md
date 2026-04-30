@@ -6,8 +6,9 @@ It must be used together with:
 
 - `research/theory/notation.md`
 - `research/theory/glossary.md`
+- `thesis/golden_rules_writing_summary.md`
 
-If a future draft conflicts with this document, `notation.md`, or `glossary.md`, the draft should be revised rather than the conflict ignored.
+If a future draft conflicts with this document, `notation.md`, `glossary.md`, or `golden_rules_writing_summary.md`, the draft should be revised rather than the conflict ignored.
 
 ---
 

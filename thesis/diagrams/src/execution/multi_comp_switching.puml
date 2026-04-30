@@ -1,0 +1,42 @@
+@startuml MultiComponent_Switching
+
+!include ../includes/sequence_theme.puml
+
+hide footbox
+skinparam defaultFontSize 10
+skinparam participantPadding 6
+skinparam maxMessageSize 200
+skinparam shadowing false
+
+participant "Master\nAlgorithm" as ALG COLOR_FRAMEWORK
+participant "Multi\nComponent" as MC  COLOR_SUBCLASS
+participant "Current\nModel"   as CM  COLOR_USER
+participant "Hysteresis"        as H   COLOR_BASECLASS
+participant "Target\nModel"    as TM  COLOR_USER
+
+ALG -> MC : do_step(t, dt)
+activate MC
+
+MC -> CM : get_state()
+MC -> MC : mode_selector(t, state)
+
+alt #EEF6F6 target mode differs
+    opt hysteresis configured
+        MC -> H : can_switch(t, target)
+        H --> MC : accepted
+    end
+
+    alt switch accepted
+        MC -> MC : _adapt_state(state, target)
+        MC -> TM : set_state(adapted, t)
+        MC -> MC : active_mode = target\nactive_comp = target model
+        MC -> MC : append to sync_events
+    end
+end
+
+MC -> TM : do_step(t, dt)
+TM --> MC : outputs at t+dt
+
+deactivate MC
+
+@enduml
