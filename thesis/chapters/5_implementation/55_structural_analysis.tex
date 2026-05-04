@@ -211,7 +211,7 @@ The predicate \texttt{is\_delayed\_producer()} implements exactly this test.
 After the relocation, \texttt{execution\_idx} is rebuilt so that the schedule metadata stays consistent.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Use by Master Algorithms}
+\subsection{Consumers of Structural Metadata}
 \label{sec:impl_structural_use}
 
 The metadata produced by \texttt{build\_graphs()} and \pyfn{compute\_execution\_order()} is computed once during \texttt{initialize(t0)} and then consumed read-only.
@@ -219,5 +219,53 @@ The initialization loop and the master algorithms traverse \pyfn{execution\_orde
 They use \pyfn{\_input\_sources} for input propagation, \pyfn{execution\_idx} for generation lookup, and \pyfn{algebraic\_loops} to identify loop blocks that must be passed to the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}.
 Structural analysis therefore provides the orchestration metadata for the remainder of the run.
 
+The same metadata is also used by the Graphviz-based system graph visualizer.
+The visualizer supports UR-12 by rendering the assembled system as a directed graph with component groups, port labels, signal connections, event connections, execution-order indices, and highlighted algebraic-loop edges.
+It is not part of the simulation semantics.
+It is an inspection and documentation helper for checking the assembled scenario after structural analysis.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
+\label{sec:impl_structural_verification}
+
+The structural-analysis verification uses the four-component scenario of Figure~\ref{fig:struct_worked}.
+The scenario is small enough to inspect manually, but it exercises the complete metadata path from registered connections to the final execution order.
+The expected full connection graph contains all registered signal connections.
+The expected zero-delay graph contains only the instantaneous dependencies induced by the direct-feedthrough maps of components~B and~C.
+Components~A and~D expose no direct feedthrough and therefore do not contribute zero-delay edges.
+
+Table~\ref{tab:structural_verification} summarizes the expected and observed metadata.
+The result confirms that \texttt{build\_graphs()} preserves the full connection structure in \texttt{graph}, filters the zero-delay structure into \texttt{\_dag}, and detects the SCC formed by components~B and~C.
+The subsequent call to \pyfn{compute\_execution\_order()} condenses this SCC into one generation and moves component~D to the final generation as a delayed producer.
+
+\begin{table}[tbp]
+  \centering
+  \small
+  \caption{Verification of structural-analysis metadata on the worked four-component scenario.}
+  \label{tab:structural_verification}
+  \begin{tabular}{p{3.4cm} p{5.4cm} p{5.6cm}}
+    \toprule
+    \textbf{Metadata} & \textbf{Expected result} & \textbf{Observed result} \\
+    \midrule
+    \texttt{graph}
+      & Contains all four components and all registered signal connections
+      & All component nodes and all connection edges are present \\
+    \addlinespace
+    \texttt{\_dag}
+      & Contains only the zero-delay dependencies through components~B and~C
+      & Edges through components~A and~D are absent after feedthrough filtering \\
+    \addlinespace
+    \texttt{algebraic\_loops}
+      & Contains one loop block with components~B and~C
+      & One SCC is detected with member set \(\{B,C\}\) \\
+    \addlinespace
+    \texttt{execution\_order}
+      & Places A before the loop block and D after delayed-producer relocation
+      & The final generation order is \(\{\mathrm{A}\}\), \(\{\mathrm{B},\mathrm{C}\}\), \(\{\mathrm{D}\}\) \\
+    \addlinespace
+    \texttt{execution\_idx}
+      & Maps every component to its final generation index
+      & The lookup is consistent with the stored \texttt{execution\_order} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

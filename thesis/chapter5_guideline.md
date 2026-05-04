@@ -5,8 +5,9 @@ Chapter 5 covers feature implementation and verification.
 It must be read together with the following documents.
 
 - `thesis/guideline.md`
-- `thesis/glossary.md`
-- `thesis/notation.md`
+- `research/theory/glossary.md`
+- `research/theory/notation.md`
+- `thesis/golden_rules_writing_summary.md`
 
 ---
 
@@ -63,122 +64,156 @@ It must be read together with the following documents.
 
 ---
 
-## Section Guidance for Structural Analysis and Execution Ordering
+## Current Chapter 5 Draft Status
 
-### Role
-- This section is the implementation counterpart of the structural analysis theory in Chapter 2.
-- It should explain how `syssimx` derives persistent graph metadata from registered components, signal connections, and direct-feedthrough information.
-- It should address SR-10-02 and SR-10-03 under UR-10.
-- It should also address SR-11-02 under UR-11.
-- It should not repeat the conceptual theory of zero-delay graphs, SCCs, and condensed generations.
+### Completion judgement
+- Chapter 5 is now a complete first draft in terms of feature coverage.
+- It is not yet a final polished chapter.
+- The chapter can now move from drafting mode to cleanup and reduction mode.
+- No new standalone implementation sections should be added unless a missing requirement cannot be covered by an existing section.
 
-### Recommended Structure
-- Start with a short motivation paragraph.
-- State that the section builds on the `System` and connection implementation.
-- State the implementation inputs.
-- Use a compact metadata table for the fields stored on `System`.
-- Place the implementation pipeline figure after the metadata table.
-- Place the worked implementation-level example after the graph construction subsection.
-- Explain graph construction.
-- Explain algebraic loop detection.
-- Explain condensation and generation ordering.
-- Explain delayed producer post-processing as a `syssimx` scheduling heuristic.
-- End with a short description of how initialization and master algorithms consume the metadata.
-- Use one focused verification example.
+### Required cleanup before calling the draft complete
+- Remove the obsolete reference to `sec:impl_visualization` from `5_implementation.tex`.
+- Keep the system graph visualizer as a short metadata-consumer paragraph in the structural-analysis section.
+- Do not reintroduce `510_visualization.tex` as a standalone section.
+- Ensure that the structural-analysis verification table is complete and referenced.
+- Fix small prose and spelling issues before compilation.
+- Compile the full thesis and check unresolved references, float placement, and overfull boxes.
 
-### Verification
-- Use one minimal verification example.
-- A suitable example is a two-component algebraic loop made from direct-feedthrough gain components.
-- The setup should contain `GainA.y -> GainB.u` and `GainB.y -> GainA.u`.
-- The expected result is one algebraic loop containing both components.
-- The observed metadata should include both full-graph edges, a cyclic zero-delay graph, one SCC in `algebraic_loops`, and one execution generation containing both loop members.
-- Do not list every structural-analysis unit test.
-- Do not verify IJCSA convergence in this section.
-- Solver convergence belongs to the algebraic-loop solver section.
+### Coverage check
+- The port system covers typed and unit-aware data exchange.
+- The component interface covers lifecycle, ports, state, history, structural metadata, and hybrid hooks.
+- The backend wrappers cover FMI, OpenSim, and finite-element integration.
+- The system section covers component registration, signal connections, event connections, algorithm selection, lifecycle orchestration, and history aggregation.
+- The structural-analysis section covers full graphs, zero-delay graphs, SCC detection, condensation, delayed producers, execution metadata, and graph visualization as an inspection helper.
+- The algebraic-loop section covers SCC-local interface iteration.
+- The master-algorithm section covers Jacobi, Gauss--Seidel, and global IJCSA orchestration.
+- The hybrid section covers trial stepping, localization, dense-time event handling, and selected verification cases.
+- The multi-model section covers runtime switching, state adaptation, hysteresis, active-model delegation, and verification.
+
+### Current balance risk
+- Chapter 5 is technically strong but long.
+- Structural analysis and hybrid execution are the largest sections.
+- This is acceptable because they are central contributions.
+- Wrapper sections should be checked for repeated lifecycle prose.
+- Verification tables should be checked for method-list style.
+- Chapter 6 must not be shorter in argumentative weight than Chapter 5.
 
 ---
 
-## Section Guidance for Master Algorithms
+## Discussion Guidance for Chapter 5
 
-### Role
-- This section is the implementation counterpart of the execution-strategy theory in Chapter 2.
-- It also builds on the algorithm interface of Chapter 4.
-- It should explain how `syssimx` orchestrates one macro step for the continuous master algorithms.
-- It should cover `JacobiAlgorithm`, `GaussSeidelAlgorithm`, and `IJCSAAlgorithm`.
-- It should exclude hybrid event handling.
-- Hybrid execution belongs to the hybrid section.
+Chapter 5 may discuss direct consequences of implementation choices.
+Such discussion must stay short.
+Broader limitations and interpretation belong to Chapter 7.
 
-### Boundary Rules
-- Do not repeat the strategy-pattern explanation from Chapter 4.
-- Do not restate the conceptual Jacobi and Gauss--Seidel theory from Chapter 2.
-- Do not restate the structural-analysis logic from the previous section.
-- Do not restate the local Newton procedure from the algebraic-loop section.
-- Focus on orchestration logic, data flow, and the differences between the concrete algorithm classes.
+Use one or two consequence sentences per section where helpful.
+Do not create separate discussion subsections inside Chapter 5.
 
-### Recommended Structure
-- Start with a short opening paragraph.
-- State that structural analysis already provides `execution_order` and `algebraic_loops`.
-- State that the algebraic-loop section already defines the SCC-local solver.
-- Add one short subsection on shared metadata.
-- Add one subsection for the Jacobi algorithm.
-- Add one subsection for the Gauss--Seidel algorithm.
-- Add one subsection for the global IJCSA algorithm.
-- End with one short verification subsection.
+### Port System
+- Discuss that strict type and unit validation catches connection errors before simulation.
+- Mention that the unit registry defines the accepted unit vocabulary.
+- Do not discuss general dimensional-analysis theory.
 
-### Shared Metadata
-- All three continuous algorithms consume the same system metadata after `System.initialize()`.
-- The relevant items are `execution_order`, `algebraic_loops`, and `_set_inputs_for_generation()`.
-- Do not emphasize `execution_idx` in this section.
-- It is not part of the main orchestration path of these three algorithms.
-- State clearly that the algorithms consume existing metadata rather than rebuilding it.
+### Component Interface
+- Discuss that the template-method lifecycle centralizes time advancement, output refresh, and history recording.
+- Mention that wrappers only implement model-specific hooks.
+- Mention that state transfer and rollback are intentionally separate concepts.
+- Do not list every base-class method.
 
-### Jacobi Algorithm
-- Explain the two-phase implementation of `JacobiAlgorithm.step()`.
-- First all generations receive staged inputs.
-- Then every loop block contained in a generation is solved locally.
-- Only after all generations are prepared do the components perform `do_step(t, dt)`.
-- State explicitly that later generations do not see fresh outputs from earlier generations within the same macro step.
-- State explicitly that the current implementation preserves Jacobi semantics but does not execute the system in parallel.
+### Component Wrappers
+- Discuss backend asymmetry explicitly.
+- FMI can be wrapped generically because the FMU descriptor exposes ports, parameters, and dependencies.
+- OpenSim needs concrete subclasses because no equivalent descriptor defines a co-simulation interface.
+- FEM support is intentionally minimal because discretization, state representation, and solver state are model-specific.
+- Mention rollback limitations for generic wrappers only where relevant.
+- Defer concrete FE pendulum details to Chapter 6.
 
-### Gauss--Seidel Algorithm
-- Explain the generation-wise pipeline of `GaussSeidelAlgorithm.step()`.
-- For each generation the algorithm stages inputs, solves local loop blocks, and immediately steps the generation.
-- Later generations therefore see updated outputs from earlier generations in the same macro step.
-- Present this as the key implementation difference to Jacobi.
-- Do not re-explain the local IJCSA Newton iteration here.
+### System and Connections
+- Discuss that registration validates the structural definition before simulation.
+- Mention that single assignment ensures every input has a unique driver.
+- Mention that event connections route events but do not define event semantics.
+- Mention that system history supports interaction requirements for recorded results.
+- Do not repeat structural-analysis logic.
 
-### Global IJCSA Algorithm
-- Explain that `IJCSAAlgorithm.step()` first solves the complete zero-delay interface system through `solve_global_interface_ijcsa()`.
-- Mention `collect_global_interface_unknowns()` as the entry point for building the global unknown vector and driver map.
-- Explain that the residual is evaluated with frozen component states through `evaluate_outputs()`.
-- After convergence the interface values are committed.
-- The components then perform their macro steps in the existing `execution_order`.
-- State explicitly that the global solve does not eliminate the later stepping order.
+### Structural Analysis
+- Discuss that the implementation assumes fixed direct-feedthrough metadata during a run.
+- Mention that the active-output filter reduces unnecessary zero-delay constraints.
+- Mention that delayed-producer relocation is a `syssimx` scheduling choice.
+- Mention that graph visualization is an inspection helper and not part of simulation semantics.
+- Do not discuss IJCSA convergence here.
 
-### Comparison Guidance
-- Use one compact table instead of long repeated prose.
-- Good comparison rows are input staging, scope of interface solve, visibility of updated outputs inside a macro step, and possible parallelism.
-- Keep this comparison at implementation level.
-- Do not repeat the conceptual properties already covered in Chapter 2.
+### Algebraic Loop Resolution
+- Discuss that SCC-local IJCSA keeps loop solving local to the detected interface variables.
+- Mention that the solver commits only consistent interface values.
+- Mention convergence assumptions only briefly.
+- Defer numerical robustness limitations to Chapter 7 if needed.
 
-### Figure Guidance
-- Do not use three full sequence diagrams in the thesis.
-- They are too detailed for the purpose of this section.
-- Prefer one compact comparison figure for Jacobi and Gauss--Seidel.
-- This figure should show only the order of setting inputs, solving loop blocks, and stepping components.
-- Add a separate figure for global IJCSA only if the prose is still unclear.
-- If such a figure is used, it should emphasize the two phases of the algorithm.
-- The first phase is the global interface solve.
-- The second phase is the time stepping of the components.
-- The existing PlantUML diagrams can serve as drafting material.
-- They should be simplified before inclusion in the thesis.
-- Avoid duplicating the theory figures from Chapter 2.
+### Master Algorithms
+- Discuss the implementation consequence of each algorithm.
+- Jacobi stages all inputs before stepping and therefore preserves old-output visibility within a macro step.
+- Gauss--Seidel interleaves propagation and stepping generation by generation.
+- Global IJCSA solves the zero-delay interface globally before the normal step order continues.
+- Mention that Jacobi is not parallelized in the current implementation.
+- Do not repeat Chapter 2 execution-strategy theory.
 
-### Verification
-- Use one simple direct-feedthrough scenario to compare Jacobi and Gauss--Seidel.
-- `docs/03_core_tutorials/02_intermediate/01_comparing_algorithms.ipynb` is a suitable source.
-- Verify that Gauss--Seidel uses fresh within-step outputs and reduces the phase lag relative to Jacobi.
-- If global IJCSA is included in the verification, use a separate minimal looped scenario or explain briefly why its result matches the local-loop treatment on the chosen example.
-- Keep the verification focused on orchestration behavior.
-- Do not repeat the algebraic-loop solver verification from the previous section.
-- Do not list every algorithm test.
+### Hybrid Co-Simulation Algorithm
+- Discuss that the hybrid path reuses Gauss--Seidel input preparation and stepping.
+- Mention that trial stepping and localization require rollback-capable event sources.
+- Mention that dense time makes cascaded events deterministic at one physical time.
+- Mention that commutativity checks avoid nondeterministic simultaneous event handling.
+- Keep algorithmic consequences short.
+- Leave broader limitations for Chapter 7.
+
+### Multi-Model Component
+- Discuss that the wrapper keeps the external interface fixed while the active internal model changes.
+- Mention that state adaptation is the central extension point.
+- Mention that inactive models receive current inputs but are not continuously state-synchronized.
+- Mention that hysteresis reduces switching chatter.
+- Defer the realistic MasterPendulum use case to Chapter 6.
+
+---
+
+## Reduction and Compaction Guidance
+
+### High-priority compaction targets
+- Shorten repeated lifecycle descriptions in the FMU and OpenSim wrapper sections.
+- Shorten verification tables that read like test coverage reports.
+- Shorten captions that restate full paragraphs.
+- Remove repeated definitions of direct feedthrough, SCCs, execution order, rollback, dense time, and event localization.
+- Replace repeated explanations with cross-references.
+- Keep only figures that explain data flow, control flow, or verification evidence.
+
+### Sections that should not be expanded further
+- Port System
+- Component Interface
+- System and Connections
+- Structural Analysis and Execution Ordering
+- Hybrid Co-Simulation Algorithm
+- Multi-Model Component and Mode Switching
+
+These sections already contain enough implementation detail for a thesis draft.
+Future work on them should focus on clarity and reduction.
+
+### Sections that may need alignment rather than expansion
+- Component Wrappers
+- Algebraic Loop Resolution
+- Master Algorithms
+
+The wrapper section should keep the backend asymmetry visible.
+The algebraic-loop section is compact and should remain compact.
+The master-algorithm section should stay focused on orchestration behavior.
+
+### Table of contents guidance
+- The table of contents should show only major framework features.
+- Sections should appear in the table of contents.
+- Subsections may appear if the thesis class includes them by default.
+- Subsubsections and paragraphs should not be used to expose local implementation details in the table of contents.
+- Do not make `System Graph Visualization` a table-of-contents section.
+
+### Final transition rule
+- End Chapter 5 with a short transition to Chapter 6.
+- State that Chapter 5 verified framework features in isolation.
+- State that Chapter 6 evaluates their combined use in the controlled-pendulum case study.
+- Do not add new technical claims in the transition.
+

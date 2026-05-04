@@ -30,8 +30,7 @@ These algorithms use the execution order computed by the structural analysis.
 They delegate algebraic loop resolution to the mechanism described in the
 preceding section.
 Section~\ref{sec:impl_hybrid} extends the stepping logic with event detection, localization, and rollback for hybrid co-simulation.
-Section~\ref{sec:impl_multi_model} describes the multi-model switching mechanism with state adaptation and hysteresis.
-Finally, Section~\ref{sec:impl_visualization} presents the graph-based visualization of the system structure.
+Finally, Section~\ref{sec:impl_multi_model} describes the multi-model switching mechanism with state adaptation and hysteresis.
 
 \input{chapters/5_implementation/51_port_system}
 \input{chapters/5_implementation/52_co_sim_component}
@@ -42,4 +41,8 @@ Finally, Section~\ref{sec:impl_visualization} presents the graph-based visualiza
 \input{chapters/5_implementation/57_master_algorithms}
 \input{chapters/5_implementation/58_hybrid}
 \input{chapters/5_implementation/59_multi_component}
-\input{chapters/5_implementation/510_visualization}
+
+The preceding sections verified the main framework features in isolation.
+Together, these features provide the executable basis for assembling heterogeneous co-simulation scenarios with structural analysis, algebraic-loop resolution, hybrid event handling, and runtime model switching.
+The next chapter evaluates their combined use in the controlled-pendulum case study.
+There, the focus shifts from feature-level verification to system-level validation against the reference simulation and the intended application workflow.

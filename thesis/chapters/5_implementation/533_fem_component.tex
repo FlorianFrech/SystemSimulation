@@ -15,7 +15,7 @@ They are therefore implemented by the concrete FE component.
 
 The controlled-pendulum case study uses \texttt{FEMPendulum}.
 This component derives from \texttt{FEMComponent} and implements the actual NGSolve model.
-It defines the port interface, constructs the finite-element spaces and grid functions, assembles the nonlinear problem, dvances the model in time, and maps the FE state to the exposed pendulum outputs.
+It defines the port interface, constructs the finite-element spaces and grid functions, assembles the nonlinear problem, advances the model in time, and maps the FE state to the exposed pendulum outputs.
 State transfer and rollback are also implemented by \texttt{FEMPendulum}, because they depend on the selected time integration scheme and on the grid function vectors that must be restored.
 
 The reusable behavior of \texttt{FEMComponent} is therefore intentionally small.

@@ -291,3 +291,83 @@ Before drafting or revising any theory text, check all of the following:
 Use this rule whenever generating thesis content:
 
 > Write only the amount of theory required for the reader to understand the next architectural, implementation, or case-study chapter, and defer all framework-specific realization details to the chapter that owns them.
+
+---
+
+# 10. Current Thesis-Level Risk Assessment
+
+This section records the current global assessment of the thesis draft.
+It must be considered when drafting the remaining implementation, case-study, discussion, and conclusion chapters.
+
+## 10.1 Overall assessment
+
+The thesis has strong technical substance.
+The framework architecture and implementation are becoming concrete, traceable, and defensible.
+The main risk is not missing technical content.
+The main risk is scope control.
+
+Chapter 5 is currently the dominant chapter.
+This is acceptable while the implementation draft is still being completed.
+It should not remain the final balance of the thesis.
+The final document must give enough weight to the case study and discussion so that the work reads as a thesis rather than as framework documentation.
+
+## 10.2 Main risks
+
+- Chapter 5 may become too long and too method-oriented.
+- Chapter 5 may overshadow the case study and the discussion.
+- Verification sections may repeat concepts that were already explained in the implementation subsections.
+- Tutorial examples may turn into documentation examples rather than focused thesis evidence.
+- Concepts may be repeated across Chapters 2, 4, and 5.
+- Figures and captions may repeat surrounding prose.
+- Tables may duplicate class diagrams or paragraph text.
+- The case study may become too short compared with the implementation chapter.
+- The discussion may become too weak if it only summarizes implementation results.
+
+## 10.3 Writing rules for the remaining implementation sections
+
+- Finish the draft before starting a large compaction pass.
+- Keep each remaining implementation section focused on the main implementation idea.
+- Explain design decisions and data flow.
+- Avoid method-by-method documentation.
+- Use one compact figure only when it improves understanding.
+- Use one focused verification scenario per feature.
+- Keep verification paragraphs short.
+- Do not repeat the theory behind the feature.
+- Do not repeat architecture-level motivation.
+- Refer to earlier sections instead of re-explaining shared concepts.
+
+## 10.4 Writing rules for the case study
+
+- Treat Chapter 6 as the main evidence chapter.
+- Do not retest every implementation feature in Chapter 6.
+- Show how the implemented features work together in the controlled pendulum scenario.
+- Make the validation logic explicit.
+- Separate model setup, system assembly, simulation results, and interpretation.
+- Use the Modelica reference only where it supports verification or validation claims.
+- Use the multi-model pendulum as an integrated use case rather than as another implementation example.
+
+## 10.5 Writing rules for the discussion and conclusion
+
+- Link every major conclusion to a requirement, research question, or case-study result.
+- Discuss limitations explicitly.
+- Separate implementation limitations from modeling limitations.
+- Avoid introducing new technical detail in the conclusion.
+- State what the framework demonstrates.
+- State what remains outside the scope.
+
+## 10.6 Required reduction pass after Chapter 5
+
+After Chapter 5 is fully drafted, perform a dedicated reduction pass before expanding Chapter 6.
+The goal is to reduce Chapter 5 by removing duplicated explanations and low-value implementation detail.
+
+Check the following items during this pass:
+
+- Remove repeated definitions of direct feedthrough, SCCs, algebraic loops, execution order, event handling, and dense time.
+- Replace repeated explanations with cross-references.
+- Shorten captions that restate the text.
+- Remove tables that only repeat class attributes or method names.
+- Keep only figures that clarify data flow, control flow, or validation evidence.
+- Ensure that each verification paragraph states what is tested, what is observed, and why the result is sufficient.
+- Fix known structural issues before the final build.
+- In particular, remove the duplicate English abstract inclusion in `thesis/main.tex`.
+- Replace or remove placeholder appendix content.
