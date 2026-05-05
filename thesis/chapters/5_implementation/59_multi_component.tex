@@ -58,15 +58,15 @@ Table~\ref{tab:multi_component_contract} summarizes the main contract.
 \subsection{Initialization and Interface Unification}
 \label{sec:impl_multi_model_initialization}
 
-Before initialization, a concrete subclass must populate \texttt{models} with the available internal components.
-The base class then checks whether the configured \texttt{active\_mode} exists in this registry.
-During \texttt{\_initialize\_component(t0)}, all registered internal components are initialized at the same start time.
-The active component is then selected from the registry and stored in \texttt{active\_comp}.
+A concrete subclass registers its internal models during construction.
+It stores them in \texttt{models}, selects the initial model through \texttt{active\_mode}, and stores the corresponding component in \texttt{active\_comp}.
+The subclass then calls \texttt{\_unify\_ports()} before the wrapper is registered with a \texttt{System}.
+This construction-time setup is required because signal connections are validated before component initialization.
 
 The wrapper must expose one stable port interface to the surrounding system.
 For this purpose, \texttt{\_unify\_ports()} adopts the input and output specifications of the active component.
 It then checks that every registered model provides compatible ports with the same names, directions, port types, and units.
-If a model misses a required port or exposes an incompatible specification, initialization fails with a \texttt{ValueError}.
+If a model misses a required port or exposes an incompatible specification, construction fails with a \texttt{ValueError}.
 This ensures that a later mode switch cannot change the external interface of the component.
 
 The same consistency requirement applies to direct feedthrough metadata.
@@ -127,6 +127,9 @@ For this reason, \texttt{set\_inputs()} forwards incoming input values to all re
 Only the active model advances in time.
 All models nevertheless receive the latest external inputs.
 This avoids stale input values when a later step switches to another model.
+Inactive models receive current inputs but are not advanced continuously.
+Their internal states are updated only when they become active through a mode switch.
+The state transfer in \texttt{\_switch\_mode()} is therefore the point where the target model is synchronized with the previously active model.
 
 Output propagation follows the opposite direction.
 After the active model has advanced, \texttt{\_update\_output\_states()} copies the active model outputs to the wrapper ports.
@@ -134,10 +137,10 @@ The surrounding \texttt{System} therefore reads outputs only from the \texttt{Mu
 Event ports are handled in the same update step.
 Ports corresponding to triggered events are set to \texttt{True}, while inactive event ports are reset to \texttt{False}.
 
-State access is also routed through the active model.
+State access is routed through the active model.
 \texttt{get\_state()} returns the state of \texttt{active\_comp}.
-\texttt{set\_state()} first adapts the provided state to the active mode and then writes it to \texttt{active\_comp}.
-This keeps external state transfer independent of the model currently selected inside the wrapper.
+\texttt{set\_state()} adapts the provided state to the active mode and writes it to \texttt{active\_comp}.
+The wrapper therefore provides one access point, while the concrete state schema remains defined by the active model and the subclass adaptation logic.
 
 The hybrid hooks are delegated to the active model as well.
 Event indicator evaluation, crossing detection, rollback snapshots, event handling, and internal event hints are all forwarded to \texttt{active\_comp}.
@@ -162,9 +165,9 @@ Figure~\ref{fig:impl_multi_model_verification} shows the numerical trajectory ag
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/multi_component/multi_component_switching_verification.pdf}
-    \caption{Verification of the \texttt{MultiComponent} switching mechanism on a two-mode integrator.
-    The numerical trajectory matches the analytical reference within machine precision.
-    The dashed vertical line marks the accepted switch time $t_s = 0.5\,\mathrm{s}$.
+    \caption{Verification of runtime mode switching on a two-mode integrator.
+    The numerical trajectory matches the analytical reference.
+    The dashed line marks the accepted switch time.
     The state remains continuous across the switch.}
     \label{fig:impl_multi_model_verification}
 \end{figure}

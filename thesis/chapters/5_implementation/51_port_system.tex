@@ -1,26 +1,33 @@
 \section{Port System}
 \label{sec:impl_port_system}
 
-This section describes the implementation of the port system, which realizes the typed port interface of the \texttt{CoSimComponent} contract introduced in Section~\ref{sec:architecture_cosimcomponent}.
-It addresses the requirements SR-01-01 and SR-02-01 to SR-02-03.
-The port system is used throughout the framework for connection validation, unit-aware value propagation, and event-port creation.
+This section describes the implementation of the typed and unit-aware port system.
+It realizes the port interface of the \texttt{CoSimComponent} abstraction introduced in Section~\ref{sec:architecture_cosimcomponent}.
+It addresses SR-01-01 and SR-02-01 to SR-02-03.
+The same port machinery is used for connection validation, value propagation, history recording, and event-port creation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Specification and State}
 
-The port system separates the static interface definition of a port from its mutable runtime state into two classes (see Figure~\ref{fig:impl_port_system}).
+The implementation separates the static port specification from the mutable runtime value, as shown in Figure~\ref{fig:impl_port_system}.
+\texttt{PortSpec} defines the interface contract of a port.
+\texttt{PortState} stores the current value and validates every runtime update against this contract.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{diagrams/out/pdf/class/core/Port.pdf}
-  \caption{Class diagram of the port system. A \texttt{PortSpec} defines the immutable interface contract, while a \texttt{PortState} stores the runtime value and performs validation and unit-aware conversion using that specification.}
+  \includegraphics[width=0.75\linewidth]{diagrams/out/pdf/class/core/Port.pdf}
+  \caption{Class diagram of the port system.
+  \texttt{PortSpec} defines the immutable port contract.
+  \texttt{PortState} stores the runtime value and applies type and unit validation.}
   \label{fig:impl_port_system}
 \end{figure}
 
 \paragraph{Port Types.}
-Table~\ref{tab:impl_port_types} lists the supported port data types, implemented as a string-valued enumeration \texttt{PortType}.
-Physical units are allowed only on \texttt{REAL} ports.
-The \texttt{EVENT} type represents boolean trigger ports used for discrete event propagation and is created automatically for each registered event indicator during component initialization (Section~\ref{sec:impl_component_interface}).
+Table~\ref{tab:impl_port_types} lists the supported data types.
+They are implemented by the \texttt{PortType} enumeration.
+Physical units are allowed only for \texttt{REAL} ports.
+The \texttt{EVENT} type represents boolean trigger ports.
+Such ports are created automatically for registered event indicators during component initialization, as described in Section~\ref{sec:impl_component_interface}.
 
 \begin{table}[htbp]
   \centering
@@ -48,32 +55,35 @@ Two specifications are compatible when their data types match exactly and, for \
 This rule is consumed during connection registration in \texttt{System.\_validate\_connection} (Section~\ref{sec:impl_system}).
 
 \paragraph{\texttt{PortState}.}
-A \texttt{PortState} holds the mutable runtime value of a port during simulation and references the corresponding \texttt{PortSpec}.
-Each state stores the current value and the timestamp of the last update.
-On \texttt{set()}, the value is validated against the specification, and \texttt{REAL} values are converted to the port's declared unit.
-On \texttt{get()}, the caller may request a target unit for conversion, which allows downstream code to read values in whichever unit is convenient without losing dimensional information.
-Port states are instantiated from the registered specifications during component Initialization.
+A \texttt{PortState} stores the current value of one port and the time of the last update.
+It references the corresponding \texttt{PortSpec}.
+On \texttt{set()}, the value is checked against the specification.
+For \texttt{REAL} ports, compatible quantities are converted to the declared port unit.
+On \texttt{get()}, callers may request a target unit.
+This allows downstream code to read values in a convenient unit while preserving dimensional information.
+Port states are instantiated from the registered specifications during component initialization.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Physical Unit Handling}
 \label{par:impl_units}
 
-Physical units are managed through the Pint library~\cite{grecco_pint_nodate}, which provides a unit registry, dimensional analysis, and automatic conversion between compatible units.
-The framework initializes a single shared registry that is used by all ports and components.
-Unit enforcement happens at three points in the workflow.
-At port construction, the declared unit string is validated against the registry and unrecognized strings are rejected.
-At connection time, the \texttt{System} checks dimensional compatibility between source and destination ports via \texttt{PortSpec.compatible()}.
-At runtime, every call to \texttt{PortState.set()} converts the incoming value to the port's declared unit, and incompatible dimensions raise an error.
+Physical units are handled through Pint~\cite{grecco_pint_nodate}.
+The framework uses one shared unit registry for all ports and components.
+Unit checks occur at three points.
+First, unit strings are validated when a \texttt{PortSpec} is constructed.
+Second, \texttt{System.\_validate\_connection()} checks dimensional compatibility between connected ports through \texttt{PortSpec.compatible()}.
+Third, \texttt{PortState.set()} converts incoming values to the declared port unit and rejects incompatible dimensions.
 
-To support FMI~2.0 Co-Simulation FMUs exported from OpenModelica, the registry is preceded by a pre-processing step that normalizes FMI-style unit strings.
-OpenModelica uses a compact exponent notation such as \texttt{"m.s-2"} for $\text{m}\,\text{s}^{-2}$, which is not directly recognized by Pint.
-The framework translates such strings to the standard form before passing them to the registry.
+FMI~2.0 FMUs exported from OpenModelica may use compact unit strings such as \texttt{"m.s-2"} for $\mathrm{m}\,\mathrm{s}^{-2}$.
+These strings are normalized before they are passed to Pint.
+This keeps the public port interface consistent even when backend tools use different unit-string conventions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The port system is verified through unit tests covering type validation, unit compatibility, automatic conversion, and FMI string normalization.
-Table~\ref{tab:port_verification} summarizes representative cases.
+The port-system verification checks the acceptance and rejection behavior of the runtime value layer.
+The representative cases in Table~\ref{tab:port_verification} cover type validation, unit compatibility, automatic conversion, and FMI unit-string normalization.
+Together, these cases confirm that invalid values and incompatible connections are rejected before they can affect a simulation run.
 
 \begin{table}[htbp]
   \centering

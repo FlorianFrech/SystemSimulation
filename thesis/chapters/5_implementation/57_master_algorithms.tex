@@ -3,8 +3,7 @@
 \label{sec:impl_algorithms}
 
 This section addresses SR-11-03 (numerical treatment of algebraic loops) and explains how \syssimx{} realizes the master algorithms introduced in Section~\ref{sec:234_cosim_execution_strategies}.
-The structural analysis of Section~\ref{sec:impl_structural} already provides the execution generations and the detected algebraic loops.
-Section~\ref{sec:impl_algebraic_loops} already defined the SCC-local loop solver.
+The structural analysis of Section~\ref{sec:impl_structural} provides the execution generations and the detected algebraic loops, and Section~\ref{sec:impl_algebraic_loops} defined the SCC-local loop solver.
 The present section therefore focuses on the orchestration of one macro step by the concrete classes \texttt{JacobiAlgorithm}, \texttt{GaussSeidelAlgorithm}, and \texttt{IJCSAAlgorithm}.
 Hybrid event handling is excluded here and is explained in Section~\ref{sec:impl_hybrid}.
 
@@ -13,7 +12,9 @@ Hybrid event handling is excluded here and is explained in Section~\ref{sec:impl
 \label{sec:impl_algorithms_scope}
 
 All master algorithms consume the same execution metadata stored on the \texttt{System} instance during initialization.
-The list \pyfn{execution\_order} defines the generation order, \pyfn{algebraic\_loops} identifies the loop blocks, and \pyfn{\_set\_inputs\_for\_generation()} propagates signal values to the destination input ports of one generation.
+The list \texttt{execution\_order} defines the generation order.
+The list \texttt{algebraic\_loops} identifies loop blocks.
+The method \pyfn{\_set\_inputs\_for\_generation()} propagates signal values to the destination input ports of one generation.
 The Jacobi and Gauss--Seidel algorithms reuse the SCC-local solver of Section~\ref{sec:impl_algebraic_loops}.
 The global \pyfn{IJCSAAlgorithm} replaces this local treatment by one global interface solve before the macro steps are executed.
 
@@ -24,8 +25,7 @@ The algorithms differ only in how these tasks are ordered across the generations
 
 Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level execution flow of the two explicit continuous master algorithms.
 
-\begin{figure}[!htbp]
-    \vspace{-1em}
+\begin{figure}[t]
     \centering
     \begin{subfigure}[t]{0.48\linewidth}
         \centering
@@ -45,13 +45,13 @@ Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level e
             \centering
             \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/Gauss_Seidel_Algorithm.pdf}
         \end{minipage}
-        \caption{Gauss--Seidel execution. Each generation is prepared and stepped immediately before the next one is processed.}
+        \caption{Gauss--Seidel execution. Each generation is prepared and stepped before the next.}
         \label{fig:impl_algorithms_gs}
     \end{subfigure}
-    \caption{Implementation-level execution diagrams of the explicit continuous master algorithms.}
+    \caption{Implementation-level execution flow of the explicit continuous master algorithms.}
     \label{fig:impl_algorithms_jacobi_gs}
-    \vspace{-1em}
 \end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Jacobi Algorithm}
@@ -64,9 +64,10 @@ If the generation contains algebraic loops, it then invokes \pyfn{solve\_algebra
 In the second phase, the algorithm iterates through the generations a second time.
 Every component of each generation is advanced by one step through \texttt{do\_step(t, dt)} with the interface values frozen at $t$.
 Because no component advances before all interface values have been staged, components in later generations still read the output values produced at the previous communication point.
-This is how the Jacobi property works at the implementation level.
-All simulation units use the same communication-point snapshot.
-The current implementation preserves this semantics through a serial loop over the generations, so the second phase would admit parallel execution of the component steps, but \syssimx{} does not yet exploit this.
+At the implementation level, the Jacobi property reduces to one rule. All simulation units use the same communication-point snapshot.
+The current implementation preserves this semantics through a serial loop over the generations.
+The second phase would admit parallel execution of the component steps in principle.
+\syssimx{} does not yet exploit this.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -80,7 +81,8 @@ The execution of \texttt{do\_step(t, dt)} moves every component of the generatio
 The output ports of the components in earlier generations therefore already hold the values at $t+\Delta t$ when the inputs of a later generation are staged.
 A call of \pyfn{\_set\_inputs\_for\_generation()} on the next generation propagates these fresh values into the destination ports.
 This within-step visibility of updated outputs is the only algorithmic difference to the Jacobi implementation.
-The local SCC solver, the input-staging routine, and the structural metadata on \texttt{System} are reused unchanged, which is why the two classes share the orchestration skeleton of Section~\ref{sec:impl_algorithms_scope} and differ only in where the \texttt{do\_step(t, dt)} call is placed relative to the generation loop.
+The local SCC solver, the input-staging routine, and the structural metadata on \texttt{System} are reused unchanged.
+The two classes therefore share the orchestration skeleton of Section~\ref{sec:impl_algorithms_scope} and differ only in where the \texttt{do\_step(t, dt)} call is placed relative to the generation loop.
 The sequential per-generation ordering also implies that the Gauss--Seidel algorithm does not exploit the parallelism that the Jacobi second phase would admit in principle.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,8 +90,9 @@ The sequential per-generation ordering also implies that the Gauss--Seidel algor
 \subsection{Global IJCSA Algorithm}
 \label{sec:impl_algorithms_ijcsa}
 
-The class \texttt{IJCSAAlgorithm} provides a global counterpart to the SCC-local solver of Section~\ref{sec:impl_algebraic_loops}.
-It implements the original Sicklinger formulation~\cite{sicklinger_interface_2014}, which treats the full set of zero-delay interface unknowns of the scenario as one coupled Newton system.
+The class \texttt{IJCSAAlgorithm} provides a global variant of the interface Newton solve.
+It follows the interface-Jacobian idea of Sicklinger et al.~\cite{sicklinger_interface_2014}, but restricts it to the signal-assignment form used by \syssimx{}.
+Instead of solving each SCC locally, it collects all zero-delay interface inputs of the system and solves them as one coupled residual problem.
 
 Its \texttt{step()} method runs in two phases.
 The first phase calls \pyfn{solve\_global\_interface\_ijcsa(system, t)}.
@@ -99,20 +102,17 @@ A damped-gradient fallback stabilizes the update when the Jacobian is singular.
 After convergence, the solved interface values are written to the destination input ports.
 In the second phase, \texttt{step()} traverses \texttt{execution\_order} and calls \texttt{do\_step(t, dt)} on every component.
 
-Several elements of the original Sicklinger formulation are deliberately omitted in \syssimx{}.
-The constraint operator is restricted to the signal-assignment form $U=\widehat{U}(U)$.
-A general nonlinear interface constraint $L(U,Y)=0$ is not supported.
-The inner evaluation reuses the side-effect-free \pyfn{evaluate\_outputs(inputs)} contract and keeps component states frozen at $t$.
-Trial macro steps with rollback are therefore not required.
-The interface Jacobian is always assembled by finite differences.
-Directional derivatives exposed by the simulation units are not requested even when available.
-Input extrapolation between communication points and an explicit relaxation factor are also absent.
-The fixed point is reached with unit step length or with the damped-gradient fallback.
+Several elements of the general formulation are not included.
+The constraint form is restricted to $U=\widehat{U}(U)$.
+General nonlinear interface constraints are not supported.
+The residual evaluation uses \pyfn{evaluate\_outputs(inputs)} without advancing accepted component time.
+The interface Jacobian is assembled by finite differences.
+Input extrapolation and explicit relaxation factors are not implemented.
 
-The global solve is mathematically redundant when the zero-delay SCCs are disjoint.
-In that case its block-diagonal Jacobian is equivalent to running the local solver of Section~\ref{sec:impl_algebraic_loops} once per SCC, and the two variants produce the same fixed point in the same number of Newton iterations.
-\texttt{IJCSAAlgorithm} is therefore included mainly for completeness and as a reference implementation of the original Sicklinger scheme.
-The default orchestration path is \texttt{JacobiAlgorithm} or \texttt{GaussSeidelAlgorithm}, which invoke the local solver on demand and avoid assembling one large interface system for every macro step.
+The global solve can be more expensive than the local SCC strategy because it assembles one interface system for all zero-delay inputs.
+For scenarios with small or acyclic zero-delay structures, this provides little benefit over generation-based propagation and local loop solving.
+\texttt{IJCSAAlgorithm} is therefore included mainly as a reference implementation of a global interface solve.
+The default continuous path remains \texttt{GaussSeidelAlgorithm}, while \texttt{JacobiAlgorithm} is available for comparison.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
@@ -125,7 +125,11 @@ Figure~\ref{fig:impl_algorithms_verification_system} shows the resulting topolog
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/5_implementation/master_algorithms/master_algorithm_verification.pdf}
-    \caption{Topology of the verification scenario. Solid black arrows are port-to-port connections. Dashed red arrows are internal direct-feedthrough relations. The generation index is shown in the lower-right corner of each component. Because the Integrator has no direct feedthrough from $\dot{x}$ to $x$, the inbound edge $\texttt{Subtractor.d} \to \texttt{Integrator.}\dot{x}$ is delayed. This is why the Integrator shares generation~$0$ with the Source and the zero-delay graph remains acyclic.}
+    \caption{Verification scenario for the continuous master algorithms.
+    Solid arrows are signal connections.
+    Dashed red arrows are direct-feedthrough relations.
+    The lower-right label shows the generation index.
+    The integrator has no direct feedthrough, so the zero-delay graph is acyclic.}
     \label{fig:impl_algorithms_verification_system}
 \end{figure}
 
@@ -146,19 +150,17 @@ Figure~\ref{fig:impl_algorithms_verification} compares all three algorithms agai
     \label{fig:impl_algorithms_verification}
 \end{figure}
 
-At $\Delta t = 0.5\,$s the Jacobi trace overshoots the analytical solution, while the Gauss--Seidel trace stays close to it.
+At $\Delta t = 0.5\,$s the Jacobi trace overshoots the analytical solution.
 The overshoot is a direct consequence of the two-phase structure of \texttt{JacobiAlgorithm}.
 Components in later generations read output values from the previous communication point, so the feedback through the integrator reaches the subtractor with one macro-step delay.
+
+The Gauss--Seidel trace stays close to the analytical solution at the same step size.
 The Gauss--Seidel pass propagates the updated subtractor output within the same macro step and therefore tracks the reference more closely.
-The \texttt{IJCSAAlgorithm} trace overlaps the Gauss--Seidel trace in this scenario.
-This is expected because the zero-delay graph is acyclic.
-The global solve still contains the zero-delay interface inputs of the Gain and Subtractor components, but it does not resolve an algebraic loop.
-After this consistency step, the algorithm advances the generations sequentially.
-Its behavior therefore matches the Gauss--Seidel traversal for this example.
-All three traces approach the analytical solution as the macro step size is reduced.
-This verifies the expected orchestration behavior of the three master algorithms.
 
-The scenario does not exercise algebraic-loop resolution because its zero-delay graph is acyclic.
+The \texttt{IJCSAAlgorithm} trace overlaps the Gauss--Seidel trace in this scenario because the zero-delay graph is acyclic.
+The global solve handles the zero-delay interface inputs of the Gain and Subtractor components but does not resolve an algebraic loop.
+After this consistency step, the algorithm advances the generations sequentially, which matches the Gauss--Seidel traversal for this example.
+
+The scenario verifies the expected orchestration behavior of the three master algorithms.
+It does not exercise algebraic-loop resolution because the zero-delay graph is acyclic.
 The SCC-local Newton solve is verified separately in Section~\ref{sec:impl_algebraic_loops}.
-
-

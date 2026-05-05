@@ -3,17 +3,17 @@
 \label{sec:impl_wrappers}
 
 This section describes how backend-specific models are adapted to the common \texttt{CoSimComponent} contract.
-The three adapters differ deliberately in abstraction level.
-\texttt{FMUComponent} is the most generic wrapper, because FMI already defines a standardized co-simulation interface, a model-description file, typed value references, parameters, and structural dependency metadata.
-\texttt{OpenSimComponent} provides a thinner abstraction.
-It supplies a common runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}, but the exposed ports, parameters, and model assembly remain specific to each musculoskeletal model.
-For finite-element models, the reusable abstraction is even smaller. 
-The framework provides only a minimal convenience base for common FE-related
-containers and optional file/output hooks.
-The actual discretization, material law, solver state, boundary conditions, and state-transfer semantics are owned by the concrete FE component.
+The wrappers differ in abstraction level because the supported backends expose different amounts of reusable interface information.
 
-This asymmetry is a consequence of the backends themselves rather than an inconsistency of the framework design.
-Reusable abstractions are introduced only where the backend provides a stable interface or where repeated implementation patterns exist.
+\texttt{FMUComponent} is the most generic wrapper.
+FMI already provides a standardized co-simulation interface, a model-description file, typed value references, parameters, and structural dependency metadata.
+\texttt{OpenSimComponent} is less generic.
+It provides a reusable runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}, but concrete subclasses must still define ports, parameters, and model assembly.
+\texttt{FEMComponent} is intentionally minimal.
+Finite-element models do not share a single descriptor, solver state, mesh format, weak form, or state-transfer convention.
+
+This asymmetry is a deliberate implementation choice.
+Reusable base functionality is introduced only where a backend provides a stable interface or where repeated implementation patterns exist.
 
 \input{chapters/5_implementation/531_fmu_component}
 \input{chapters/5_implementation/532_opensim_component}

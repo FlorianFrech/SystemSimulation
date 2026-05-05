@@ -5,7 +5,7 @@
 The previous sections described the master algorithms and the structural metadata used during macro-step execution.
 This section extends that implementation to hybrid co-simulation and realizes the concepts introduced in Section~\ref{sec:236_cosim_hybrid}.
 It addresses SR-10-04 under UR-10 in Table~\ref{tab:req_simulation}, which requires system-level detection, localization, and propagation of discrete events across coupled subsystem models.
-The hybrid orchestration is implemented as \texttt{HybridAlgorithm} and reuses \texttt{GaussSeidelAlgorithm} as the continuous algorithm, between events.
+The hybrid orchestration is implemented as \texttt{HybridAlgorithm} and reuses \texttt{GaussSeidelAlgorithm} as the continuous algorithm between events.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Scope and Component Contract}
@@ -18,41 +18,36 @@ If at least one event source is present, the selected continuous algorithm is re
 A component becomes an event source by registering an indicator with \pyfn{add\_event\_indicator()}.
 The resulting \texttt{EventIndicator} stores the scalar indicator function and the crossing direction.
 Rollback support is required because event detection and localization use trial steps inside a macro step.
-This requirement is enforced through \texttt{supports\_rollback} when the indicator is registered.
-A component becomes an event listener when an \texttt{EventConnection} subscribes it to an event produced by another component.
 
+A component becomes an event listener when an \texttt{EventConnection} subscribes it to an event produced by another component.
+\syssimx{} checks the \texttt{supports\_rollback} property when an indicator is registered and rejects components that do not support rollback.
 Event times are stored as \texttt{DenseTime} objects.
 Each object combines the physical time $t$ with a microstep index $\nu$.
-This allows the algorithm to order cascaded events that occur at the same physical time.
+This allows the algorithm to deterministically order cascaded events at the same physical time.
 
 Table~\ref{tab:hybrid_component_contract} summarizes the hybrid-specific operations used by \texttt{HybridAlgorithm}.
 The general component interface is described in Section~\ref{sec:impl_component_interface}.
 
 \begin{table}[htbp]
   \centering
-  \caption{Hybrid component operations used by \texttt{HybridAlgorithm}.}
+  \small
+  \caption{Hybrid-specific component operations used by \texttt{HybridAlgorithm}.}
   \label{tab:hybrid_component_contract}
-  \begin{tabular}{lp{10cm}}
+  \begin{tabular}{lp{9.5cm}}
     \toprule
-    \textbf{Operation} & \textbf{Role in hybrid execution} \\
+    \textbf{Operation} & \textbf{Role} \\
     \midrule
-    \texttt{evaluate\_event\_indicators()} & Returns the current indicator values \\
-    \addlinespace
-    \texttt{detect\_event\_crossings()} & Detects crossings between two indicator states \\
-    \addlinespace
-    \texttt{snapshot\_state()} & Captures the rollback state before a trial step \\
-    \addlinespace
-    \texttt{restore\_state()} & Restores the component after trial stepping or bisection \\
-    \addlinespace
+    \texttt{evaluate\_event\_indicators()} & Returns current indicator values \\
+    \texttt{detect\_event\_crossings()} & Applies crossing directions to two indicator states \\
+    \texttt{snapshot\_state()} and \texttt{restore\_state()} & Provide rollback for trial stepping and bisection \\
     \texttt{handle\_event()} & Applies event-driven state updates \\
-    \addlinespace
-    \texttt{report\_internal\_event()} & Reports optional event brackets from internal micro-stepping \\
+    \texttt{report\_internal\_event()} & Reports optional brackets from internal micro-stepping \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Event routing is stored on the \texttt{System}.
-During \pyfn{add\_event\_connection()}, each \pyfn{EventConnection} adds one source-event to listener mapping to \pyfn{\_event\_targets\_by\_source}.
+During \pyfn{add\_event\_connection()}, each \texttt{EventConnection} adds one source-to-listener mapping to \texttt{\_event\_targets\_by\_source}.
 The hybrid algorithm uses this mapping when localized events are dispatched.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,7 +87,7 @@ The localized events are recorded with their \texttt{DenseTime} stamps and dispa
 Event handlers may change component states and trigger further events at the same physical time.
 The algorithm therefore prepares the inputs again and repeats event handling until no pending event remains.
 After this dense-time loop has terminated, the remaining part of the original macro interval is processed in the next pass.
-Sections~\ref{sec:impl_hybrid_detection}, \ref{sec:impl_hybrid_localization}, and~\ref{sec:impl_hybrid_handling} describe these steps in detail.
+Sections~\ref{sec:impl_hybrid_detection}, \ref{sec:impl_hybrid_localization}, and~\ref{sec:impl_hybrid_handling} describe detection, localization, and dense-time handling.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Event Detection via Trial Stepping}
@@ -155,10 +150,10 @@ The loop terminates when no new event remains at the current physical time.
 The limit \texttt{max\_microsteps} prevents an infinite cascade.
 
 The method \texttt{handle\_events()} groups pending events by listener component.
-If one listener receives multiple events at the same dense time, the algorithm checks whether the corresponding handlers commute.
-It first checks the optional \texttt{event\_commutativity} annotations of the component.
+If one listener receives multiple events at the same dense time, their handlers must commute.
+The algorithm first checks optional \texttt{event\_commutativity} annotations.
 If no annotation is available, it runs all handler orders from the same rollback state and compares the resulting states with \texttt{\_states\_equal()}.
-A non-commutative event set raises a runtime error.
+A non-commutative event set raises a \texttt{RuntimeError}.
 Commutative events are dispatched through \texttt{System.dispatch\_event()}.
 
 After the dense-time loop has terminated, the algorithm prepares the inputs once more.
@@ -169,7 +164,8 @@ The outer loop then continues with the remaining interval \texttt{[t\_left, t\_r
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The verification uses small scenarios that isolate the hybrid features and are not exercised in the case study.
+The verification uses small scenarios that isolate hybrid features that are not exercised in the case study.
+The three scenarios cover cascaded events at one physical time, simultaneous events on a single listener, and events that fall strictly between communication points.
 
 \paragraph{Event chain and superdense time.}
 The first scenario verifies cascaded event handling at one physical time.
@@ -185,7 +181,7 @@ The expected result is therefore one event at $(t_e,0)$ and one cascaded event a
     \caption{Event chain resolved with superdense time.
     The dotted lines mark the original communication interval.
     The dashed line marks the localized event time.
-    The annotations show the emitted and received events at the two microsteps.}
+    The annotations show the emitted and received events.}
     \label{fig:impl_hybrid_verification_chain}
 \end{figure}
 
@@ -217,27 +213,6 @@ Listing~\ref{lst:hybrid_simultaneity_log} confirms the dispatch path.
 Both events are grouped on the \texttt{Listener}.
 Because the listener does not provide a commutativity annotation, the dynamic check is used.
 The check confirms identical final states for both handler orders before the events are dispatched.
-
-\begin{figure}[t]
-    \centering
-    \begin{subfigure}[t]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/strong_simultaneity.pdf}
-        \caption{Strong event simultaneity.
-        Both source indicators cross zero at $(t_e,0)$.
-        The listener responds to two commutative handlers at the same dense time.}
-        \label{fig:impl_hybrid_verification_simultaneity}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[t]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/internal_event_reporting.pdf}
-        \caption{Internal event reporting. The events at $t = 0.45\,$s and $t = 0.55\,$s lie strictly inside the macro interval $[0.4, 0.6]\,$s and are localized through internal hints.}
-        \label{fig:impl_hybrid_verification_internal}
-    \end{subfigure}
-    \caption{Verification scenarios for two hybrid features that are not exercised in the case study. Dashed gray lines mark the localized event times; dotted gray lines mark the macro communication grid.}
-    \label{fig:impl_hybrid_verification_pair}
-\end{figure}
 
 \begin{listing}[!htbp]
 \begin{lstlisting}[
@@ -277,11 +252,34 @@ Whenever the indicator changes sign between two internal steps, it reports an \t
 In this scenario the reported brackets are $[0.44,0.45]\,$s and $[0.54,0.55]\,$s.
 An \texttt{EventListener} subscribes to the event and inverts its slope whenever an event is handled.
 
-Figure~\ref{fig:impl_hybrid_verification_internal} shows the indicator and listener trajectory.
-The first hint localizes the event at $t=0.45\,$s.
-The second hint localizes the event at $t=0.55\,$s.
-Both located event times match the analytical roots.
-The listener changes slope at both event times, as expected.
+Figure~\ref{fig:impl_hybrid_verification_internal} shows the indicator and the listener trajectory.
+The first hint narrows the bisection to $[0.44, 0.45]\,$s and locates the event at $t = 0.45\,$s.
+The handler inverts the listener slope.
+The second hint then narrows to $[0.54, 0.55]\,$s and locates the event at $t = 0.55\,$s.
+Both located times match the analytical roots within machine precision.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/strong_simultaneity.pdf}
+        \caption{Strong event simultaneity.
+        Both source indicators cross zero at $(t_e,0)$.
+        The listener responds to two commutative handlers at the same dense time.}
+        \label{fig:impl_hybrid_verification_simultaneity}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/internal_event_reporting.pdf}
+        \caption{Internal event reporting. The events at $t = 0.45\,$s and $t = 0.55\,$s lie strictly inside the macro interval $[0.4, 0.6]\,$s and are localized through internal hints.}
+        \label{fig:impl_hybrid_verification_internal}
+    \end{subfigure}
+    \caption{Verification scenarios for strong simultaneity and internal event reporting.
+    Dashed lines mark localized event times.
+    Dotted lines mark macro communication points.}
+    \label{fig:impl_hybrid_verification_pair}
+\end{figure}
 
 After the second event, the algorithm detects a residual crossing in the remaining interval.
 This crossing refers to the event that was already handled at $t=0.55\,$s.

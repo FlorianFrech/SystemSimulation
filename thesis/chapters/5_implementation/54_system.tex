@@ -19,27 +19,10 @@ The structural analysis that derives the execution order from the registered con
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Responsibilities and Stored State}
 
-Table~\ref{tab:system_state} summarizes the persistent state maintained by a \texttt{System} instance.
-
-\begin{table}[t]
-  \centering
-  \small
-  \caption{Core \texttt{System} attributes and their implementation purpose.}
-  \label{tab:system_state}
-  \begin{tabular}{lp{8.8cm}}
-    \toprule
-    \textbf{Attribute} & \textbf{Purpose} \\
-    \midrule
-    \texttt{name}                         & System identifier used for logging and history output \\
-    \texttt{components}                   & Registered components, keyed by unique component name \\
-    \texttt{connections}                  & Registered signal connections between output and input ports \\
-    \texttt{event\_connections}           & Registered event links between event indicators and event targets \\
-    \texttt{algorithm}                    & Execution strategy used for macro-step advancement \\
-    \texttt{history}                      & Aggregated access to the histories of all registered components \\
-    \texttt{t}, \texttt{is\_initialized}  & Current simulation time and lifecycle state \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+A \texttt{System} instance stores the structural definition of a co-simulation scenario.
+This includes the registered components, signal connections, event connections, selected algorithm, and aggregated history.
+It also tracks the current simulation time and the initialization state.
+Derived metadata such as dependency graphs, algebraic loops, and execution order is introduced in Section~\ref{sec:impl_structural}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Component Registration}
@@ -51,16 +34,15 @@ The component's history is registered with the system-level \texttt{SystemHistor
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Signal Connections}
 
-A signal connection is represented by the immutable \texttt{Connection} dataclass.
-It stores the source component name, the source output port name, the destination component name, and the destination input port name.
-The dataclass is frozen and hashable, which allows connections to be used directly as set elements and dictionary keys during graph construction and duplicate detection.
+A signal connection is represented by a immutable \texttt{Connection} object.
+It stores the source component and output port together with the destination component and input port.
+The object is frozen and hashable, so it can be used directly during duplicate checks and graph construction.
 
 \paragraph{Validation.}
-A system registers a signal connection via the method \texttt{add\_connection()}.
-The method first delegates to the private \texttt{\_validate\_connection()} routine before appending the connection.
-Validation checks four conditions, namely the existence of both referenced components, the existence of the named ports on those components, compatibility of the two port specifications, and the absence of an exact duplicate connection.
-Two port specifications are compatible in the sense of \texttt{PortSpec.compatible()} introduced in Section~\ref{sec:impl_port_system} if they have the same data type and, for \texttt{REAL} ports, dimensionally compatible units in the Pint sense.
-A failure in any of these checks raises the corresponding exception before the connection is stored, so the system cannot reach the initialization stage with structurally invalid or ambiguous couplings.
+Signal connections are registered through \texttt{add\_connection()}.
+Before a connection is stored, \texttt{\_validate\_connection()} checks that both components exist, both ports exist, the port specifications are compatible, and no duplicate connection is already registered.
+The same validation also enforces single assignment.
+A new connection is rejected if another connection already drives the same destination input.
 
 \paragraph{Single Assignment.}
 Each input port may be driven by at most one signal connection.
@@ -96,16 +78,11 @@ This ensures that the hybrid features of the framework are active whenever a com
 Once all components and connections are registered, the system is driven through three phases.
 
 \paragraph{Initialization.}
-\texttt{initialize(t0)} first performs the component classification and algorithm selection described above.
-It then triggers the construction of port states for all components and computes their direct-feedthrough structure, which is required before the structural analysis can build the zero-delay dependency graph.
-The structural analysis of Section~\ref{sec:impl_structural} is invoked next and produces the execution order together with the list of algebraic loops.
-Initialization then proceeds generation by generation, as illustrated in Figure~\ref{fig:impl_system_initialization}.
-For each generation, upstream output values are first propagated into the input port states.
-The components in the generation are then initialized.
-If the generation contains an algebraic loop, the corresponding SCC is resolved through the IJCSA solver of Section~\ref{sec:impl_algebraic_loops}.
-Finally, each component performs a zero-step to publish outputs for downstream generations.
-Processing generations in topological order therefore guarantees that every component sees coherent initial inputs derived from the already-initialized upstream components.
-Registration of further components or connections is no longer allowed after this point.
+\texttt{initialize(t0)} first classifies the registered components and selects the hybrid algorithm when event sources are present.
+It then prepares the component ports, computes direct-feedthrough metadata, and invokes the structural analysis of Section~\ref{sec:impl_structural}.
+The resulting execution order is used to initialize the system generation by generation, as shown in Figure~\ref{fig:impl_system_initialization}.
+For each generation, the system propagates upstream outputs, initializes the contained components, resolves local algebraic loops when needed, and performs a zero-step to publish outputs for downstream generations.
+After initialization, the structural definition is fixed for the simulation run.
 
 \begin{figure}[t]
   \centering
@@ -129,20 +106,16 @@ The registered components, signal connections, event connections, and selected a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The feature verified here is the \emph{registration contract} of the \texttt{System}.
-This contract is a single behavioral invariant.
-Only structurally valid and unambiguous configurations may reach the initialization stage, and every registration attempt either augments the structural definition or is rejected before any state is mutated.
-The contract is exposed through three entry points that share the same acceptance-and-rejection logic, namely signal-connection registration, event-connection registration, and the lifecycle boundary enforced by \texttt{initialize()}.
-A minimal verification of this feature therefore has to exercise all three entry points in a single scenario.
-Each row of Table~\ref{tab:system_verification} corresponds to one of them.
-The scenario uses lightweight mock components.
+The verification focuses on the registration contract of the \texttt{System}.
+A valid registration must either extend the structural definition or be rejected before simulation state is changed.
+The scenario uses lightweight mock components and checks signal connections, event connections, and lifecycle protection.
+Table~\ref{tab:system_verification} summarizes the observed behavior.
+
 
 \begin{table}[t]
   \centering
   \small
-  \caption{Minimal verification scenario for the \texttt{System} registration contract.
-    The three rows correspond to the three entry points through which the contract is exposed.
-    They are exercised in one scenario because they share the same acceptance-and-rejection semantics.}
+  \caption{Verification of the \texttt{System} registration contract.}
   \label{tab:system_verification}
   \begin{tabular}{p{3.2cm} p{6cm} p{6cm}}
     \toprule

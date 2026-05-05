@@ -2,35 +2,22 @@
 \label{chap:implementation}
 
 Chapter~\ref{chap:architecture} introduced the main architectural abstractions of \syssimx{}.
-These include the component interface, the system model, the algorithm strategy, and the multi-model component.
-This chapter describes how these abstractions are implemented and verified.
-It covers the core framework features that realize the architecture in software.
-The chapter starts with the port system and continues through the component interface, backend wrappers, system orchestration, execution algorithms, hybrid co-simulation, and multi-model switching.
+This chapter explains how these abstractions are realized in software and how the implemented features are verified in isolation.
+It focuses on implementation decisions that are needed to understand the framework behavior and the case study.
+System-level validation is deferred to Chapter~\ref{chap:case_study}.
 
-Each section focuses on one framework feature.
-It first states the requirement addressed by the feature.
-It then explains the implementation approach and the relevant technical details.
-Each section also summarizes the verification used to check the implemented behavior in isolation.
-The full interaction of the implemented features is evaluated in the case study in Chapter~\ref{chap:case_study}.
+The chapter is organized along the execution path of a co-simulation scenario.
+Section~\ref{sec:impl_port_system} introduces the typed and unit-aware port system.
+Section~\ref{sec:impl_component_interface} describes the common component lifecycle and runtime contract.
+Section~\ref{sec:impl_wrappers} explains how FMI, OpenSim, and finite-element models are adapted to this contract.
+Section~\ref{sec:impl_system} describes system assembly, signal connections, event connections, and lifecycle orchestration.
 
-The sections are ordered from foundational to advanced.
-Section~\ref{sec:impl_port_system} describes the typed, unit-aware port system that underlies all data exchange.
-Section~\ref{sec:impl_wrappers} presents the three backend-specific component wrappers that map external simulation tools to the common \texttt{CoSimComponent} interface.
-Section~\ref{sec:impl_structural} describes the structural analysis of the
-coupled system.
-It builds the zero-delay dependency graph, identifies strongly connected
-components, detects algebraic loops, and derives an execution order.
-Section~\ref{sec:impl_algebraic_loops} describes how algebraic loops are
-resolved once they have been identified by the structural analysis.
-It focuses on the local iteration problem inside an instantaneous dependency
-cycle.
-Section~\ref{sec:impl_algorithms} describes the master algorithms that advance
-the coupled system by macro time steps.
-These algorithms use the execution order computed by the structural analysis.
-They delegate algebraic loop resolution to the mechanism described in the
-preceding section.
-Section~\ref{sec:impl_hybrid} extends the stepping logic with event detection, localization, and rollback for hybrid co-simulation.
-Finally, Section~\ref{sec:impl_multi_model} describes the multi-model switching mechanism with state adaptation and hysteresis.
+The following sections cover the execution logic built on top of the registered system.
+Section~\ref{sec:impl_structural} derives the structural metadata used for initialization and stepping.
+Section~\ref{sec:impl_algebraic_loops} describes the local resolution of algebraic loops.
+Section~\ref{sec:impl_algorithms} presents the continuous master algorithms.
+Section~\ref{sec:impl_hybrid} extends the stepping logic with event detection, event localization, and dense-time event handling.
+Section~\ref{sec:impl_multi_model} describes runtime switching between interchangeable internal models.
 
 \input{chapters/5_implementation/51_port_system}
 \input{chapters/5_implementation/52_co_sim_component}
@@ -42,7 +29,7 @@ Finally, Section~\ref{sec:impl_multi_model} describes the multi-model switching 
 \input{chapters/5_implementation/58_hybrid}
 \input{chapters/5_implementation/59_multi_component}
 
-The preceding sections verified the main framework features in isolation.
-Together, these features provide the executable basis for assembling heterogeneous co-simulation scenarios with structural analysis, algebraic-loop resolution, hybrid event handling, and runtime model switching.
+The preceding sections verify the main framework features in isolation.
+Together, these features provide the executable basis for heterogeneous co-simulation scenarios with structural analysis, algebraic-loop resolution, hybrid event handling, and runtime model switching.
 The next chapter evaluates their combined use in the controlled-pendulum case study.
-There, the focus shifts from feature-level verification to system-level validation against the reference simulation and the intended application workflow.
+The focus therefore shifts from feature-level verification to system-level validation against the reference simulation and the intended application workflow.

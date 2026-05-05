@@ -2,7 +2,7 @@
 \section{Algebraic Loop Resolution}
 \label{sec:impl_algebraic_loops}
 
-This section addresses SR-11-03 and is the implementation counterpart of the algebraic-loop theory introduced in Section~\ref{sec:cosim_algebraic_loops}.
+This section addresses SR-11-03 and is the implementation counterpart of the algebraic-loop theory introduced in Section~\ref{sec:235_cosim_algebraic_loops}.
 Section~\ref{sec:impl_structural} already identifies every algebraic loop as a strongly connected component of the zero-delay graph and assigns it to one generation of \texttt{execution\_order}.
 When the master algorithm reaches such a generation, \syssimx{} must produce mutually consistent interface values before any component in the loop block performs its macro step.
 The present section explains how the local solver \pyfn{solve\_algebraic\_scc\_ijcsa()} realizes this consistency check on a single strongly connected component.
@@ -28,7 +28,7 @@ Routing the returned outputs through \pyfn{driver\_for\_input} yields the induce
 \begin{equation}
     \mathcal{R}_{\mathcal{L}}(U_{\mathcal{L}}) = U_{\mathcal{L}} - \widehat{U}_{\mathcal{L}}(U_{\mathcal{L}}),
 \end{equation}
-which matches the fixed-point form of Section~\ref{sec:cosim_algebraic_loops} restricted to $\mathcal{L}$.
+which matches the fixed-point form of Section~\ref{sec:235_cosim_algebraic_loops} restricted to $\mathcal{L}$.
 A consistent loop state is reached when $\|\mathcal{R}_{\mathcal{L}}\|_2$ falls below the solver tolerance.
 Because \pyfn{evaluate\_outputs()} is side-effect free, the residual can be sampled at arbitrarily many trial vectors per macro step without corrupting component state.
 

@@ -1,22 +1,20 @@
 \subsection{Finite-Element Model Wrapper}
 \label{sec:impl_fem}
-  
+
 Finite-element models are integrated through the same \texttt{CoSimComponent} contract as the other component types.
 The framework provides a lightweight \texttt{FEMComponent} base class for this purpose.
-This class derives from \texttt{CoSimComponent}.
-It only collects common attributes that are useful for FE implementations.
+The class derives from \texttt{CoSimComponent} and collects common attributes that are useful for FE implementations.
 These include geometry, mesh data, finite-element spaces, grid functions, forms, solver handles, and visualization state.
 
 The class does not implement a generic finite-element backend wrapper.
 It does not define ports from a descriptor file.
-It does not prescribe a mesh format, weak form, material law, boundary condition, time integrator, or solver state representation.
-These choices depend on the concrete FE formulation.
-They are therefore implemented by the concrete FE component.
+It also does not prescribe a mesh format, weak form, material law, boundary condition, time integrator, or solver state representation.
+These choices depend on the concrete FE formulation and are therefore implemented by the concrete FE component.
 
 The controlled-pendulum case study uses \texttt{FEMPendulum}.
-This component derives from \texttt{FEMComponent} and implements the actual NGSolve model.
+This component derives from \texttt{FEMComponent} and implements the NGSolve model used in the case study.
 It defines the port interface, constructs the finite-element spaces and grid functions, assembles the nonlinear problem, advances the model in time, and maps the FE state to the exposed pendulum outputs.
-State transfer and rollback are also implemented by \texttt{FEMPendulum}, because they depend on the selected time integration scheme and on the grid function vectors that must be restored.
+State transfer and rollback are also implemented by \texttt{FEMPendulum}, because they depend on the selected time integration scheme and on the grid-function vectors that must be restored.
 
 The reusable behavior of \texttt{FEMComponent} is therefore intentionally small.
 Its implementation documents the framework entry point for FE-based components.

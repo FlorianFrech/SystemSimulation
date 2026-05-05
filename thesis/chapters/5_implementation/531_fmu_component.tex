@@ -1,15 +1,14 @@
 \subsection{FMI 2.0 Co-Simulation Wrapper}
 \label{sec:impl_fmu}
 
-% --- MOTIVATION ---
-This subsection describes the implementation of \texttt{FMUComponent} backend wrapper class.
-It addresses requirement SR-03-01 (integration of FMI-compliant simulation tools) by mapping FMI 2.0 Co-Simulation FMUs onto the \texttt{CoSimComponent} interface defined in Section~\ref{sec:impl_component_interface}.
-The wrapper delegates all interaction with the FMU binary to the \texttt{fmpy} library~\cite{dassault_systemes__catia-systems_fmpy_2026} and encapsulates the FMI 2.0 Co-Simulation lifecycle behind the primitive and hook operations of the component contract.
+This subsection describes the \texttt{FMUComponent} wrapper.
+It realizes SR-03-01 by mapping FMI~2.0 Co-Simulation FMUs to the \texttt{CoSimComponent} interface of Section~\ref{sec:impl_component_interface}.
+The wrapper delegates FMI calls to \texttt{fmpy}~\cite{dassault_systemes__catia-systems_fmpy_2026}.
+It derives ports, parameters, value references, and direct-feedthrough metadata from the FMU's \texttt{modelDescription.xml}.
 
-As introduced in Section~\ref{sec:cosim_fmi}, an FMU in Co-Simulation
-mode retains its own internal solver and exposes a standardized set of operators for experiment setup, initialization, stepping, and state access.
-The wrapper does not re-implement any of these operators.
-Its role is to present an FMU as a \syssimx{} component whose ports, parameters, and direct-feedthrough metadata are derived automatically from the FMU's \texttt{modelDescription.xml} so that the FMU can participate in coupled simulation without manual configuration.
+As described in Section~\ref{sec:cosim_fmi}, a Co-Simulation FMU keeps its own solver.
+The wrapper therefore does not re-implement FMU simulation logic.
+Its role is to expose the FMU as a \syssimx{} component that can be connected, initialized, stepped, and inspected through the common component contract.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Architecture and Interface Mapping}
@@ -20,13 +19,10 @@ Figure~\ref{fig:impl_fmu_class} shows the class-level relationship between \text
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/class/components/FMUComponent.pdf}
-  \caption{Class diagram of the FMU wrapper. \texttt{FMUComponent}
-         specializes \texttt{CoSimComponent} and adapts an FMI~2.0
-         Co-Simulation FMU to the component contract. The
-         \texttt{ModelDescription} parsed once at construction time
-         supplies the ports, parameters, value references, and
-         direct-feedthrough dependencies, while the \texttt{FMU2Slave}
-         runtime proxy executes the FMI operators during simulation.}
+  \caption{Class diagram of the FMU wrapper.
+  \texttt{FMUComponent} adapts an FMI~2.0 Co-Simulation FMU to the \texttt{CoSimComponent} contract.
+  The parsed model description supplies ports, parameters, value references, and direct-feedthrough metadata.
+  The \texttt{FMU2Slave} instance executes the FMI runtime operations.}
   \label{fig:impl_fmu_class}
 \end{figure}
 
@@ -46,7 +42,7 @@ Table~\ref{tab:fmu_mapping} lists the correspondence between FMI artefacts and t
     \toprule
     \textbf{FMI artefact} & \textbf{\syssimx{} abstraction} \\
     \midrule
-    \texttt{ScalarVariable} with causality \texttt{input}/\texttt{output}
+    \texttt{ScalarVariable} with causality \texttt{input} or \texttt{output}
       & \texttt{PortSpec} with matching direction and \texttt{PortType} \\
     \addlinespace
     \texttt{ScalarVariable.unit} (FMI compact string)
@@ -70,64 +66,52 @@ Table~\ref{tab:fmu_mapping} lists the correspondence between FMI artefacts and t
   \end{tabular}
 \end{table}
 
-The cached value-reference maps in the last row are a purely local optimization.
-The FMI standard addresses variables by integer value references rather than by name, and these references are stable over the lifetime of an FMU instance.
-Caching them once per base type allows all subsequent inputs and outputs to be read and written through a single batched call per type, avoiding per-variable lookup overhead during stepping.
+The value-reference maps are cached once during construction.
+FMI variables are accessed by integer value references rather than by name.
+Caching these references allows inputs and outputs to be written and read through batched calls grouped by FMI base type.
+This keeps runtime access independent of repeated name lookups.
 
 \paragraph{Direct-Feedthrough Extraction.}
-For generic components, direct feedthrough is detected numerically by output perturbation, as described in Section~\ref{sec:impl_component_interface}.
-An FMU, however, declares its input-output dependencies explicitly in the \texttt{ModelStructure} element of the model description.
-\texttt{FMUComponent} therefore reads this information directly and populates \texttt{direct\_feedthrough} with the declared dependencies.
-This is both more accurate and strictly cheaper than perturbation, since no extra FMI calls are required and the FMU exporter's knowledge of the output equation is authoritative.
+Generic components use perturbation-based feedthrough detection, as described in Section~\ref{sec:impl_component_interface}.
+For FMUs, the dependency information is available in the \texttt{ModelStructure} element of \texttt{modelDescription.xml}.
+\texttt{FMUComponent} reads this metadata directly and stores it in \texttt{direct\_feedthrough}.
+This avoids additional FMI calls and uses the dependency information declared by the FMU exporter.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{Lifecycle Realization}
+\subsubsection{Lifecycle Realization}
 
-The FMI~2.0 Co-Simulation standard prescribes a state machine whose transitions are triggered by specific operators.
-The wrapper realizes this state machine by implementing the primitive and hook operations of \texttt{CoSimComponent} on top of the corresponding \texttt{fmpy} calls.
+The wrapper implements the primitive operations of \texttt{CoSimComponent} through FMI~2.0 Co-Simulation calls.
+During initialization, it extracts the FMU archive and instantiates the \texttt{FMU2Slave}.
+It then calls \texttt{setupExperiment()} and enters initialization mode.
+After that, parameters and input start values are applied.
+The wrapper finally exits initialization mode.
+After the base-class template method returns, the initial outputs are stored in the port states and recorded in the component history.
 
-\paragraph{Initialization.}
-\texttt{\_initialize\_component(t0)} executes the six-step sequence required by the standard:
-\begin{enumerate}[nosep]
-  \item Extract the FMU archive to a temporary directory.
-  \item Instantiate an \texttt{FMU2Slave} with the GUID and model identifier taken from the model description.
-  \item Call \texttt{setupExperiment(startTime=$t_0$)}.
-  \item Enter initialization mode.
-  \item Apply parameter start values, then input start values, each batched per base type.
-  \item Exit initialization mode.
-\end{enumerate}
-After the template method \texttt{initialize()} returns, the initial outputs are available in the \texttt{PortState} objects and recorded in the component history (Section~\ref{sec:impl_component_interface}).
+A time step is delegated to the FMI \texttt{doStep()} call with the current communication point $t$ and the communication step size $dt$.
+The base class handles time bookkeeping, output refresh, and history recording around this call.
+Output refresh uses the cached value references and reads the FMU outputs through one getter call per active base type.
+For \texttt{REAL} outputs, the declared unit is attached before the value is written to the corresponding \texttt{PortState}.
 
-\paragraph{Stepping.}
-\texttt{\_do\_step\_internal(t, dt)} reduces to a single call to \pyfn{doStep(currentCommunicationPoint=$t$, communicationStepSize=$dt$)}.
-All surrounding bookkeeping, such as time advancement, output refresh, and history recording, is handled by the template method \texttt{do\_step()} of the base class, so the wrapper itself contributes only the numerical advancement.
-
-\paragraph{Output Refresh.}
-\texttt{\_update\_output\_states()} issues one batched FMI getter per base type using the cached output value references and writes the returned values back into the \texttt{PortState} objects.
-For \texttt{REAL} outputs, the declared unit is attached so that the port state exposes a Pint quantity rather than a raw float.
-
-\paragraph{Zero-Step Output Evaluation.}
-\texttt{evaluate\_outputs(inputs, t)} implements the hook operation introduced in Section~\ref{sec:impl_component_interface}.
-It applies the supplied inputs without recording history, issues a \texttt{doStep} with $dt = 0$, and reads the resulting outputs.
-This mechanism provides the instantaneous output evaluation required for the algebraic-loop resolution described in Section~\ref{sec:impl_algebraic_loops}.
-Zero-step evaluation is admissible under FMI~2.0 Co-Simulation and is preferred over numerical perturbation because it reflects the exact feedthrough behavior declared by the FMU.
+\texttt{evaluate\_outputs(inputs,t)} provides the zero-step output evaluation used by algebraic-loop resolution.
+It applies the supplied inputs, evaluates the FMU outputs without advancing the accepted macro time, and returns the resulting output dictionary.
+This hook is used only where the FMU supports such zero-step evaluation.
+It provides the instantaneous output values needed by Section~\ref{sec:impl_algebraic_loops}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{State Access and Rollback Boundary}
+\subsubsection{State Access and Rollback Boundary}
 
-\texttt{FMUComponent} provides \texttt{get\_state()} and \texttt{set\_state()} as part of the generic \syssimx{} state-transfer interface.
-These methods must be distinguished from the native FMI state operations exposed by \texttt{fmpy} through methods such as \texttt{getFMUState()} and \texttt{setFMUState()}.
-In \syssimx{}, \texttt{get\_state()} returns a dictionary containing non-\texttt{fixed}, non-\texttt{local} FMU variables together with their current values and declared units.
-Conversely, \texttt{set\_state()} uses such a dictionary to re-enter the FMU initialization sequence, re-apply serialized parameter and input values, and refresh the exposed output ports.
+\texttt{FMUComponent} implements \texttt{get\_state()} and \texttt{set\_state()} as part of the framework's state-transfer interface.
+These methods are distinct from native FMI state operations such as \texttt{getFMUState()} and \texttt{setFMUState()}.
+\texttt{get\_state()} returns non-\texttt{fixed} and non-\texttt{local} FMU variables with their current values and declared units.
+\texttt{set\_state()} uses such a dictionary to re-enter initialization, restore serialized values, and refresh the exposed output ports.
 
-This dictionary-based state representation is intended for inspection, state transfer, and re-initialization.
+This dictionary state is intended for inspection, state transfer, and re-initialization.
 It is not an opaque snapshot of the internal FMU solver state.
-Consequently, the generic \texttt{FMUComponent} does not provide native rollback support for the hybrid algorithm and does not override \texttt{snapshot\_state()} or \texttt{restore\_state()}.
-Rollback for FMU-based hybrid components is implemented only in specialized subclasses when the concrete FMU and solver permit it.
-
+The generic \texttt{FMUComponent} therefore does not provide rollback support for the hybrid algorithm.
+Rollback for FMU-based hybrid components must be implemented by specialized subclasses when the concrete FMU and solver support it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{Verification}
+\subsubsection{Verification}
 
 The verification of \texttt{FMUComponent} targets the mapping from FMI artefacts to the \texttt{CoSimComponent} contract.
 A small purpose-built FMU with two real inputs, two real outputs, one boolean parameter, and a declared feedthrough dependency is used as the test subject.
@@ -136,40 +120,32 @@ Table~\ref{tab:fmu_verification} lists the verified properties.
 \begin{table}[t]
   \centering
   \small
-  \caption{Verified properties of \texttt{FMUComponent}. All tests use a
-           purpose-built FMI~2.0 Co-Simulation FMU with a known model
-           structure.}
+  \caption{Verification of the main \texttt{FMUComponent} wrapper properties.}
   \label{tab:fmu_verification}
-  \begin{tabular}{p{6.5cm} p{8.5cm}}
+  \begin{tabular}{p{5.8cm} p{8.8cm}}
     \toprule
     \textbf{Verified property} & \textbf{Expected outcome} \\
     \midrule
-    Rejection of unsupported FMUs
-      & FMI version other than \texttt{2.0} or Model Exchange FMU raises an exception at construction \\
+    Supported FMU type
+      & FMI~2.0 Co-Simulation FMUs are accepted, while unsupported FMI versions and Model Exchange FMUs are rejected \\
     \addlinespace
-    Port derivation from model description
-      & \texttt{input\_specs} and \texttt{output\_specs} reflect the declared causalities, data types, and units \\
+    Interface derivation
+      & Ports, parameters, normalized units, and value-reference maps match \texttt{modelDescription.xml} \\
     \addlinespace
-    Unit-string normalization
-      & OpenModelica compact notation (e.g.\ \texttt{"m.s-2"}) is converted to a Pint-compatible form \\
+    Direct-feedthrough metadata
+      & Dependencies declared in \texttt{ModelStructure} are reproduced in \texttt{direct\_feedthrough} \\
     \addlinespace
-    Direct feedthrough from model structure
-      & Declared output/input dependencies are exactly reproduced in \texttt{direct\_feedthrough} \\
-    \addlinespace
-    Parameter application
-      & Values assigned through \texttt{set\_parameters()} are pushed into the FMU during initialization \\
-    \addlinespace
-    Initialize--step--reset cycle
-      & Full lifecycle completes without resource leaks; component is reusable after \texttt{reset()} \\
+    Initialization and stepping
+      & Parameters and input start values are applied during initialization, and \texttt{do\_step()} advances the FMU by one communication step \\
     \addlinespace
     Zero-step output evaluation
-      & \texttt{evaluate\_outputs()} returns the FMU output that satisfies the declared algebraic output equation \\
+      & \texttt{evaluate\_outputs()} returns outputs for supplied interface inputs without committing a macro step \\
     \addlinespace
-    Batched FMI calls
-      & Number of FMI getter/setter invocations per step equals the number of active base types, independent of port count \\
+    Reset and reuse
+      & The wrapper can be reset and initialized again for another run \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-These properties confirm that \texttt{FMUComponent} faithfully adapts the FMI~2.0 Co-Simulation standard to the component contract without leaking backend-specific semantics.
-End-to-end integration with control, musculoskeletal, and FEM components of a real pendulum model is deferred to the case study in Chapter~\ref{chap:case_study}.
+These properties confirm that \texttt{FMUComponent} maps FMI~2.0 Co-Simulation FMUs to the common component contract.
+End-to-end integration with control, musculoskeletal, and FEM components is evaluated in the controlled-pendulum case study in Chapter~\ref{chap:case_study}.
