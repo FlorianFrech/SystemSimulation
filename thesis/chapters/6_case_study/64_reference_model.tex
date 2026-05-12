@@ -1,0 +1,120 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Reference Model and Evaluation Metrics}
+\label{sec:case_study_reference_metrics}
+
+The numerical references define the comparison basis for the scenarios in Section~\ref{sec:case_study_scenarios}.
+Two scenarios are compared with monolithic OpenModelica models of the same closed-loop configuration.
+The performance scenario uses a full-FEM co-simulation run as high-fidelity benchmark.
+None of these references is treated as experimental ground truth.
+
+The case-study scenarios are reproducible from the \syssimx{} repository.
+The scenario notebooks contain the exact co-simulation configurations used for the figures in this chapter.
+The OpenModelica reference models are stored in the controlled-pendulum Modelica package.
+The exported reference trajectories are loaded by the plotting scripts so that the thesis figures can be regenerated without recompiling the Modelica models.
+
+\paragraph{OpenModelica Reference Models.}
+Table~\ref{tab:case_reference_models} lists the monolithic reference models used in the reported scenario evaluation.
+Each reference contains the setpoint, controller, actuator, sensor blocks when required, and pendulum plant in one equation-based system.
+Both references start at $0\,\mathrm{s}$ and use an output interval of $10^{-3}\,\mathrm{s}$.
+The baseline reference stops at $2\,\mathrm{s}$.
+The contact reference stops at $1\,\mathrm{s}$.
+
+\begin{table}[tbp]
+  \centering
+  \small
+  \caption{Monolithic OpenModelica reference models used in the case study.}
+  \label{tab:case_reference_models}
+  \begin{tabular}{p{4.0cm} p{5.0cm} p{5.2cm}}
+    \toprule
+    \textbf{Reference model} & \textbf{Scenario role} & \textbf{Main observables} \\
+    \midrule
+    \texttt{NoContact.Baseline}
+      & Baseline closed-loop system without sensor quantization or contact
+      & $\theta$, $\omega$, $\alpha$, $u_{\mathrm{control}}$, $\tau$ \\
+    \addlinespace
+    \texttt{Contact.RigidContact}
+      & Contact and multi-model switching scenario
+      & $\theta$, $\theta_{\mathrm{meas}}$, \texttt{pid.I\_out}, contact flag \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Solver Configuration.}
+The OpenModelica reference simulations use DASSL.
+The reference output interval is fixed to $10^{-3}\,\mathrm{s}$ by the experiment annotations.
+The reported OpenModelica runs use an experiment tolerance of \(10^{-6}\).
+
+All FMUs in the co-simulation use CVODE as the default solver.
+The exported CVODE configuration uses a multi-step and multi-order BDF method.
+The only exception is the PID controller with reset functionality.
+It uses the Euler-based FMU because the reset input is applied through a zero-duration step during event handling.
+The macro communication step \(\Delta t\) is stated in each scenario and is independent of the internal FMU solver.
+
+\paragraph{Full-FEM Benchmark Reference.}
+The performance benchmark does not use OpenModelica as its reference.
+It compares the switched \texttt{MasterPendulum} run with a co-simulation run that keeps the FEM pendulum active over the full trajectory.
+This full-FEM run provides the high-fidelity benchmark for the runtime comparison.
+The benchmark evaluates the computational benefit of switching while preserving the contact-relevant FEM response.
+
+\paragraph{Compared Quantities.}
+The main trajectory variable is the pendulum angle $\theta$.
+For the baseline scenario, the angle is compared across multiple macro step sizes.
+For the multi-model contact scenario, the contact event time and the PID integrator state are also evaluated.
+For the performance scenario, wall-clock runtime and FEM-active time are reported in addition to the trajectory deviation.
+
+\paragraph{Trajectory Error.}
+All trajectory errors are evaluated on a common comparison grid.
+The OpenModelica reference trajectory is interpolated to the accepted co-simulation output times.
+For the pendulum angle, the pointwise error is
+\begin{equation}
+  e_{\theta,j}
+  =
+  \theta_{\mathrm{cs}}(t_j)
+  -
+  \theta_{\mathrm{ref}}(t_j) .
+\end{equation}
+The maximum angle error is
+\begin{equation}
+  E_{\infty,\theta}
+  =
+  \max_j |e_{\theta,j}| .
+\end{equation}
+The integrated angle error is
+\begin{equation}
+  E_{2,\theta}
+  =
+  \left(
+    \frac{1}{T - T_0}
+    \sum_j e_{\theta,j}^{2}\,\Delta t_j
+  \right)^{1/2}.
+\end{equation}
+The maximum error identifies the worst trajectory deviation.
+The integrated error captures the deviation over the full simulation interval.
+
+\paragraph{Event-Time Error.}
+For contact scenarios, the event-time error is evaluated separately from the trajectory error.
+If $t_{\mathrm{event,cs}}$ is the event time detected by the co-simulation algorithm and $t_{\mathrm{event,ref}}$ is the corresponding event time in the OpenModelica reference, the absolute timing error is
+\begin{equation}
+  E_{t}
+  =
+  |t_{\mathrm{event,cs}} - t_{\mathrm{event,ref}}| .
+\end{equation}
+This metric is used only when a corresponding reference event can be identified unambiguously.
+
+\paragraph{Switching Consistency.}
+The multi-model contact scenario also checks whether runtime switching introduces discontinuities in the exposed plant state.
+The \texttt{MasterPendulum} records every accepted switch in its \texttt{sync\_events} log.
+For each switch, the deviations in \(\theta\) and \(\omega\) before and after state transfer are evaluated.
+The maximum observed deviation is reported as the switching consistency error.
+Values at numerical round-off level indicate that the model switch did not introduce a visible state jump.
+
+\paragraph{Convergence Criterion.}
+Numerical verification is based on macro-step refinement.
+For the baseline scenario, the co-simulation is repeated with decreasing communication step sizes.
+The expected behavior is that $E_{\infty,\theta}$ and $E_{2,\theta}$ decrease as the macro step size is reduced.
+A scenario is interpreted as numerically verified when the trajectory approaches the reference under this refinement and the remaining deviations are consistent with the stated modeling differences.
+
+\paragraph{Performance Criterion.}
+The performance benchmark compares full-FEM execution with a switched configuration that activates the FEM model only near contact.
+The switched configuration is acceptable if its maximum angle error against the full-FEM result is not larger than the maximum angle error of the rigid-body model against the same full-FEM result.
+The computational benefit is reported through wall-clock speedup and reduced FEM-active time.

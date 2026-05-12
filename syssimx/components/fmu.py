@@ -275,6 +275,21 @@ class FMUComponent(CoSimComponent):
         self._apply_input_starts()
         self._instance.exitInitializationMode()
 
+    def reinitialize_instance(self, t0: float) -> None:
+        """Recreate the FMU instance and enter initialized state at ``t0``.
+
+        This is intentionally different from FMI ``reset()``. Some FMUs do not
+        support reliable rollback through ``fmi2Reset`` after stepping, but can
+        be restored by creating a fresh instance and applying reconstructed
+        initial conditions through parameters.
+        """
+        self._instance.instantiate()
+        self._instance.setupExperiment(startTime=t0)
+        self._instance.enterInitializationMode()
+        self._apply_parameters_starts()
+        self._apply_input_starts()
+        self._instance.exitInitializationMode()
+
     # ----------------------------------------------------------------------------
     # Initialization helpers
     # ----------------------------------------------------------------------------

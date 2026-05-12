@@ -5,6 +5,37 @@ FULL_WIDTH = 5.9
 HALF_WIDTH = 2.85
 SUBFIG_048 = 2.80
 
+REFERENCE_COLOR = "#1A1A1A"
+
+# Unified palette for §6.5.1, §6.5.2, §6.5.3 figures.
+# Move to thesis/notebooks/plot_setup.py to share across notebooks.
+MODEL_COLORS = {
+    "FEM":     "#1f77b4",   # blue   — high-fidelity plant
+    "FMU":     "#2ca02c",   # green  — rigid-body plant
+    "OpenSim": "#ff7f0e",   # orange — musculoskeletal plant
+}
+REFERENCE_STYLE = dict(color="#d62728", linestyle="--", linewidth=1.4, alpha=0.85)
+WALL_STYLE      = dict(color="0.45", linestyle=":", linewidth=1.0)
+GRID_STYLE      = dict(alpha=0.4)
+PANEL_LABEL_STYLE = dict(
+    fontweight="bold", fontsize=10,
+    bbox=dict(facecolor="white", edgecolor="none", alpha=0.9, pad=2),
+)
+TIMING_TOTAL_COLOR = "#2F4858"
+TIMING_FEM_COLOR   = MODEL_COLORS["FEM"]
+
+STEP_SIZE_COLORS = {
+    0.02: "#7C8DA6",
+    0.01: "#D58936",
+    0.005: "#4F8F6B",
+    0.001: "#B23A48",
+}
+
+METRIC_COLORS = {
+    "e_inf": "#2F4858",
+    "e_2": "#C75C2D",
+}
+
 ALGO_COLORS = {
     "Analytic": "#1A1A1A",
     "Jacobi": "#D55E00",

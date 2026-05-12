@@ -198,24 +198,20 @@ class MasterPendulum(MultiComponent):
             return "FMU"
 
     def _gap_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
-        # Get current angular position from active component
-        current_state = self.get_state()
-        theta = current_state["theta"]["value"]
+        """
+        Select mode based on current angular position (theta) with hysteresis to prevent rapid switching.
+        """
+        theta_value = self.outputs["theta"].get()
+        if theta_value is None:
+            return self.active_mode  # not yet initialized; keep current mode
+        theta = theta_value.magnitude if hasattr(theta_value, "magnitude") else float(theta_value)
 
-        # Handle Quantity objects (with units)
-        if hasattr(theta, "magnitude"):
-            theta = theta.magnitude
-
-        # Convert to degrees for threshold comparison
-        theta_deg = np.rad2deg(theta)
-
-        # Use absolute value for symmetric contact detection
-        theta_abs = abs(theta_deg)
+        theta_abs_deg = abs(np.rad2deg(theta))
 
         # Mode selection based on angular position thresholds
-        if theta_abs > 15:
+        if theta_abs_deg > 15:
             return "FMU"
-        elif theta_abs > 5:
+        elif theta_abs_deg > np.rad2deg(0.075):
             return "OpenSim"
         else:
             return "FEM"

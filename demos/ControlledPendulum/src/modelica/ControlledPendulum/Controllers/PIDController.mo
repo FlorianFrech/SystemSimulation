@@ -2,9 +2,9 @@ within ControlledPendulum.Controllers;
 
 model PIDController
   // Parameters (parallel form)
-  parameter Real Kp=10 "Proportional gain";
-  parameter Real Ki=4 "Integral gain";
-  parameter Real Kd=0.15 "Derivative gain";
+  parameter Real Kp=12 "Proportional gain";
+  parameter Real Ki=8 "Integral gain";
+  parameter Real Kd=0.02 "Derivative gain";
   parameter Real uMin=-1, uMax=1 "Output limits";
   parameter Boolean useReset=false "Enable integrator reset input";
   

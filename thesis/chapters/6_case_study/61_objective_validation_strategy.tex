@@ -1,0 +1,33 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Case-Study Objective and Validation Strategy}
+\label{sec:case_study_strategy}
+
+The controlled pendulum is chosen because it is simple enough to interpret but rich enough to exercise the main framework features.
+It combines closed-loop control, sensor feedback, actuator dynamics, contact, strong coupling, and alternative pendulum models with different fidelity levels.
+It also permits a monolithic OpenModelica reference model.
+This makes it suitable for numerical verification against a reference solution and for workflow validation of the heterogeneous co-simulation framework.
+
+The case study verifies selected co-simulation results against monolithic OpenModelica reference simulations and validates the framework workflow on a controlled pendulum system.
+Performance results are reported as benchmarks.
+No experimental validation is claimed.
+
+The numerical verification follows a convergence-based strategy.
+For scenarios with a monolithic reference, the co-simulation result is compared against the OpenModelica solution for decreasing macro step sizes.
+The expected behavior is that the trajectory error decreases as the communication step size is reduced.
+The OpenModelica models represent the same closed-loop configurations without decomposing the system into separately executed co-simulation units.
+They are numerical references and are not treated as experimental ground truth.
+
+The workflow validation focuses on feature interaction.
+The case study checks whether the framework can assemble the controlled system from heterogeneous components, derive the required execution metadata, resolve strong coupling, handle contact events, and switch between pendulum models during runtime.
+These aspects were verified separately in Chapter~\ref{chap:implementation}.
+Here, they are evaluated in one coupled scenario.
+
+The performance benchmark addresses the computational cost of high-fidelity modeling.
+The full-FEM pendulum is compared with a switched configuration that activates the FEM model only during contact-relevant phases.
+Accuracy is assessed by comparing the relevant trajectories and event behavior.
+The computational benefit is assessed through wall-clock time and FEM-active time.
+
+The following sections separate these three claim types.
+Numerical verification is used when a monolithic OpenModelica reference is available.
+Workflow validation is used when several framework features are exercised together.
+Performance results are reported as benchmarks and are interpreted together with the observed numerical deviation.

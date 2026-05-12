@@ -506,17 +506,19 @@ class MultiComponent(CoSimComponent):
         """
         # Step 1: Check if mode switch is needed
         if self._allow_mode_switching and self.mode_selector is not None:
-            state = self.get_state()
-            proposed_mode = self.mode_selector(t, state)
+            within_dwell = (self.hysteresis is not None and
+                            (t - self.hysteresis.last_switch_time < self.hysteresis.dwell_time))
 
-            # a) Apply hysteresis if configured
-            if self.hysteresis is not None:
-                if not self.hysteresis.can_switch(t, proposed_mode):
-                    proposed_mode = self.active_mode
+            if not within_dwell:
+                proposed_mode = self.mode_selector(t, None)
+                # a) Re-check hysteresis with proposed mode to prevent chattering
+                if self.hysteresis is not None:
+                    if not self.hysteresis.can_switch(t, proposed_mode):
+                        proposed_mode = self.active_mode
 
-            # b) Perform switch if mode changed
-            if proposed_mode != self.active_mode:
-                self._switch_mode(proposed_mode, t)
+                # b) Perform switch if mode changed
+                if proposed_mode != self.active_mode:
+                    self._switch_mode(proposed_mode, t)
 
         # Step 2: Execute active component's time step
         self._require_active_comp().do_step(t, dt)
@@ -803,15 +805,18 @@ class MultiComponent(CoSimComponent):
         """Retrieve internal event hints from the active component.
 
         Delegates to the active sub-component to get any timing hints
-        from internal micro-stepping for event localization.
+        from internal micro-stepping for event localization. Forwarding
+        is unconditional so that hints reported by the active model
+        during a trial step are visible to the hybrid algorithm and can
+        short-circuit bisection.
 
         Returns:
             List of ``InternalEventInfo`` objects from the active
             component. Empty list if no hints available.
         """
-        if self.active_comp and self.active_comp.has_state_events:
-            return self.active_comp.get_internal_event_hints()
-        return []
+        if self.active_comp is None:
+            return []
+        return self.active_comp.get_internal_event_hints()
 
     # -------------------------------------------------------------------
     # Detect Direct Feedthrough

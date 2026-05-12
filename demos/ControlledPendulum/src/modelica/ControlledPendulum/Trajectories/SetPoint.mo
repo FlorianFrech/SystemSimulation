@@ -11,7 +11,7 @@ model SetPoint
   // Parameters
   parameter Real offset(unit="rad") = 0 "Mean angle";
   parameter Real amplitude(unit="rad") = pi/9 "Peak amplitude in rad";
-  parameter Real frequency(unit="Hz") = 0.75 "Sine frequency";
+  parameter Real frequency(unit="Hz") = 3 "Sine frequency";
   parameter Real phase(unit="rad") = 0 "Phase at t = startTime";
 
 protected

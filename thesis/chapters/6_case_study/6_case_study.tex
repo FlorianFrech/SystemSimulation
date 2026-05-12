@@ -1,55 +1,17 @@
 \chapter{Case Study: Controlled Pendulum System}
 \label{chap:case_study}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Choice and Justification of the Case Study}
+Chapter~\ref{chap:implementation} verified the main \syssimx{} features in isolation.
+This chapter evaluates their combined use in a controlled-pendulum case study.
+The case study connects a reference trajectory, sensor feedback, a controller, an actuator, and a pendulum plant in one closed-loop system.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{System Engineering of the Controlled Pendulum}
+The chapter first defines the validation strategy.
+It then introduces the controlled-pendulum system, the pendulum model variants, and the monolithic reference models.
+The final part evaluates selected scenarios and discusses the observed accuracy, event behavior, model-switching behavior, and computational cost.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{System Architecture and Signal Flow}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{PID Controller}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{BLDC Drive Model}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Sensors and Quantization}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Pendulum Models}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Modelica Pendulum}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{OpenSim Pendulum}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{FEM Pendulum}
-\begin{enumerate}
-    \item Mesh generation and geometry
-    \item Neo-Hookean Material Law
-    \item Variational Formulation
-    \item Newmark Time Integration Scheme
-    \item Torque Application
-    \item Contact Boundary
-    \item Rigid Body Mappings 
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Multi-Model Pendulum}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{System Assembly and Configuration}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Component Wiring and Connection Graph}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Algebraic Loop Analysis}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Monolithic Modelica Reference Model}
+\input{chapters/6_case_study/61_objective_validation_strategy.tex}
+\input{chapters/6_case_study/62_controlled_pendulum_system.tex}
+\input{chapters/6_case_study/63_pendulum_models.tex}
+\input{chapters/6_case_study/64_reference_model.tex}
+\input{chapters/6_case_study/65_validation_scenarios.tex}
+\input{chapters/6_case_study/66_discussion_of_results.tex}

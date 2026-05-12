@@ -100,3 +100,6 @@ claude/
 CLAUDE.md
 *.sto
 *.mot
+
+# Matplotlib local cache
+.mplconfig/

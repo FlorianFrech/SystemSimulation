@@ -68,11 +68,11 @@ class MaterialParameters:
     def __init__(
         self,
         model="svk", # or "svk"
-        E_pendulum=70e9,
-        nu_pendulum=0.2,
-        rho_pendulum=2700,
+        E_pendulum=2.1e11,
+        nu_pendulum=0.3,
+        rho_pendulum=7850,
         E_wall=210e9,
-        nu_wall=0.3, #0.2
+        nu_wall=0.3,
         rho_wall=7850,
         thickness=0.01,  # thin (plane-stress assumption)
     ):
@@ -160,7 +160,7 @@ class ContactParameters:
         kn (float): Contact stiffness in N/m.
     """
 
-    def __init__(self, kn=1e10):
+    def __init__(self, kn=2e9):
         self.kn = kn
 
     def __str__(self):

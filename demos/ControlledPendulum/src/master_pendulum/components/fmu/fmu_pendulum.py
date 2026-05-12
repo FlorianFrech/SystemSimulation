@@ -64,14 +64,8 @@ class FMUPendulum(FMUComponent):
         elif self.solver == "cvode":
             theta_start = snapshot["theta"]["value"]
             omega_start = snapshot["omega"]["value"]
-            self._instance.reset()
-            self._instance.instantiate()
-            self._instance.setupExperiment(startTime=t)
-            self._instance.enterInitializationMode()
             self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
-            self._apply_parameters_starts()
-            self._apply_input_starts()
-            self._instance.exitInitializationMode()
+            self.reinitialize_instance(t)
         self._update_output_states(t)
         self._record_outputs(t)
 
@@ -83,14 +77,8 @@ class FMUPendulum(FMUComponent):
         output = self.get_outputs()
         omega_start = -restitution * output["omega"].magnitude
 
-        self._instance.reset()
-        self._instance.instantiate()
-        self._instance.setupExperiment(startTime=t)
-        self._instance.enterInitializationMode()
         self.set_parameters(**{"theta_start": 0, "omega_start": omega_start})
-        self._apply_parameters_starts()
-        self._apply_input_starts()
-        self._instance.exitInitializationMode()
+        self.reinitialize_instance(t)
 
     def _update_output_states(
         self, t: float | None = None, event_names: list[str] | None = []

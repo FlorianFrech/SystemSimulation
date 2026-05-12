@@ -19,7 +19,7 @@ Its role is to show that the framework features from Chapter 5 work together on 
 
 The controlled pendulum is used to verify selected co-simulation results against monolithic OpenModelica reference simulations and to validate that the framework workflow combines heterogeneous tools, hybrid events, and runtime model switching.
 
-The chapter is approximately 12 to 15 pages.
+The chapter is approximately 15 to 20 pages.
 
 ### Verification and Validation Terminology
 
@@ -274,10 +274,18 @@ The switched configuration is acceptable if its angle $L^\infty$ error against t
 The benefit is reported as the wall-clock speedup and the reduction of FEM-active time.
 
 **Figure shape.**
-One compact figure with two panels.
+One compact figure with three panels.
 
-- Panel A. Trajectory or contact-window comparison for full FEM, switched, and rigid-body.
-- Panel B. Wall-clock time bars or normalized speedup against the rigid-body lower bound.
+- Panel A. Trajectory comparison of full-FEM and switched configurations over the full horizon, with the FEM-active interval indicated by a thin mode strip between the trajectory panels.
+- Panel B. Magnification of the contact window in which the FEM model is active.
+- Panel C. Median wall-clock time of full-FEM and switched configurations, decomposed into total run time and FEM solver time, with the runtime speedup reported as an inset.
+
+**Reference traces in the figure.**
+The §6.5.3 figure shows only the two performance-relevant traces: full-FEM and switched.
+The OpenModelica rigid-contact reference does **not** appear in the §6.5.3 figure.
+It is the verification reference of §6.5.2 and would blur the performance message if added.
+The rigid-body bound for the acceptance criterion is reported only as a numerical value in the §6.5.3 table.
+
 
 **Required honest reporting.**
 If switching introduces visible discontinuities or contact artifacts, state this explicitly in §6.6.
@@ -289,6 +297,195 @@ The performance comparison evaluates whether the multi-model plant can reduce th
 The switched configuration uses the FEM model only inside the contact window and otherwise advances the rigid-body model.
 The comparison therefore measures both numerical deviation and wall-clock runtime.
 ```
+
+---
+
+## Scenario 6.5.3 — Implementation Findings (engineering notes)
+
+This section captures empirical findings from the implementation of the
+performance benchmark that are needed to interpret §6.5.3 and §6.6 honestly.
+They are notes for the author and should be condensed into the chapter
+discussion, not copied verbatim.
+
+### Headline benchmark numbers (`thesis/notebooks/casestudy_performance.ipynb`)
+
+The final thesis values are medians over five measured runs.
+One warm-up run was excluded.
+Do not report the earlier single-run timing values in the thesis text.
+
+| Metric | Value |
+|---|---:|
+| Full-FEM total wall time | `464.032 s` |
+| Switched total wall time | `294.321 s` |
+| End-to-end speedup | `1.577x` |
+| Full-FEM solver wall time | `454.951 s` |
+| Switched FEM solver wall time | `224.344 s` |
+| FEM solver wall-time reduction | `2.03x` |
+| Full-FEM solver calls | `850` |
+| Switched FEM solver calls | `425` |
+| Switched FEM-active simulated time | `0.189 s` |
+| Switched FEM-active share | `47.3%` |
+| Mode switches | `2` |
+| L∞(switched, full) | `2.839e-02 rad` |
+| L²(switched, full) | `8.202e-03 rad` |
+
+**Headline statement.** End-to-end speedup is `1.58x`.
+The FEM solver wall time is reduced by `2.03x`.
+The gap between FEM solver speedup and end-to-end speedup is the
+`MasterPendulum` orchestration overhead and the non-FEM part of the
+simulation.
+
+### State-projection effect at FMU → FEM switch
+
+The switched and full-FEM runs use **identical FEM parameters** (mesh,
+material, contact stiffness, mesh order, gravity, internal step). The
+divergence between their trajectories has a different cause.
+
+At the FMU → FEM switch (`MultiComponent._switch_mode`),
+`FEMPendulum.set_state` rebuilds `(u, v, a)` as a pure rigid-body rotation
+of `(θ, ω, τ)` from the FMU and resets the Newmark history
+`(u_old, v_old, a_old) ← (u, v, a)`. The body therefore enters contact
+without the deformation field, vibrational modes, or Newmark history that
+the full-FEM run has accumulated for ~170 ms before first impact.
+
+Observed consequences in the controlled-pendulum scenario:
+
+- The **first wall-hit time matches to ~10⁻⁵ s** (essentially one FEM
+  micro-step).
+- Subsequent wall-hit times **drift earlier by ~1 ms per bounce** in the
+  switched run. By the fifth bounce the offset is ~4 ms.
+- **Wall penetration is greater in full-FEM than in switched** at every
+  bounce, because the full-FEM body carries vibrational kinetic energy
+  and pre-stress at impact while the switched body does not.
+
+### Required honest reporting in §6.6
+
+The above effect is exactly the modeling cost the chapter must discuss
+under "Discuss the consequences of approximating rigid contact with stiff
+compliant FEM contact in 6.5.2". Suggested phrasing for §6.6:
+
+> The switched configuration enters FEM contact from a rigid-body
+> projection of the FMU state. Compared with the full-FEM run the
+> switched body lacks the deformation field and Newmark history
+> accumulated during the upswing. As a result the switched body
+> penetrates the wall less deeply at each bounce, and the contact times
+> drift earlier by approximately 1 ms per bounce. This is the modeling
+> cost of state projection at a mode switch and bounds the sense in
+> which the switched configuration "reproduces" the full-FEM trajectory.
+
+### Acceptance-criterion plumbing (§6.4)
+
+The §6.5.3 figure shows only `Full FEM` and `Switched` trajectories
+(plus a thin FEM-active mode strip between the two trajectory panels).
+The rigid-contact OpenModelica reference is deliberately omitted from the
+figure to keep the performance message clean and is instead reported as
+a numerical row in the §6.5.3 metrics table.
+
+Two error rows are required in the §6.5.3 table:
+
+1. `theta_E∞(switched, full-FEM)` — already computed in the notebook.
+2. `theta_E∞(rigid, full-FEM)` — the rigid-body lower bound. Compute it
+   by adding a third "Rigid pendulum" run to `casestudy_performance.ipynb`
+   that uses the FMU pendulum as the plant with `omega_invert` event
+   handling enabled. The same Modelica rigid-contact trace already
+   loaded in the notebook can be reused if its timing aligns with the
+   syssimx macro grid.
+
+The acceptance criterion `L∞(switched, full-FEM) ≤ L∞(rigid, full-FEM)`
+is then checked numerically and stated as a one-line claim under §6.5.3.
+
+A separate row `theta_E∞(syssimx, monolithic-Modelica)` belongs to
+Section 6.5.2 only and is reused from `casestudy_model_switching.ipynb`.
+It is not part of the §6.5.3 table.
+
+
+### Implementation-side optimizations applied
+
+Four library and notebook changes were necessary to obtain the headline
+numbers above. They are *implementation choices* that belong to Chapter 5,
+but their motivation is rooted in the Chapter 6 case study. The §6.6
+discussion should reference them only by effect, not by code site.
+
+1. **Internal-event-hint forwarding through `MultiComponent`.**
+   `MultiComponent.get_internal_event_hints` now delegates unconditionally
+   to `active_comp.get_internal_event_hints`, so the hybrid algorithm can
+   short-circuit bisection when the FEM has already localized a contact
+   crossing during its own micro-stepping. Without forwarding, every
+   contact event in the switched run incurred a full bisection that
+   re-stepped the FEM 4–17 times per event.
+
+2. **`get_state` removed from `MultiComponent._do_step_internal`.**
+   The mode selector is now invoked with `(t, None)` and reads what it
+   needs from cached output ports (`self.outputs[...].get()`). The
+   previous implementation called `FEMPendulum._rigid_proxy()` (six
+   NGSolve mesh integrals) once per macro step while FEM was active,
+   contributing tens of seconds of orchestration overhead.
+
+3. **Hysteresis-aware short-circuit.**
+   `_do_step_internal` checks the dwell window before invoking the
+   selector. When the dwell has not elapsed, the selector is skipped
+   entirely. Defensive optimization for selectors that are not yet
+   following lever (2).
+
+4. **Hybrid-algorithm tolerance tuning per scenario.**
+   `tol_time = 1e-5 s` (10 µs ≈ 1 % of macro step) and
+   `event_dedup_tol = 5e-4 s` are set on `system.algorithm` after
+   `system.initialize`. The first reduces bisection iterations from
+   ~17 to ~3 per event when the hint short-circuit does not fire; the
+   second folds the spurious double-event observed at the second bounce
+   in early experiments.
+
+### Performance instrumentation pitfall
+
+`fem_wall_s` and `fem_calls` must be measured by wrapping
+`FEMPendulum._do_step_internal`, **not** `do_step`. The hybrid algorithm
+calls `_do_step_internal` directly on event sources for trial steps in
+`_detect_crossings`, for bisection iterations in `_locate_event_time`,
+and for the post-localization event-collection re-step. Wrapping
+`do_step` would miss those calls in the full-FEM case (where the FEM is
+the event source) but catch them in the switched case (where they
+delegate via `MasterPendulum.active_comp.do_step`), making the two
+cases incomparable. With the wrong wrapping, `fem_calls` reads 405 for
+full-FEM and 425 for switched — appearing to show *more* FEM work in the
+switched case. With the correct wrapping the numbers are 850 and 425, a
+clean 2× reduction.
+
+### Where the orchestration overhead goes
+
+For the §6.6 discussion of "tradeoff between accuracy and runtime", the
+gap between the FEM solver speedup and the observed end-to-end speedup is
+consumed by:
+
+- mode-selector evaluations (one cached-output read per macro step),
+- `_detect_crossings` trial steps that delegate FMU/FEM stepping
+  through `MasterPendulum`,
+- per-event post-localization re-step,
+- `set_inputs` propagation to all three sub-components every macro step,
+- `MasterPendulum.set_state` at each mode switch, including
+  `_rigid_proxy` evaluation in the source component.
+
+This is a *constant* per macro step, so the relative cost shrinks as the
+FEM problem becomes more expensive (finer mesh, longer horizon).
+The reported end-to-end speedup should therefore be interpreted as a
+benchmark for the present model size, not as a general upper bound.
+
+### Configuration parameters used by the figure
+
+These are the values that produce the published `performance_switching.pdf`.
+They are repeated here because they cross-cut the figure caption and
+table footnotes in the chapter.
+
+- `T_END = 0.4 s`
+- `MACRO_DT = FEM_INTERNAL_DT = 1e-3 s`
+- `CONTACT_STIFFNESS = 2e9 N/m`
+- `DWELL_TIME = 0.05 s`
+- `FEM_SWITCH_THRESHOLD_RAD = 0.075 rad ≈ 4.3°`
+- `algorithm.tol_time = 1e-5 s`
+- `algorithm.event_dedup_tol = 5e-4 s`
+- Material: SVK, `E = 2.1·10¹¹ Pa`, `ν = 0.3`, `ρ = 7850 kg/m³`
+- Mesh: order 2, `max_element_size = 0.03`, curved
+- Geometry: defaults from `pendulum_config.py`
+  (`r_rod = 0.015`, `r_head = 0.06`, `l_center = 0.24`, `wall_len_y = 0.25`)
 
 ---
 

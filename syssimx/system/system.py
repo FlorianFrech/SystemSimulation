@@ -54,6 +54,8 @@ See Also:
 
 from __future__ import annotations
 
+import logging
+import timeit
 from typing import Any
 
 import networkx as nx
@@ -70,6 +72,8 @@ from .algorithms.ijcsa import solve_algebraic_scc_ijcsa
 from .connection import Connection, EventConnection
 
 _ports_compatible = PortSpec.compatible
+
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------------
@@ -731,12 +735,17 @@ class System:
             (Hybrid algorithm) or iteration (IJCSA for algebraic loops).
             The ``dt`` parameter controls the macro step size.
         """
+        timer = timeit.default_timer
+        logger.info(f"Starting simulation run from t={t0} to t={tf} with dt={dt}")
         t = t0
         self.t_end = tf
+        start_time = timer()
         while t < tf - 1e-12:
             dt = min(dt, tf - t)
             self.algorithm.step(self, t, dt)
             t += dt
+        end_time = timer()
+        logger.info(f"Simulation completed in {end_time - start_time:.2f} seconds")
 
     # ----------------------------------------------------------------------------
     # Get history of all components

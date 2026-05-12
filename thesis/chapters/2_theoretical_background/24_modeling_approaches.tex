@@ -328,20 +328,44 @@ For nonlinear material laws or large-deformation kinematics, $\mathbf{F}_{\mathr
 \paragraph{Time Integration and Nonlinear Solution.}
 After spatial semi-discretization, a time integration scheme is required to advance the nodal displacements, velocities, and accelerations.
 The Newmark method is an implicit time-integration scheme for second-order structural dynamics problems.
-In the average-acceleration form used here, the update relations are~\cite{newmark_method_1959,kochmann_introduction_2025}
+In the average-acceleration form used here, the inertial contribution in the weak form is evaluated with the new acceleration~\cite{newmark_method_1959,kochmann_introduction_2025}
+\begin{equation}
+    \int_{\Omega_0}
+    \rho_0\,
+    \ddot{\mathbf{u}}^{n+1}(\mathbf{u}^{n+1})
+    \cdot
+    \mathbf{v}\,
+    \mathrm{d}V .
+    \label{eq:fem_newmark_inertia}
+\end{equation}
+The new velocity and acceleration are expressed from the unknown displacement and the stored previous states by
 \begin{align}
-    \frac{\mathbf{U}^{n+1}-\mathbf{U}^n}{\Delta t}
+    \dot{\mathbf{u}}^{n+1}
     &=
-    \frac{\dot{\mathbf{U}}^n+\dot{\mathbf{U}}^{n+1}}{2},
-    \label{eq:fem_newmark_displacement}
-    \\
-    \frac{\dot{\mathbf{U}}^{n+1}-\dot{\mathbf{U}}^n}{\Delta t}
-    &=
-    \frac{\ddot{\mathbf{U}}^n+\ddot{\mathbf{U}}^{n+1}}{2}.
+    \frac{2}{\Delta t}
+    \left(
+        \mathbf{u}^{n+1}
+        -
+        \mathbf{u}^{n}
+    \right)
+    -
+    \dot{\mathbf{u}}^{n},
     \label{eq:fem_newmark_velocity}
+    \\
+    \ddot{\mathbf{u}}^{n+1}
+    &=
+    \frac{2}{\Delta t}
+    \left(
+        \dot{\mathbf{u}}^{n+1}
+        -
+        \dot{\mathbf{u}}^{n}
+    \right)
+    -
+    \ddot{\mathbf{u}}^{n}.
+    \label{eq:fem_newmark_acceleration}
 \end{align}
-These equations can be rearranged so that the unknown velocity and acceleration at the new time step are expressed in terms of the unknown displacement $\mathbf{U}^{n+1}$.
-The time-discrete problem is therefore solved by first finding $\mathbf{U}^{n+1}$, typically with Newton's method, and then updating $\dot{\mathbf{U}}^{n+1}$ and $\ddot{\mathbf{U}}^{n+1}$ from the Newmark relations.
+The time-discrete problem is therefore solved by first finding $\mathbf{u}^{n+1}$, typically with Newton's method.
+The velocity $\dot{\mathbf{u}}^{n+1}$ and the acceleration $\ddot{\mathbf{u}}^{n+1}$ are then updated from the Newmark relations.
 This is the numerical pattern used by the finite element pendulum component.
 
 \paragraph{Relation to the Pendulum Model.}

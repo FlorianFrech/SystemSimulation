@@ -61,7 +61,7 @@ equation
   tau = drive.torque; 
   
   annotation(
-    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 1, Interval = 0.0010)
   );
 
 end RigidContact;

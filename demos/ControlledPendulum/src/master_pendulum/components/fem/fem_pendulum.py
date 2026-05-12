@@ -7,6 +7,7 @@ It provides methods for initializing the model, setting and getting the state, h
 """
 
 from typing import Any
+import logging
 
 import ipywidgets as widgets
 import numpy as np
@@ -23,6 +24,8 @@ from .pendulum_mesh import build_mesh
 from syssimx.components.fem import FEMComponent
 from syssimx.core.port import PortSpec, PortType
 from syssimx.utilities.units import Quantity, ureg
+
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------
 # Port specifications
@@ -55,8 +58,8 @@ class FEMPendulum(FEMComponent):
         super().__init__(name, group=group)
 
         # Define input and output specifications
-        self.input_specs = INPUT_SPECS
-        self.output_specs = OUTPUT_SPECS
+        self.input_specs = INPUT_SPECS.copy()
+        self.output_specs = OUTPUT_SPECS.copy()
         self._initialize_ports_from_specs()
 
         # Pendulum configuration parameters
@@ -629,7 +632,7 @@ class FEMPendulum(FEMComponent):
         if "wall_hit" not in event_names:
             return
 
-        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s.")
+        print(f"[{self.name}] Event 'wall_hit' at t={t:.6f}s.")
 
         # Invert velocity field (keep displacement and old states unchanged)
         if not self._with_contact:

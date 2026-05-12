@@ -511,6 +511,7 @@ class HybridAlgorithm(Algorithm):
 
         # 7) Bisection loop
         for iteration in range(self.max_iter):
+            logger.debug("Bisection iteration %d: interval [%.8f, %.8f]", iteration + 1, left, right)
             # a) Check termination: interval width
             if right - left <= self.tol_time:
                 t_event = right
