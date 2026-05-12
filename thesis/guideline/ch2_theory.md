@@ -1,4 +1,191 @@
-# Writing Guideline – Modeling Approaches Section (Chapter 2.4)
+# Chapter 2 Guideline
+
+This document defines the scope and boundary rules for Chapter 2.
+Chapter 2 provides the theoretical basis needed to understand the framework,
+implementation, and case study.
+It must not become a second state-of-the-art chapter or a hidden
+implementation chapter.
+
+Use this document together with:
+
+- `README.md`
+- `golden_rules_writing_summary.md`
+- `writing_style.md`
+- `glossary.md`
+- `notation.md`
+
+---
+
+## Role of Chapter 2
+
+Chapter 2 should provide the minimum complete theoretical basis needed for the
+reader to:
+
+- understand the framework architecture,
+- understand the component abstractions,
+- understand continuous-time, hybrid, and co-simulation terminology,
+- follow the implementation without conceptual gaps,
+- and interpret the controlled-pendulum case study.
+
+Chapter 2 explains concepts.
+Chapter 5 explains how `syssimx` realizes them.
+Chapter 6 explains which concrete models and solver settings are used in the
+case study.
+
+---
+
+## Chapter 2 Must Not
+
+Chapter 2 must not:
+
+- become a detailed algorithm chapter,
+- repeat the state of the art,
+- include code-level or API-level implementation detail,
+- derive framework-specific procedures that belong in Chapter 5,
+- overload the reader with formalism that is not used later,
+- or name case-study solver settings that belong in Chapter 6.
+
+---
+
+## Standard Subsection Pattern
+
+Each theory subsection should follow this pattern when practical.
+
+1. Short prose bridge.
+2. Core concept explanation.
+3. Required notation or notation extension.
+4. Minimal example or figure.
+5. Boundary sentence that defers technical realization to the owning chapter.
+
+---
+
+## Theory Versus Implementation Boundary
+
+The theory chapter should explain:
+
+- what a concept is,
+- why it matters,
+- what problem it solves,
+- what information it produces,
+- and which later chapter realizes it concretely.
+
+The implementation chapter should explain:
+
+- exact data structures,
+- graph construction,
+- iteration schemes,
+- solver logic,
+- ordering logic,
+- event-handling logic,
+- and verification of the realized behavior.
+
+---
+
+## Co-Simulation Section Scope
+
+The co-simulation section should explain enough for the reader to understand:
+
+- why simulation units exchange data only at communication points,
+- why inputs must be approximated between communication points,
+- why direct feedthrough matters for execution ordering,
+- why algebraic loops arise from instantaneous cyclic dependencies,
+- why coupled initialization is nontrivial,
+- why hybrid co-simulation is harder than purely continuous co-simulation,
+- and why FMI matters as the standard interface layer.
+
+The co-simulation section must not derive:
+
+- detailed graph construction logic,
+- active-output filtering details,
+- SCC detection procedures,
+- Tarjan or implementation-specific graph algorithms,
+- the exact local or global IJCSA implementation,
+- Jacobian assembly details,
+- convergence-management details,
+- event localization by bisection in procedural detail,
+- rollback realization details,
+- or implementation-specific initialization sequences.
+
+---
+
+## Co-Simulation Figure Guidance
+
+The preferred structural-analysis figure in Chapter 2 is conceptual.
+It should show the principle, not the exact `syssimx` implementation.
+
+Recommended three-panel structure:
+
+- Panel 1: port connections and direct-feedthrough hints at simulation-unit
+  level.
+- Panel 2: zero-delay dependency graph with one highlighted SCC.
+- Panel 3: condensed acyclic graph with the resulting generations.
+
+The figure should communicate:
+
+- port connections and direct-feedthrough information induce a zero-delay
+  dependency graph,
+- a directed cycle in that graph forms one algebraic loop,
+- the loop is a strongly connected component,
+- collapsing each SCC yields an acyclic condensed graph,
+- and execution generations are computed on the condensed graph.
+
+Rules:
+
+- Panel 1 may show ports, but the text should remain at simulation-unit level.
+- Panel 2 should show only the zero-delay graph.
+- Panel 2 should label the loop as one SCC or algebraic-loop block.
+- Panel 3 should show the condensed graph, not the raw cyclic graph with
+  generation braces added afterward.
+- Generation labels belong only to Panel 3.
+- The caption must state that the figure is conceptual.
+
+Implementation-specific refinements such as active-output filtering,
+delayed-producer handling, and stored `System` metadata belong in Chapter 5.
+
+---
+
+## Co-Simulation Draft Status Notes
+
+The following notes capture the current review status of the co-simulation
+section and should be used during revision.
+
+Appropriate topics:
+
+- From monolithic simulation to co-simulation.
+- Mathematical formulation of co-simulation.
+- Structural analysis of a co-simulation scenario.
+- Co-simulation execution strategies.
+- Algebraic loops in co-simulation.
+- Hybrid co-simulation.
+- Functional Mock-up Interface.
+
+Known risks:
+
+- The hybrid co-simulation subsection can become too procedural.
+- Execution-order wording must stay consistent with the condensed-graph
+  interpretation.
+- Coupled initialization should appear as an explicit conceptual issue.
+- The notation table and the co-simulation section must remain harmonized.
+- Forward references and figure logic must be checked after revision.
+
+---
+
+## Chapter 2 Revision Checklist
+
+- [ ] Does the content belong in Chapter 2?
+- [ ] Does the terminology match `glossary.md`?
+- [ ] Does the notation match `notation.md`?
+- [ ] Is the text conceptual rather than implementation-specific?
+- [ ] Is every equation needed later?
+- [ ] Is every figure conceptually correct and useful?
+- [ ] Does the text avoid repeating Chapter 1 motivation?
+- [ ] Does the text avoid becoming a mini-implementation chapter?
+- [ ] Are all references and labels valid?
+- [ ] Does the subsection end with a boundary sentence where needed?
+
+---
+
+# Modeling Approaches Section (Chapter 2.4)
 
 ## Purpose
 

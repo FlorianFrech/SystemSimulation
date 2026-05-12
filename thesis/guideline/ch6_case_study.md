@@ -4,10 +4,13 @@ This document defines the scope, structure, and boundary rules for Chapter 6.
 Chapter 6 covers the controlled-pendulum case study.
 It must be read together with the following documents.
 
-- `thesis/guideline.md`
-- `research/theory/glossary.md`
-- `research/theory/notation.md`
-- `thesis/golden_rules_writing_summary.md`
+- `README.md`
+- `thesis_concept.md`
+- `golden_rules_writing_summary.md`
+- `writing_style.md`
+- `glossary.md`
+- `notation.md`
+- `claims_and_evidence.md`
 
 ---
 

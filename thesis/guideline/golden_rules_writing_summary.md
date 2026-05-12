@@ -181,32 +181,23 @@ Supporting elements:
 
 ## 4. The main “golden rules”
 
-## Take a reader’s view
-Write for your audience, not for yourself.
+**Take a reader’s view:** Write for your audience, not for yourself.
 
-## Tell a story
-A paper is not a dump of results. It needs a directed narrative.
+**Tell a story:** A paper is not a dump of results. It needs a directed narrative.
 
-## Be yourself
-Write naturally first, then revise and polish.
+**Be yourself:** Write naturally first, then revise and polish.
 
-## Make it simple
-Use the simplest explanation that is still technically accurate.
+**Make it simple:** Use the simplest explanation that is still technically accurate.
 
-## Make it concrete
-Prefer concrete words and strong verbs. Avoid vague abstractions and overloaded noun clusters.
+**Make it concrete:** Prefer concrete words and strong verbs. Avoid vague abstractions and overloaded noun clusters.
 
-## Make it short
-Avoid repetition, redundancy, and over-explaining familiar concepts.
+**Make it short:** Avoid repetition, redundancy, and over-explaining familiar concepts.
 
-## Take responsibility
-Clearly distinguish between your contribution and previous work.
+**Take responsibility:** Clearly distinguish between your contribution and previous work.
 
-## Make strong statements
-State your conclusions directly when your evidence supports them.
+**Make strong statements:** State your conclusions directly when your evidence supports them.
 
-## Be self-critical
-Acknowledge uncertainty, limitations, and the work of others.
+**Be self-critical:** Acknowledge uncertainty, limitations, and the work of others.
 
 ---
 
@@ -226,20 +217,15 @@ Common reasons for rejection mentioned in the source:
 
 ## 6. Practical writing principles
 
-## Prefer clarity over pseudo-scientific style
-Simple, coherent writing is better than inflated language.
+**Prefer clarity over pseudo-scientific style:** Simple, coherent writing is better than inflated language.
 
-## Use examples
-Examples improve understanding, especially for complex methodology.
+**Use examples:** Examples improve understanding, especially for complex methodology.
 
-## Maintain logical flow
-Each section and subsection should perform a clear function.
+**Maintain logical flow:** Each section and subsection should perform a clear function.
 
-## Keep structure visible
-Use signposts and subsections where helpful.
+**Keep structure visible:** Use signposts and subsections where helpful.
 
-## Focus on relevance
-Only include material that supports the research question and paper objective.
+**Focus on relevance:** Only include material that supports the research question and paper objective.
 
 ---
 

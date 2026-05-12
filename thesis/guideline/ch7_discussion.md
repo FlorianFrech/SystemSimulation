@@ -4,12 +4,15 @@ This document defines the scope, structure, and boundary rules for Chapter 7.
 Chapter 7 closes the thesis with discussion, limitations, conclusions, and outlook.
 It must be read together with the following documents.
 
-- `thesis/guideline.md`
-- `thesis/chapter5_guideline.md`
-- `thesis/chapter6_guideline.md`
-- `research/theory/glossary.md`
-- `research/theory/notation.md`
-- `thesis/golden_rules_writing_summary.md`
+- `README.md`
+- `thesis_concept.md`
+- `golden_rules_writing_summary.md`
+- `writing_style.md`
+- `glossary.md`
+- `notation.md`
+- `claims_and_evidence.md`
+- `ch5_implementation.md`
+- `ch6_case_study.md`
 
 ---
 
@@ -18,6 +21,11 @@ It must be read together with the following documents.
 Chapter 7 is the synthesis chapter.
 It must not become another implementation chapter and it must not repeat the case-study results in detail.
 Its role is to answer what the thesis demonstrated, what the evidence supports, where the limits are, and what should be done next.
+
+Chapter 7 must explicitly close the loop to the introduction.
+It should refer back to the research gap, contribution, research questions, and objectives from Chapter 1.
+It should not repeat the full motivation.
+It should state which research questions were answered, how they were answered, and which limitations remain.
 
 Use the Hengl and Gould writing rules directly.
 The chapter must answer the research objective, interpret the results, explain discrepancies, state limitations, and make clear conclusions.
@@ -68,14 +76,14 @@ It should not restate all figures and tables.
 
 Use this paragraph order.
 
-1. Overall synthesis of the framework.
-2. Heterogeneous integration through the shared component interface.
-3. Structural analysis, algebraic loops, and master-algorithm orchestration.
-4. Hybrid event handling and dense-time behavior.
-5. Runtime model switching and state projection.
-6. Controlled-pendulum case-study interpretation.
-7. Performance interpretation.
-8. Relation to the state of the art.
+1. Return to the research gap and actual contribution.
+2. Answer RQ1: heterogeneous integration through the shared component interface.
+3. Answer RQ2: structural analysis, algebraic loops, and master-algorithm orchestration.
+4. Answer RQ3: hybrid event handling and dense-time behavior.
+5. Answer RQ4: runtime model switching and state projection.
+6. Answer RQ5: controlled-pendulum case-study interpretation and benchmark evidence.
+7. Interpret the performance result.
+8. Relate the result to the state of the art without turning the section into a literature review.
 
 ### Required Claims
 
@@ -88,6 +96,23 @@ State these claims if the final results support them.
 - The baseline case study shows convergence toward the monolithic OpenModelica reference as the macro step size is refined.
 - The contact case study shows that heterogeneous plant models, hybrid contact events, PID reset, and model switching can be combined in one closed-loop scenario.
 - The performance benchmark shows a runtime benefit when the FEM model is restricted to the contact-relevant part of the trajectory.
+
+### Research Question Closure
+
+Chapter 7 should contain a compact paragraph or table that maps the research
+questions from Chapter 1 to the evidence in Chapters 5 and 6.
+Use this mapping as the starting point.
+
+| Research question | Answer in Chapter 7 |
+|---|---|
+| RQ1: unified representation of heterogeneous models | Answer through the component abstraction, port system, and FMU/OpenSim/FEM wrappers |
+| RQ2: dependency analysis and execution order | Answer through structural analysis, direct-feedthrough metadata, SCC detection, condensation, and algebraic-loop handling |
+| RQ3: hybrid phenomena | Answer through event indicators, trial stepping, event localization, rollback, dense-time event handling, and PID-reset/contact scenarios |
+| RQ4: runtime switching between alternative models | Answer through the `MultiComponent` and `MasterPendulum`, including state adaptation and switching limitations |
+| RQ5: reproduction of representative system behavior | Answer through the controlled-pendulum scenarios, OpenModelica reference comparisons, and runtime benchmark |
+
+Do not repeat all implementation details while answering these questions.
+State the answer, cite the evidence, and explain the remaining boundary.
 
 ### Required Boundaries
 
@@ -136,11 +161,14 @@ This is required by the Hengl and Gould rule to be self-critical and not hide un
 Use short paragraphs with clear topics.
 
 1. Validation boundary.
-2. Numerical and solver limitations.
-3. Modeling limitations of contact.
-4. Runtime switching and state-projection limitations.
-5. Scalability and performance limitations.
-6. Tool-wrapper limitations.
+2. FMI and backend capability limitations.
+3. Numerical and solver limitations.
+4. Hybrid-time representation limitations.
+5. Algebraic-loop solver limitations.
+6. Modeling limitations of contact.
+7. Runtime switching and state-projection limitations.
+8. Scalability and performance limitations.
+9. Tool-wrapper limitations.
 
 ### Required Limitation Points
 
@@ -154,8 +182,32 @@ Include these points unless later results invalidate them.
 - The switched FEM state cannot preserve deformation history that was never simulated.
 - Performance results depend on the FEM mesh, solver tolerances, macro step size, switching thresholds, and hardware.
 - The OpenSim integration path is demonstrated on a simple pendulum and not on a full musculoskeletal model.
+- The OpenSim wrapper covers the main functionality required by the case study, but it is not a general-purpose OpenSim co-simulation interface.
+- The FEM integration is model-specific and does not yet provide a generic NGSolve wrapper comparable to the FMU wrapper.
+- The implementation is constrained by the capabilities exposed by the exported FMUs.
+- The thesis uses FMI 2.0 Co-Simulation FMUs. It does not implement FMI 3.0 clocks, scheduled execution, or a full FMI 3.0 hybrid co-simulation workflow.
+- Some FMI capabilities that are useful for hybrid co-simulation, such as complete rollback support, are optional or backend-dependent.
+- OpenModelica FMU exports used in the thesis therefore limit which hybrid mechanisms can be realized through FMUs alone.
+- No adaptive macro-step-size or error-controlled master algorithm is implemented.
+- A general adaptive master algorithm would require rollback or state reconstruction support for all components that may need to be re-stepped.
+- Dense time is represented with floating-point physical time and an integer microstep index.
+- More rigorous hybrid semantics would represent physical time on an integer tick grid or another exactly comparable time base to avoid floating-point equality issues.
+- The algebraic-loop implementation is SCC-local and practical for the tested scenarios, but it is not a full optimized IJCSA implementation.
+- The current loop solver does not reuse a constant Jacobian across iterations or time steps.
+- Reusing the Jacobian could reduce cost for loops whose local linearization remains unchanged.
 - Parallel execution of independent generations is not implemented.
 - Large-scale scalability was not systematically benchmarked.
+
+### Limitation Evaluation Notes
+
+Use these points carefully.
+They are valid limitations, but they should not all be written with the same weight.
+
+- The FMI and wrapper limitations are important because they bound framework generality.
+- The missing adaptive master algorithm is important because it affects accuracy control.
+- The dense-time floating-point limitation is technically important, but it should be stated briefly and linked to future work.
+- The algebraic-loop Jacobian limitation is an optimization and completeness limitation, not a correctness failure for the tested examples.
+- Missing parallel execution is a scalability limitation, not a conceptual limitation of the framework architecture.
 
 ### Wording Rule
 
@@ -239,11 +291,15 @@ Use a small selection of these topics.
 - Experimental validation with a physical pendulum or comparable laboratory setup.
 - Improved state projection for switching into FEM models.
 - Adaptive switching thresholds based on error indicators or contact prediction.
+- Adaptive and error-controlled master algorithms with rollback-aware step rejection.
 - Larger FEM models and larger coupled systems for scalability studies.
 - Parallel execution of independent execution generations.
 - More robust rollback support for additional backend wrappers.
 - Broader OpenSim examples with biomechanical models and muscle actuation.
 - FMI 3.0 clocks and scheduled execution for stronger support of sampled and event-driven behavior.
+- Exact or tick-based time representation for dense-time event ordering.
+- Optimized algebraic-loop solvers with Jacobian reuse when the local loop structure is constant.
+- A more generic FEM backend wrapper that separates NGSolve-specific model code from the shared component interface.
 - Automated benchmark suite for co-simulation accuracy, event timing, and runtime cost.
 - More user-facing diagnostics for structural analysis, algebraic loops, and switching decisions.
 

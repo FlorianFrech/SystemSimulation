@@ -4,10 +4,12 @@ This document defines the scope, structure, and boundary rules for Chapter 5.
 Chapter 5 covers feature implementation and verification.
 It must be read together with the following documents.
 
-- `thesis/guideline.md`
-- `research/theory/glossary.md`
-- `research/theory/notation.md`
-- `thesis/golden_rules_writing_summary.md`
+- `README.md`
+- `thesis_concept.md`
+- `golden_rules_writing_summary.md`
+- `writing_style.md`
+- `glossary.md`
+- `notation.md`
 
 ---
 
@@ -216,4 +218,3 @@ The master-algorithm section should stay focused on orchestration behavior.
 - State that Chapter 5 verified framework features in isolation.
 - State that Chapter 6 evaluates their combined use in the controlled-pendulum case study.
 - Do not add new technical claims in the transition.
-
