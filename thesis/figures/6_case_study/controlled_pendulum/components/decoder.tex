@@ -25,7 +25,7 @@
     \draw[dec-default,->,thick] (0,0) -- (0,\gH+0.4) node[left] {$\theta$};
 
     % Ideal linear mapping (dashed reference)
-    \draw[dec-default,red!90,dashed,domain=0:\gW,samples=2]
+    \draw[dec-default,red!90,dashed,thick,domain=0:\gW,samples=2]
       plot (\x,{\x*\gH/\gW});
 
     % Staircase: quantized voltage bins → decoded angle levels
@@ -33,15 +33,15 @@
       \pgfmathsetmacro{\xa}{\i*\stepW}
       \pgfmathsetmacro{\xb}{(\i+1)*\stepW}
       \pgfmathsetmacro{\yq}{\i*\stepH}
-      \draw[dec-default,signalOutputColor,semithick] (\xa,\yq) -- (\xb,\yq);
+      \draw[dec-default,signalOutputColor,thick] (\xa,\yq) -- (\xb,\yq);
     }
 
     % Legend
-    \fill[white, opacity=0.85] (0.05, \gH-0.55) rectangle (2, \gH+0.02);
-    \draw[red!90, dashed, semithick] (0.15, \gH-0.15) -- ++(0.3,0);
-    \node[right, font=\tiny] at (0.45, \gH-0.15) {$\theta_\mathrm{ideal}(V)$};
-    \draw[signalOutputColor, semithick] (0.15, \gH-0.4) -- ++(0.3,0);
-    \node[right, font=\tiny] at (0.45, \gH-0.4) {$\theta_\mathrm{decoder}(V)$};
+    \fill[white, opacity=0.85] (0.05, \gH-0.7) rectangle (2.2, \gH+0.02);
+    \draw[red!90, dashed, thick] (0.15, \gH-0.15) -- ++(0.3,0);
+    \node[right, font=\small] at (0.45, \gH-0.15) {$\theta_\mathrm{ideal}(V)$};
+    \draw[signalOutputColor, thick] (0.15, \gH-0.5) -- ++(0.3,0);
+    \node[right, font=\small] at (0.45, \gH-0.5) {$\theta_\mathrm{decoder}(V)$};
   \end{scope}
 
   % % Parameters

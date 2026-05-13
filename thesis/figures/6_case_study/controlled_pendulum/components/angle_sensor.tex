@@ -67,6 +67,9 @@
       angle radius=\potRefR cm, angle eccentricity=1.15]
       {angle=as-down--as-center--as-wray};
 
+    % Coordinate system at the potentiometer/rotation axis.
+    \pic at (as-center) {coordsys};
+
     % Sub-label
     \node[font=\footnotesize\bfseries] at (0,\potR+1) {Potentiometer};
   \end{scope}
@@ -103,11 +106,11 @@
     }
 
     % Legend
-    \fill[white, opacity=0.85] (0.05, \gH-0.55) rectangle (1.7, \gH+0.02);
+    \fill[white, opacity=0.85] (0.05, \gH-0.7) rectangle (2, \gH+0.02);
     \draw[signalOutputColor, semithick] (0.15, \gH-0.15) -- ++(0.3,0);
-    \node[right, font=\tiny] at (0.45, \gH-0.15) {$V_\mathrm{pot}(t)$};
-    \draw[orange!85!black, semithick] (0.15, \gH-0.4) -- ++(0.3,0);
-    \node[right, font=\tiny] at (0.45, \gH-0.4) {$V_\mathrm{adc}(t)$};
+    \node[right, font=\small] at (0.45, \gH-0.15) {$V_\mathrm{pot}(t)$};
+    \draw[orange!85!black, semithick] (0.15, \gH-0.5) -- ++(0.3,0);
+    \node[right, font=\small] at (0.45, \gH-0.5) {$V_\mathrm{adc}(t)$};
 
     % Ts annotation
     \draw[as-default,<->,thin,black!70] (0,-0.25) -- (\Ts,-0.25)

@@ -2,156 +2,146 @@
 \label{sec:intro_sota}
 
 This section positions the thesis within the current landscape of modeling and simulation approaches relevant to heterogeneous hybrid system simulation.
-It does not aim to provide an exhaustive review.
-Instead, it highlights the main modeling paradigms, tool classes, and orchestration challenges that form the context for the development of \emph{SysSimX}.
+It does not provide an exhaustive review.
+It highlights the modeling approaches, tool classes, and orchestration challenges that motivate the framework developed in this thesis.
 
 %=================================================
-\subsection{Equation-based Modeling and FMI-based Components}
+\subsection{Equation-based Modeling and FMI-based Simulation Units}
 
 Equation-based modeling describes systems through mathematical relations between physical quantities.
-In simulation, these relations are formulated as algebraic equations, differential equations, or combinations of both.
-Two main modeling styles can be distinguished.
-In causal modeling, the computational direction is defined explicitly through inputs and outputs.
-In acausal modeling, the relations between variables are stated as equations, and the simulation tool derives the required computational causality.
-Both approaches are relevant for cyber-physical and mechatronic systems.
+These relations may be algebraic equations, differential equations, or combinations of both.
+Two modeling styles are especially relevant here.
+In \emph{causal} modeling, the computational direction is defined through inputs and outputs.
+In \emph{acausal} modeling, the model states relations between variables, and the simulation tool derives the computational causality.
 Causal models are common for control, signal processing, and software-oriented subsystems.
-Acausal equation-based models are especially useful for physical subsystems whose behavior follows conservation laws and constitutive relations.
+Acausal equation-based models are useful for physical subsystems whose behavior follows conservation laws and constitutive relations.
 
-Equation-based modeling has become an established approach for the description of multi-domain physical systems.
-It allows engineers to formulate subsystem behavior in a compact and domain-oriented way without prescribing the full numerical solution procedure.
-This is particularly useful for mechatronic systems, since such systems combine mechanics, electronics, thermal effects, hydraulics, and control-oriented behavior.
-A common formalism helps to represent these domains within one model structure and to connect them through physically meaningful interfaces.
+Equation-based modeling is established for multi-domain physical systems.
+It lets engineers describe subsystem behavior in a compact and domain-oriented form without prescribing the full numerical solution procedure.
+This is useful for mechatronic systems because they combine mechanics, electronics, thermal effects, hydraulics, and control behavior.
+A common equation-based formalism helps to represent these domains within one model structure and to connect them through physically meaningful interfaces.
 
-The most prominent open representative of this paradigm is Modelica \cite{Modelica_Fritzson}.
-Modelica is an object-oriented, equation-based language for the modeling of physical systems.
-It supports hierarchical composition, reusable component libraries, and acausal connectors.
-Through these features, it is widely used for the modeling of multi-domain systems in both academia and industry.
-Commercial and open-source environments such as Dymola, SimulationX, and OpenModelica provide solvers, graphical editors, and libraries based on the Modelica language and the Modelica Standard Library.
+The most prominent open language in this area is Modelica \cite{Modelica_Fritzson}.
+Modelica is an object-oriented, equation-based language for modeling physical systems.
+It supports hierarchical composition, reusable model libraries, and acausal connectors.
+Tools such as Dymola, SimulationX, and OpenModelica provide solvers, graphical editors, and libraries based on the Modelica language and the Modelica Standard Library.
 
-For tool interoperability, the Functional Mock-up Interface (FMI) standard has become particularly important \cite{FMI2.0}.
-It provides a standardized way to package and exchange simulation models across tools and therefore plays a central role in component-based simulation workflows \cite{gomes_co-simulation_2019-1}.
-
-Equation-based tools and FMI-based components provide a strong basis for system simulation.
+For tool interoperability, the \ac{FMI} standard has become particularly important \cite{FMI2.0}.
+It defines how simulation units are packaged as \acp{FMU} and how an importing environment instantiates them, sets inputs and parameters, advances them through standardized calls, and reads their outputs at communication points.
+This makes \ac{FMI} a central basis for co-simulation workflows across tools \cite{gomes_co-simulation_2019-1}.
 
 %=================================================
 \subsection{Domain-Specific Simulation Environments}
-Although equation-based modeling environments cover many physical domains, they do not represent all simulation needs equally well.
-In particular, some subsystem classes require specialized modeling approaches and dedicated software tools.
-This is especially relevant for the systems considered in this thesis, where technical subsystems interact with the human musculoskeletal system and where local structural effects may become important.
 
-A first example is musculoskeletal simulation.
+Equation-based modeling environments cover many technical domains, but some subsystem models require specialized modeling approaches and dedicated tools.
+This is relevant for the application class considered in this thesis, where a technical device interacts with the human musculoskeletal system and where local structural effects can influence the system behavior.
+
+One example is musculoskeletal simulation.
 In applications such as prostheses and exoskeletons, the technical device is mechanically coupled to the human body \cite{eberle_biomechanical_2025}.
-The resulting system behavior depends not only on the device itself, but also on the biomechanics of the user.
-For such questions, musculoskeletal simulation environments provide modeling capabilities that go beyond classical one-dimensional component libraries.
-OpenSim is a widely used open platform in this area \cite{OpenSim_Delp, seth_opensim_2018}.
-It supports the modeling of articulated rigid-body systems with joints, muscle-tendon actuation, and biomechanical constraints.
-It also provides established workflows such as forward dynamics and inverse dynamics.
-In this way, OpenSim enables analyses that are highly relevant for human-device interaction, but it is not primarily designed as a standardized FMI-based component source.
+The resulting behavior depends on the device, the controller, and the biomechanics of the user.
+OpenSim is a widely used open platform for such models \cite{OpenSim_Delp,seth_opensim_2018}.
+It supports articulated rigid-body systems with joints, biomechanical constraints, and muscle-tendon actuation.
+It also provides workflows such as forward dynamics and inverse dynamics.
+OpenSim is therefore relevant for human-device interaction, but OpenSim models usually require tool-specific integration in co-simulation workflows.
 
-A second example is finite element analysis.
-Finite element models are used when spatially distributed effects must be resolved explicitly.
-This includes deformation, stress, strain, and complex contact phenomena.
-Such information cannot usually be obtained from lumped-parameter rigid-body models alone.
-Finite element methods solve partial differential equations on a spatial discretization of the geometry and therefore provide a much higher level of local detail \cite{knothe_finite_2017}.
-This is important when compliant components, structural loading, or local contact behavior must be analyzed.
+Finite element analysis is a second example.
+Finite element models are used when spatially distributed quantities must be resolved explicitly.
+This includes deformation, stress, strain, and local contact behavior.
+Such quantities cannot usually be obtained from lumped rigid-body models alone.
+The \ac{FEM} solves partial differential equations on a spatial discretization of the geometry and therefore provides a higher level of local detail \cite{knothe_finite_2017}.
+This makes it suitable for compliant structures, structural loading, and contact phases in which local deformation is relevant.
 
-Musculoskeletal models and finite element models differ substantially from classical equation-based system components.
-Their interfaces are often not defined through a small set of reusable connectors.
-Instead, coupling variables must be chosen specifically for the application.
-These variables may include generalized coordinates, torques, external forces, contact quantities, marker trajectories, or reduced state representations.
-As a result, such models are usually integrated through custom wrappers or tool-specific interfaces rather than through direct FMI export.
+Musculoskeletal and finite element models differ from classical equation-based models in how they expose their coupling interface.
+Their coupling variables are often application-specific rather than described by a small standardized connector set.
+They may include generalized coordinates, torques, external forces, contact quantities, marker trajectories, or reduced state variables.
+As a result, these models are usually integrated through custom wrappers or tool-specific interfaces rather than through direct \ac{FMI} export.
 
-For heterogeneous system simulation, this creates an important challenge.
-Domain-specific tools provide essential high-fidelity models, but they are not naturally embedded in the standardized component-oriented workflows that are common in FMI-based environments.
-A practical system simulation framework must therefore be able to integrate both standardized FMU-based models and non-FMI domain-specific models within one common orchestration concept.
+This creates a practical challenge for heterogeneous system simulation.
+Domain-specific tools provide models that are needed for high-fidelity analysis, but they are not naturally embedded in \ac{FMU}-based co-simulation workflows.
+A system simulation framework must therefore integrate both standardized \acp{FMU} and tool-specific simulation units under one common orchestration concept.
 
 %=================================================
 \subsection{Co-Simulation Frameworks and Orchestration}
+
 Co-simulation enables the coupled simulation of subsystem models that originate from different tools.
-In this setting, each subsystem keeps its own model representation and its own numerical solver.
-The coupled simulation is coordinated through data exchange at communication points.
-This makes co-simulation a natural approach for heterogeneous system simulation~\cite{gomes_co-simulation_2019-1}.
+Each subsystem keeps its own model representation and numerical solver.
+A master algorithm coordinates the coupled simulation through data exchange at communication points.
+This makes co-simulation a natural approach for heterogeneous system simulation \cite{gomes_co-simulation_2019-1}.
 
-The most important standard in this area is the Functional Mock-up Interface (FMI) \cite{FMI2.0,FMI3.0}.
-FMI defines a standardized interface for simulation components called Functional Mock-up Units (FMUs).
-An importing environment creates FMU instances and calls their standardized interface functions.
-In the case of Model Exchange, the importing tool provides the numerical solver and performs the integration.
-In the case of Co-Simulation, the FMU typically advances its own internal solver and exchanges values only at communication points.
-FMI~3.0 further extends this concept through Scheduled Execution and explicit clock-based mechanisms for discrete-time behavior and event-oriented interaction \cite{FMI3.0}.
+\ac{FMI} supports two main execution modes.
+In Model Exchange, the importing environment provides the numerical solver and integrates the model equations.
+In Co-Simulation, the \ac{FMU} keeps its own internal solver and is advanced only at communication points.
+\ac{FMI}~3.0 extends the interface with scheduled execution and clock-based mechanisms for discrete-time behavior and event-oriented interaction \cite{FMI3.0}.
 
-Building on FMI, several frameworks have been developed to orchestrate coupled FMU execution.
-Standalone tools such as OMSimulator provide FMI-based composition and execution environments with scripting and graphical support \cite{noauthor_omsimulator_nodate}.
-INTO-CPS Maestro provides another orchestration environment for FMI-based co-simulation and supports the specification and execution of coupled simulation scenarios \cite{thule_maestro_2019}.
-These tools show that FMI-based co-simulation is well established at the level of standardized component coupling.
+Several frameworks build on \ac{FMI} to orchestrate coupled \ac{FMU} execution.
+OMSimulator provides an \ac{FMI}-based composition and execution environment with scripting and graphical support \cite{noauthor_omsimulator_nodate}.
+INTO-CPS Maestro provides another orchestration environment for \ac{FMI}-based co-simulation and supports the specification and execution of coupled simulation scenarios \cite{thule_maestro_2019}.
+These tools show that \ac{FMI}-based co-simulation is established at the level of standardized simulation-unit coupling.
 
-Within the Python ecosystem, several libraries address FMI at different abstraction levels.
-FMPy provides lightweight support for loading, inspecting, validating, and simulating FMUs \cite{dassault_systemes__catia-systems_fmpy_2026}.
-PyFMI offers a more simulation-oriented Python interface for Model Exchange and Co-Simulation FMUs \cite{andersson_pyfmi_nodate}.
-Research-oriented tools such as CoFmuPy further show that lightweight Python-based co-simulation environments can be built around FMI-compliant components \cite{friedrich_cofmupy_nodate}.
-Taken together, these tools show that FMI-based orchestration is mature for FMU-centric workflows.
+Within the Python ecosystem, several libraries address \ac{FMI} at different abstraction levels.
+FMPy supports loading, inspecting, validating, and simulating \acp{FMU} \cite{dassault_systemes__catia-systems_fmpy_2026}.
+PyFMI provides a simulation-oriented Python interface for Model Exchange and Co-Simulation \acp{FMU} \cite{andersson_pyfmi_nodate}.
+Research-oriented tools such as CoFmuPy show that lightweight Python-based co-simulation environments can be built around \acp{FMU} \cite{friedrich_cofmupy_nodate}.
+These tools provide a mature basis for FMU-centric workflows.
 
-At the same time, the scope of most existing co-simulation frameworks remains strongly FMU-centered.
-Their direct interoperability is strongest when subsystem models are available as FMI-compliant components.
-Models from tools that do not naturally export FMUs, such as musculoskeletal simulation environments or finite element solvers, usually require custom wrappers or tool-specific interfaces.
-In addition, FMI standardizes the component interface, but it does not by itself solve all orchestration problems at system level.
-Challenges such as resolving execution order, algebraic loops, discrete events, and runtime switching between alternative subsystem models remain the responsibility of the importing framework.
-For this reason, current co-simulation frameworks provide an essential basis for interoperability.
-However, they do not fully address the broader requirements of heterogeneous hybrid system simulation.
+The remaining difficulty is the broader heterogeneous workflow.
+Direct interoperability is strongest when subsystem models are available as \acp{FMU}.
+Models from tools that do not naturally export \acp{FMU}, such as musculoskeletal simulation environments or finite element solvers, usually require custom wrappers or tool-specific interfaces.
+In addition, \ac{FMI} standardizes the simulation-unit interface, but it does not solve all orchestration problems at system level.
+Execution order, algebraic loops, discrete events, and runtime switching between alternative subsystem models remain responsibilities of the importing framework.
+These aspects define the gap addressed in this thesis.
 
 %=================================================
 \subsection{Hybrid Co-Simulation and Event Handling}
+
 Hybrid systems combine continuous-time dynamics with discrete changes of state or behavior \cite{cellier_combined_1986,derler_modeling_2012}.
-In cyber-physical and mechatronic systems, such behavior arises in several ways.
-Typical examples are sampled sensors, digital controllers, switching logic, mode changes, and mechanical contact.
-Their simulation therefore requires both the numerical solution of the continuous-time problem and the consistent handling of discrete events.
+In \ac{CPS} and mechatronic systems, such behavior arises through sampled sensors, digital controllers, switching logic, mode changes, and mechanical contact.
+Their simulation requires both continuous-time integration and consistent handling of discrete events.
 
 In a monolithic simulation, one solver has access to the full system model.
 It can evaluate all relevant variables and equations during each integration step.
-This makes it possible to detect event conditions, localize the event time, execute the required event logic, and then continue the continuous integration from a consistent post-event state ~\cite{Modelica_Fritzson}.
+This makes it possible to detect event conditions, localize event times, execute event logic, and continue from a consistent post-event state \cite{Modelica_Fritzson}.
 For hybrid systems, this is a major advantage of a monolithic formulation.
 
-In co-simulation, the situation is more difficult.
-The master algorithm usually sees subsystem outputs only at communication points, while each component advances internally between these points.
-As a result, an event may occur within a communication step without being immediately visible at system level.
-Hybrid co-simulation therefore requires additional orchestration mechanisms.
-The importing framework must be able to detect that an event has occurred, localize the event time, restore or roll back subsystem states when necessary, execute the event handling logic, synchronize the affected components, and only then resume the continuous simulation ~\cite{broman_determinate_2013}.
-The problem becomes even more difficult when several events interact or when one event triggers further events in other subsystems.
+In co-simulation, the master algorithm usually sees subsystem outputs only at communication points.
+Each simulation unit advances internally between these points.
+An event may therefore occur within a communication step without being immediately visible at system level.
+Hybrid co-simulation requires additional orchestration mechanisms.
+The importing framework must detect the event, localize its time, restore or roll back subsystem states when necessary, execute event handling logic, synchronize affected simulation units, and resume the continuous simulation \cite{broman_determinate_2013}.
+The problem becomes more difficult when several events interact or when one event triggers further events in other subsystems.
 
-This challenge has been discussed extensively in the co-simulation literature.
-In particular, the representation of time, event handling, and rollback capabilities have been identified as central issues for deterministic and robust hybrid co-simulation ~\cite{StepRevision_Cremona, broman_requirements_2015, cremona_hybrid_2019}.
-FMI~3.0 extends FMI~2.0 with additional concepts that are relevant in this context, including clocks, event mode, and scheduled execution \cite{FMI3.0}.
+The representation of time, event handling, and rollback capabilities have been identified as central issues for deterministic hybrid co-simulation \cite{StepRevision_Cremona,broman_requirements_2015,cremona_hybrid_2019}.
+\ac{FMI}~3.0 adds concepts such as clocks, event mode, and scheduled execution \cite{FMI3.0}.
 These additions improve the representation of sampled and event-driven behavior.
-However, the standard alone does not solve the full orchestration problem.
-The importing framework must still implement the system-level logic for event detection, event localization, state consistency, and continuation after events.
+The importing framework still has to implement the system-level logic for event detection, event localization, state consistency, and continuation after events.
 
-Hybrid co-simulation is therefore a central topic for the present thesis.
-The systems considered here include both sampled and event-driven behavior, for example sensor sampling, controller action, and mechanical contact.
-A heterogeneous simulation framework must be able to combine continuous integration with robust event handling across coupled subsystems.
+Hybrid co-simulation is therefore central for the systems considered in this thesis.
+Relevant examples include sensor sampling, controller action, mode changes, and mechanical contact.
+A heterogeneous simulation framework must combine continuous integration with consistent event handling across coupled subsystem models.
 
 %=================================================
 \subsection{Multi-Model and Multi-Fidelity Simulation}
 
-Many engineering subsystems can be represented by more than one simulation model.
+Many engineering subsystems can be represented by more than one model.
 These models may differ in their physical assumptions, numerical complexity, computational cost, and output detail.
 Model fidelity denotes how closely a model represents the system properties of interest \cite{DefinitionFidelity_IEEE}.
-This leads to the idea of multi-model or multi-fidelity simulation \cite{peherstorfer_survey_2018,fernandez-godino_review_2023}.
+This leads to multi-model and multi-fidelity simulation approaches \cite{peherstorfer_survey_2018,fernandez-godino_review_2023}.
 
-A low-dimensional or reduced-complexity model is often sufficient when the objective is to predict global system behavior, design controllers, or perform rapid parameter studies.
+A low-dimensional or reduced-complexity model is often sufficient for global system behavior, controller design, or rapid parameter studies.
 More detailed models are needed when local effects become important, for example deformation, stress, or contact.
 The appropriate model therefore depends on the simulation objective and on the current operating phase of the system \cite{williams_switched-fidelity_2014,Choi2014}.
 
-In engineering practice, this trade-off appears both across the development process and during runtime.
+This trade-off appears both across the development process and within individual simulations.
 Early design stages often rely on simple models because they are fast to build and simulate.
-Later stages require more detailed models for validation.
-A similar principle can also be used within one simulation scenario, where different phases of motion require different levels of detail.
+Later stages require more detailed models for analysis and verification.
+Within one simulation scenario, different phases of motion may also require different levels of detail.
 
-Region-based runtime model substitution has been proposed as a strategy for simulation speed-up.
-Choi et al. describe a multi-fidelity methodology in which a computationally expensive target model is replaced by lower-fidelity models outside an interest region while preserving a common external interface and switching between internal models according to fidelity-change conditions \cite{Choi2014,Choi2017}.
-The present thesis is conceptually related to this idea, but applies it in a narrower sense.
-The framework switches between heterogeneous subsystem models from different tools that share a common external interface, rather than between simplified derivatives of one target model.
+Region-based runtime model substitution has been proposed as a strategy for reducing computational cost.
+Choi et al. describe an approach in which a computationally expensive target model is replaced by lower-fidelity models outside an interest region while preserving a common external interface and switching according to fidelity-change conditions \cite{Choi2014,Choi2017}.
+The present thesis is conceptually related to this idea, but focuses on heterogeneous subsystem models from different tools that share a common external interface.
 
-Existing work on multi-fidelity simulation covers a broad range of approaches, including hierarchical model families, reduced-order models, surrogate models, and adaptive model selection \cite{peherstorfer_survey_2018,fernandez-godino_review_2023}.
-For the present thesis, the most relevant aspect is the practical switching between alternative subsystem models within one simulation workflow.
-In this setting, the main challenge is not only the existence of models with different fidelity, but also the consistent transition between them.
-The framework must preserve a common external interface, transfer the relevant state information, define suitable switching criteria, and avoid unstable or excessively frequent mode changes \cite{williams_switched-fidelity_2014}.
-In heterogeneous settings, such switching typically requires projection onto a shared reduced state rather than exact preservation of all internal model variables.
+Existing work on multi-fidelity simulation includes hierarchical model families, reduced-order models, surrogate models, and adaptive model selection \cite{peherstorfer_survey_2018,fernandez-godino_review_2023}.
+For this thesis, the most relevant aspect is runtime switching between alternative subsystem models within one co-simulation workflow.
+The main challenge is the consistent transition between models.
+Such a workflow must preserve a common external interface, transfer relevant state information, define suitable switching criteria, and avoid unstable or excessively frequent mode changes \cite{williams_switched-fidelity_2014}.
+In heterogeneous settings, the switch usually requires projection onto a shared reduced state rather than exact preservation of all internal model variables.

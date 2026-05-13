@@ -24,9 +24,6 @@
 \colorlet{signalOutputColor}{green!70!black}
 \colorlet{supplyTerminalColor}{red!70!black}
 \colorlet{groundTerminalColor}{blue!70!black}
-% \colorlet{uColor}{green!50!black};
-% \colorlet{omegaColor}{orange!90!black};
-% \colorlet{tauColor}{green!80!black};
 
 % -----------------------------------------------------------------------------
 % Reusable drawing styles (used by pendulum.tex)
@@ -50,5 +47,10 @@
     rounded corners,
     fill=red!10,
     inner sep=1ex
+  },
+  coordsys/.pic={
+    \fill[red] (0,0) circle(0.05);
+    \draw[->,thick, red] (0,0) -- (1,0) node[right] {$x$};
+    \draw[->,thick, red] (0,0) -- (0,1) node[above] {$y$};
   }
 }

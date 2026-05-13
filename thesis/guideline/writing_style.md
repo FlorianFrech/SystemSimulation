@@ -59,6 +59,7 @@ Rules:
 - Prefer one main statement per sentence.
 - Split sentences with more than two commas.
 - Avoid sentences joined by colons or semicolons.
+- Avoid the pattern "not A; instead B" when the positive statement can be made directly.
 - Prefer concrete verbs over abstract nouns.
 - Do not hide the subject of the sentence.
 - Do not use a long noun chain when a short clause is clearer.
@@ -77,6 +78,20 @@ Avoid:
 Due to the potential occurrence of directed cycles in the zero-delay graph, the
 implementation performs a condensation of strongly connected components prior
 to the computation of the execution order.
+```
+
+Avoid:
+
+```text
+The framework is not intended to replace domain-specific simulation tools.
+Instead, it provides a common orchestration layer.
+```
+
+Better:
+
+```text
+The framework provides a common orchestration layer for subsystem models that
+remain implemented in their domain-specific simulation tools.
 ```
 
 ---

@@ -91,6 +91,10 @@ Perform this pass after Chapter 5 is fully drafted.
 - [ ] Remove unsupported intensifiers such as "robust" or "clearly" where not quantified.
 - [ ] Check terminology against `glossary.md`.
 - [ ] Check notation against `notation.md`.
+- [ ] Check abbreviation handling across the thesis.
+- [ ] Define abbreviations in one central LaTeX file instead of manually repeating long forms.
+- [ ] Use abbreviation macros consistently after the first definition.
+- [ ] Verify that the list of abbreviations contains all relevant entries and no unused entries.
 - [ ] Check that captions do not duplicate the surrounding text.
 - [ ] Check that tables are not data dumps.
 - [ ] Check that cross-references are specific.

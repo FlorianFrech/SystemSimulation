@@ -45,34 +45,36 @@
   \node[font=\large\bfseries, anchor=west] at ($(D)+(-\wPID/2+0.2,0)$) {D};
   \node[font=\large] at ($(P)+(0.3,0)$) {$K_p\,e(t)$};
   \node[font=\large] at ($(I)+(0.3,0)$) {$K_i\int_0^t e(\tau)\,\mathrm{d}\tau$};
-  \node[font=\large] at ($(D)+(0.3,0)$) {$K_d\,\dfrac{\mathrm{d}\theta_\mathrm{meas}(t)}{\mathrm{d}t}$};
+  \node[font=\large] at ($(D)+(+0.3,0)$) {$K_d\,\dfrac{\mathrm{d}\theta_\mathrm{meas}(t)}{\mathrm{d}t}$};
 
   % --- reference, error, and branch split ---
-  \draw[->, very thick] (-3.5,2) --++ (2.5,0) -- ($(SumE)+(0, \rSum)$) node[midway,above left] {$\theta_\mathrm{ref}(t)$};
+  \draw[->, ultra thick] (-3.5,2) --++ (2.5,0) -- ($(SumE)+(0, \rSum)$) node[midway,above=1.25cm, left,font=\Large] {$\theta_\mathrm{ref}$};
   
-  \draw[->, very thick] (MeasIn) -- ($(SumE)+(0,-\rSum)$) node at (\xErr-0.8, -2){$\theta_\mathrm{meas}(t)$};
+  \draw[->, ultra thick] (MeasIn) -- ($(SumE)+(0,-\rSum)$) node[font=\Large] at (\xErr-1, -2){$\theta_\mathrm{meas}$};
   \node[font=\large\bfseries] at ($(SumE)+(-0.7,0.6)$) {$+$};
   \node[font=\large\bfseries] at ($(SumE)+(-0.35,-0.95)$) {$-$};
 
-  \draw[->, very thick] ($(SumE)+(\rSum,0)$) -- ($(I)+(-\wPID/2,0)$) node at (\xErr+1, 0.5) {$e(t)$};
-  \draw[thick] ($(I)+(-\wPID/2,0)$) -- ($(I)+(-\wPID/2-0.9,0)$) -- ($(P)+(-\wPID/2-0.9,0)$) -- ($(P)+(-\wPID/2,0)$);
-  \draw[->, very thick] ($(P)+(-\wPID/2-0.02,0)$) -- ($(P)+(-\wPID/2,0)$);
+  \draw[->, ultra thick] ($(SumE)+(\rSum,0)$) -- ($(I)+(-\wPID/2,0)$) node[font=\Large] at (\xErr+1, 0.5) {$e$};
+  \draw[ultra thick] ($(I)+(-\wPID/2,0)$) -- ($(I)+(-\wPID/2-0.9,0)$) -- ($(P)+(-\wPID/2-0.9,0)$) -- ($(P)+(-\wPID/2,0)$);
+  \fill[black] ($(I)+(-\wPID/2-0.9,0)$) circle (0.1);
+  \draw[->, ultra thick] ($(P)+(-\wPID/2-0.02,0)$) -- ($(P)+(-\wPID/2,0)$);
 
   % D-branch is derivative on measurement (not on error)
-  \draw[->, very thick] (\xErr, -2) -- ($(D)+(-\wPID/2,0)$);
+  \draw[->, ultra thick] (\xErr, -2) -- ($(D)+(-\wPID/2,0)$);
+  \fill[black] (\xErr,-2) circle (0.1);
 
   % --- sum of P/I/D contributions ---
-  \draw[->, very thick] ($(P)+(\wPID/2,0)$) -| ($(SumU)+(0,\rSum)$);
-  \draw[->, very thick] ($(I)+(\wPID/2,0)$) -- ($(SumU)+(-\rSum,0)$);
-  \draw[->, very thick] ($(D)+(\wPID/2,0)$) -| ($(SumU)+(0,-\rSum)$);
+  \draw[->, ultra thick] ($(P)+(\wPID/2,0)$) -| ($(SumU)+(0,\rSum)$);
+  \draw[->, ultra thick] ($(I)+(\wPID/2,0)$) -- ($(SumU)+(-\rSum,0)$);
+  \draw[->, ultra thick] ($(D)+(\wPID/2,0)$) -| ($(SumU)+(0,-\rSum)$);
   \node[font=\large\bfseries] at ($(SumU)+(-0.86,0.35)$) {$+$};
   \node[font=\large\bfseries] at ($(SumU)+(-0.35,-0.95)$) {$+$};
   \node[font=\large\bfseries] at ($(SumU)+(-0.35,0.95)$) {$+$};
 
   % Optional integrator reset integrator
-  \draw[->, very thick, dashed, red] (ResetIn) node[midway, below=2.5cm] {reset} -- (0.5, -0.4) -- (\xPID-\wPID/2, -0.4);
+  \draw[->, ultra thick, dashed, red] (ResetIn) node[midway, below=1.0cm, right=0.5cm , font=\Large] {reset} -- (0.5, -0.4) -- (\xPID-\wPID/2, -0.4);
 
   % --- controller output and plant output ---
-  \draw[->, very thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1,0)$) -- (CtrlOut) node[midway,left] {$u(t)$};
+  \draw[->, ultra thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1,0)$) -- (CtrlOut) node[above=0.75cm, left,font=\Large] {$u_\mathrm{control}$};
 
 }

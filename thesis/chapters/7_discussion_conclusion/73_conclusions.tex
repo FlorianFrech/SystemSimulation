@@ -1,0 +1,23 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions}
+\label{sec:discussion_conclusions}
+
+The objective of this thesis was to develop and evaluate \syssimx{} as a practical framework for heterogeneous hybrid co-simulation.
+The work addressed the problem that subsystem models from different tools and modeling paradigms cannot be combined by a single solver when they are available only as executable simulation units.
+The thesis therefore focused on the orchestration layer that connects such models into one consistent system-level simulation workflow.
+
+The developed framework provides a shared component abstraction with typed and unit-aware ports, backend wrappers, structural analysis, algebraic-loop handling, master algorithms, hybrid event handling, and runtime model switching.
+This answers the research questions on heterogeneous representation, dependency-aware orchestration, hybrid event handling, and switching between alternative subsystem models.
+The implementation-level verification in Chapter~\ref{chap:implementation} showed that these mechanisms behave as expected in focused scenarios before they are combined in the case study.
+
+The controlled-pendulum case study demonstrated the combined use of the framework features.
+The baseline scenario verified numerical convergence toward a monolithic OpenModelica reference as the macro step size was reduced.
+The contact scenario showed that heterogeneous pendulum models, hybrid contact events, PID reset, FEM contact, and runtime model switching can be combined in one closed-loop simulation.
+The performance benchmark showed that restricting FEM execution to the contact-relevant part of the trajectory reduced the total median wall time from \(464.0\,\mathrm{s}\) to \(294.3\,\mathrm{s}\) for the selected configuration.
+
+The results support the feasibility of the framework for the tested class of heterogeneous hybrid simulation scenarios.
+They also define the boundaries of the contribution.
+The thesis verifies numerical consistency against model-based references and validates the framework workflow in the controlled-pendulum case study.
+It does not provide experimental physical validation, universal convergence guarantees, or a complete implementation of all possible backend capabilities.
+
+The main contribution of the thesis is therefore not a new pendulum model, but an implementation architecture that combines heterogeneous simulation tools, dependency-aware orchestration, hybrid event handling, and runtime fidelity switching in one controlled co-simulation workflow.

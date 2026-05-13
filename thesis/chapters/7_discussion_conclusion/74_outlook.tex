@@ -1,0 +1,46 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Outlook and Future Work}
+\label{sec:discussion_outlook}
+
+% The limitations of the thesis lead to several concrete extensions.
+% The most direct next step is experimental validation.
+% A physical pendulum setup, or another controlled laboratory system with contact and measurable actuator behavior, would allow the numerical reference comparisons of Chapter~\ref{chap:case_study} to be complemented by physical data.
+% This would separate modeling errors from co-simulation errors and would clarify how well the contact and switching assumptions represent a real system.
+
+% A second direction is improved state transfer for runtime model switching.
+% The current \texttt{MasterPendulum} reconstructs the FEM state from rigid-body quantities when switching into the high-fidelity model.
+% Future work could preserve additional reduced deformation information, use a precomputed modal representation, or initialize the FEM model through a short relaxation step before contact.
+% Such extensions would reduce the difference between switched and full-FEM trajectories while keeping the computational benefit of selective high-fidelity activation.
+
+The hybrid co-simulation algorithm could be extended by adaptive and error-controlled macro stepping.
+The present implementation uses prescribed macro step sizes.
+An adaptive algorithm would estimate coupling error, reject inaccurate macro steps, and repeat them with smaller step sizes.
+This requires a stronger rollback contract across all components that participate in the rejected step.
+It also requires clear rules for backend components that cannot restore arbitrary past states.
+
+The dense-time representation could be made more rigorous.
+The current implementation combines floating-point physical time with an integer microstep index.
+Future versions could use an exact tick-based time representation for physical time and reserve the microstep index only for event ordering at the same instant.
+This would reduce tolerance-dependent comparisons in long hybrid simulations and would align better with deterministic hybrid co-simulation semantics.
+
+The algebraic-loop solver also offers room for improvement.
+The current implementation solves algebraic loops in the interface form used by \syssimx{}, but it does not reuse Jacobians across iterations or time steps.
+For loops with a constant or slowly changing local linearization, Jacobian reuse could reduce computational cost.
+A more complete implementation of interface-Jacobian based co-simulation would also allow stronger convergence management and clearer diagnostics for difficult loop systems.
+
+Further work should also address scalability.
+Independent execution generations are currently evaluated sequentially.
+Parallel execution would be useful for larger systems, especially when many components can be advanced independently within one communication step.
+A systematic benchmark suite should therefore include larger component graphs, different coupling densities, and different backend costs.
+This would clarify when orchestration overhead dominates and when high-fidelity model switching provides the largest benefit.
+
+The backend integrations can be broadened as well.
+FMI~3.0 concepts such as clocks and scheduled execution are relevant for sampled and event-driven co-simulation workflows.
+Supporting these features would improve the treatment of hybrid and discrete-time components beyond the FMI~2.0 Co-Simulation capabilities used in this thesis.
+The OpenSim and FEM integrations could also be generalized.
+In particular, a reusable FEM backend wrapper would separate NGSolve-specific model code from the common co-simulation interface more clearly.
+
+Finally, the user-facing diagnostics of the framework should be expanded.
+The structural-analysis metadata, algebraic-loop blocks, event traces, switching decisions, and benchmark measurements are already available internally or through selected visualizations.
+Future versions could expose this information through a more systematic reporting layer.
+This would make assembled simulations easier to inspect, reproduce, and debug, which is essential for applying heterogeneous hybrid co-simulation to larger systems.
