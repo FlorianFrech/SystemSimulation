@@ -1,68 +1,68 @@
 \subsection{General System Modeling}
 \label{sec:req_general_modeling}
 
-The general system modeling requirements describe how users shall be able 
+The general system modeling requirements describe how users shall be able
 to represent subsystems and assemble them into complete system models.
-They cover modularity, explicit physical interfaces, system assembly, and 
+They cover modularity, explicit physical interfaces, system assembly, and
 support for hybrid dynamic behavior.
 
-Table~\ref{tab:req_general_modeling} lists the user requirements together 
+Table~\ref{tab:req_general_modeling} lists the user requirements together
 with the derived system requirements for this category.
 
 \begin{longtable}{
-  >{\raggedright\arraybackslash}p{1.75cm} 
+  >{\raggedright\arraybackslash}p{1.75cm}
   >{\raggedright\arraybackslash}p{13.25cm}}
-\caption{User and system requirements: General system modeling}
-\label{tab:req_general_modeling} \\
-\toprule
-\textbf{ID} & \textbf{Requirement} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{ID} & \textbf{Requirement} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
+  \caption{User and system requirements: General system modeling}
+  \label{tab:req_general_modeling}                                                     \\
+  \toprule
+  \textbf{ID}      & \textbf{Requirement}                                              \\
+  \midrule
+  \endfirsthead
+  \caption[]{User and system requirements: General system modeling (continued)}        \\
+  \toprule
+  \textbf{ID}      & \textbf{Requirement}                                              \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
 
-\textbf{UR-01} & \textbf{The overall workflow shall support component-based 
-modeling, where each subsystem is represented as an independent, reusable, 
-and parameterizable component with explicit input and output interfaces.} \\
-\addlinespace[2pt]
-SR-01-01 & The framework shall provide a common component abstraction with 
-explicit input and output interfaces for representing subsystem models. \\
-SR-01-02 & The framework shall support parameterized instantiation of 
-components. \\
-\midrule
+  \reqidbf{UR-01}  & \textbf{The overall workflow shall support subsystem-based
+    modeling, where each subsystem is represented by an independent, reusable,
+  and parameterizable simulation unit with explicit input and output interfaces.}      \\
+  \addlinespace[2pt]
+  \reqid{SR-01-01} & The framework shall provide a common component abstraction with
+  explicit input and output ports.                                                     \\
+  \reqid{SR-01-02} & \strut The framework shall support parameterized instantiation of
+  components.                                                                          \\
+  \midrule
 
-\textbf{UR-02} & \textbf{The overall workflow shall support explicit physical 
-units for variables and parameters, including automatic 
-unit validation and conversion.} \\
-\addlinespace[2pt]
-SR-02-01 & The framework shall associate physical units with component 
-parameters and interface variables. \\
-SR-02-02 & The framework shall validate unit compatibility when connecting 
-interface variables or assigning parameter values. \\
-SR-02-03 & The framework shall support automatic conversion between 
-compatible units where required. \\
-\midrule
+  \reqidbf{UR-02}  & \textbf{The overall workflow shall support explicit physical
+    units for variables and parameters, including automatic
+  unit validation and conversion.}                                                     \\
+  \addlinespace[2pt]
+  \reqid{SR-02-01} & The framework shall associate physical units with component
+  parameters and ports.                                                                \\
+  \reqid{SR-02-02} & The framework shall validate unit compatibility when connecting
+  ports or assigning parameter values.                                                 \\
+  \reqid{SR-02-03} & The framework shall support automatic conversion between
+  compatible units where required.                                                     \\
+  \midrule
 
-\textbf{UR-03} & \textbf{The overall workflow shall support the assembly of 
-system models by connecting components.} \\
-\addlinespace[2pt]
-SR-03-01 & The framework shall support the assembly of system models from 
-interconnected components. \\
-SR-03-02 & The framework shall provide explicit signal and event connections 
-between component interfaces. \\
-\midrule
+  \reqidbf{UR-03}  & \textbf{The overall workflow shall support the assembly of
+  system models by connecting subsystem models.}                                       \\
+  \addlinespace[2pt]
+  \reqid{SR-03-01} & The framework shall support the assembly of system models from
+  interconnected components.                                                           \\
+  \reqid{SR-03-02} & The framework shall provide explicit signal and event connections
+  between component ports.                                                             \\
+  \midrule
 
-\textbf{UR-04} & \textbf{The overall workflow shall support components with 
-continuous-time, discrete-time, and hybrid behavior.} \\
-\addlinespace[2pt]
-SR-04-01 & The framework shall support components with continuous-time, 
-discrete-time, and hybrid behavior behind the same component abstraction. \\
-SR-04-02 & The framework shall allow hybrid components to expose 
-event-related information required for discrete state changes and 
-re-initialization. \\
-
+  \reqidbf{UR-04}  & \textbf{The overall workflow shall support simulation units with
+  continuous-time, discrete-time, and hybrid behavior.}                                \\
+  \addlinespace[2pt]
+  \reqid{SR-04-01} & The framework shall support components with continuous-time,
+  discrete-time, and hybrid behavior behind the same component abstraction.            \\
+  \reqid{SR-04-02} & The framework shall allow hybrid components to expose
+  event-related information required for discrete state changes and
+  re-initialization.                                                                   \\
 \end{longtable}

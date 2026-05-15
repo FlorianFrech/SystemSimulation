@@ -130,6 +130,8 @@ Do not create separate discussion subsections inside Chapter 5.
 - FEM support is intentionally minimal because discretization, state representation, and solver state are model-specific.
 - Mention rollback limitations for generic wrappers only where relevant.
 - Defer concrete FE pendulum details to Chapter 6.
+- The OpenSim section should contain the simulation-unit contract details that are too concrete for Chapter 2: selected OpenSim quantities, port mapping, model/state/manager initialization, staged realization, output reads, and direct-feedthrough behavior.
+- The FEM wrapper section should state that `FEMComponent` is a lightweight base and not a generic finite-element backend wrapper. The concrete FEM pendulum boundary conditions, contact law, mesh, projection, and field visualizations belong in Chapter 6.
 
 ### System and Connections
 - Discuss that registration validates the structural definition before simulation.
@@ -185,6 +187,51 @@ Do not create separate discussion subsections inside Chapter 5.
 - Remove repeated definitions of direct feedthrough, SCCs, execution order, rollback, dense time, and event localization.
 - Replace repeated explanations with cross-references.
 - Keep only figures that explain data flow, control flow, or verification evidence.
+
+---
+
+## Figures
+
+Implementation figures must show *how* the framework realizes a concept, not *what* the concept is.
+Each figure should add information not already visible in the Chapter 2 (theoretical) or Chapter 4 (architectural) figure of the same feature.
+
+### Structural-Analysis Figure (Section 5.5)
+
+Role:
+Show the complete implementation-level pipeline of `build_graphs()` and `compute_execution_order()` on the worked four-component scenario.
+This figure is the verification anchor of the structural-analysis section.
+
+Required panels:
+
+- Panel (a) **Input data.** Registered components, signal connections, and per-component direct-feedthrough maps. Mark that components A and D expose no direct feedthrough.
+- Panel (b) **Full connection graph `graph`.** Port-labelled edges, with parallel edges preserved because `graph` is a `MultiDiGraph`.
+- Panel (c) **Zero-delay graph `_dag`.** Active-output filter applied. Ghosted edges show which connections from `graph` are omitted from `_dag`. The dashed boundary marks the single entry of `algebraic_loops`.
+- Panel (d) **Condensed graph and `execution_order`.** Show the schedule before and after the delayed-producer relocation of component D.
+
+Distinguishing content versus the theory and architecture figures:
+
+- Port-level boxes and direct-feedthrough arrows belong here, not in Chapter 2.
+- Metadata field names (`graph`, `_dag`, `algebraic_loops`, `execution_order`, `_scc_index`) belong here.
+- Ghosted edges and the active-output filter belong here. They are a `syssimx` implementation choice and must not appear in Chapter 2.
+- Delayed-producer relocation belongs here. It is a `syssimx` scheduling choice and must not appear in Chapter 2 or Chapter 4.
+
+Caption rule:
+The caption must state what each panel adds at the implementation level.
+Do not enumerate panels as a method list.
+Do not repeat the conceptual definitions that belong to Section 2.3.3.
+
+### Relation to Chapter 2 and Chapter 4 Figures
+
+The structural-analysis figure forms part of a three-chapter chain:
+
+| Chapter | Figure role |
+| --- | --- |
+| Chapter 2 (Section 2.3.3) | Conceptual scenario, zero-delay graph, condensed graph. No ports. No metadata field names. |
+| Chapter 4 (Section 4.2.2) | User-defined system in `syssimx`: components, typed ports, signal and event connections, direct-feedthrough markers. No derived graphs. |
+| Chapter 5 (Section 5.5) | Full implementation pipeline with metadata field names, active-output filter, and delayed-producer relocation. |
+
+The same A/B/C/D scenario is reused across all three figures so the reader can follow it from concept to implementation.
+The implementation figure may *refine* the theoretical figure, but it must not *restate* it. Cross-reference Section 2.3.3 from the prose instead.
 
 ### Sections that should not be expanded further
 - Port System

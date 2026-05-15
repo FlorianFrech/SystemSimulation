@@ -25,11 +25,12 @@ The master algorithm has no access to the internal equations of any simulation u
 This \emph{black-box property} is the defining characteristic of co-simulation~\cite{gomes_co-simulation_2019}.
 It enables tool-independent coupling but introduces a coupling error that is absent in monolithic simulation.
 
-The three approaches thus differ in how solvers are shared.
-Monolithic simulation uses one solver for all equations. 
-Model exchange distributes the modeling but keeps the solver centralized.
-Co-simulation distributes both modeling and solving, at the cost of the black-box constraint and discrete data exchange.
-In the present thesis, Modelica-based simulation serves as the monolithic reference for verification and validation in the case study.
+The three approaches differ in how model formulation and numerical solving are distributed.
+Monolithic simulation uses one environment and one solver for the complete equation system.
+Model exchange separates model authoring from integration, but still relies on a host solver for the coupled system.
+Co-simulation distributes both model execution and numerical solving across simulation units.
+This enables tool-independent coupling, but introduces coupling errors through discrete data exchange.
+In the case study of this thesis, a monolithic Modelica model is used as the numerical reference for the co-simulation results.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Mathematical Formulation of Co-Simulation}
@@ -73,8 +74,9 @@ The three interface operators are typed as
 The operator~$\operatorname{set}_i$ stages a value on a designated input port.
 The operator~$\operatorname{get}_i$ reads the current value of a designated output port.
 The operator~$\operatorname{step}_i$ advances the simulation unit by a requested duration~$H \geq 0$.
-The case $H = 0$ is explicitly admitted, it instructs the simulation unit to recompute its outputs from the current staged inputs without advancing the internal state.
-This zero-step evaluation is required by the iterative algebraic loop resolution described in Section~\ref{sec:235_cosim_algebraic_loops}.
+The case $H = 0$ is explicitly admitted.
+It instructs the simulation unit to recompute its outputs from the current staged inputs without advancing its internal time.
+This zero-step evaluation is required by the interface-consistency treatment of algebraic loops described in Section~\ref{sec:235_cosim_algebraic_loops}.
 
 \paragraph{Lifecycle of a Simulation Unit.}
 \label{para:simulation_unit_lifecycle}
@@ -95,8 +97,8 @@ The direct-feedthrough relation of simulation unit~$i$ is the set
 where $(u, y) \in F_i$ means that output~$y$ depends directly on input~$u$ at the same time instant.
 If no port pair of simulation unit~$i$ exhibits direct feedthrough, the unit can always be evaluated after its inputs have been fixed.
 Thus, its outputs depend only on the internal state accumulated over prior macro steps.
-The direct feedthrough relation is declared by each simulation unit as part of its interface and is used in the structural analysis introduced
-in Section~\ref{sec:233_cosim_structural_analysis}.
+For structural analysis, the direct-feedthrough relation is assumed to be available as interface metadata or derived from the simulation-unit behavior.
+It determines which connections create instantaneous dependencies at a communication point.
 
 \paragraph{Co-Simulation Scenario.}
 A co-simulation scenario collects all simulation units and their interconnections into a single structure~\cite{gomes_co-simulation_2019}:
@@ -195,6 +197,7 @@ unit:
 \end{itemize}
 Only instantaneous edges constrain the evaluation order within a communication point.
 Several port-level connections between the same pair of simulation units may collapse to a single simulation-unit-level edge in this graph.
+Figure~\ref{fig:dependency_graph}a shows the resulting dependency graph for the four-unit scenario, with edges classified as instantaneous or delayed.
 
 \paragraph{Zero-Delay Graph.}
 Retaining only the instantaneous edges yields the \emph{zero-delay dependency graph} (see Figure~\ref{fig:dependency_graph}b).
@@ -202,24 +205,27 @@ If this graph is acyclic, a topological ordering directly defines a valid evalua
 If it contains directed cycles, \emph{algebraic loops} are present.
 These form groups of simulation units whose interface variables depend on each other at the same communication point~\cite{hansen_verification_2021}.
 
-\paragraph{Algebraic Loop Blocks and Generations.}
+\paragraph{Condensed Graph.}
+
 For scheduling purposes, each algebraic loop is collapsed to a single \emph{loop block}, which yields an acyclic condensed graph (see Figure~\ref{fig:dependency_graph}c).
 Topological generations of this condensed graph define the execution stages used by the master algorithm~\cite{gomes_co-simulation_2018,petridis_test_2015}.
 Independent simulation units within one generation may be evaluated in parallel, whereas an algebraic loop block within that generation requires an additional interface-consistency treatment before its participating units can advance.
 
-\paragraph{Role in the Present Thesis.}
-Structural analysis provides a classification of couplings into delayed and instantaneous dependencies, the identification of algebraic loops, and a generation-based execution order for the condensed scenario.
-The concrete graph construction and the realization used in \syssimx{} are described in Chapter~\ref{chap:implementation}.
-
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{figures/2_theoretical_background/structural_analysis.png}
-    \caption{Conceptual illustration of the structural-analysis principle for a scenario with four simulation units.
-    (a)~Port connections and direct-feedthrough relations (dashed arrows inside each unit).
-    (b)~Zero-delay dependency graph retaining only instantaneous edges. The directed cycle between B and~C forms an algebraic loop (SCC~$\{$B,\,C$\}$).
-    (c)~Condensed acyclic graph obtained by collapsing the SCC to a single loop block. Topological generations of this condensed graph define the execution order used by the master algorithm.}
+    \includegraphics[width=\textwidth]{figures/2_theoretical_background/structural_analysis.pdf}
+    \caption{Conceptual structural analysis of a co-simulation scenario.
+    (a)~Dependency graph: simulation units with direct feedthrough are marked in orange.
+    An incoming connection to such a unit creates an instantaneous dependency at the current communication point and is drawn as a solid edge.
+    Connections whose receiving unit has no relevant direct feedthrough are delayed and drawn as dashed edges.
+    (b)~Zero-delay dependency graph retains only instantaneous dependencies. The cycle between B and C forms an algebraic loop.
+    (c)~The condensed graph collapses the loop into one block, and its topological generations define the execution stages of the master algorithm.}
     \label{fig:dependency_graph}
 \end{figure}
+
+\paragraph{Role in the Present Thesis.}
+Structural analysis classifies couplings into delayed and instantaneous dependencies, identifies algebraic-loop blocks, and derives a generation-based execution order for the condensed scenario.
+Chapter~\ref{chap:implementation} describes how this principle is realized in the framework implementation.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -285,7 +291,8 @@ Simulation units forming a loop block require the iterative procedure described 
 Before the first macro step can begin, the master algorithm must establish a consistent initial coupling state at~$T_0$.
 If a simulation unit exhibits direct feedthrough, its initial outputs depend on its initial inputs.
 The same instantaneous dependency structure that governs execution order during time stepping therefore also applies at the initial communication point.
-The generation order and any algebraic loops identified by the structural analysis of Section~\ref{sec:233_cosim_structural_analysis} must be respected when propagating initial values across the coupled scenario. The concrete initialization sequence used in \syssimx{}, including the handling of the FMI initialization mode, is described in Chapter~\ref{chap:implementation}.
+The generation order and any algebraic loops identified by structural analysis must therefore also be respected during coupled initialization.
+Chapter~\ref{chap:implementation} describes the concrete initialization sequence.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Algebraic Loops in Co-Simulation}
@@ -306,7 +313,7 @@ where $\Gamma_A$ denotes the coupling relation restricted to the ports participa
 Two consequences follow from this formulation.
 First, simple fixed-point substitution $U_A^{(k+1)}=\Gamma_A\!\bigl(Y_A(U_A^{(k)})\bigr)$ converges only when the loop gain is contractive.
 Contractivity here means that the spectral radius of the loop-gain Jacobian $\partial(\Gamma_A\!\circ\!Y_A)/\partial U_A$ is strictly less than one.
-This condition is not met in most coupled scenarios of practical interest.
+This condition is restrictive and may fail for tightly coupled systems.
 A Newton-type treatment of $\mathcal{R}(U_A)=0$ instead requires only local regularity of the interface Jacobian $\partial\mathcal{R}/\partial U_A$.
 Local regularity means that this Jacobian has nonzero determinant at the solution and is therefore invertible.
 It is a strictly weaker condition than contractivity and is the default approach in~\cite{sicklinger_interface_2014}.
@@ -358,18 +365,18 @@ The concrete realization used in \syssimx{}, including event localization, state
 \subsection{The Functional Mock-up Interface (FMI)}
 \label{sec:237_cosim_fmi}
 
-The co-simulation concepts introduced in the preceding subsections assume that each simulation unit exposes a standardized interface for variable exchange, time advancement, and structural metadata.
-The Functional Mock-up Interface (FMI) provides such a tool-independent standard for packaging and executing simulation models across tools~\cite{FMI2.0}.
-In the present thesis, the practically relevant case is FMI~2.0 Co-Simulation.
+The co-simulation concepts introduced above assume that each simulation unit exposes an interface for variable exchange, time advancement, and structural metadata.
+The \ac{FMI} standard provides such a tool-independent interface for packaged simulation models~\cite{FMI2.0}.
+In this thesis, the practically relevant case is \ac{FMI}~2.0 Co-Simulation.
 
-An FMU (Functional Mock-up Unit) is a portable model package, typically distributed as a single archive
+An \ac{FMU} is a portable model package.
 It combines a standardized C interface, an XML model description, and the binaries or source code required for execution.
-The model description file \texttt{modelDescription.xml} declares the exposed variables together with their causality, variability, data type, and physical units.
-It therefore provides the importing environment with the static interface information needed to interpret an FMU without access to the original modeling tool~\cite{FMI2.0}.
+The file \texttt{modelDescription.xml} declares the exposed variables, including causality, variability, data type, and physical units.
+It therefore provides the importing environment with static interface information without exposing the original model equations~\cite{FMI2.0}.
 
-FMI distinguishes between Model Exchange(\emph{strong coupling}) and Co-Simulation (\emph{weak coupling}).
+\ac{FMI} distinguishes between Model Exchange and Co-Simulation.
 In Model Exchange, the importing environment provides the numerical solver.
-In Co-Simulation, the FMU retains its own internal solver and is advanced only through standardized interface calls.
+In Co-Simulation, the \ac{FMU} retains its own internal solver and is advanced through standardized interface calls.
 The importing environment provides the master algorithm and interacts with the FMU as a black-box simulation unit.
 The master algorithm stages input values, requests time advancement, and retrieves outputs, but it does not access the internal equations or solver state of the FMU directly.
 

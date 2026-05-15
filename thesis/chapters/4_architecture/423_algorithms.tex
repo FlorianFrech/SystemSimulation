@@ -1,11 +1,17 @@
 \subsection{Algorithm Interface}
 \label{sec:arch_algorithm}
 
-When the user calls \texttt{system.run()}, the system advances in  macro steps of size~$\Delta t$.
-Each macro step is executed by the algorithm's \texttt{step(system, t, dt)} method, which advances all components from~$t$ to~$t + \Delta t$ by  stepping them in the computed execution order, propagating interface values, and, where required, resolving algebraic coupling or handling discrete events.
-This realizes a strategy-based design in which the system structure is independent of the chosen execution scheme.
+The algorithm interface separates the assembled system structure from the execution strategy.
+The \texttt{System} owns the components, connections, and structural context.
+An algorithm owns the procedure that advances this system in time.
+This separation allows the same system definition to be executed with different coordination schemes.
 
-\syssimx{} provides algorithms that range from explicit parallel and sequential schemes to implicit algebraic-loop solvers and hybrid event-driven execution.
-The choice depends on the structural and dynamical properties of the system. When event indicators are present in any registered component, the framework automatically upgrades to the hybrid algorithm during initialization.
-All algorithms share the same system and component interfaces, so the user can change the coordination scheme without modifying the model definitions.
-The individual algorithms and their numerical procedures are described in Sections~\ref{sec:impl_algorithms} through~\ref{sec:impl_hybrid}.
+Each algorithm advances the coupled system in macro steps of size~$\Delta t$.
+During a macro step, it coordinates input propagation, component stepping, output collection, and any additional treatment required by the system structure.
+Explicit algorithms evaluate components according to the available execution order.
+Algebraic-loop algorithms add coupled treatment for instantaneous dependencies.
+Hybrid algorithms add event detection, event localization, and event dispatch.
+
+All algorithms use the same component and system interfaces.
+The user can therefore change the execution strategy without changing the component implementations or the system definition.
+The concrete algorithms and their numerical procedures are described in Sections~\ref{sec:impl_algorithms} through~\ref{sec:impl_hybrid}.

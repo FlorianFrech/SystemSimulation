@@ -1,31 +1,37 @@
 \subsection{Multi-Model Component}
 \label{sec:architecture_multicomponent}
 
-The class \texttt{MultiComponent} extends the \texttt{CoSimComponent} abstraction to the case where several interchangeable \emph{models} represent the same physical subsystem at different levels of fidelity or with different modeling approaches.
-It provides a single external component interface while managing multiple internal model realizations.
-Each model is itself a \texttt{CoSimComponent} instance, which allows the \texttt{MultiComponent} to delegate lifecycle and stepping calls to the currently active model through the same interface.
-This abstraction is the basis for multi-fidelity simulation and runtime model switching in \syssimx{}.
-Figure~\ref{fig:multi_component} illustrates the internal structure and the external view of the abstraction.
+The \texttt{MultiComponent} abstraction extends the component interface to several interchangeable model realizations of the same physical subsystem.
+It exposes one public component interface to the surrounding \texttt{System}.
+Internally, it owns a registry of compatible models and delegates execution to one active model at a time.
+This supports runtime switching between models with different fidelity levels or different modeling approaches.
+
+Figure~\ref{fig:multi_component} shows this architecture.
+The public layer exposes the same port interface as a regular \texttt{CoSimComponent}.
+The internal layer contains the registered model realizations.
+The switching-support layer contains the responsibilities used to change the active model.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\textwidth]{figures/4_architecture/multi_component.pdf}
-  \vspace{-1em}
-  \caption{Architectural overview of the \texttt{MultiComponent} abstraction.
-  The upper panel shows the internal structure: multiple interchangeable models are registered under a single component wrapper. The mode selector determines the active model based on the current state. On a mode switch, the state adapter transfers and adapts the physical state to the target model. The lower panel shows the external view: the surrounding system interacts only with the active model through unified input and output ports.}
-  \vspace{-0.5em}  
+  \includegraphics[width=0.72\textwidth]{figures/4_architecture/multi_model.pdf}
+  \caption{Architectural view of the \texttt{MultiComponent} abstraction.
+  The wrapper exposes one unified component interface to the surrounding \texttt{System}.
+  Internally, it owns compatible model realizations and delegates execution to the active model.
+  The switching logic uses a mode selector, hysteresis, and state adaptation to change the active model when the switching criteria require it.}
   \label{fig:multi_component}
 \end{figure}
 
-At any point in time, exactly one internal model is active, as indicated by the highlighted element in Figure~\ref{fig:multi_component}.
-This makes it possible to switch between models, for example between a computationally inexpensive rigid-body model and a high-fidelity finite element model, without altering the system structure.
+At any point in time, exactly one internal model is active.
+The active model provides the outputs exposed by the wrapper and receives the delegated lifecycle and stepping calls.
+Inactive models remain registered inside the wrapper so that they can become active later without changing the surrounding system structure.
 
-A change of the active model requires state synchronization between the outgoing and the incoming model.
-The \texttt{MultiComponent} uses physical state transfer for this purpose, because the transferred quantities must be interpretable by a model with a potentially different internal formulation.
-If the state representations differ, a user-provided state adaptation function maps the exported state to the format expected by the target model.
+A switch changes the active model.
+The mode selector determines the requested model from the switching criteria defined by the concrete component.
+Hysteresis can suppress rapid changes near switching boundaries.
+The state adapter maps the physical state exported by the outgoing model to a representation accepted by the incoming model.
 
-To avoid rapid switching near decision boundaries, the abstraction supports hysteresis through a configurable minimum dwell time or switching margin.
-This prevents chattering and reduces unnecessary switching overhead.
-The detailed switching mechanism and its integration with the hybrid algorithm are discussed in Section~\ref{sec:impl_multi_model}.
+The abstraction separates model choice from system assembly.
+The surrounding \texttt{System} connects only to the public interface of the \texttt{MultiComponent}.
+The implementation details of port unification, state transfer, and switching are described in Section~\ref{sec:impl_multi_model}.
 
-With the architectural layers and their responsibilities established,  the following chapter describes the implementation, starting with the port system and proceeding through the component interface, the tool-specific wrappers, system orchestration, and the co-simulation algorithms.
+Chapter~\ref{chap:implementation} describes how the architectural abstractions introduced in this chapter are implemented and verified.

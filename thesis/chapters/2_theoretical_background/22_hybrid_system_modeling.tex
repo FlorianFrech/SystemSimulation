@@ -35,10 +35,10 @@ A pure switching event is the special case $x^{+} = x^{-}$, so only the active m
 A reset event is the case in which $R_j(\cdot)$ changes one or more continuous states instantaneously.
 From the viewpoint of simulation, both cases are handled in the same way.
 The event is localized, the update maps are evaluated, and the post-event model is re-initialized.
-\emph{SysSimX} follows this unified interpretation and does not distinguish algorithmically between these event effects.
+This unified interpretation is used later for the hybrid co-simulation algorithm.
 The continuous state trajectory is therefore piecewise continuous, while the discrete state is piecewise constant \cite{van_der_schaft_introduction_2000,branicky_general_1995}.
 
-The pendulum example introduced in Section~\ref{sec:211_dynamical_systems} can be extended to a hybrid system. The pendulum is in this case assumed to start swinging freely from an initial angle $theta_0$ with initial velocity $\omega_0$ and hits a rigid wall at $\theta = \theta_\text{wall}$, modeled as an ideal elastic impact (see Figure~\ref{fig:pendulum_wall}).
+The pendulum example introduced in Section~\ref{sec:211_dynamical_systems} can be extended to a hybrid system. The pendulum is in this case assumed to start swinging freely from an initial angle $\theta_0$ with initial velocity $\omega_0$ and hits a rigid wall at $\theta = \theta_\text{wall}$, modeled as an ideal elastic impact (see Figure~\ref{fig:pendulum_wall}).
 
 \begin{figure}[htbp]
     \centering

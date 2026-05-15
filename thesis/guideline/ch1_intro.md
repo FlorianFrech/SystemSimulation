@@ -242,6 +242,26 @@ Avoid:
 Tool class -> long feature list -> no connection to the thesis gap.
 ```
 
+### Frameworks versus FMI Libraries in Section 1.2.3
+
+Section 1.2.3 must keep two paragraphs distinct.
+
+- **FMI-based orchestration frameworks** are full co-simulation environments with coordinator, master algorithms, and scenario assembly. Place OMSimulator, INTO-CPS Maestro, and CoFMPy in this paragraph.
+- **Python FMI libraries** are lower-level interfaces to the FMI standard. Place FMPy and PyFMI in this paragraph.
+
+CoFMPy is a framework, not a library.
+It provides FMU coupling, Jacobi and Gauss-Seidel master algorithms, fixed-point algebraic-loop handling, a Python FMU proxy for non-FMU components, and Digital-Twin oriented communication and storage blocks.
+Placing it next to FMPy and PyFMI underrepresents its scope and weakens the gap statement in Section 1.3.
+
+Recommended introduction sentence for CoFMPy in the frameworks paragraph:
+
+```latex
+CoFMPy is a more recent Python-native framework for rapid prototyping of FMI-based Digital Twins, combining FMU co-simulation, algebraic-loop handling, datastream communication, and a Python FMU proxy for non-FMU components~\cite{friedrich_cofmpy_2025}.
+```
+
+Do not include the full CoFMPy architecture in Chapter 1.
+The contribution boundary against CoFMPy belongs in Chapter 7.
+
 ---
 
 ## 6. Research Gap Rules

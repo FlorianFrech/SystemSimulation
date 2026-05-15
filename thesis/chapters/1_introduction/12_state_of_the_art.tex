@@ -2,8 +2,7 @@
 \label{sec:intro_sota}
 
 This section positions the thesis within the current landscape of modeling and simulation approaches relevant to heterogeneous hybrid system simulation.
-It does not provide an exhaustive review.
-It highlights the modeling approaches, tool classes, and orchestration challenges that motivate the framework developed in this thesis.
+It is a focused orientation that covers the main modeling paradigms, tool classes, and orchestration challenges that motivate the framework developed in this thesis.
 
 %=================================================
 \subsection{Equation-based Modeling and FMI-based Simulation Units}
@@ -24,7 +23,7 @@ A common equation-based formalism helps to represent these domains within one mo
 The most prominent open language in this area is Modelica \cite{Modelica_Fritzson}.
 Modelica is an object-oriented, equation-based language for modeling physical systems.
 It supports hierarchical composition, reusable model libraries, and acausal connectors.
-Tools such as Dymola, SimulationX, and OpenModelica provide solvers, graphical editors, and libraries based on the Modelica language and the Modelica Standard Library.
+Tools such as Dymola, SimulationX, and OpenModelica~\cite{fritzson_openmodelica_2005} provide solvers, graphical editors, and libraries based on the Modelica language and the Modelica Standard Library.
 
 For tool interoperability, the \ac{FMI} standard has become particularly important \cite{FMI2.0}.
 It defines how simulation units are packaged as \acp{FMU} and how an importing environment instantiates them, sets inputs and parameters, advances them through standardized calls, and reads their outputs at communication points.
@@ -42,7 +41,7 @@ The resulting behavior depends on the device, the controller, and the biomechani
 OpenSim is a widely used open platform for such models \cite{OpenSim_Delp,seth_opensim_2018}.
 It supports articulated rigid-body systems with joints, biomechanical constraints, and muscle-tendon actuation.
 It also provides workflows such as forward dynamics and inverse dynamics.
-OpenSim is therefore relevant for human-device interaction, but OpenSim models usually require tool-specific integration in co-simulation workflows.
+OpenSim is therefore relevant for human-device interaction, but its models usually require tool-specific integration in co-simulation workflows.
 
 Finite element analysis is a second example.
 Finite element models are used when spatially distributed quantities must be resolved explicitly.
@@ -54,7 +53,7 @@ This makes it suitable for compliant structures, structural loading, and contact
 Musculoskeletal and finite element models differ from classical equation-based models in how they expose their coupling interface.
 Their coupling variables are often application-specific rather than described by a small standardized connector set.
 They may include generalized coordinates, torques, external forces, contact quantities, marker trajectories, or reduced state variables.
-As a result, these models are usually integrated through custom wrappers or tool-specific interfaces rather than through direct \ac{FMI} export.
+As a result, such models are usually integrated through custom wrappers or tool-specific interfaces, while direct \ac{FMU} export remains uncommon.
 
 This creates a practical challenge for heterogeneous system simulation.
 Domain-specific tools provide models that are needed for high-fidelity analysis, but they are not naturally embedded in \ac{FMU}-based co-simulation workflows.
@@ -74,15 +73,15 @@ In Co-Simulation, the \ac{FMU} keeps its own internal solver and is advanced onl
 \ac{FMI}~3.0 extends the interface with scheduled execution and clock-based mechanisms for discrete-time behavior and event-oriented interaction \cite{FMI3.0}.
 
 Several frameworks build on \ac{FMI} to orchestrate coupled \ac{FMU} execution.
-OMSimulator provides an \ac{FMI}-based composition and execution environment with scripting and graphical support \cite{noauthor_omsimulator_nodate}.
-INTO-CPS Maestro provides another orchestration environment for \ac{FMI}-based co-simulation and supports the specification and execution of coupled simulation scenarios \cite{thule_maestro_2019}.
-These tools show that \ac{FMI}-based co-simulation is established at the level of standardized simulation-unit coupling.
+OMSimulator provides an \ac{FMI}-based composition and execution environment with scripting and graphical support~\cite{noauthor_omsimulator_nodate}.
+INTO-CPS Maestro provides another orchestration environment for \ac{FMI}-based co-simulation and supports the specification and execution of coupled simulation scenarios~\cite{thule_maestro_2019}.
+CoFMPy is a more recent Python-native framework for rapid prototyping of FMI-based Digital Twins, combining FMU co-simulation, algebraic-loop handling, datastream communication, and a Python FMU proxy for non-FMU components~\cite{friedrich_cofmpy_2025}.
+These tools show that \ac{FMI}-based orchestration is established and that Python-native variants exist.
 
-Within the Python ecosystem, several libraries address \ac{FMI} at different abstraction levels.
-FMPy supports loading, inspecting, validating, and simulating \acp{FMU} \cite{dassault_systemes__catia-systems_fmpy_2026}.
-PyFMI provides a simulation-oriented Python interface for Model Exchange and Co-Simulation \acp{FMU} \cite{andersson_pyfmi_nodate}.
-Research-oriented tools such as CoFmuPy show that lightweight Python-based co-simulation environments can be built around \acp{FMU} \cite{friedrich_cofmupy_nodate}.
-These tools provide a mature basis for FMU-centric workflows.
+Within the Python ecosystem, lower-level libraries address the \ac{FMI} interface itself.
+FMPy supports loading, inspecting, validating, and simulating \acp{FMU}~\cite{dassault_systemes__catia-systems_fmpy_2026}.
+PyFMI provides a simulation-oriented Python interface for Model Exchange and Co-Simulation \acp{FMU}~\cite{andersson_pyfmi_nodate}.
+These libraries provide a mature basis for FMU access from Python.
 
 The remaining difficulty is the broader heterogeneous workflow.
 Direct interoperability is strongest when subsystem models are available as \acp{FMU}.
@@ -107,7 +106,8 @@ In co-simulation, the master algorithm usually sees subsystem outputs only at co
 Each simulation unit advances internally between these points.
 An event may therefore occur within a communication step without being immediately visible at system level.
 Hybrid co-simulation requires additional orchestration mechanisms.
-The importing framework must detect the event, localize its time, restore or roll back subsystem states when necessary, execute event handling logic, synchronize affected simulation units, and resume the continuous simulation \cite{broman_determinate_2013}.
+The importing framework must detect the event, localize its time, and restore or roll back subsystem states when necessary.
+It must then execute the event handling logic, synchronize the affected simulation units, and resume the continuous simulation~\cite{broman_determinate_2013}.
 The problem becomes more difficult when several events interact or when one event triggers further events in other subsystems.
 
 The representation of time, event handling, and rollback capabilities have been identified as central issues for deterministic hybrid co-simulation \cite{StepRevision_Cremona,broman_requirements_2015,cremona_hybrid_2019}.

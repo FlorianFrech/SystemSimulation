@@ -103,6 +103,8 @@ The shared port-level interface is defined in §6.2 and is not repeated here.
 - §6.3.4 `MasterPendulum`: multi-model plant wrapper.
 
 Do not repeat Chapter 5 wrapper implementation details.
+For OpenSim, state only the concrete pendulum interface: torque input, angle, angular velocity, angular acceleration, synchronized mass, center-of-mass length, pivot inertia, absence of muscle dynamics, and role as the intermediate-fidelity model.
+For FEM, include the concrete geometry, mesh, boundary regions, hinge constraint, torque boundary, contact law, internal stepping, and output projection because these choices affect the interpretation of the contact scenarios.
 
 ### 6.4 Reference Model and Evaluation Metrics
 
@@ -219,12 +221,16 @@ The subsection §6.3.3 stays focused on the case-study role.
 Include the following topics.
 
 - Geometry and hinge constraint.
+- Mesh and labeled boundary regions.
 - Neo-Hookean material choice.
 - Newmark time integration.
 - Torque application.
 - Compliant contact boundary.
 - Rigid-body output mapping to `theta`, `omega`, and `alpha`.
 - Reason for using high stiffness to approximate rigid contact.
+- One FEM-specific figure with two panels:
+  - Panel A: FEM mesh or reference configuration with labeled regions: pivot or rotation boundary, torque boundary, contact boundary, and wall or contact surface.
+  - Panel B: representative deformed configuration during contact, optionally colored by displacement magnitude or von Mises stress.
 
 Do not include the following details unless they are needed for interpreting a result.
 
@@ -233,10 +239,16 @@ Do not include the following details unless they are needed for interpreting a r
 - Full NGSolve implementation detail.
 - Long material-law derivations.
 - General FEM theory that is not used in the result discussion.
+- Exploratory notebook figures that are not converted into thesis-ready figures.
 
 The chapter may mention that switching between FEM and rigid-body models is a projection.
 FEM deformation states are not fully representable in the rigid-body models.
 This modeling consequence is discussed in §6.6 for Scenario 6.5.2.
+
+Figures from `docs/04_tool_integration/03_fem/` and `demos/ControlledPendulum/notebooks/master_pendulum/fem/` may be used as source material.
+They should not be inserted as notebook screenshots.
+Use them to generate one thesis-ready FEM model figure or, at most, one additional appendix figure.
+The main text should not contain a separate verification gallery for the FEM pendulum unless a plotted field directly supports a claim in §6.5 or §6.6.
 
 ---
 
@@ -532,6 +544,7 @@ Each recommended figure is tagged with the scenario it serves.
 | Baseline convergence figure against OpenModelica | §6.5.1 | required |
 | Multi-model switching figure with active-mode timeline and contact-event overlay | §6.5.2 | required |
 | Performance figure comparing full-FEM and switched-FEM execution | §6.5.3 | required |
+| FEM model figure with mesh/boundaries and representative contact deformation or stress field | §6.3.3 | recommended |
 | Quantization comparison figure | §6.5.A | only if 6.5.A is included |
 | Algebraic-loop result figure | §6.5.B | only if 6.5.B is included |
 
@@ -570,7 +583,11 @@ Do not describe repository paths in the thesis text unless they are needed for r
 - `docs/04_tool_integration/01_modelica/` contains Modelica pendulum, contact, FMU export, and rollback material.
 - `docs/04_tool_integration/02_opensim/` contains OpenSim pendulum setup, torque actuation, and contact tutorials.
 - `docs/04_tool_integration/03_fem/` contains FEM pendulum setup, torque application, and compliant contact tutorials.
+- `docs/04_tool_integration/03_fem/01_fem_pendulum_basics.ipynb` can provide source material for the FEM mesh, geometry, and hinge-constraint explanation.
+- `docs/04_tool_integration/03_fem/02_fem_pendulum_torque.ipynb` can provide source material for the torque-boundary explanation.
+- `docs/04_tool_integration/03_fem/03_fem_pendulum_contact.ipynb` can provide source material for the contact-boundary and contact-field figure.
 - `docs/04_tool_integration/04_master_pendulum/` contains the MasterPendulum tutorials for model switching and contact-aware modes.
+- `demos/ControlledPendulum/notebooks/master_pendulum/fem/` contains exploratory FEM pendulum checks for driven motion, swing, impact, and event detection. Use these notebooks for author verification and figure generation, not as direct thesis figures.
 
 ### Implementation Sources
 

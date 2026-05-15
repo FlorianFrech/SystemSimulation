@@ -6,7 +6,7 @@ It realizes SR-03-02 by adapting OpenSim models to the \texttt{CoSimComponent} i
 The wrapper delegates multibody and muscle dynamics to OpenSim and Simbody.
 It encapsulates the realize--integrate cycle behind the primitive operations of the component contract.
 
-As described in Section~\ref{sec:theory_opensim}, an OpenSim model advances an \texttt{osim.State} through a \texttt{Manager}.
+As described in Section~\ref{sec:242_modeling_musculoskeletal}, an OpenSim model advances an \texttt{osim.State} through a \texttt{Manager}.
 Derived quantities are obtained by staged realization of that state.
 The wrapper does not replace this machinery.
 It provides a reusable base for concrete musculoskeletal components whose ports and model assembly remain model-specific.

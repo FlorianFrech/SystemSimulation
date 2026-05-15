@@ -1,46 +1,65 @@
 \subsection{CoSimComponent Interface}
 \label{sec:architecture_cosimcomponent}
 
-The abstract base class \texttt{CoSimComponent} defines the contract that every simulation component in \syssimx{} must respect.
-It is the boundary between tool-specific model wrappers and the co-simulation framework and allows components from different backends to be treated uniformly during initialization, time stepping, data exchange, and result collection.
-The shape of the contract follows directly from the co-simulation formulation of Section~\ref{sec:232_cosim_formulation}.
-The master algorithm requires uniform stepping, type- and unit-aware coupling, a declared input-output dependency structure, and, for hybrid scenarios, the ability to roll a component back to an earlier time instant.
-Figure~\ref{fig:cosimcomponent_architecture} summarizes the resulting interface.
+The \texttt{CoSimComponent} interface defines the architectural contract for simulation components in \syssimx{}.
+It separates backend-specific model behavior from framework-level orchestration.
+All components expose the same interface for initialization, stepping, data exchange, and result collection.
+This uniform contract follows from the co-simulation formulation in Section~\ref{sec:232_cosim_formulation}.
+
+The master algorithms require a component interface with four properties.
+Components must expose typed and unit-aware ports.
+They must support a common lifecycle for initialization and stepping.
+They must declare the input-output dependencies needed for structural analysis.
+Components that participate in hybrid scenarios must also provide the state handling needed for rollback.
+Figure~\ref{fig:cosimcomponent_architecture} summarizes this interface.
 
 \begin{figure}[t]
   \centering
   \vspace{-1em}
   \includegraphics[width=0.95\textwidth]{figures/4_architecture/cosimcomponent.pdf}
   \vspace{-1em}
-  \caption{Architectural overview of the abstract \texttt{CoSimComponent} interface in \syssimx{}. It combines a typed port interface, a uniform lifecycle, distinct mechanisms for physical state transfer and rollback, and optional capabilities for structural analysis and hybrid co-simulation.}
+  \caption{Architectural overview of the \texttt{CoSimComponent} interface.
+  The interface combines typed ports, a common lifecycle, state handling, and optional capabilities for structural analysis and hybrid co-simulation.}
   \vspace{-0.5em}
   \label{fig:cosimcomponent_architecture}
 \end{figure}
 
 \paragraph{Typed Port Interface.}
 A component exposes its system interface through typed input and output ports.
-Each port carries a declared data type and an optional physical unit, which makes coupling assumptions explicit at the interface level and lets the framework validate type compatibility and unit consistency when connections are established (Section~\ref{sec:architecture_system_connections}).
+Each port carries a declared data type and an optional physical unit.
+These declarations make coupling assumptions explicit at the interface level.
+They also allow the framework to validate type compatibility and unit consistency when connections are established, as described in Section~\ref{sec:architecture_system_connections}.
 
 \paragraph{Lifecycle and Inversion of Control.}
-The interface prescribes a fixed lifecycle consisting of construction, parameter configuration, initialization at the simulation start time, repeated participation in the simulation loop, and finalization or reset.
-This lifecycle is owned by the framework rather than by the concrete component.
-The base class fixes the invariant execution skeleton, and the backend-specific subclass supplies only the model-specific operations invoked by this skeleton.
-This template-method arrangement follows the design pattern of~\cite{gamma_design_1995} and has two consequences.
-Generic framework concerns such as port-state management, time bookkeeping, history recording, and capability detection are implemented once and apply uniformly to all components.
-Backend wrappers can focus on model-specific behavior without duplicating framework logic.
+The interface prescribes a common lifecycle for all components.
+A component is constructed, configured, initialized at the simulation start time, stepped during the simulation loop, and reset or finalized after use.
+The framework owns this lifecycle order.
+Backend-specific subclasses provide the model operations that are called inside this order.
+
+This inversion of control keeps framework concerns in one place.
+Port-state management, time bookkeeping, history recording, and capability checks are handled uniformly.
+Backend wrappers can focus on model-specific initialization, stepping, and output evaluation.
 
 \paragraph{Declared Structural and Hybrid Metadata.}
-Beyond inputs, outputs, and parameters, the interface requires each component to declare the information that the master algorithm needs at the system level.
-The direct-feedthrough structure reports which outputs depend algebraically on which inputs within a single communication step and is consumed by the system to determine the execution order and to detect algebraic loops (Section~\ref{sec:architecture_system_connections}).
-Components that participate in hybrid simulation additionally declare zero-crossing event indicators and subscriptions to events produced by other components, which allows the hybrid algorithm of Section~\ref{sec:arch_algorithm} to locate, order, and dispatch events across the coupled system.
+The component interface also exposes metadata needed by the system-level orchestration.
+The direct-feedthrough declaration states which outputs can depend on which inputs within the same communication step.
+The \texttt{System} abstraction uses this information together with the connection structure to derive the execution constraints described in Section~\ref{sec:233_cosim_structural_analysis}.
+
+Hybrid components can additionally expose event indicators and event subscriptions.
+Event indicators allow an algorithm to detect and localize discrete events.
+Event subscriptions define which components must receive an event after it has been detected.
 
 \paragraph{State Handling.}
-The interface separates two forms of state handling.
-Physical state transfer exports the state in semantically meaningful quantities such as positions, velocities, or mode indicators and is used for inspection and for synchronization between alternative models of the same subsystem.
-Rollback state transfer captures and restores the internal solver state of a component opaquely and is used during hybrid event handling, where the simulation must return to an earlier time instant and re-advance.
-This separation is necessary because rollback relies on tool-specific solver information that is generally not interpretable across different model representations, whereas physical state must remain transferable between them.
+The interface separates physical state transfer from rollback state transfer.
+Physical state transfer exports semantically meaningful quantities such as positions, velocities, or mode indicators.
+It is used for inspection and for synchronization between alternative models of the same subsystem.
+
+Rollback state transfer captures and restores the internal solver state of a component.
+It is used during hybrid event handling, where the simulation may have to return to an earlier time and re-advance.
+The two mechanisms are separated because rollback state is tool-specific, while physical state must remain meaningful across model representations.
 
 \paragraph{Opt-in Capabilities.}
-Not every component must support every feature of the contract.
-The lifecycle operations are mandatory, whereas physical and rollback state transfer, zero-step output evaluation, and event handling are optional.
-This keeps simple components lightweight and confines the additional complexity to those components that genuinely participate in strongly coupled or hybrid scenarios.
+Components do not have to support every advanced capability.
+The lifecycle operations are mandatory.
+Physical state transfer, rollback, zero-step output evaluation, event indicators, and event handling are optional.
+This keeps simple components lightweight and limits additional complexity to components that participate in strongly coupled or hybrid scenarios.

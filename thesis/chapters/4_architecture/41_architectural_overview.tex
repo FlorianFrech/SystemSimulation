@@ -1,78 +1,77 @@
 \section{Architectural Overview}
 \label{sec:architecture_overview}
 
-Figure~\ref{fig:syssimx_architecture} shows the layered architecture of \syssimx{} and the delegation chain from user code through the framework to the external simulation backends.
-The architecture is organized into four internal layers, adapter, core abstractions, system orchestration, and execution, each with a clearly defined responsibility.
-Six design principles shaped this layering:
+Figure~\ref{fig:syssimx_architecture} summarizes the layered architecture of \syssimx{}.
+It shows how user code delegates simulation tasks to framework layers and external simulation backends.
+The framework contains four internal layers.
+The adapter layer maps backend APIs to the component interface.
+The core abstraction layer defines components, ports, connections, and multi-model components.
+The system-orchestration layer owns the assembled system structure.
+The execution layer advances the system through interchangeable algorithms.
+The layering follows six design principles:
 %
 \begin{enumerate}[nosep]
-  \item \textit{component-based decomposition,}
-  \item \textit{tool-agnostic core with backend adapters,}
-  \item \textit{separation of model and orchestration,}
-  \item \textit{pluggable execution algorithms,}
-  \item \textit{explicit and unit-aware interfaces, and}
-  \item \textit{minimal required contract with optional capabilities.}
+  \item \textit{component-based decomposition}
+  \item \textit{tool-agnostic core with backend adapters}
+  \item \textit{separation of model and orchestration}
+  \item \textit{pluggable execution algorithms}
+  \item \textit{explicit and unit-aware interfaces}
+  \item \textit{minimal required contract with optional capabilities}
 \end{enumerate}
 %
-Rather than discussing these principles in isolation, the following paragraphs introduce each layer of the architecture and explain the design decisions that motivated it.
-The description proceeds from the bottom of Figure~\ref{fig:syssimx_architecture} upward, starting with the external tools and ending with the execution algorithms.
+The following paragraphs describe the layers from the external tools upward.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/4_architecture/syssimx_architecture.pdf}
   \caption{Layered architecture of the \syssimx{} framework.
-  Solid arrows indicate the delegation direction between layers;
-  dashed arrows indicate calls to external tool APIs across the
-  framework boundary.}
+  Solid arrows show delegation between framework layers.
+  Dashed arrows show calls to external tool APIs across the framework boundary.}
   \label{fig:syssimx_architecture}
 \end{figure}
 
 \paragraph{External simulation tools.}
-The simulation backends at the bottom of Figure~\ref{fig:syssimx_architecture} are not part of the framework.
+External simulation tools provide the backend model representations and numerical solvers.
 They include FMI~2.0 Co-Simulation FMUs exported from equation-based modeling environments, OpenSim for musculoskeletal dynamics, and Netgen/NGSolve for finite element analysis.
-Each tool provides its own solver, model representation, and programmatic Python interface.
-The framework treats these tools as black-box backends and interacts with them exclusively through their respective APIs.
+Each backend provides its own solver, model representation, and programmatic Python interface.
+\syssimx{} accesses these backends through their respective APIs.
 
 \paragraph{Adapter layer.}
-The adapter layer wraps tool-specific APIs behind the common \texttt{CoSimComponent} interface.
-The depth of these adapters depends on the structure provided by the backend.
-\texttt{FMUComponent} is the strongest adapter, because FMI already provides a standardized co-simulation interface and a machine-readable model description.
-It can derive ports, parameters, value references, and structural dependencies from the FMU metadata.
-\texttt{OpenSimComponent} provides a thinner adapter.
-OpenSim offers a common runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}, but ports and model assembly remain specific to each musculoskeletal model.
-\texttt{FEMComponent} is only a lightweight base for finite-element components.
-It collects common FE-related attributes, but the concrete component defines the discretization, material law, boundary conditions, solver state, and time integration scheme.
-Despite these different abstraction levels, all adapters expose the same component contract to the layers above.
-This realizes the principle of a \emph{tool-agnostic core with backend adapters}.
+The adapter layer connects external simulation tools to the common \texttt{CoSimComponent} contract.
+Each adapter translates the runtime interface of one backend into framework-level ports, parameters, lifecycle operations, and optional capabilities.
+The amount of translation depends on the backend.
+FMUs already provide standardized metadata and co-simulation calls.
+OpenSim and Netgen/NGSolve require more model-specific wrapper code because their Python APIs expose simulation objects rather than FMI-style descriptors.
+
+This layer keeps the framework core tool-agnostic.
+The layers above interact with all backends through the same component contract, while the backend-specific API calls remain inside the adapters.
 
 \paragraph{Core abstractions.}
-The core abstraction layer defines the modeling primitives of the framework.
-The abstract base class \texttt{CoSimComponent} specifies the contract that every simulation component must satisfy. These are typed and unit-annotated input and output ports, a fixed lifecycle for initialization, stepping, and output evaluation, and optional hooks for direct-feedthrough declaration, event indicators, and state rollback.
-This reflects two design principles.
-First, \emph{component-based decomposition}, a system is represented as a set of interacting components that can be constructed, configured, and exchanged independently.
-Second, \emph{minimal required contract with optional capabilities}, the component interface distinguishes between abstract methods that every component must implement and optional methods that enable participation in advanced framework features.
-A simple component only needs to implement the core lifecycle methods.
-Components that act as event sources must additionally implement state snapshot and rollback.
-This keeps simple wrappers lightweight while allowing the framework to detect and exploit richer component capabilities where available.
+The core abstraction layer defines the architectural primitives of the framework.
+The \texttt{CoSimComponent} base class specifies the contract that every simulation component must satisfy.
+This contract includes typed and unit-annotated ports, a lifecycle for initialization and stepping, and optional capabilities for direct feedthrough, event indicators, and rollback.
 
-Signal connections and event connections define the directed data flow and discrete event propagation between components.
-\emph{Explicit and unit-aware interfaces} make coupling assumptions visible.
-Each port carries a declared type and physical unit, and connections are validated for compatibility when they are added to the system.
-The \texttt{MultiComponent} class extends this layer to the case where several interchangeable models represent the same physical subsystem, providing a single external interface while managing multiple internal realizations with consistent state synchronization.
+Component-based decomposition represents a coupled system as interacting components that can be configured and exchanged independently.
+The minimal-contract principle keeps simple components lightweight and allows advanced components to expose additional capabilities.
+Signal connections and event connections define data flow and event propagation between components.
+The \texttt{MultiComponent} abstraction extends the same external interface to several interchangeable models of one physical subsystem.
 
 \paragraph{System orchestration.}
 The \texttt{System} class assembles components and connections into a complete co-simulation scenario.
-It validates port compatibility, constructs the dependency graph, derives a topologically sorted execution order, identifies direct-feedthrough dependencies, and detects algebraic loops through strongly connected component analysis.
-These structural properties are computed automatically during initialization and made available to the execution algorithms.
-This layer embodies the \emph{separation of model and orchestration}.
-Components are responsible for their own state integration and output evaluation, while the \texttt{System} class handles all system-level concerns.
+It owns the system-level structure that is shared by initialization, structural analysis, and execution.
+Components remain responsible for their internal state integration and output evaluation.
+The \texttt{System} abstraction owns the coupling relation between them.
+
+This layer realizes the separation between model behavior and orchestration.
+The structural concepts used by this layer are introduced in Section~\ref{sec:233_cosim_structural_analysis}.
+Their implementation is described in Chapter~\ref{chap:implementation}.
 
 \paragraph{Execution layer.}
 The execution layer contains the master algorithms that advance the coupled system in time.
-An algorithm receives a \texttt{System} instance and steps all components from the current communication time~$t$ to~$t + \Delta t$, managing input propagation, output collection, and, where required, iterative resolution of algebraic loops or detection, localization, and handling of discrete events.
-The same system model can be executed with different algorithms without modifying the component implementations or the system definition.
-This realizes the principle of \emph{pluggable execution algorithms}.
-The framework delegates all stepping logic to interchangeable algorithm objects, keeping numerical orchestration separate from model structure.
+Each algorithm operates on the same \texttt{System} abstraction and uses the system structure provided by the orchestration layer.
+Different algorithms can therefore execute the same system definition without changing the component implementations.
+This realizes the principle of pluggable execution algorithms.
 
 \paragraph{Supporting services.}
-In addition to the main layers, the framework provides supporting services for unit handling, recording of port and component histories during simulation, and graph-based visualization of the system structure.
+Supporting services provide unit handling, history recording, and graph-based visualization.
+They support model assembly, inspection, and post-processing without changing the component and algorithm contracts.

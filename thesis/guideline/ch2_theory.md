@@ -1,393 +1,380 @@
-# Chapter 2 Guideline
-
-This document defines the scope and boundary rules for Chapter 2.
-Chapter 2 provides the theoretical basis needed to understand the framework,
-implementation, and case study.
-It must not become a second state-of-the-art chapter or a hidden
-implementation chapter.
-
-Use this document together with:
-
-- `README.md`
-- `golden_rules_writing_summary.md`
-- `writing_style.md`
-- `glossary.md`
-- `notation.md`
-
----
-
-## Role of Chapter 2
-
-Chapter 2 should provide the minimum complete theoretical basis needed for the
-reader to:
-
-- understand the framework architecture,
-- understand the component abstractions,
-- understand continuous-time, hybrid, and co-simulation terminology,
-- follow the implementation without conceptual gaps,
-- and interpret the controlled-pendulum case study.
-
-Chapter 2 explains concepts.
-Chapter 5 explains how `syssimx` realizes them.
-Chapter 6 explains which concrete models and solver settings are used in the
-case study.
-
----
-
-## Chapter 2 Must Not
-
-Chapter 2 must not:
-
-- become a detailed algorithm chapter,
-- repeat the state of the art,
-- include code-level or API-level implementation detail,
-- derive framework-specific procedures that belong in Chapter 5,
-- overload the reader with formalism that is not used later,
-- or name case-study solver settings that belong in Chapter 6.
-
----
-
-## Standard Subsection Pattern
-
-Each theory subsection should follow this pattern when practical.
-
-1. Short prose bridge.
-2. Core concept explanation.
-3. Required notation or notation extension.
-4. Minimal example or figure.
-5. Boundary sentence that defers technical realization to the owning chapter.
-
----
-
-## Theory Versus Implementation Boundary
-
-The theory chapter should explain:
-
-- what a concept is,
-- why it matters,
-- what problem it solves,
-- what information it produces,
-- and which later chapter realizes it concretely.
-
-The implementation chapter should explain:
-
-- exact data structures,
-- graph construction,
-- iteration schemes,
-- solver logic,
-- ordering logic,
-- event-handling logic,
-- and verification of the realized behavior.
-
----
-
-## Co-Simulation Section Scope
-
-The co-simulation section should explain enough for the reader to understand:
-
-- why simulation units exchange data only at communication points,
-- why inputs must be approximated between communication points,
-- why direct feedthrough matters for execution ordering,
-- why algebraic loops arise from instantaneous cyclic dependencies,
-- why coupled initialization is nontrivial,
-- why hybrid co-simulation is harder than purely continuous co-simulation,
-- and why FMI matters as the standard interface layer.
-
-The co-simulation section must not derive:
-
-- detailed graph construction logic,
-- active-output filtering details,
-- SCC detection procedures,
-- Tarjan or implementation-specific graph algorithms,
-- the exact local or global IJCSA implementation,
-- Jacobian assembly details,
-- convergence-management details,
-- event localization by bisection in procedural detail,
-- rollback realization details,
-- or implementation-specific initialization sequences.
-
----
-
-## Co-Simulation Figure Guidance
-
-The preferred structural-analysis figure in Chapter 2 is conceptual.
-It should show the principle, not the exact `syssimx` implementation.
-
-Recommended three-panel structure:
-
-- Panel 1: port connections and direct-feedthrough hints at simulation-unit
-  level.
-- Panel 2: zero-delay dependency graph with one highlighted SCC.
-- Panel 3: condensed acyclic graph with the resulting generations.
-
-The figure should communicate:
-
-- port connections and direct-feedthrough information induce a zero-delay
-  dependency graph,
-- a directed cycle in that graph forms one algebraic loop,
-- the loop is a strongly connected component,
-- collapsing each SCC yields an acyclic condensed graph,
-- and execution generations are computed on the condensed graph.
-
-Rules:
-
-- Panel 1 may show ports, but the text should remain at simulation-unit level.
-- Panel 2 should show only the zero-delay graph.
-- Panel 2 should label the loop as one SCC or algebraic-loop block.
-- Panel 3 should show the condensed graph, not the raw cyclic graph with
-  generation braces added afterward.
-- Generation labels belong only to Panel 3.
-- The caption must state that the figure is conceptual.
-
-Implementation-specific refinements such as active-output filtering,
-delayed-producer handling, and stored `System` metadata belong in Chapter 5.
-
----
-
-## Co-Simulation Draft Status Notes
-
-The following notes capture the current review status of the co-simulation
-section and should be used during revision.
-
-Appropriate topics:
-
-- From monolithic simulation to co-simulation.
-- Mathematical formulation of co-simulation.
-- Structural analysis of a co-simulation scenario.
-- Co-simulation execution strategies.
-- Algebraic loops in co-simulation.
-- Hybrid co-simulation.
-- Functional Mock-up Interface.
-
-Known risks:
-
-- The hybrid co-simulation subsection can become too procedural.
-- Execution-order wording must stay consistent with the condensed-graph
-  interpretation.
-- Coupled initialization should appear as an explicit conceptual issue.
-- The notation table and the co-simulation section must remain harmonized.
-- Forward references and figure logic must be checked after revision.
-
----
-
-## Chapter 2 Revision Checklist
-
-- [ ] Does the content belong in Chapter 2?
-- [ ] Does the terminology match `glossary.md`?
-- [ ] Does the notation match `notation.md`?
-- [ ] Is the text conceptual rather than implementation-specific?
-- [ ] Is every equation needed later?
-- [ ] Is every figure conceptually correct and useful?
-- [ ] Does the text avoid repeating Chapter 1 motivation?
-- [ ] Does the text avoid becoming a mini-implementation chapter?
-- [ ] Are all references and labels valid?
-- [ ] Does the subsection end with a boundary sentence where needed?
-
----
-
-# Modeling Approaches Section (Chapter 2.4)
+# Chapter 2 Guideline: Theoretical Background
 
 ## Purpose
 
-This section introduces the modeling paradigms whose subsystem models
-are integrated in the case study. It does not teach tools, derive
-numerical methods, or justify tool selection (that is Chapter 3).
+Chapter 2 provides the minimum theoretical background needed to understand the architecture, implementation, and case study of the thesis.
+It should define the modeling and co-simulation concepts that are later implemented in `syssimx`.
+It is not a second state-of-the-art chapter and it is not an implementation chapter.
 
-### What the reader should understand after this section
+The chapter should answer three questions:
 
-- What type of equations each paradigm produces.
-- What state, input, and output vectors look like at the interface
-  level.
-- Why the equation structures differ enough to require separate
-  solvers.
-- Why no single paradigm covers all aspects of the target system.
+- What mathematical concepts are needed to describe continuous, hybrid, and coupled simulation models?
+- Which co-simulation concepts are required for execution ordering, algebraic-loop handling, and event interaction?
+- Which modeling approaches are used later in the case study, and what is their theoretical role?
 
-### What this section must not do
+## Required Context Before Writing
 
-- Repeat the motivation from Chapter 1 (why heterogeneous simulation
-  is needed).
-- Repeat the tool selection from Chapter 3 (why Modelica / OpenSim /
-  NGSolve were chosen).
-- Derive numerical methods (weak forms, shape functions, index
-  reduction, time integration schemes).
-- Describe API-level or code-level implementation details (belongs to
-  Chapter 5).
-- Describe specific solver or integrator choices (see below).
-- Describe specific material laws, contact formulations, or model
-  configurations (belongs to Chapter 6).
+Read these documents before drafting or polishing Chapter 2:
 
----
+- `thesis/guideline/README.md`
+- `thesis/guideline/thesis_concept.md`
+- `thesis/guideline/writing_style.md`
+- `thesis/guideline/glossary.md`
+- `thesis/guideline/notation.md`
+- `thesis/guideline/golden_rules_writing_summary.md`
 
-## Solver and model-specific detail: where it belongs
+Chapter 2 must follow the glossary strictly.
+Use `subsystem` for the modeled part of the physical system.
+Use `simulation unit` for a tool-neutral executable simulation participant.
+Use `component` only when referring to the concrete `syssimx` abstraction in later chapters.
 
-The framework enforces a clean separation:
+## Chapter Role
 
-- The **model** (inside the simulation unit) owns the solver, the
-  material law, the contact formulation, and all internal numerics.
-- The **wrapper** (the component) owns the `set`/`get`/`step`
-  mapping to the backend API.
-- The **framework** (the system) owns the orchestration.
+Chapter 2 should contain theory, definitions, and conceptual relations.
+It should not contain code-level names, implementation routines, test results, or case-study parameter values.
 
-The thesis chapter structure must mirror this separation:
+Use Chapter 2 for:
 
-| Content                                      | Chapter   | Reason                                |
-|----------------------------------------------|-----------|---------------------------------------|
-| Paradigm characterization (equation type,    | **Ch. 2** | Minimum theory for understanding      |
-| abstraction level, typical interface)        |           | the framework and the case study      |
-| Wrapper realization (`set`/`get`/`step`      | **Ch. 5** | Framework implementation              |
-| mapping to backend API)                      |           |                                       |
-| Specific solver choices (CVODE, Newmark,     | **Ch. 6** | Model-specific decisions affecting    |
-| Simbody integrator)                          |           | the case study results                |
-| Specific material laws, contact formulations,| **Ch. 6** | Model-specific choices for the        |
-| torque application methods                   |           | pendulum case study                   |
+- continuous-time state-space concepts
+- ordinary and differential-algebraic equations
+- hybrid systems, events, modes, guards, resets, and dense time
+- co-simulation, communication points, macro steps, master algorithms, feedthrough, structural dependencies, and algebraic loops
+- modeling approaches used in the thesis: equation-based modeling, musculoskeletal or multibody simulation, finite element modeling, and model fidelity
 
-Chapter 2 should state that each paradigm requires its own solver
-(this is the whole point of co-simulation). It should NOT name
-specific solvers (Newmark, CVODE, etc.).
+Do not use Chapter 2 for:
 
-Chapter 5 should explain how the wrapper communicates with the
-backend. It should NOT explain what the backend does internally,
-because the wrapper does not know — that is the black-box property.
+- `syssimx` class names, method names, port implementation details, or graph metadata fields
+- implementation-specific algorithms such as exact bisection code paths, active-output filtering, cached maps, or event-deduplication caches
+- case-study parameter values such as contact stiffness, PID gains, macro-step sizes, solver tolerances, or benchmark timings
+- detailed tool-wrapper behavior for FMUs, OpenSim, NGSolve, or the `MasterPendulum`
+- validation results or claims about performance
 
-Chapter 6 should describe the concrete pendulum model variants:
-their material laws, solver choices, contact formulations, and
-interface quantities. This is where the reader learns that the FEM
-pendulum uses Neo-Hookean hyperelasticity with Newmark time
-integration, that the Modelica FMUs use CVODE, etc.
+## Recommended Section Structure
 
----
+The current chapter structure is appropriate and should be preserved unless the thesis structure changes globally.
 
-## Recommended structure
+### 2.0 Notation and Conventions
 
-    2.4 Modeling Approaches Used in This Thesis
-    ├── 2.4.1 Equation-Based Modeling
-    ├── 2.4.2 Musculoskeletal Multibody Modeling
-    ├── 2.4.3 Continuum-Mechanical Modeling
-    └── 2.4.4 Complementarity and Integration Need
+Function:
+Define global notation used throughout the thesis.
 
----
+Content:
 
-## Standard subsection pattern
+- time variables, macro-step notation, communication points
+- state, input, output, event, and mode symbols
+- dense-time notation if used in later chapters
+- basic graph notation if needed for structural analysis
 
-Each subsection should cover:
+Rules:
 
-1. **Paradigm characterization** — what class of physical systems,
-   what kind of equations (ODE, DAE, semi-discretized PDE), what
-   abstraction level (lumped-parameter vs. spatially distributed).
-2. **Interface abstraction** — what are the state variables, inputs,
-   outputs from the perspective of a simulation unit wrapping this
-   model? What structural properties (e.g. direct feedthrough,
-   stiffness) are typical?
-3. **Limitation that motivates complementary paradigms** — one or two
-   sentences on what this paradigm cannot resolve.
-4. **Boundary sentence** — forward reference to Chapter 6 for the
-   concrete model and solver choices, and to Chapter 5 for the
-   wrapper realization.
+- Only include symbols used repeatedly in later chapters.
+- Do not overload symbols with different meanings in different sections.
+- Keep local symbols in the section where they are introduced.
+- Align all symbols with `thesis/guideline/notation.md`.
 
-Name the representative tool once per subsection for concreteness
-("such as Modelica", "such as OpenSim", "such as NGSolve"), but
-write about the paradigm, not the tool.
+### 2.1 Continuous-Time Modeling
 
----
+Function:
+Provide the mathematical basis for continuous subsystem behavior.
 
-## Content per subsection
+Content:
 
-### 2.4.1 Equation-Based Modeling
+- state-space representation
+- inputs, outputs, parameters, and time-dependent trajectories
+- \ac{ODE} and \ac{DAE} concepts
+- numerical integration as an approximation of continuous dynamics
+- direct feedthrough as an input-output dependency at the same time instant
 
-- Lumped-parameter, multi-domain physical systems.
-- Acausal formulation → compiler produces DAE or ODE.
-- Typical state: generalized coordinates, velocities, algebraic
-  variables.
-- Interface: inputs and outputs defined by the modeler; causality
-  assigned at translation time.
-- Structural property: direct feedthrough depends on the output
-  equation; declared in the exported model metadata.
-- Limitation: no spatial resolution — cannot resolve local
-  deformation, stress, or distributed contact.
-- Mention: when exported via FMI, the model becomes a simulation
-  unit with the interface defined in §2.3.
+Rules:
 
-### 2.4.2 Musculoskeletal Multibody Modeling
+- Keep the level conceptual.
+- Do not explain solver internals unless the concept is needed later.
+- Do not discuss concrete solver choices such as CVODE, DASSL, or Euler here.
+- Use this section to prepare the reader for component dynamics, not for implementation details.
 
-- Articulated rigid-body systems with joints, constraints, and
-  muscle-tendon actuators.
-- Forward dynamics: ODE on generalized coordinates produced by the
-  multibody formulation.
-- Typical state: joint angles, joint velocities.
-- Interface: external forces/torques as inputs, joint kinematics or
-  muscle quantities as outputs.
-- Structural property: usually no direct feedthrough from applied
-  force to kinematic output within a single step.
-- Limitation: rigid-body assumption — no local deformation, no
-  distributed stress/strain fields.
+### 2.2 Hybrid System Modeling
 
-### 2.4.3 Continuum-Mechanical Modeling
+Function:
+Introduce discontinuities, mode changes, and event-based behavior.
 
-- Spatially distributed systems described by PDEs (elasticity, heat,
-  contact).
-- Spatial semi-discretization (FEM) produces a large ODE or DAE
-  system in the nodal degrees of freedom.
-- The resulting systems are typically stiff and nonlinear, requiring
-  implicit time integration with iterative solvers at each step.
-- Typical state: nodal displacements, velocities (and possibly
-  pressures or temperatures).
-- Interface: boundary conditions (forces, prescribed displacements)
-  as inputs; reaction forces, displacements, or field quantities at
-  selected nodes as outputs.
-- Structural property: direct feedthrough from prescribed boundary
-  force to reaction displacement is common in quasi-static or
-  implicit time integration.
-- Limitation: high computational cost — not practical for full
-  system-level simulation over long time horizons without selective
-  activation.
-- Do NOT include: weak form derivations, shape functions, specific
-  material laws (Neo-Hookean), specific time integrators (Newmark),
-  contact formulations. These belong in Chapter 6 where the concrete
-  FEM pendulum model is described.
+Content:
 
-### 2.4.4 Complementarity and Integration Need
+- continuous evolution interrupted by discrete events
+- event indicators, zero crossings, guards, and resets
+- modes and mode-dependent dynamics
+- dense or superdense time when multiple events occur at the same physical time
+- rollback and event localization as conceptual requirements for hybrid co-simulation
 
-Summary table:
+Rules:
 
-| Paradigm              | Abstraction      | Strength                  | Gap                           |
-|-----------------------|------------------|---------------------------|-------------------------------|
-| Equation-based        | Lumped (1D)      | Multi-domain system-level | No spatial resolution         |
-| Multibody biomech.    | Lumped (1D)      | Musculoskeletal dynamics  | No local deformation          |
-| Continuum mechanics   | Field (2D/3D)    | Spatial accuracy          | High cost, narrow scope       |
+- Explain why ordinary continuous-time integration is insufficient for hybrid behavior.
+- Define terminology that is later used by the hybrid algorithm.
+- Do not describe `syssimx` event caches, dispatch groups, or exact localization implementation.
 
-Key message: no single paradigm covers all relevant aspects of the
-target system. This complementarity is the reason why the framework
-must support heterogeneous co-simulation with subsystem models from
-different paradigms and abstraction levels.
+### 2.3 Co-Simulation Principles
 
-Close with a sentence linking to §2.3 (co-simulation principles
-provide the coupling mechanism) and to Chapter 4 (the framework
-architecture realizes this integration).
+Function:
+Explain how multiple simulation units are coupled and orchestrated.
 
----
+Content:
 
-## Distinction from other chapters
+- simulation units and communication points
+- macro steps and input approximation between communication points
+- master algorithms and execution order
+- Jacobi and Gauss-Seidel coupling at a conceptual level
+- direct feedthrough and instantaneous dependencies
+- structural dependency graphs and strongly connected components
+- algebraic loops and coupled initialization
+- conceptual role of FMI and FMUs in co-simulation
 
-| Question                                    | Where answered  |
-|---------------------------------------------|-----------------|
-| Why is heterogeneous simulation needed?     | Chapter 1       |
-| What modeling paradigms are involved?       | **Chapter 2.4** |
-| Why was tool X selected over tool Y?        | Chapter 3       |
-| How is each model wrapped as a component?   | Chapter 5       |
-| What specific models, solvers, and material | Chapter 6       |
-| laws are used in the case study?            |                 |
+Rules:
 
----
+- Use `simulation unit` for tool-neutral participants.
+- Use `master algorithm`, not `orchestrator`, unless referring to the general orchestration role.
+- Keep graph theory at the level needed for Chapter 5 structural analysis.
+- Do not include implementation-specific graph fields such as `_dag`, `_input_sources`, or `execution_idx`.
+- Do not describe the exact IJCSA implementation. State the principle of solving coupled input-output dependencies.
 
-## Writing checklist
+### 2.4 Modeling Approaches Used in This Thesis
 
-- [ ] No tool-selection argument (that is Chapter 3)
-- [ ] No motivation repetition (that is Chapter 1)
-- [ ] No solver or integrator details (that is Chapter 6)
-- [ ] No specific material laws or contact formulations (that is Chapter 6)
-- [ ] No FEM derivations, no Modelica compiler internals
-- [ ] No wrapper or API details (that is Chapter 5)
-- [ ] Each subsection states the equation type (ODE / DAE / semi-discretized PDE)
-- [ ] Each subsection states the interface abstraction (state, input, output)
-- [ ] The complementarity argument is explicit
-- [ ] FMI is not repeated (already in §2.3.7)
+Function:
+Provide the theoretical background for the model classes later used in the controlled pendulum case study.
+
+Content:
+
+- equation-based modeling and Modelica-style declarative models
+- \ac{FMI} and \acp{FMU} as packaging and tool-interoperability concepts
+- musculoskeletal or multibody modeling as rigid-body dynamics with joints and constraints
+- finite element modeling as a continuum-based discretization approach
+- model fidelity and reduced representations
+
+Rules:
+
+- Keep the section about modeling approaches, not tool integration.
+- Use the pendulum only as a running example if it clarifies the concept.
+- Do not reproduce the full implementation of the FMU, OpenSim, or FEM pendulum.
+- Defer concrete pendulum equations, contact parameters, solver settings, and switching thresholds to Chapter 6.
+- If Newmark updates are included, present them only as the time-discretization concept used for dynamic FEM analysis. Do not turn this into a full solver chapter.
+- Keep simulation-unit interface discussion short. Chapter 2 may state which quantities a modeling approach typically exposes, but the concrete port contract, wrapper lifecycle, state snapshot representation, feedthrough declaration, and backend adaptation belong in Chapter 5.
+- For finite element models, separate the general concept from the case-study realization. Chapter 2 explains continuum fields, weak form, discretization, and time integration. Chapter 6 explains the controlled-pendulum geometry, mesh, hinge constraint, torque boundary, penalty contact law, output projection, and stress or displacement visualizations.
+- For OpenSim, keep only the conceptual consequence: OpenSim models expose selected controls, generalized coordinates, speeds, and realized quantities, but no FMI-style descriptor. The wrapper mapping belongs in Chapter 5. The concrete pendulum interface belongs in Chapter 6.
+- Use `\paragraph{}` headings inside Section 2.4 only when they make a long conceptual subsection easier to scan. Do not introduce paragraph headings only to make all modeling approaches look symmetric. Section 2.4.1 may remain prose-only if the Modelica listing already structures the explanation.
+
+## Theory-to-Chapter Boundary
+
+Use this table to decide where content belongs.
+
+| Content type | Belongs in |
+| --- | --- |
+| Mathematical definition, notation, conceptual dependency | Chapter 2 |
+| User requirements and system requirements | Chapter 3 |
+| Framework abstractions and design rationale | Chapter 4 |
+| Class behavior, method order, data structures, implementation algorithms | Chapter 5 |
+| Concrete case-study models, parameters, solver settings, and reference setup | Chapter 6 |
+| Interpretation, limitations, contribution, and future work | Chapter 7 |
+
+Examples:
+
+| Topic | Chapter 2 version | Later chapter version |
+| --- | --- | --- |
+| Direct feedthrough | Same-time input-output dependency | Port perturbation or FMI model-structure extraction in Chapter 5 |
+| Algebraic loop | Cycle of instantaneous dependencies | Stored loop metadata and IJCSA implementation in Chapter 5 |
+| Event handling | Indicators, guards, resets, dense time | Detection, localization, dispatch, deduplication in Chapter 5 |
+| FEM dynamics | Continuum discretization and time integration concept | FEM pendulum geometry, boundary conditions, contact stiffness, and output projection in Chapter 6 |
+| Solver choices | General role of numerical integration | CVODE, Euler reset FMU, and FEM Newmark settings in Chapter 6 |
+| Simulation-unit contract | Typical exposed quantities and why an interface is needed | Concrete wrapper behavior, ports, lifecycle, feedthrough, snapshots, and backend calls in Chapter 5 |
+| FEM visualization | Concept that FEM resolves displacement, strain, stress, and contact fields | Mesh, boundary tags, deformed contact snapshots, and field plots for the case-study pendulum in Chapter 6 |
+
+### Simulation-Unit Contract Boundary
+
+Chapter 2 should not contain a separate contract discussion for every modeling approach if that discussion starts to read like wrapper documentation.
+Use at most one short bridge paragraph per approach.
+That paragraph may state the typical interface consequence of the modeling approach:
+
+- equation-based models expose variables according to causality and variability declarations,
+- FMUs package such variables in a standardized model description,
+- musculoskeletal models require a model-specific selection of controls, generalized coordinates, speeds, and realized outputs,
+- finite element models expose selected boundary quantities or projected scalar outputs rather than the full field state.
+
+For the OpenSim subsection, the Chapter 2 bridge paragraph should stop at this level:
+
+```latex
+A musculoskeletal model does not define a standardized co-simulation descriptor comparable to an \ac{FMI} model description.
+The exchanged quantities must therefore be selected for the concrete model.
+Typical inputs are actuator controls, prescribed generalized forces, or external loads.
+Typical outputs are generalized coordinates, speeds, accelerations, body kinematics, contact quantities, or muscle-related quantities.
+```
+
+The following OpenSim content belongs outside Chapter 2:
+
+- Chapter 5: how `OpenSimComponent` maps selected quantities to ports, initializes the OpenSim `Model`, `State`, and `Manager`, stages realization, reads outputs, and declares or handles direct feedthrough.
+- Chapter 6: the concrete pendulum torque input, \(\theta\), \(\omega\), \(\alpha\), synchronized mass, center-of-mass length, pivot inertia, absence of muscle dynamics, and role as intermediate-fidelity model.
+
+Move the following content to Chapter 5:
+
+- how a wrapper creates ports,
+- how it initializes the backend,
+- how it reads and writes values,
+- how it detects or declares direct feedthrough,
+- how rollback snapshots are represented,
+- how the backend state is restored.
+
+Move the following content to Chapter 6:
+
+- the concrete pendulum inputs and outputs,
+- parameter synchronization between model variants,
+- FEM boundary names and geometry,
+- FEM contact parameters and internal time stepping,
+- qualitative mesh, displacement, stress, or contact visualizations.
+
+## Solver Detail Boundary
+
+Solver theory must stay proportional to the thesis contribution.
+The thesis contributes a co-simulation framework, not a new numerical integration method.
+
+Allowed in Chapter 2:
+
+- explaining that continuous dynamics require numerical integration
+- distinguishing \acp{ODE}, \acp{DAE}, and \acp{PDE}
+- presenting a short Newmark update if required to understand dynamic FEM modeling
+- stating that implicit and explicit schemes differ in stability and cost at a high level
+
+Not appropriate for Chapter 2:
+
+- detailed derivations of CVODE, DASSL, Euler, or Newton solver internals
+- solver-specific tolerances or configuration parameters
+- performance claims about solver choices
+- tool-specific solver behavior of exported FMUs
+
+Concrete solver choices belong in Chapter 6.
+For this thesis, Chapter 6 should state that most FMUs use CVODE by default, while the PID reset FMU uses Euler because the reset input must be applied reliably during event handling.
+
+## Figures and Tables
+
+Use figures and tables only when they reduce explanation effort.
+
+Appropriate figures:
+
+- conceptual continuous-time model with inputs, states, and outputs
+- hybrid trajectory with event indicator and reset
+- co-simulation communication grid
+- dependency graph and algebraic-loop concept
+- comparison of modeling approaches at a conceptual level
+
+Avoid:
+
+- implementation sequence diagrams
+- class diagrams
+- code-level data-flow diagrams
+- case-study result plots
+- tool screenshots
+
+Caption rule:
+Every figure caption must state what concept the figure supports.
+Do not use captions as a second full explanation of the section.
+
+### Structural-Analysis Figure (Section 2.3.3)
+
+Role:
+Show the conceptual three-step pipeline from a coupled scenario to a generation-based execution order.
+The figure must remain solution-neutral and must not depend on `syssimx` field names, port boxes, or implementation-style coloring.
+
+Required panels:
+
+- Panel (a) **Dependency graph.** Four labelled nodes (A, B, C, D) with directed arrows. Mark nodes with direct feedthrough on the node itself (distinct color or double border, not red) **and** classify edges as instantaneous (solid) or delayed (dashed). The node encoding shows the cause (feedthrough property of the receiving unit); the edge encoding shows the effect (instantaneous versus delayed dependency). Include a three-entry legend.
+- Panel (b) **Zero-delay graph.** Only the instantaneous edges are retained. The SCC formed by B and C is highlighted as an algebraic loop block.
+- Panel (c) **Condensed graph.** The algebraic loop is collapsed to a single block. Topological generations are labelled (Gen 0, Gen 1, Gen 2).
+
+What the figure must not show:
+
+- port-level boxes or per-port direct-feedthrough arrows (these belong to the implementation level)
+- `\texttt{graph}`, `\texttt{\_dag}`, `\texttt{execution\_order}` or any other metadata field name
+- delayed-producer relocation (this is a `syssimx` scheduling choice and belongs in Chapter 5)
+- ghosted edges or filter annotations
+
+Caption must state that the figure illustrates the conceptual pipeline, and must not enumerate panels as a method list.
+The same scenario (A, B, C, D) is reused in the implementation chapter for the worked example. Chapter 2 is therefore the visual anchor; the implementation figure refines it.
+
+## Equation Rules
+
+Equations should be included only if they are reused later.
+
+Rules:
+
+- Define every symbol close to its first use.
+- Use notation consistently with `notation.md`.
+- Label equations only if they are referenced later.
+- Avoid derivations that do not support later implementation or case-study interpretation.
+- Keep the derivation depth below what would be expected in a numerical-methods thesis.
+
+## Acronyms and Terminology
+
+Use acronym macros for terms listed in `thesis/other/acronyms.tex`.
+
+Likely Chapter 2 acronyms:
+
+- `\ac{ODE}`
+- `\ac{DAE}`
+- `\ac{PDE}`
+- `\ac{FMI}`
+- `\ac{FMU}` and `\acp{FMU}`
+- `\ac{FEM}`
+- `\ac{SCC}`
+- `\ac{IJCSA}` if the term is introduced conceptually
+
+Introduce \ac{FMI} before \ac{FMU}.
+The first explanation should make clear that an \ac{FMU} is the packaged simulation unit defined by the \ac{FMI} standard.
+
+## Writing Style
+
+Chapter 2 should be precise and compact.
+Use direct statements and avoid defensive phrasing.
+
+Preferred:
+
+- "A co-simulation master algorithm advances several simulation units through communication points."
+- "Direct feedthrough creates an instantaneous dependency from an input to an output."
+- "A strongly connected component of the dependency graph represents an algebraic loop."
+
+Avoid:
+
+- "This is not an implementation detail, but rather a theoretical concept."
+- "It can be observed that the model can be described as..."
+- "The methodology facilitates a robust coupling of heterogeneous models."
+- "The framework is not intended to replace tools. Instead, it..."
+
+Do not introduce `syssimx` as the subject of Chapter 2.
+If a forward reference is necessary, keep it short:
+
+- "Chapter 5 implements this dependency analysis for the `syssimx` system graph."
+
+## Cross-References
+
+Use forward references sparingly.
+The main references should point from later chapters back to Chapter 2, not the other way around.
+
+Good forward references:
+
+- "The implementation of this concept is described in Section~..."
+- "The controlled pendulum case study uses this modeling distinction in Chapter~..."
+
+Avoid:
+
+- repeating implementation details before they are introduced
+- previewing every later result
+- turning Chapter 2 into a roadmap for the whole thesis
+
+## Revision Checklist
+
+Before considering Chapter 2 polished, check:
+
+- Each section has a clear theoretical role.
+- No implementation method names appear unless used only as a later reference.
+- `simulation unit`, `component`, `system`, and `System` are used according to the glossary.
+- FMI is introduced before FMU.
+- Concrete solver settings are deferred to Chapter 6.
+- FEM details are limited to concepts; pendulum-specific boundary conditions stay in Chapter 6 unless needed as a short example.
+- Equations are necessary, defined, and reused later.
+- Figures are conceptual and not implementation-level.
+- The chapter does not duplicate the state-of-the-art review from Chapter 1.
+- The chapter does not pre-empt the architecture in Chapter 4 or implementation in Chapter 5.

@@ -1,11 +1,14 @@
 \chapter{Framework Architecture}
 \label{chap:architecture}
 
-This chapter presents the architecture of \emph{SysSimX}.
-It begins with an overview of the layered structure and the design principles that guided its development.
-The subsequent sections then describe the core abstractions that define the component interface, the system model, the execution algorithms, and the multi-model component concept.
-Implementation details and verification of individual features are
-deferred to Chapter~\ref{chap:implementation}.
+This chapter describes the architecture of \syssimx{}.
+It connects the requirements of Chapter~\ref{chap:requirements} to the implementation in Chapter~\ref{chap:implementation}.
+The focus is on responsibilities, interfaces, and ownership relations between the main framework abstractions.
+
+Section~\ref{sec:architecture_overview} introduces the layered framework structure and the design principles behind it.
+Section~\ref{sec:architecture_core_abstractions} presents the core framework abstractions.
+These are the component interface, the port and connection model, the \texttt{System} abstraction, the algorithm interface, and the multi-model component.
+Chapter~\ref{chap:implementation} then covers class-level mechanisms, stored metadata, and feature-level verification.
 
 \input{chapters/4_architecture/41_architectural_overview}
 \input{chapters/4_architecture/42_core_abstractions}

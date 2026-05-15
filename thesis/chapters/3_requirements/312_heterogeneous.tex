@@ -1,16 +1,16 @@
 \subsection{Heterogeneous Integration}
 \label{sec:req_heterogeneous_integration}
 
-The heterogeneous integration requirements describe the need to integrate  subsystem models from different modeling and simulation backends into one coupled workflow.
-As established in Section~\ref{sec:intro_sota}, no single existing tool covers all required modeling approaches
-This motivates the need for a common integration framework that is independent of any particular backend.
+The heterogeneous integration requirements describe the need to integrate subsystem models from different modeling and simulation backends into one coupled workflow.
+As established in Section~\ref{sec:intro_sota}, no single existing tool covers all required modeling approaches.
+This motivates a common integration interface that is independent of any particular backend.
 
-This category also includes runtime model switching, which relies on the  common component abstraction to transfer state between models during simulation.
+This category also includes runtime model switching, which relies on a shared simulation-unit interface to transfer state between models during simulation.
 
 Table~\ref{tab:req_heterogeneous_integration} lists the user requirements together with the derived system requirements for this category.
 
 \begin{longtable}{
-  >{\raggedright\arraybackslash}p{1.75cm} 
+  >{\raggedright\arraybackslash}p{1.75cm}
   >{\raggedright\arraybackslash}p{13.25cm}}
 \caption{User and system requirements: Heterogeneous integration}
 \label{tab:req_heterogeneous_integration} \\
@@ -26,46 +26,48 @@ Table~\ref{tab:req_heterogeneous_integration} lists the user requirements togeth
 \bottomrule
 \endfoot
 
-\textbf{UR-05} & \textbf{The overall workflow shall support the integration 
-of equation-based subsystem models into the component-based workflow.} \\
+\reqidbf{UR-05} & \textbf{The overall workflow shall support the integration
+of equation-based subsystem models into the coupled co-simulation
+workflow.} \\
 \addlinespace[2pt]
-SR-05-01 & The framework shall provide a component wrapper for integrating 
-executable equation-based subsystem models. \\
+\reqid{SR-05-01} & The framework shall provide a component wrapper for
+equation-based simulation units. \\
 \midrule
 
-\textbf{UR-06} & \textbf{The overall workflow shall support the integration 
-of musculoskeletal subsystem models into the component-based workflow.} \\
+\reqidbf{UR-06} & \textbf{The overall workflow shall support the integration
+of musculoskeletal subsystem models into the coupled co-simulation
+workflow.} \\
 \addlinespace[2pt]
-SR-06-01 & The framework shall provide a component wrapper for integrating 
-executable musculoskeletal subsystem models. \\
+\reqid{SR-06-01} & The framework shall provide a component wrapper for
+musculoskeletal simulation units. \\
 \midrule
 
-\textbf{UR-07} & \textbf{The overall workflow shall support the integration 
-of finite element models into the component-based workflow.} \\
+\reqidbf{UR-07} & \textbf{The overall workflow shall support the integration
+of finite element subsystem models into the coupled co-simulation workflow.} \\
 \addlinespace[2pt]
-SR-07-01 & The framework shall provide a component wrapper for integrating 
-executable spatially discretized subsystem models. \\
+\reqid{SR-07-01} & The framework shall provide a component wrapper for
+spatially discretized simulation units. \\
 \midrule
 
-\textbf{UR-08} & \textbf{The overall workflow shall support the simultaneous 
-use of subsystem models from different modeling and simulation backends 
+\reqidbf{UR-08} & \textbf{The overall workflow shall support the simultaneous
+use of subsystem models from different modeling and simulation backends
 within one coupled system model.} \\
 \addlinespace[2pt]
-SR-08-01 & The framework shall treat all integrated subsystem models 
-uniformly through a common component abstraction, independent of their 
+\reqid{SR-08-01} & The framework shall treat all integrated components
+uniformly through a common component abstraction, independent of their
 modeling and simulation backend. \\
 \midrule
 
-\textbf{UR-09} & \textbf{The overall workflow shall support runtime switching 
+\reqidbf{UR-09} & \textbf{The overall workflow shall support runtime switching
 between alternative model representations of the same subsystem.} \\
 \addlinespace[2pt]
-SR-09-01 & The framework shall allow multiple interchangeable models to be 
+\reqid{SR-09-01} & The framework shall allow multiple interchangeable models to be
 registered under a unified component interface. \\
-SR-09-02 & The framework shall support runtime selection of the active model 
+\reqid{SR-09-02} & The framework shall support runtime selection of the active model
 based on user-defined criteria. \\
-SR-09-03 & The framework shall transfer physical state between models during 
+\reqid{SR-09-03} & The framework shall transfer physical state between models during
 switching to ensure consistent continuation. \\
-SR-09-04 & The framework shall provide a hysteresis mechanism to prevent 
+\reqid{SR-09-04} & The framework shall provide a hysteresis mechanism to prevent
 rapid oscillation between models. \\
 
 \end{longtable}

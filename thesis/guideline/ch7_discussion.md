@@ -77,13 +77,49 @@ It should not restate all figures and tables.
 Use this paragraph order.
 
 1. Return to the research gap and actual contribution.
-2. Answer RQ1: heterogeneous integration through the shared component interface.
-3. Answer RQ2: structural analysis, algebraic loops, and master-algorithm orchestration.
-4. Answer RQ3: hybrid event handling and dense-time behavior.
-5. Answer RQ4: runtime model switching and state projection.
-6. Answer RQ5: controlled-pendulum case-study interpretation and benchmark evidence.
-7. Interpret the performance result.
-8. Relate the result to the state of the art without turning the section into a literature review.
+2. Position the contribution against the closest existing peer (CoFMPy). One paragraph, see *Contribution Boundary against CoFMPy* below.
+3. Answer RQ1: heterogeneous integration through the shared component interface.
+4. Answer RQ2: structural analysis, algebraic loops, and master-algorithm orchestration.
+5. Answer RQ3: hybrid event handling and dense-time behavior.
+6. Answer RQ4: runtime model switching and state projection.
+7. Answer RQ5: controlled-pendulum case-study interpretation and benchmark evidence.
+8. Interpret the performance result.
+9. Relate the result to the state of the art without turning the section into a literature review.
+
+### Contribution Boundary against CoFMPy
+
+CoFMPy is the closest existing Python-native co-simulation framework~\cite{friedrich_cofmpy_2025}.
+The FMU coupling core of \syssimx{} overlaps with CoFMPy in scope and language.
+The discussion must therefore include one paragraph that bounds the contribution explicitly.
+
+Recommended paragraph:
+
+```latex
+The framework contributions of this thesis should be positioned against the closest existing peer.
+CoFMPy is a Python-native co-simulation framework that provides FMU coupling, Jacobi and Gauss-Seidel master algorithms, fixed-point algebraic-loop handling, and a Python FMU proxy for non-FMU components~\cite{friedrich_cofmpy_2025}.
+The FMU coupling core of \syssimx{} overlaps with CoFMPy in scope and language.
+The differentiating contributions of \syssimx{} are the hybrid co-simulation algorithm with event localization and state restoration, the multi-model component for runtime switching between heterogeneous backends, and the Newton-type interface-Jacobian loop solver, which are not provided by CoFMPy at the time of writing.
+```
+
+Constraints on this paragraph.
+
+- Do not claim that CoFMPy is generally inferior. It is broader than \syssimx{} on Digital-Twin operational features such as Kafka communication and storage.
+- Do not turn this paragraph into a feature list. State the four differentiating contributions and stop.
+- Do not present this as a benchmark comparison. No reproduction of the case study in CoFMPy is required for this paragraph to stand.
+- Do not use this paragraph to introduce new evidence; cite Chapter 5 and Chapter 6 for the differentiating contributions.
+
+### Temporal Context for CoFMPy
+
+CoFMPy was published in 2025, after the implementation of \syssimx{} had begun.
+This temporal context is honest but is not the main argument.
+The substantive argument is the four differentiating contributions listed above.
+If the temporal context is mentioned, use a footnote rather than body prose:
+
+```latex
+\footnote{CoFMPy was published in 2025, after the implementation of \syssimx{} had begun. The substantive comparison nevertheless holds and is the subject of this paragraph.}
+```
+
+Do not write a paragraph that reads as *"I did not know about CoFMPy at the time"*. That framing weakens the contribution claim. The substantive comparison is independent of the implementation timeline.
 
 ### Required Claims
 
@@ -302,6 +338,7 @@ Use a small selection of these topics.
 - A more generic FEM backend wrapper that separates NGSolve-specific model code from the shared component interface.
 - Automated benchmark suite for co-simulation accuracy, event timing, and runtime cost.
 - More user-facing diagnostics for structural analysis, algebraic loops, and switching decisions.
+- Comparative benchmarking against CoFMPy or other Python-native co-simulation frameworks on the controlled-pendulum scenario, including the implementation effort required to add hybrid event handling and runtime model switching on top of a non-hybrid framework.
 
 ### What Not To Add
 

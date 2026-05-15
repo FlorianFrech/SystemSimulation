@@ -89,8 +89,7 @@ Component~D therefore remains an isolated node in \texttt{\_dag}.
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/structural_analysis/structural_input_data.pdf}
     \caption{Input data consumed by \texttt{build\_graphs()}.
-    The registered structure consists of the component set, the signal connections, and the per-component direct-feedthrough maps.
-    Components~A and~D expose no direct feedthrough.}
+    The registered structure consists of the component set, the signal connections, and the per-component direct-feedthrough maps.}
     \label{fig:struct_worked_a}
   \end{subfigure}
   \hfill
@@ -123,20 +122,15 @@ Component~D therefore remains an isolated node in \texttt{\_dag}.
     It is then moved to a new final generation because it is classified as a delayed producer from the full graph.}
     \label{fig:struct_worked_d}
   \end{subfigure}
-
-  \caption{Implementation-level worked example of structural analysis
-    on the same scenario as Figure~\ref{fig:dependency_graph},
-    refined to the \syssimx{} implementation level.
-    Panel~\subref{fig:struct_worked_a} tags the inputs of
-    \texttt{build\_graphs()}.
-    Panel~\subref{fig:struct_worked_b1} tags \texttt{graph}.
-    Panel~\subref{fig:struct_worked_b2} tags \texttt{\_dag} and
-    \texttt{algebraic\_loops}.
-    Panel~\subref{fig:struct_worked_d} tags \texttt{execution\_order}
-    and \texttt{execution\_idx} and exposes the delayed-producer
-    post-processing of \texttt{compute\_execution\_order()}.}
-  \label{fig:struct_worked}
+  \caption{Implementation-level structural analysis on the scenario of Figure~\ref{fig:dependency_graph}.
+  Panel~\subref{fig:struct_worked_a} shows the inputs to \texttt{build\_graphs()}: components, signal connections, and direct-feedthrough maps.
+  Panel~\subref{fig:struct_worked_b1} shows the full connection graph \texttt{graph}, preserving parallel edges.
+  Panel~\subref{fig:struct_worked_b2} shows the zero-delay graph \texttt{\_dag} after the active-output filter, with the single SCC forming \texttt{algebraic\_loops}.
+  Panel~\subref{fig:struct_worked_d} shows \texttt{execution\_order} before and after the delayed-producer relocation of component~D.} \label{fig:struct_worked}
 \end{figure}
+
+
+
 
 \paragraph{Algebraic Loop Detection.}
 Once the zero-delay graph has been assembled, \texttt{build\_graphs()} identifies the subsets of components that participate in an instantaneous cyclic dependency.

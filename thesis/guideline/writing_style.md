@@ -59,6 +59,7 @@ Rules:
 - Prefer one main statement per sentence.
 - Split sentences with more than two commas.
 - Avoid sentences joined by colons or semicolons.
+- Prefer two short sentences over a semicolon sentence.
 - Avoid the pattern "not A; instead B" when the positive statement can be made directly.
 - Prefer concrete verbs over abstract nouns.
 - Do not hide the subject of the sentence.
