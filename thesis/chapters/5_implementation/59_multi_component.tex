@@ -2,25 +2,25 @@
 \section{Multi-Model Component and Mode Switching}
 \label{sec:impl_multi_model}
 
-This section describes the implementation of runtime model switching inside one component.
-It addresses UR-09 and the derived requirements SR-09-01 to SR-09-04 in Table~\ref{tab:req_heterogeneous_integration}.
-Runtime model switching is required when one physical subsystem is best represented by different models in different operating regimes, such as switching from a high-fidelity contact model to a reduced-order rigid-body model when contact ends.
-The architectural role of the \texttt{MultiComponent} abstraction was introduced in Section~\ref{sec:architecture_multicomponent}.
-The present section focuses on the concrete implementation in \texttt{multi\_comp.py}.
+Runtime model switching allows one physical subsystem to use different internal models in different operating regimes.
+The implementation realizes \ref{req:UR-09} and the derived requirements \ref{req:SR-09-01}--\ref{req:SR-09-04}.
+The \texttt{MultiComponent} class implements this behavior as a component wrapper with a fixed external interface and one active internal model.
+Section~\ref{sec:architecture_multicomponent} introduced the architectural roles of the wrapper, mode selector, hysteresis, and state adapter.
+This section describes how these roles are realized in the implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Scope and Component Contract}
 \label{sec:impl_multi_model_scope}
 
-\texttt{MultiComponent} extends \texttt{CoSimComponent} with a registry of interchangeable internal models.
-Each internal model is a \texttt{CoSimComponent}.
+The \texttt{MultiComponent} class extends \texttt{CoSimComponent} with a registry of interchangeable internal models.
+Each registered model is itself a \texttt{CoSimComponent}.
 The surrounding \texttt{System} interacts only with the wrapper component.
-It does not need to know which internal model is active.
+It does not depend on the currently active internal model.
 
 At runtime, exactly one model is active.
 The wrapper identifies it through \texttt{active\_mode} and accesses it through \texttt{active\_comp}.
 The active model performs the time step, provides the wrapper outputs, and serves as the source for state access and hybrid hooks.
-Input assignment is handled separately, because incoming inputs are forwarded to all registered models.
+Input assignment is handled separately, because incoming inputs are forwarded to the active model and cached for a possible later switch.
 A user-defined \texttt{mode\_selector} may request a different mode before a step is executed.
 On an accepted switch, the wrapper transfers the physical state from the current model to the target model.
 
@@ -28,27 +28,31 @@ Subclasses provide the model-specific parts of this process.
 They register the available models and define how state is adapted between model interfaces.
 Table~\ref{tab:multi_component_contract} summarizes the main contract.
 
-\begin{table}[tbp]
+\begin{table}[t]
   \centering
   \caption{Main extension points and state fields of \texttt{MultiComponent}.}
   \label{tab:multi_component_contract}
   \begin{tabular}{lp{9.5cm}}
     \toprule
-    \textbf{Element} & \textbf{Role} \\
+    \textbf{Element}                  & \textbf{Role}                                                                                                   \\
     \midrule
-    \texttt{models} & Stores the available model implementations by mode key \\
+    \texttt{models}                   & Implements the model registry by storing available model implementations by mode key                            \\
     \addlinespace
-    \texttt{active\_mode} & Stores the key of the currently active model \\
+    \texttt{active\_mode}             & Stores the key of the currently active model selected by the mode-switching wrapper                             \\
     \addlinespace
-    \texttt{active\_comp} & References the currently active component instance \\
+    \texttt{active\_comp}             & References the active component instance to which lifecycle and stepping calls are delegated                    \\
     \addlinespace
-    \texttt{mode\_selector} & Selects the desired mode from time and current state \\
+    \texttt{mode\_selector}           & Implements the mode selector by deriving the requested mode from the current time and selector-specific context \\
     \addlinespace
-    \texttt{hysteresis} & Blocks rapid switching when a dwell time is configured \\
+    \texttt{hysteresis}               & Implements the hysteresis support by blocking rapid switching when a dwell time is configured                   \\
     \addlinespace
-    \texttt{\_adapt\_state()} & Maps the exported state to the target model interface \\
+    \texttt{\_allow\_mode\_switching} & Guards mode selection during trial steps and algebraic output evaluation                                        \\
     \addlinespace
-    \texttt{sync\_events} & Records performed switches for inspection and debugging \\
+    \texttt{\_adapt\_state()}         & Implements the state adapter by mapping the exported state to the target model interface                        \\
+    \addlinespace
+    \texttt{\_latest\_inputs}         & Caches the most recent external inputs so they can be replayed on the target model during a switch              \\
+    \addlinespace
+    \texttt{sync\_events}             & Records performed switches for inspection and debugging                                                         \\
     \addlinespace
     \bottomrule
   \end{tabular}
@@ -69,12 +73,11 @@ It then checks that every registered model provides compatible ports with the sa
 If a model misses a required port or exposes an incompatible specification, construction fails with a \texttt{ValueError}.
 This ensures that a later mode switch cannot change the external interface of the component.
 
-The same consistency requirement applies to direct feedthrough metadata.
-\pyfn{\_detect\_direct\_feedthrough()} compares the \texttt{direct\_feedthrough} dictionaries of all registered models.
-A mismatch is rejected at initialization.
-The structural analysis of Section~\ref{sec:impl_structural} assumes that each component keeps one fixed zero-delay behavior during a simulation run.
-A switching component must therefore not change its feedthrough property at runtime.
-The \texttt{MultiComponent} can therefore switch the internal model without changing the dependency graph seen by the \texttt{System}.
+Direct-feedthrough metadata must also remain fixed.
+The \pyfn{\_detect\_direct\_feedthrough()} method compares the feedthrough dictionaries of all registered models.
+A mismatch is rejected during initialization.
+The structural analysis of Section~\ref{sec:impl_structural} assumes fixed zero-delay behavior for every component during a simulation run.
+The \texttt{MultiComponent} class can therefore switch the internal model only when the externally visible dependency structure remains unchanged.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Runtime Mode Switching}
@@ -82,23 +85,23 @@ The \texttt{MultiComponent} can therefore switch the internal model without chan
 
 Runtime switching is part of the component step.
 When a master algorithm calls \texttt{do\_step(t, dt)} on the wrapper, the base component logic delegates to \texttt{\_do\_step\_internal(t, dt)}.
-The method first reads the state of the active model and evaluates the optional \texttt{mode\_selector}.
-If no selector is configured, the active mode remains unchanged.
+Zero-duration calls are treated as output-refresh evaluations and are delegated to the current active model without mode selection.
+For positive step sizes, the wrapper first checks the switching guards.
+Mode selection is skipped when switching is disabled, when no selector is configured, or when the hysteresis dwell window is active.
+Only then is the selector evaluated at the current simulation time.
 Figure~\ref{fig:impl_multi_model_switching} summarizes the switching path.
 
 \begin{figure}[t]
-    \centering
-    \includegraphics[width=0.82\textwidth]{diagrams/out/pdf/execution/MultiComponent_Switching.pdf}
-    \caption{Implementation-level mode switching sequence of \texttt{MultiComponent}.
-    The master algorithm calls the wrapper like any other component.
-    The wrapper evaluates the selector and optional hysteresis.
-    If a switch is accepted, the state is adapted and written to the target model before the active step continues.}
-    \label{fig:impl_multi_model_switching}
+  \centering
+  \includegraphics[width=\textwidth]{diagrams/out/pdf/execution/MultiComponent_Switching.pdf}
+  \caption{Runtime switching sequence of the \texttt{MultiComponent} class for a positive macro step. The wrapper applies the switching guards, transfers state and cached inputs on an accepted switch, and then delegates the step to the active model.}
+  \label{fig:impl_multi_model_switching}
 \end{figure}
 
 A configured \texttt{Hysteresis} object may block a requested switch.
-It checks whether the proposed mode differs from the last accepted mode and whether the dwell time has elapsed.
-If the check fails, the wrapper keeps the current mode for this step.
+During the dwell window, the wrapper keeps the current mode and does not call the selector.
+Outside the dwell window, the selector returns the requested mode.
+If the requested mode equals the current mode, the wrapper keeps the current model for this step.
 This prevents rapid switching near decision boundaries.
 
 If the requested mode is accepted, \texttt{\_switch\_mode()} performs the transition.
@@ -110,7 +113,7 @@ The wrapper then updates \texttt{active\_mode} and \texttt{active\_comp}.
 
 Each accepted switch is stored in \texttt{sync\_events}.
 The stored entry contains the switch time and the two involved modes.
-It also stores the retrieved state and the synchronized target state.
+Detailed source and target state snapshots are recorded only when \texttt{record\_switch\_state} is enabled.
 This log is used to inspect whether the state transfer behaved as expected.
 
 After the optional mode switch, the actual time step is delegated to the active component through \texttt{do\_step(t, dt)}.
@@ -122,20 +125,20 @@ Section~\ref{sec:impl_multi_model_state_events} describes how input forwarding, 
 \subsection{Input, Output, and Hybrid Delegation}
 \label{sec:impl_multi_model_state_events}
 
-The wrapper must keep inactive models ready for future switches.
-For this reason, \texttt{set\_inputs()} forwards incoming input values to all registered models.
-Only the active model advances in time.
-All models nevertheless receive the latest external inputs.
-This avoids stale input values when a later step switches to another model.
-Inactive models receive current inputs but are not advanced continuously.
-Their internal states are updated only when they become active through a mode switch.
-The state transfer in \texttt{\_switch\_mode()} is therefore the point where the target model is synchronized with the previously active model.
+The \texttt{set\_inputs()} method forwards incoming values to the active model and stores them in \texttt{\_latest\_inputs}.
+Inactive models are not advanced and do not receive every input update.
+During an accepted switch, the cached inputs are replayed on the target model before the adapted state is written.
+The target model is therefore synchronized with the most recent external inputs at the switch time.
 
 Output propagation follows the opposite direction.
 After the active model has advanced, \texttt{\_update\_output\_states()} copies the active model outputs to the wrapper ports.
 The surrounding \texttt{System} therefore reads outputs only from the \texttt{MultiComponent}.
 Event ports are handled in the same update step.
 Ports corresponding to triggered events are set to \texttt{True}, while inactive event ports are reset to \texttt{False}.
+
+Algebraic output evaluation uses the same active-model delegation.
+\texttt{evaluate\_outputs()} temporarily disables mode switching, evaluates the active model for the supplied trial inputs, and copies the resulting values to the wrapper ports.
+This prevents direct-feedthrough detection and IJCSA residual evaluations from changing the active model.
 
 State access is routed through the active model.
 \texttt{get\_state()} returns the state of \texttt{active\_comp}.
@@ -160,19 +163,18 @@ A \texttt{mode\_selector} switches from Mode~A to Mode~B at the analytical time 
 The expected trajectory is piecewise linear with slope $k_A$ before the switch and slope $k_B$ after.
 The state must remain continuous at $t_s$, since \texttt{\_switch\_mode()} adapts and transfers the active state to the target model before the next time step.
 
-Figure~\ref{fig:impl_multi_model_verification} shows the numerical trajectory against the analytical reference and the active mode over time.
+Figure~\ref{fig:impl_multi_model_verification} compares the numerical trajectory with the analytical reference and shows the active mode over time.
 
 \begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figures/5_implementation/multi_component/multi_component_switching_verification.pdf}
-    \caption{Verification of runtime mode switching on a two-mode integrator.
-    The numerical trajectory matches the analytical reference.
-    The dashed line marks the accepted switch time.
-    The state remains continuous across the switch.}
-    \label{fig:impl_multi_model_verification}
+  \centering
+  \includegraphics[width=\linewidth]{figures/5_implementation/multi_component/multi_component_switching_verification.pdf}
+  \caption{Two-mode integrator check for runtime mode switching.
+    The trajectory follows the analytical reference and remains continuous at the accepted switch time.}
+  \label{fig:impl_multi_model_verification}
 \end{figure}
 
-The numerical trajectory matches the analytical solution within machine precision, with a maximum absolute error of $3.3\cdot 10^{-16}$.
-The active mode flips from A to B exactly at $t_s$.
-The recorded \texttt{sync\_events} entry confirms a single accepted switch with retrieved and synchronized states equal to the analytical value $x(t_s) = 0.5$.
+The numerical trajectory matches the analytical solution within machine precision.
+The maximum absolute error is $3.3\cdot 10^{-16}$.
+The active mode changes from A to B exactly at $t_s$.
+The recorded \texttt{sync\_events} entry confirms one accepted switch with retrieved and synchronized states equal to $x(t_s)=0.5$.
 The hysteresis path is covered by the unit tests and is not repeated here.

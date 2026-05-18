@@ -110,21 +110,12 @@ class SimpleMultiComponent(MultiComponent):
     """
 
     def __init__(self, name: str, initial_mode: ModeKey = "A"):
-        super().__init__(name, initial_mode=initial_mode)
-
-        self._register_models()
-
-        if initial_mode not in self.models:
-            raise ValueError(f"Initial mode '{initial_mode}' not found in registered models.")
-        self.active_comp = self.models[initial_mode]
-
-        self._unify_ports()
-
-    def _register_models(self) -> None:
-        self.models = {
-            "A": MockSubComponent(f"{self.name}_A", gain=1.0),
-            "B": MockSubComponentAlt(f"{self.name}_B"),
+        models = {
+            "A": MockSubComponent(f"{name}_A", gain=1.0),
+            "B": MockSubComponentAlt(f"{name}_B"),
         }
+        super().__init__(name, models=models, initial_mode=initial_mode)
+        self._unify_ports()
 
     def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
         # Simple pass-through adaptation (same state format)
@@ -137,13 +128,11 @@ class IncompatibleMultiComponent(MultiComponent):
     """
 
     def __init__(self, name: str):
-        super().__init__(name, initial_mode="A")
-
-    def _register_models(self) -> None:
-        self.models = {
-            "A": MockSubComponent(f"{self.name}_A"),
-            "B": MockSubComponentIncompatible(f"{self.name}_B"),
+        models = {
+            "A": MockSubComponent(f"{name}_A"),
+            "B": MockSubComponentIncompatible(f"{name}_B"),
         }
+        super().__init__(name, models=models, initial_mode="A")
 
     def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
         return state.copy()
@@ -151,14 +140,12 @@ class IncompatibleMultiComponent(MultiComponent):
 
 class EmptyMultiComponent(MultiComponent):
     """
-    MultiComponent that registers no models (for error testing).
+    MultiComponent that registers no models. Construction must fail.
     """
 
     def __init__(self, name: str):
-        super().__init__(name, initial_mode="A")
-
-    def _register_models(self) -> None:
-        self.models = {}  # Empty!
+        # Empty models map; MultiComponent.__init__ rejects this with ValueError.
+        super().__init__(name, models={}, initial_mode="A")
 
     def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
         return state.copy()
@@ -202,16 +189,12 @@ class UnitMismatchMultiComponent(MultiComponent):
     """
 
     def __init__(self, name: str):
-        super().__init__(name, initial_mode="A")
-        self._register_models()
-        self.active_comp = self.models["A"]
-        self._unify_ports()
-
-    def _register_models(self) -> None:
-        self.models = {
-            "A": UnitMismatchComponent(f"{self.name}_A", unit="N"),
-            "B": UnitMismatchComponent(f"{self.name}_B", unit="N*m"),
+        models = {
+            "A": UnitMismatchComponent(f"{name}_A", unit="N"),
+            "B": UnitMismatchComponent(f"{name}_B", unit="N*m"),
         }
+        super().__init__(name, models=models, initial_mode="A")
+        self._unify_ports()
 
     def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
         return state.copy()

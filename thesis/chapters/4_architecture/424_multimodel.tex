@@ -15,9 +15,8 @@ The switching-support layer contains the responsibilities used to change the act
   \centering
   \includegraphics[width=0.72\textwidth]{figures/4_architecture/multi_model.pdf}
   \caption{Architectural view of the \texttt{MultiComponent} abstraction.
-  The wrapper exposes one unified component interface to the surrounding \texttt{System}.
-  Internally, it owns compatible model realizations and delegates execution to the active model.
-  The switching logic uses a mode selector, hysteresis, and state adaptation to change the active model when the switching criteria require it.}
+  The wrapper exposes one unified component interface and delegates execution to one active model from a registered set.
+  A mode selector, hysteresis, and state adapter together change the active model when the switching criteria require it.}
   \label{fig:multi_component}
 \end{figure}
 
@@ -27,7 +26,7 @@ Inactive models remain registered inside the wrapper so that they can become act
 
 A switch changes the active model.
 The mode selector determines the requested model from the switching criteria defined by the concrete component.
-Hysteresis can suppress rapid changes near switching boundaries.
+Hysteresis enforces a minimum dwell time between consecutive switches and suppresses rapid changes near switching boundaries.
 The state adapter maps the physical state exported by the outgoing model to a representation accepted by the incoming model.
 
 The abstraction separates model choice from system assembly.

@@ -1,24 +1,24 @@
 \section{Port System}
 \label{sec:impl_port_system}
 
-This section describes the implementation of the typed and unit-aware port system.
-It realizes the port interface of the \texttt{CoSimComponent} abstraction introduced in Section~\ref{sec:architecture_cosimcomponent}.
-It addresses SR-01-01 and SR-02-01 to SR-02-03.
-The same port machinery is used for connection validation, value propagation, history recording, and event-port creation.
+This section describes the typed and unit-aware port system used by all \texttt{CoSimComponent} instances.
+It realizes \ref{req:SR-01-01} under \ref{req:UR-01} and \ref{req:SR-02-01}--\ref{req:SR-02-03} under \ref{req:UR-02}.
+The implementation provides the port interface introduced in Section~\ref{sec:architecture_cosimcomponent}.
+The same machinery supports connection validation, value propagation, history recording, and event-port creation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Specification and State}
 
 The implementation separates the static port specification from the mutable runtime value, as shown in Figure~\ref{fig:impl_port_system}.
-\texttt{PortSpec} defines the interface contract of a port.
-\texttt{PortState} stores the current value and validates every runtime update against this contract.
+The \texttt{PortSpec} class defines the interface contract of a port.
+The \texttt{PortState} class stores the current value and validates every runtime update against this contract.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.75\linewidth]{diagrams/out/pdf/class/core/Port.pdf}
   \caption{Class diagram of the port system.
-  \texttt{PortSpec} defines the immutable port contract.
-  \texttt{PortState} stores the runtime value and applies type and unit validation.}
+  The \texttt{PortSpec} class defines the immutable port contract.
+  The \texttt{PortState} class stores the runtime value and applies type and unit validation.}
   \label{fig:impl_port_system}
 \end{figure}
 
@@ -47,14 +47,18 @@ Such ports are created automatically for registered event indicators during comp
   \end{tabular}
 \end{table}
 
-\paragraph{\texttt{PortSpec}.}
-A \texttt{PortSpec} is implemented as a frozen dataclass and describes one port through its name, direction (\texttt{"in"} or \texttt{"out"}), data type, optional physical unit, and an optional human-readable description.
-Unit strings are validated against the shared Pint registry at construction so that malformed specifications are rejected before a component is instantiated.
-A static method \texttt{PortSpec.compatible()} defines the connection rule used by the \texttt{System} class.
-Two specifications are compatible when their data types match exactly and, for \texttt{REAL} ports, either both units are \texttt{None} or both are present and dimensionally compatible.
-This rule is consumed during connection registration in \texttt{System.\_validate\_connection} (Section~\ref{sec:impl_system}).
+\paragraph{Port Specification.}
+A \texttt{PortSpec} is a frozen dataclass that describes one port.
+It stores the port name, direction, data type, optional physical unit, and an optional description.
+Unit strings are validated against the shared Pint registry during construction.
+Malformed specifications are therefore rejected before a component is instantiated.
 
-\paragraph{\texttt{PortState}.}
+The static method \pyfn{PortSpec.compatible()} defines the connection rule used by the \texttt{System} class.
+Two specifications are compatible when their data types match exactly.
+For \texttt{REAL} ports, both ports must either be dimensionless or carry dimensionally compatible units.
+This rule is consumed during connection registration in \pyfn{System.\_validate\_connection()} (Section~\ref{sec:impl_system}).
+
+\paragraph{Port State.}
 A \texttt{PortState} stores the current value of one port and the time of the last update.
 It references the corresponding \texttt{PortSpec}.
 On \texttt{set()}, the value is checked against the specification.
@@ -65,7 +69,7 @@ Port states are instantiated from the registered specifications during component
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Physical Unit Handling}
-\label{par:impl_units}
+\label{sec:impl_units}
 
 Physical units are handled through Pint~\cite{grecco_pint_nodate}.
 The framework uses one shared unit registry for all ports and components.
@@ -88,7 +92,7 @@ Together, these cases confirm that invalid values and incompatible connections a
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Representative verification cases for the port system.}
+  \caption{Acceptance and rejection cases for port values and port connections.}
   \label{tab:port_verification}
   \begin{tabular}{lll}
     \toprule
@@ -97,9 +101,9 @@ Together, these cases confirm that invalid values and incompatible connections a
     Set REAL port (\texttt{m/s})             & \texttt{3.6\,km/h} & converted to \texttt{1.0\,m/s}      \\
     Set REAL port (\texttt{rad})             & \texttt{42} (int)  & accepted as \texttt{42.0\,rad}      \\
     Set REAL port (\texttt{m/s})             & \texttt{"hello"}   & rejected (\texttt{TypeError})       \\
-    Connect \texttt{m/s} $\to$ \texttt{km/h} & ---                & compatible (same dimension)         \\
-    Connect \texttt{m/s} $\to$ \texttt{N}    & ---                & incompatible (different dimension)  \\
-    Connect \texttt{REAL} $\to$ \texttt{INT} & ---                & incompatible (type mismatch)        \\
+    Connect \texttt{m/s} $\to$ \texttt{km/h} & n/a                & compatible (same dimension)         \\
+    Connect \texttt{m/s} $\to$ \texttt{N}    & n/a                & incompatible (different dimension)  \\
+    Connect \texttt{REAL} $\to$ \texttt{INT} & n/a                & incompatible (type mismatch)        \\
     Normalize FMI unit string                & \texttt{"m.s-2"}   & parsed as $\text{m}\,\text{s}^{-2}$ \\
     \bottomrule
   \end{tabular}

@@ -330,22 +330,22 @@ Do not report the earlier single-run timing values in the thesis text.
 
 | Metric | Value |
 |---|---:|
-| Full-FEM total wall time | `464.032 s` |
-| Switched total wall time | `294.321 s` |
-| End-to-end speedup | `1.577x` |
-| Full-FEM solver wall time | `454.951 s` |
-| Switched FEM solver wall time | `224.344 s` |
-| FEM solver wall-time reduction | `2.03x` |
+| Full-FEM total wall time | `467.570 s` |
+| Switched total wall time | `289.553 s` |
+| End-to-end speedup | `1.615x` |
+| Full-FEM solver wall time | `458.347 s` |
+| Switched FEM solver wall time | `222.068 s` |
+| FEM solver wall-time reduction | `2.06x` |
 | Full-FEM solver calls | `850` |
 | Switched FEM solver calls | `425` |
 | Switched FEM-active simulated time | `0.189 s` |
 | Switched FEM-active share | `47.3%` |
 | Mode switches | `2` |
 | L∞(switched, full) | `2.839e-02 rad` |
-| L²(switched, full) | `8.202e-03 rad` |
+| L²(switched, full) | `8.199e-03 rad` |
 
-**Headline statement.** End-to-end speedup is `1.58x`.
-The FEM solver wall time is reduced by `2.03x`.
+**Headline statement.** End-to-end speedup is `1.62x`.
+The FEM solver wall time is reduced by `2.06x`.
 The gap between FEM solver speedup and end-to-end speedup is the
 `MasterPendulum` orchestration overhead and the non-FEM part of the
 simulation.
@@ -430,17 +430,18 @@ discussion should reference them only by effect, not by code site.
    re-stepped the FEM 4–17 times per event.
 
 2. **`get_state` removed from `MultiComponent._do_step_internal`.**
-   The mode selector is now invoked with `(t, None)` and reads what it
-   needs from cached output ports (`self.outputs[...].get()`). The
-   previous implementation called `FEMPendulum._rigid_proxy()` (six
-   NGSolve mesh integrals) once per macro step while FEM was active,
-   contributing tens of seconds of orchestration overhead.
+   The mode selector signature is `(t) -> ModeKey`. Selectors that need
+   state read cached output ports (`self.outputs[...].get()`) instead of
+   calling `get_state()`. The previous implementation called
+   `FEMPendulum._rigid_proxy()` (six NGSolve mesh integrals) once per
+   macro step while FEM was active, contributing tens of seconds of
+   orchestration overhead.
 
 3. **Hysteresis-aware short-circuit.**
-   `_do_step_internal` checks the dwell window before invoking the
+   `_select_target_mode` checks the dwell window before invoking the
    selector. When the dwell has not elapsed, the selector is skipped
-   entirely. Defensive optimization for selectors that are not yet
-   following lever (2).
+   entirely, saving the cached-output reads even for well-behaved
+   selectors.
 
 4. **Hybrid-algorithm tolerance tuning per scenario.**
    `tol_time = 1e-5 s` (10 µs ≈ 1 % of macro step) and
@@ -475,7 +476,7 @@ consumed by:
 - `_detect_crossings` trial steps that delegate FMU/FEM stepping
   through `MasterPendulum`,
 - per-event post-localization re-step,
-- `set_inputs` propagation to all three sub-components every macro step,
+- active-model input propagation plus cached-input replay on each mode switch,
 - `MasterPendulum.set_state` at each mode switch, including
   `_rigid_proxy` evaluation in the source component.
 
@@ -494,6 +495,7 @@ table footnotes in the chapter.
 - `MACRO_DT = FEM_INTERNAL_DT = 1e-3 s`
 - `CONTACT_STIFFNESS = 2e9 N/m`
 - `DWELL_TIME = 0.05 s`
+- `T_FEM_EARLIEST = 0.10 s` (FEM activation locked out before this time)
 - `FEM_SWITCH_THRESHOLD_RAD = 0.075 rad ≈ 4.3°`
 - `algorithm.tol_time = 1e-5 s`
 - `algorithm.event_dedup_tol = 5e-4 s`

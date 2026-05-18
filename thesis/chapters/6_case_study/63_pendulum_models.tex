@@ -76,6 +76,8 @@ The OpenSim pendulum represents the same one-degree-of-freedom plant as an artic
 It consists of a fixed base, a pendulum body, and a pin joint with generalized coordinate \(\theta\).
 A \texttt{CoordinateActuator} applies the input torque \(\tau\) at the joint.
 The outputs \(\theta\), \(\omega\), and \(\alpha\) are read from the generalized coordinate, speed, and acceleration.
+The torque input has direct feedthrough to the angular acceleration output because the actuator value affects the realized acceleration at the current OpenSim state.
+The angle and angular velocity remain state variables.
 
 The OpenSim variant is included as the domain-specific multibody tool path of the case study.
 It does not use muscle dynamics.

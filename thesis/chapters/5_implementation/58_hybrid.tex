@@ -2,10 +2,11 @@
 \section{Hybrid Co-Simulation Algorithm}
 \label{sec:impl_hybrid}
 
-The previous sections described the master algorithms and the structural metadata used during macro-step execution.
-This section extends that implementation to hybrid co-simulation and realizes the concepts introduced in Section~\ref{sec:236_cosim_hybrid}.
-It addresses SR-10-04 under UR-10 in Table~\ref{tab:req_simulation}, which requires system-level detection, localization, and propagation of discrete events across coupled subsystem models.
-The hybrid orchestration is implemented as \texttt{HybridAlgorithm} and reuses \texttt{GaussSeidelAlgorithm} as the continuous algorithm between events.
+The hybrid co-simulation implementation realizes \ref{req:SR-10-04} under \ref{req:UR-10}.
+It extends continuous macro-step execution with event detection, event localization, rollback, and event dispatch.
+The theoretical concepts are introduced in Section~\ref{sec:236_cosim_hybrid}.
+The implementation is provided by \texttt{HybridAlgorithm}.
+Between events, it reuses the Gauss--Seidel execution path described in Section~\ref{sec:impl_algorithms_gs}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Scope and Component Contract}
@@ -15,15 +16,8 @@ Hybrid execution is activated during \texttt{System.initialize(t0)}.
 The system classifies the registered components into event sources, event listeners, and continuous-only components.
 If at least one event source is present, the selected continuous algorithm is replaced by \texttt{HybridAlgorithm}.
 
-A component becomes an event source by registering an indicator with \pyfn{add\_event\_indicator()}.
-The resulting \texttt{EventIndicator} stores the scalar indicator function and the crossing direction.
-Rollback support is required because event detection and localization use trial steps inside a macro step.
-
-A component becomes an event listener when an \texttt{EventConnection} subscribes it to an event produced by another component.
-\syssimx{} checks the \texttt{supports\_rollback} property when an indicator is registered and rejects components that do not support rollback.
-Event times are stored as \texttt{DenseTime} objects.
-Each object combines the physical time $t$ with a microstep index $\nu$.
-This allows the algorithm to deterministically order cascaded events at the same physical time.
+The component contract for event sources, listeners, rollback, and dense time is defined in Section~\ref{sec:architecture_system_connections}.
+The \texttt{HybridAlgorithm} class uses this contract to detect and dispatch events during one macro interval.
 
 Table~\ref{tab:hybrid_component_contract} summarizes the hybrid-specific operations used by \texttt{HybridAlgorithm}.
 The general component interface is described in Section~\ref{sec:impl_component_interface}.
@@ -47,8 +41,9 @@ The general component interface is described in Section~\ref{sec:impl_component_
 \end{table}
 
 Event routing is stored on the \texttt{System}.
-During \pyfn{add\_event\_connection()}, each \texttt{EventConnection} adds one source-to-listener mapping to \texttt{\_event\_targets\_by\_source}.
-The hybrid algorithm uses this mapping when localized events are dispatched.
+Each \texttt{EventConnection} registers one source-to-listener route during event-connection setup.
+The route is stored in the system-level event-target map.
+The hybrid algorithm uses this map when localized events are dispatched.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hybrid Macro-Step Sequence}
@@ -63,11 +58,9 @@ Figure~\ref{fig:impl_hybrid_macro_step} summarizes one pass through this loop.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.85\linewidth]{diagrams/out/pdf/execution/hybrid/Hybrid_Step.pdf}
-    \caption{Implementation-level macro-step orchestration of the hybrid co-simulation algorithm.
-    Each interval starts with input preparation and trial event detection.
-    If no crossing is found, the remaining interval is advanced by the Gauss--Seidel path.
-    If a crossing is found, the event time is localized, the system is advanced to that time, and event handling is iterated in superdense time until no further cascaded event remains.}
+    \includegraphics[width=1\linewidth]{diagrams/out/pdf/execution/hybrid/Hybrid_Step.pdf}
+    \caption{Macro-step sequence of the hybrid co-simulation algorithm.
+    The algorithm prepares inputs, tests the current interval for events, localizes the first crossing, and dispatches cascaded events in dense time.}
     \label{fig:impl_hybrid_macro_step}
 \end{figure}
 
@@ -140,19 +133,18 @@ An event is skipped when the same component and event name were handled less tha
 This avoids repeated handling of the same crossing near event boundaries.
 
 Event handling is performed in an inner dense-time loop.
-Each loop pass handles the pending events at the current \texttt{DenseTime}.
-The algorithm first records these events in the system history and evaluates all event indicators before handling.
-It then dispatches the events, prepares the inputs again, and evaluates the indicators after handling.
-
-Cascaded events are detected by comparing the indicator values before and after the handlers have run.
-If new events are found, the algorithm advances the microstep index with \texttt{DenseTime.advance\_micro()} and repeats the loop.
-The loop terminates when no new event remains at the current physical time.
+Each pass handles all pending events at the current \texttt{DenseTime}.
+The algorithm records the events and evaluates the indicators before dispatch.
+It then dispatches the subscribed handlers, prepares inputs again, and evaluates the indicators after handling.
+New indicator crossings create cascaded events at the same physical time with an increased microstep index.
+The loop terminates when no new event remains.
 The limit \texttt{max\_microsteps} prevents an infinite cascade.
 
-The method \texttt{handle\_events()} groups pending events by listener component.
+The \texttt{handle\_events()} method groups pending events by listener component.
 If one listener receives multiple events at the same dense time, their handlers must commute.
 The algorithm first checks optional \texttt{event\_commutativity} annotations.
-If no annotation is available, it runs all handler orders from the same rollback state and compares the resulting states with \texttt{\_states\_equal()}.
+If no annotation is available, it evaluates all handler orders from the same rollback state.
+The resulting states are compared with \texttt{\_states\_equal()}.
 A non-commutative event set raises a \texttt{RuntimeError}.
 Commutative events are dispatched through \texttt{System.dispatch\_event()}.
 
@@ -164,15 +156,15 @@ The outer loop then continues with the remaining interval \texttt{[t\_left, t\_r
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The verification uses small scenarios that isolate hybrid features that are not exercised in the case study.
-The three scenarios cover cascaded events at one physical time, simultaneous events on a single listener, and events that fall strictly between communication points.
+The verification uses three small scenarios that isolate hybrid features not covered by the case study.
+The scenarios test cascaded events at one physical time, simultaneous events on one listener, and events that occur strictly inside a macro interval.
 
 \paragraph{Event chain and superdense time.}
 The first scenario verifies cascaded event handling at one physical time.
 A \texttt{HybridSource} with $x_{\mathrm{src}}(t) = -\tfrac{2}{3} + 2t$ crosses zero at the analytical time $t_e = \tfrac{1}{3}\,$s.
-This event is routed to a \texttt{HybridCombi}, which doubles its velocity from $-1$ to $-2$.
+This event is routed to a \texttt{HybridCombi}, which doubles its velocity from $-1\, \frac{\mathrm{m}}{\mathrm{s}}$ to $-2\, \frac{\mathrm{m}}{\mathrm{s}}$.
 The velocity change triggers a second event on the \texttt{HybridCombi}.
-This second event is routed to a \texttt{HybridListener}, which inverts its velocity from $+3$ to $-3$.
+This second event is routed to a \texttt{HybridListener}, which inverts its velocity from $+3\, \frac{\mathrm{m}}{\mathrm{s}}$ to $-3\, \frac{\mathrm{m}}{\mathrm{s}}$.
 The expected result is therefore one event at $(t_e,0)$ and one cascaded event at $(t_e,1)$.
 
 \begin{figure}[tbp]
@@ -186,27 +178,27 @@ The expected result is therefore one event at $(t_e,0)$ and one cascaded event a
 \end{figure}
 
 Figure~\ref{fig:impl_hybrid_verification_chain} shows the three component trajectories and the localized event time.
-The algorithm detects the source crossing in the macro interval $[0.30,0.35]\,$s.
-It locates the event at $t_e \approx 0.33333359\,$s.
+The algorithm detects the source crossing in the macro interval $[0.30,0.35]\, \mathrm{s}$.
+It locates the event at $t_e \approx 0.33333359\, \mathrm{s}$.
 The first handler runs at microstep~$0$.
 The cascaded event is then detected and handled at microstep~$1$.
-The post-event slopes match the expected dynamics with $v_{\mathrm{combi}}=-2$ and $v_{\mathrm{lis}}=-3$.
-The absolute error against $t_e = 1/3\,$s is about $2.6\cdot 10^{-7}\,$s.
+The post-event slopes match the expected dynamics with $v_{\mathrm{combi}}=-2\, \frac{\mathrm{m}}{\mathrm{s}}$ and $v_{\mathrm{lis}}=-3\, \frac{\mathrm{m}}{\mathrm{s}}$.
+The absolute error against $t_e = \tfrac{1}{3}\, \mathrm{s}$ is about $2.6\cdot 10^{-7}\, \mathrm{s}$.
 
 \paragraph{Strong event simultaneity and commutativity.}
 The second scenario verifies simultaneous events that target the same listener.
-Two \texttt{HybridSource} components are configured to cross zero at $t_e = \tfrac{2}{3}\,$s.
+Two \texttt{HybridSource} components are configured to cross zero at $t_e = \tfrac{2}{3}\, \mathrm{s}$.
 The first source uses $x_1(t)=\tfrac{2}{3}-t$ with falling-edge detection.
 The second source uses $x_2(t)=-\tfrac{2}{3}+t$ with rising-edge detection.
 
 Both events are routed to one \texttt{HybridListener}.
-The listener starts with velocity $v_0=3.0\,$m/s and applies the updates $v \mapsto -v$ and $v \mapsto 2v$.
+The listener starts with velocity $v_0=3.0\, \frac{\mathrm{m}}{\mathrm{s}}$ and applies the updates $v \mapsto -v$ and $v \mapsto 2v$.
 These updates commute.
-The expected post-event velocity is therefore $-2v_0=-6.0\,$m/s.
+The expected post-event velocity is therefore $-2v_0=-6.0\, \frac{\mathrm{m}}{\mathrm{s}}$.
 
 Figure~\ref{fig:impl_hybrid_verification_simultaneity} shows the two source indicators and the listener trajectory.
-The algorithm detects both crossings in the macro interval $[0.65,0.70]\,$s.
-It localizes them at the dense time $(t_e,0)$ with $t_e \approx 0.66666667\,$s.
+The algorithm detects both crossings in the macro interval $[0.65,0.70]\, \mathrm{s}$.
+It localizes them at the dense time $(t_e,0)$ with $t_e \approx 0.66666667\, \mathrm{s}$    .
 The listener trajectory changes slope at this time and matches the expected post-event velocity.
 
 Listing~\ref{lst:hybrid_simultaneity_log} confirms the dispatch path.
@@ -275,9 +267,8 @@ Both located times match the analytical roots within machine precision.
         \caption{Internal event reporting. The events at $t = 0.45\,$s and $t = 0.55\,$s lie strictly inside the macro interval $[0.4, 0.6]\,$s and are localized through internal hints.}
         \label{fig:impl_hybrid_verification_internal}
     \end{subfigure}
-    \caption{Verification scenarios for strong simultaneity and internal event reporting.
-    Dashed lines mark localized event times.
-    Dotted lines mark macro communication points.}
+    \caption{Hybrid verification scenarios for simultaneous events and internal event reporting.
+    The scenarios check dense-time dispatch and event localization from internally reported brackets.}
     \label{fig:impl_hybrid_verification_pair}
 \end{figure}
 

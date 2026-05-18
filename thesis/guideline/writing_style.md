@@ -59,6 +59,7 @@ Rules:
 - Prefer one main statement per sentence.
 - Split sentences with more than two commas.
 - Avoid sentences joined by colons or semicolons.
+- Do not introduce examples or lists with a colon inside a prose sentence.
 - Prefer two short sentences over a semicolon sentence.
 - Avoid the pattern "not A; instead B" when the positive statement can be made directly.
 - Prefer concrete verbs over abstract nouns.
@@ -179,6 +180,38 @@ Poor: This methodology facilitates heterogeneous simulation workflows.
 Better: The framework couples FMU, OpenSim, and FEM components through the same
 component interface.
 ```
+
+### Code Identifiers as Subjects
+
+When a code identifier is the grammatical subject of a prose sentence, prefer
+adding the corresponding noun when it improves readability.
+This makes the text sound less like API documentation and more like thesis prose.
+
+Preferred:
+
+```latex
+The \texttt{FMUComponent} class maps FMUs to the component contract.
+The \texttt{initialize()} method creates the runtime port states.
+The \texttt{direct\_feedthrough} attribute stores algebraic dependencies.
+```
+
+Also acceptable when the sentence stays clear:
+
+```latex
+\texttt{FMUComponent} maps FMUs to the component contract.
+```
+
+Avoid using an article directly on the identifier when the intended noun is
+implicit.
+
+Weaker:
+
+```latex
+The \texttt{FMUComponent} maps FMUs to the component contract.
+```
+
+Use `a` or `an` only when referring to one instance rather than the class or
+method as a design element.
 
 ---
 

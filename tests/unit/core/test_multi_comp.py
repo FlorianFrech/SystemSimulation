@@ -5,8 +5,6 @@ Tests the MultiComponent base class and Hysteresis helper class.
 Uses mock sub-components to isolate unit behavior.
 """
 
-from typing import Any
-
 import numpy as np
 import pytest
 
@@ -30,22 +28,21 @@ class TestHysteresis:
         """Test Hysteresis object construction and initial state."""
         h = Hysteresis(dwell_time=0.1)
         assert np.isclose(h.dwell_time, 0.1)
-        assert np.isclose(h.last_switch_time, 0.0)
-        assert h.last_mode == ""
+        assert h.last_switch_time == -float("inf")
 
     def test_record_switch(self):
         """Test recording a mode switch."""
         h = Hysteresis(dwell_time=0.2)
-        h.record_switch(t=0.0, new_mode="A")
-        assert h.last_mode == "A"
-        assert np.isclose(h.last_switch_time, 0.0)
+        h.record_switch(t=0.3)
+        assert np.isclose(h.last_switch_time, 0.3)
 
-    def test_can_switch(self):
-        """Test disabling mode switching."""
+    def test_in_dwell_window(self):
+        """Dwell window starts open after a switch and closes once the dwell time has elapsed."""
         h = Hysteresis(dwell_time=0.2)
-        h.last_mode = "A"
-        assert not h.can_switch(t=0.1, proposed_mode="B")
-        assert h.can_switch(t=0.3, proposed_mode="B")
+        assert not h.in_dwell_window(t=0.0)  # No prior switch: window already closed
+        h.record_switch(t=0.0)
+        assert h.in_dwell_window(t=0.1)      # 0.1 s < 0.2 s dwell
+        assert not h.in_dwell_window(t=0.3)  # 0.3 s >= 0.2 s dwell
 
 
 # ============================================================================
@@ -64,7 +61,7 @@ class TestMultiComponentInitialization:
             "B": mc.models["B"],
         }
 
-    def test_initialize_register_models(self):
+    def test_initialize_initializes_all_models(self):
         mc = SimpleMultiComponent(name="TestMulti", initial_mode="A")
         mc.initialize(t0=0.0)
         assert "A" in mc.models
@@ -86,10 +83,10 @@ class TestMultiComponentInitialization:
             mc = SimpleMultiComponent(name="TestMulti", initial_mode="C")
             mc.initialize(t0=0.0)
 
-    def test_initialize_empty_models(self):
-        mc = EmptyMultiComponent(name="EmptyMulti")
-        with pytest.raises(RuntimeError):
-            mc.initialize(t0=0.0)
+    def test_construct_empty_models_rejected(self):
+        """An empty models map is rejected at construction time."""
+        with pytest.raises(ValueError):
+            EmptyMultiComponent(name="EmptyMulti")
 
     def test_initialize_incompatible_ports_unit_mismatch(self):
         with pytest.raises(ValueError):
@@ -132,10 +129,10 @@ class TestModeSwitching:
         state_b = multi_comp.active_comp.get_state()
         assert state_b == state_a
 
-    def test_switch_mode_records_sync_event(self, multi_comp: SimpleMultiComponent):
-        """Test that mode switch records synchronization event."""
-        state_a = {"x": 2.0, "v": 1.0}
-        multi_comp.active_comp.set_state(state=state_a, t=0.1)
+    def test_switch_mode_records_minimal_sync_event_by_default(
+        self, multi_comp: SimpleMultiComponent
+    ):
+        """Each switch logs time, from_mode, to_mode; state fields are omitted by default."""
         multi_comp._switch_mode(new_mode="B", t=0.2)
 
         sync_events = multi_comp.sync_events
@@ -144,6 +141,18 @@ class TestModeSwitching:
         assert np.isclose(event["time"], 0.2)
         assert event["from_mode"] == "A"
         assert event["to_mode"] == "B"
+        assert "retrieved" not in event
+        assert "now" not in event
+
+    def test_switch_mode_records_state_when_enabled(self, multi_comp: SimpleMultiComponent):
+        """Enabling record_switch_state adds the pre- and post-switch state snapshots."""
+        state_a = {"x": 2.0, "v": 1.0}
+        multi_comp.active_comp.set_state(state=state_a, t=0.1)
+        multi_comp.record_switch_state = True
+
+        multi_comp._switch_mode(new_mode="B", t=0.2)
+
+        event = multi_comp.sync_events[0]
         assert event["retrieved"] == state_a
         assert event["now"] == state_a
 
@@ -165,7 +174,7 @@ class TestTimestepping:
         assert "do_step(0.0, 0.01)" in multi_comp.active_comp.call_log
 
     def test_do_step_with_mode_selector(self, multi_comp):
-        def selector(t: float, state: dict[str, Any]) -> ModeKey:
+        def selector(t: float) -> ModeKey:
             return "B" if t >= 0.5 else "A"
 
         multi_comp.mode_selector = selector
@@ -175,7 +184,7 @@ class TestTimestepping:
         assert multi_comp.active_mode == "B"
 
     def test_do_step_mode_switching_disabled(self, multi_comp: SimpleMultiComponent):
-        def selector(t: float, state: dict[str, Any]) -> ModeKey:
+        def selector(t: float) -> ModeKey:
             return "B"
 
         multi_comp.mode_selector = selector
@@ -184,17 +193,23 @@ class TestTimestepping:
         assert multi_comp.active_mode == "A"
 
     def test_do_step_hysteresis_blocks_rapid_switch_back(self, multi_comp: SimpleMultiComponent):
-        def selector(t: float, state: dict[str, Any]) -> ModeKey:
-            return "B" if t < 0.1 else "A"
+        """Hysteresis prevents a second switch within the dwell window after the first switch."""
+        targets = iter(["B", "A", "A"])
+
+        def selector(t: float) -> ModeKey:
+            return next(targets)
 
         multi_comp.mode_selector = selector
         multi_comp.hysteresis = Hysteresis(dwell_time=0.05)
 
         multi_comp.do_step(t=0.0, dt=0.01)
-        assert multi_comp.active_mode == "A"  # Switch to B not allowed yet
+        assert multi_comp.active_mode == "B"  # First switch: dwell window was empty
 
-        multi_comp.do_step(t=0.05, dt=0.01)
-        assert multi_comp.active_mode == "B"  # Switch to B allowed
+        multi_comp.do_step(t=0.02, dt=0.01)
+        assert multi_comp.active_mode == "B"  # Blocked: still inside dwell window
+
+        multi_comp.do_step(t=0.10, dt=0.01)
+        assert multi_comp.active_mode == "A"  # Allowed: dwell window closed
 
 
 # ============================================================================
@@ -209,14 +224,33 @@ class TestInputOutputDelegation:
         mc.initialize(t0=0.0)
         return mc
 
-    def test_set_inputs_delegates_to_all_models(self, multi_comp: SimpleMultiComponent):
+    def test_set_inputs_forwards_only_to_active(self, multi_comp: SimpleMultiComponent):
+        """Only the active sub-component receives inputs on each call."""
         multi_comp.set_inputs({"u": 10.0}, t=0.0)
 
-        # Both models should have received the input
-        for mode, comp in multi_comp.models.items():
-            input = comp.inputs["u"].get()
-            input_value = input.magnitude if isinstance(input, Quantity) else input
-            assert np.isclose(input_value, 10.0)
+        active_value = multi_comp.active_comp.inputs["u"].get()
+        active_value = (
+            active_value.magnitude if isinstance(active_value, Quantity) else active_value
+        )
+        assert np.isclose(active_value, 10.0)
+
+        inactive = multi_comp.models["B"]
+        inactive_value = inactive.inputs["u"].get()
+        inactive_value = (
+            inactive_value.magnitude if isinstance(inactive_value, Quantity) else inactive_value
+        )
+        # Inactive model has not received the new input (still at its initial value).
+        assert inactive_value is None or not np.isclose(inactive_value, 10.0)
+
+    def test_switch_replays_cached_inputs_to_target(self, multi_comp: SimpleMultiComponent):
+        """On a mode switch, the cached inputs are replayed onto the target model."""
+        multi_comp.set_inputs({"u": 10.0}, t=0.0)
+        multi_comp._switch_mode(new_mode="B", t=0.1)
+
+        # The newly active component is model "B" and must now hold the cached input.
+        replayed = multi_comp.active_comp.inputs["u"].get()
+        replayed = replayed.magnitude if isinstance(replayed, Quantity) else replayed
+        assert np.isclose(replayed, 10.0)
 
     def test_update_outputs_copies_from_active(self, multi_comp: SimpleMultiComponent):
         # Set state and step to produce output

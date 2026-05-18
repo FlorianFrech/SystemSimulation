@@ -26,24 +26,30 @@ left to right direction
 abstract class MultiComponent <<CoSimComponent>> {
     + models: Dict[ModeKey, CoSimComponent]
     + active_mode: ModeKey
-    + active_comp: Optional[CoSimComponent]
+    + active_comp: CoSimComponent
     + mode_selector: Optional[Callable]
     + hysteresis: Optional[Hysteresis]
     + state_adapters: Dict[ModeKey, StateAdapter]
+    + sync_events: list
+    - _allow_mode_switching: bool
+    - _latest_inputs: Optional[tuple]
     ==
-    + __init__(name, initial_mode, group)
+    + __init__(name, models, initial_mode, group)
     .. Abstract Methods ..
-    {abstract} # _register_models(): None
     {abstract} # _adapt_state(state, target_mode): Dict[str, Any]
     .. Initialization ..
     # _initialize_component(t0)
     - _unify_ports()
+    # _detect_direct_feedthrough()
     .. Mode Switching ..
     # _do_step_internal(t, dt)
+    - _select_target_mode(t): ModeKey
     - _switch_mode(new_mode, t)
+    - _perform_state_transfer(new_comp, new_mode, t)
     .. I/O Delegation ..
     + set_inputs(signals, t)
     # _update_output_states(t)
+    + evaluate_outputs(inputs, t): Dict[str, Any]
     .. State Management ..
     + set_state(state, t)
     + get_state(): Dict[str, Any]
@@ -53,11 +59,10 @@ abstract class MultiComponent <<CoSimComponent>> {
 class Hysteresis {
     + dwell_time: float
     + last_switch_time: float
-    + last_mode: ModeKey
     ==
     + __init__(dwell_time)
-    + can_switch(t, proposed_mode): bool
-    + record_switch(t, new_mode)
+    + in_dwell_window(t): bool
+    + record_switch(t)
 }
 
 interface StateAdapter <<Protocol>> {

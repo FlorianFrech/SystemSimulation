@@ -1,15 +1,17 @@
 \section{Component Interface}
 \label{sec:impl_component_interface}
 
-The \texttt{CoSimComponent} base class implements the common runtime contract for all simulation components in \syssimx{}.
+The \texttt{CoSimComponent} base class defines the common runtime contract for all simulation components in \syssimx{}.
 It realizes the component abstraction introduced in Section~\ref{sec:architecture_cosimcomponent} and builds on the port system of Section~\ref{sec:impl_port_system}.
+It supports \ref{req:SR-01-01} under \ref{req:UR-01} and the uniform component treatment required by \ref{req:SR-08-01} under \ref{req:UR-08}.
+Its hybrid hooks support \ref{req:SR-04-02} under \ref{req:UR-04}.
 The class centralizes lifecycle control, port-state management, history recording, and common structural and hybrid metadata.
-Backend wrappers therefore only implement the model-specific operations.
+Backend wrappers implement only the model-specific operations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Design}
 
-\texttt{CoSimComponent} is implemented as an abstract base class that follows the template method pattern~\cite{gamma_design_1995}.
+The \texttt{CoSimComponent} class is an abstract base class based on the template method pattern~\cite{gamma_design_1995}.
 The public lifecycle methods define a fixed execution skeleton.
 Primitive operations provide the mandatory subclass-specific behavior.
 Hook operations extend the contract for features such as state transfer, rollback, zero-step output evaluation, and event handling.
@@ -19,10 +21,10 @@ Table~\ref{tab:component_methods} summarizes this organization.
 \begin{table}[!htbp]
   \centering
   \small
-  \caption{Role-based classification of the main \texttt{CoSimComponent} methods.
+  \caption{Runtime roles of the main \texttt{CoSimComponent} methods.
   Template methods define the public lifecycle.
-  Primitive operations are implemented by each subclass.
-  Hook operations provide optional extension points.}
+  Primitive operations provide backend-specific behavior.
+  Hook operations expose optional capabilities.}
   \label{tab:component_methods}
   \begin{tabular}{llp{5.8cm}}
     \toprule
@@ -95,61 +97,59 @@ Otherwise, the base class stores the initial time and creates the regular port s
 It also creates event output ports for indicators that were registered before initialization.
 
 The method then delegates model-specific setup to \texttt{\_initialize\_component(t0)}.
-After this step, the base class detects direct feedthrough dependencies, publishes the initial outputs through \texttt{\_update\_output\_states(t0)}, records them in the component history, and marks the component as initialized.
+After this step, the base class detects direct feedthrough dependencies and publishes the initial outputs.
+It records the outputs in the component history and marks the component as initialized.
 
 \begin{figure}[btbp]
   \centering
   \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Initialization.pdf}
-  \caption{Delegation during component initialization. The template method
-    \texttt{initialize()} performs the idempotency check, creates regular
-    and event ports, delegates model-specific setup to
-    \texttt{\_initialize\_component()}, detects direct feedthrough, publishes
-    initial outputs through \texttt{\_update\_output\_states()}, and records
-    the initial output values.}
+  \caption{Initialization sequence of \texttt{CoSimComponent}.
+  The base template creates ports, delegates backend setup, derives feedthrough metadata, publishes initial outputs, and records history.}
   \label{fig:impl_comp_initialization}
 \end{figure}
 
 \paragraph{Simulation Step.}
 Figure~\ref{fig:impl_comp_stepping} shows one macro step.
-The master algorithm calls \texttt{do\_step(t,dt)}.
-The template method delegates the numerical advancement to \texttt{\_do\_step\_internal()}.
-After the subclass returns, the base class updates \texttt{t}, refreshes the output ports, and records the new output values.
+The master algorithm calls \pyfn{do\_step(t,\codebreak{}dt)}.
+The template method delegates the numerical advancement to \pyfn{\_do\_step\_internal()}.
+Afterwards, the base class updates the time, refreshes the output ports, and records the new values.
 
 \begin{figure}[btbp]
   \centering
   \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Stepping.pdf}
-  \caption{Delegation during a simulation step. The template method
-    \texttt{do\_step()} delegates the computation to the primitive operation
-    \texttt{\_do\_step\_internal()} and the output update to
-    \texttt{\_update\_output\_states()}.}
+  \caption{Delegation during a simulation step.
+  The template method performs the common bookkeeping and delegates model-specific computation and output refresh to primitive operations.}
   \label{fig:impl_comp_stepping}
 \end{figure}
 
 \paragraph{Event Handling.}
-The template method \pyfn{handle\_event(event\_names,\,t)} is called by the hybrid algorithm at event times (Section~\ref{sec:impl_hybrid}).
-It delegates the state update to the hook operation \pyfn{\_handle\_events\_internal()}, then calls \pyfn{\_update\_output\_states()} to refresh the output ports, and records the updated values in the component history.
-Components that do not participate in hybrid simulation inherit an empty default for \pyfn{\_handle\_events\_internal()}, so the call is a no-op.
+The hybrid algorithm calls \texttt{handle\_event(event\_names, t)} at event times (Section~\ref{sec:impl_hybrid}).
+The template method delegates the state update to the component-specific event hook \texttt{\_handle\_events\_internal()}.
+It then refreshes the output ports and records the updated values in the component history.
+Components that do not participate in hybrid simulation inherit an empty default implementation.
+For these components, event handling is a no-op.
 
 \paragraph{Reset and Cleanup.}
 After the simulation loop, the hook operation \pyfn{reset()} supports component reuse.
 It clears the simulation time, history buffer, and initialization flag, allowing the component to be re-initialized with \pyfn{initialize()} for a new run.
-Subclasses extend the default implementation via \pyfn{super().reset()} to
-additionally clear internal state.
+Subclasses call \pyfn{super().reset()} before clearing their own internal state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
 
-The verification of \texttt{CoSimComponent} targets framework-level invariants that are independent of any backend.
-Lightweight mock subclasses, such as a pure-gain feedthrough component, a simple integrator, and minimal hybrid components, implement only the three primitive operations, keeping the tests focused on base-class behavior.
+The verification targets framework-level invariants that are independent of any backend.
+The tests use lightweight mock subclasses.
+These mocks include a pure-gain feedthrough component, a simple integrator, and minimal hybrid components.
+Each mock implements only the primitive operations required for the tested behavior.
 
 Table~\ref{tab:cosimcomp_verification} summarizes the verified base-class invariants.
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Verification of the main \texttt{CoSimComponent} base-class invariants.}
+  \caption{Base-class invariants checked with lightweight mock components.}
   \label{tab:cosimcomp_verification}
-  \begin{tabular}{p{5.8cm} p{8.2cm}}
+  \begin{tabular}{p{5.3cm} p{9cm}}
     \toprule
     \textbf{Verified invariant} & \textbf{Expected outcome} \\
     \midrule

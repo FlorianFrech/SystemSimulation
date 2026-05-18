@@ -7,35 +7,33 @@ skinparam defaultFontSize 10
 skinparam participantPadding 6
 skinparam maxMessageSize 200
 skinparam shadowing false
+skinparam sequenceMessageAlign left
 
 participant "Master\nAlgorithm" as ALG COLOR_FRAMEWORK
-participant "Multi\nComponent" as MC  COLOR_SUBCLASS
-participant "Current\nModel"   as CM  COLOR_USER
-participant "Hysteresis"        as H   COLOR_BASECLASS
-participant "Target\nModel"    as TM  COLOR_USER
+participant "Multi\nComponent" as MC COLOR_SUBCLASS
+participant "Current\nModel" as CM COLOR_USER
+participant "Hysteresis" as H COLOR_BASECLASS
+participant "Active Model\nafter selection" as AM COLOR_USER
 
 ALG -> MC : do_step(t, dt)
 activate MC
 
-MC -> CM : get_state()
-MC -> MC : mode_selector(t, state)
+MC -> MC : _select_target_mode(t)
+note over MC,H : guards switching flag, selector, and dwell window
 
-alt #EEF6F6 target mode differs
-    opt hysteresis configured
-        MC -> H : can_switch(t, target)
-        H --> MC : accepted
-    end
-
-    alt switch accepted
-        MC -> MC : _adapt_state(state, target)
-        MC -> TM : set_state(adapted, t)
-        MC -> MC : active_mode = target\nactive_comp = target model
-        MC -> MC : append to sync_events
-    end
+opt target mode differs
+    MC -> CM : get_state()
+    CM --> MC : state
+    MC -> MC : _adapt_state(state, target)
+    MC -> AM : set_inputs(latest, t_inputs)
+    MC -> AM : set_state(adapted, t)
+    MC -> MC : update active_mode and active_comp
+    MC -> MC : append sync_events
+    MC -> H : record_switch(t)
 end
 
-MC -> TM : do_step(t, dt)
-TM --> MC : outputs at t+dt
+MC -> AM : do_step(t, dt)
+AM --> MC : outputs at t+dt
 
 deactivate MC
 

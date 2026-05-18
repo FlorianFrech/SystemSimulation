@@ -121,7 +121,7 @@ These values are at numerical round-off level.
 The state transfer between internal plant models therefore does not introduce visible discontinuities in the exposed plant trajectory.
 
 This scenario verifies the integrated workflow rather than the isolated hybrid algorithm.
-The isolated event-detection and event-handling mechanisms were verified in Section~\ref{sec:impl_hybrid_verification}.
+The isolated event-detection and event-handling mechanisms were verified in Section~\ref{sec:impl_hybrid}.
 The result here shows that heterogeneous pendulum models, hybrid contact events, runtime model switching, and PID reset can be combined in one closed-loop co-simulation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -137,6 +137,7 @@ The simulation horizon is \(t_{\mathrm{end}}=0.4\,\mathrm{s}\).
 The macro communication step and the FEM internal step are both \(10^{-3}\,\mathrm{s}\).
 The contact stiffness is \(k_n=2\cdot 10^9\,\mathrm{N\,m^{-1}}\).
 The switched configuration uses the position threshold \(0.075\,\mathrm{rad}\) for FEM activation and a dwell time of \(0.05\,\mathrm{s}\).
+FEM activation is additionally locked out before \(t=0.10\,\mathrm{s}\) so that the controlled-pendulum upswing always runs on the rigid-body FMU and the first FEM activation coincides with the contact phase.
 
 The full-FEM configuration is used as the high-fidelity benchmark for this comparison.
 The switched contact workflow was already evaluated against the monolithic OpenModelica reference in Section~\ref{sec:case_study_multimodel_contact}.
@@ -166,20 +167,20 @@ The visible differences are concentrated during the rebounds.
     \centering
     \small
     \caption{Runtime and trajectory metrics for the performance benchmark over \(t_{\mathrm{end}}=0.4\,\mathrm{s}\).
-    Wall times are reported as medians over repeated runs after excluding warm-up runs.}
+    Wall times are reported as medians over five measured runs after excluding one warm-up run.}
     \label{tab:case_performance_metrics}
     \begin{tabular}{p{4.8cm} p{3.1cm} p{3.1cm} p{2.4cm}}
         \toprule
         \textbf{Metric} & \textbf{Full FEM} & \textbf{Switched} & \textbf{Relation} \\
         \midrule
         Total wall time
-          & \(464.0\,\mathrm{s}\)
-          & \(294.3\,\mathrm{s}\)
-          & \(1.58\times\) speedup \\
+          & \(467.6\,\mathrm{s}\)
+          & \(289.6\,\mathrm{s}\)
+          & \(1.62\times\) speedup \\
         FEM solver wall time
-          & \(455.0\,\mathrm{s}\)
-          & \(224.3\,\mathrm{s}\)
-          & \(2.03\times\) reduction \\
+          & \(458.3\,\mathrm{s}\)
+          & \(222.1\,\mathrm{s}\)
+          & \(2.06\times\) reduction \\
         FEM solver invocations
           & \(850\)
           & \(425\)
@@ -198,16 +199,16 @@ The visible differences are concentrated during the rebounds.
           & --- \\
         \(E_{2,\theta}\) against full FEM
           & ---
-          & \(8.202\cdot 10^{-3}\,\mathrm{rad}\)
+          & \(8.199\cdot 10^{-3}\,\mathrm{rad}\)
           & --- \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 Table~\ref{tab:case_performance_metrics} summarizes the runtime and trajectory metrics.
-The switched configuration reduces the median total wall time from \(464.0\,\mathrm{s}\) to \(294.3\,\mathrm{s}\).
-This corresponds to an end-to-end speedup of \(1.58\times\).
-The FEM solver wall time decreases from \(455.0\,\mathrm{s}\) to \(224.3\,\mathrm{s}\), which corresponds to a reduction by \(2.03\times\).
+The switched configuration reduces the median total wall time from \(467.6\,\mathrm{s}\) to \(289.6\,\mathrm{s}\).
+This corresponds to an end-to-end speedup of \(1.62\times\).
+The FEM solver wall time decreases from \(458.3\,\mathrm{s}\) to \(222.1\,\mathrm{s}\), which corresponds to a reduction by \(2.06\times\).
 This reduction is consistent with the smaller number of FEM solver invocations and with the reduced FEM-active simulated time.
 The switched trajectory differs from the full-FEM benchmark by \(E_{\infty,\theta}=2.839\cdot 10^{-2}\,\mathrm{rad}\) over the full horizon.
 This value reports the numerical cost of switching relative to the full-FEM benchmark.

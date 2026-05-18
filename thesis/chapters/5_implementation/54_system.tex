@@ -3,8 +3,8 @@
 \label{sec:impl_system}
 
 The \texttt{System} class assembles individual components into a running co-simulation scenario.
-It implements the system abstraction introduced in Section~\ref{sec:architecture_system_connections} and realizes SR-03-01 and SR-03-02 (UR-03).
-The event-connection functionality additionally supports the event-related interaction required by SR-04-02 (UR-04).
+It implements the system abstraction introduced in Section~\ref{sec:architecture_system_connections} and realizes \ref{req:SR-03-01} and \ref{req:SR-03-02} under \ref{req:UR-03}.
+The event-connection functionality additionally supports \ref{req:SR-04-02} under \ref{req:UR-04}.
 
 Figure~\ref{fig:impl_system_class} gives a class-level overview of the implementation objects involved in system composition and execution.
 The structural analysis that derives the execution order from the registered connections is deferred to Section~\ref{sec:impl_structural}, and the master algorithms that consume this order are described in Section~\ref{sec:impl_algorithms}.
@@ -12,7 +12,8 @@ The structural analysis that derives the execution order from the registered con
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.85\textwidth]{diagrams/out/pdf/class/system/System.pdf}
-    \caption{Class-level overview of the \texttt{System} abstraction in \syssimx. The diagram shows how the \texttt{System} manages components, stores signal and event connections, and delegates stepping to an \texttt{Algorithm}.}
+    \caption{Class-level overview of the \texttt{System} abstraction in \syssimx{}.
+    The \texttt{System} stores components and connections and delegates stepping to an \texttt{Algorithm}.}
     \label{fig:impl_system_class}
 \end{figure}
 
@@ -28,40 +29,39 @@ Derived metadata such as dependency graphs, algebraic loops, and execution order
 \subsection{Component Registration}
 
 Components are registered with \texttt{add\_component()} before any connection can reference them.
-Registration enforces that each component name is unique within the system and rejects additions after \texttt{initialize()} has been called, which keeps the structural analysis valid for the entire simulation run.
-The component's history is registered with the system-level \texttt{SystemHistory} instance so that results from all components can be retrieved through a single call to \texttt{get\_history()} after the simulation.
+Registration enforces unique component names within the system.
+It also rejects additions after \texttt{initialize()} has been called.
+This keeps the structural analysis valid for the complete simulation run.
+The component history is registered with the system-level \texttt{SystemHistory} instance.
+After the simulation, results from all components can therefore be retrieved through one call to \texttt{get\_history()}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Signal Connections}
 
-A signal connection is represented by a immutable \texttt{Connection} object.
+A signal connection is represented by an immutable \texttt{Connection} object.
 It stores the source component and output port together with the destination component and input port.
-The object is frozen and hashable, so it can be used directly during duplicate checks and graph construction.
+The object is frozen and hashable, so it can be used during duplicate checks and graph construction.
 
-\paragraph{Validation.}
 Signal connections are registered through \texttt{add\_connection()}.
-Before a connection is stored, \texttt{\_validate\_connection()} checks that both components exist, both ports exist, the port specifications are compatible, and no duplicate connection is already registered.
-The same validation also enforces single assignment.
+Before a connection is stored, \texttt{\_validate\_connection()} checks that both components exist, both ports exist, and the port specifications are compatible.
+The same validation rejects duplicate connections and enforces single assignment.
 A new connection is rejected if another connection already drives the same destination input.
-
-\paragraph{Single Assignment.}
-Each input port may be driven by at most one signal connection.
-This invariant is enforced during connection registration.
-The method \texttt{add\_connection()} rejects a new connection if another registered connection already targets the same destination component and input port.
 This guarantees a unique source for every consumed input port.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Event Connections}
 
-Hybrid scenarios use \texttt{EventConnection} to register a directed link from an event indicator of a source component to an event-handling target component.
-The source port identifies the registered event indicator, and the destination port identifies the event input of the target that appears in the system graph.
-The zero-crossing direction is not part of the connection.
-It is defined once by the source component's event indicator and inherited by the generated event subscription.
+Hybrid scenarios use \texttt{EventConnection} to route events from a source component to a target component.
+The source port identifies the event indicator.
+The destination port identifies the event input of the target component.
+The zero-crossing direction is defined by the source component and inherited by the generated event subscription.
 
-The method \texttt{add\_event\_connection()} validates the connection, auto-subscribes the target, and updates the internal routing table from event source to target components.
-The subscription is realized by appending a matching \texttt{Event} object to the target's \texttt{event\_subscriptions} list, which is the structure consumed by the hybrid algorithm of Section~\ref{sec:impl_hybrid}.
-If a matching subscription is already present, it is not duplicated, so the same subscription can be expressed through manual registration or through \texttt{add\_event\_connection()} without conflicting entries on the target.
-A duplicate event connection itself, however, is rejected at registration time.
+The \texttt{add\_event\_connection()} method validates the connection and registers the event route.
+It also creates the corresponding \texttt{Event} subscription for the target component.
+The subscription is stored on the target and is consumed by the hybrid algorithm during event dispatch.
+Section~\ref{sec:impl_hybrid} describes this dispatch step.
+Existing matching subscriptions are reused.
+Duplicate event connections are rejected at registration time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Algorithm Selection}
@@ -78,18 +78,16 @@ This ensures that the hybrid features of the framework are active whenever a com
 Once all components and connections are registered, the system is driven through three phases.
 
 \paragraph{Initialization.}
-\texttt{initialize(t0)} first classifies the registered components and selects the hybrid algorithm when event sources are present.
+The \texttt{initialize(t0)} method first classifies the registered components and selects the hybrid algorithm when event sources are present.
 It then prepares the component ports, computes direct-feedthrough metadata, and invokes the structural analysis of Section~\ref{sec:impl_structural}.
-The resulting execution order is used to initialize the system generation by generation, as shown in Figure~\ref{fig:impl_system_initialization}.
-For each generation, the system propagates upstream outputs, initializes the contained components, resolves local algebraic loops when needed, and performs a zero-step to publish outputs for downstream generations.
+The resulting execution order initializes the system generation by generation, as shown in Figure~\ref{fig:impl_system_initialization}.
 After initialization, the structural definition is fixed for the simulation run.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
-  \caption[System initialization sequence.]{Sequence of operations executed by \texttt{System.initialize(t0)}.
-    After classification, port preparation, and structural analysis, the system iterates over the execution order and, for each generation, propagates upstream outputs, initializes the contained components, resolves any algebraic loops, and performs a zero-step.
-    The zero-step publishes direct-feedthrough outputs so that later generations are initialized with consistent input values.}
+  \caption[System initialization sequence.]{Initialization sequence of the \texttt{System} class.
+  The system prepares components, computes execution metadata, and initializes generations in structural order.}
   \label{fig:impl_system_initialization}
 \end{figure}
 
@@ -111,11 +109,10 @@ A valid registration must either extend the structural definition or be rejected
 The scenario uses lightweight mock components and checks signal connections, event connections, and lifecycle protection.
 Table~\ref{tab:system_verification} summarizes the observed behavior.
 
-
 \begin{table}[t]
   \centering
   \small
-  \caption{Verification of the \texttt{System} registration contract.}
+  \caption{Registration checks for signal connections, event connections, and lifecycle protection.}
   \label{tab:system_verification}
   \begin{tabular}{p{3.2cm} p{6cm} p{6cm}}
     \toprule
@@ -149,6 +146,7 @@ Table~\ref{tab:system_verification} summarizes the observed behavior.
   \end{tabular}
 \end{table}
 
-The scenario confirms that the registration contract is enforced uniformly across its three entry points.
-The system rejects ambiguous or late structural changes before simulation starts, and event routing is configured through \texttt{EventConnection} while the event semantics remain owned by the source-side event indicator.
+The scenario confirms that the registration contract is enforced uniformly across signal connections, event connections, and lifecycle protection.
+The system rejects ambiguous or late structural changes before simulation starts.
+Event routing is configured through \texttt{EventConnection}, while event semantics remain owned by the source-side event indicator.
 Structural-analysis properties are verified separately in Section~\ref{sec:impl_structural}.

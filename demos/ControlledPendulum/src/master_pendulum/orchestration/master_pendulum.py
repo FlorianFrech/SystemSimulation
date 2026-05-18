@@ -6,10 +6,10 @@ from IPython.display import display
 from ipywidgets import HTML, HBox, Layout, VBox
 from traitlets import Float, HasTraits, Unicode
 
-from ..components import FMUPendulum, FEMPendulum, OpenSimPendulum
-
 from syssimx.core.multi_comp import Hysteresis, MultiComponent
 from syssimx.core.port import PortType
+
+from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
 
 MODES: Literal["FEM", "OpenSim", "FMU"] = ("FEM", "OpenSim", "FMU")
 
@@ -49,35 +49,40 @@ class MasterPendulum(MultiComponent):
     def __init__(
         self,
         name: str = "MasterPendulum",
-        initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FEM",
+        initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU",
         fmu_solver: Literal["cvode", "euler"] = "cvode",):
-        
+
         # Check initial mode validity
         if not is_valid_mode(initial_mode):
             raise ValueError(f"{name}: Invalid initial mode '{initial_mode}'."
                              f" Must be one of {MODES}.")
-        
-        super().__init__(name=name, initial_mode=initial_mode, group="Plant")
-        
-        # Instantiate sub-components
+
+        # Instantiate sub-components before delegating to the base class
         self.fmu = FMUPendulum(name="FMU_Pendulum", solver=fmu_solver)
         self.fem = FEMPendulum(name="FEM_Pendulum")
         self.opensim = OpenSimPendulum(name="OpenSim_Pendulum")
-        self.models.update({
-            "FEM": self.fem,
-            "OpenSim": self.opensim,
-            "FMU": self.fmu})
-        self.active_comp = self.models[initial_mode]
+
+        super().__init__(
+            name=name,
+            models={
+                "FEM": self.fem,
+                "OpenSim": self.opensim,
+                "FMU": self.fmu,
+            },
+            initial_mode=initial_mode,
+            group="Plant",
+        )
+
         self._unify_ports()
         self._initialize_ports_from_specs()
-        
+
         # Aggregate parameters from all sub-components
         self.parameters.update({
             "FEM": self.fem.get_parameters(),
             "OpenSim": self.opensim.get_parameters(),
             "FMU": self.fmu.get_parameters(),
         })
-        
+
         # Configure mode switching hysteresis
         self.hysteresis = Hysteresis(dwell_time=0.05)
 
@@ -89,7 +94,7 @@ class MasterPendulum(MultiComponent):
         # Monitoring state and widget references
         self.monitoring_state = PendulumMonitoringState()
         self._widget_links = []
-    
+
     # ----------------------------------------------------------------------------
     # Initialization Logic (now uses base class with hooks)
     # ----------------------------------------------------------------------------
@@ -117,15 +122,16 @@ class MasterPendulum(MultiComponent):
             if comp is not None and mode_key != "FEM":
                 comp.initialize(t0)
 
-        # Set active component and unify ports
-        self.active_comp = self.models[self.active_mode]
+        # active_comp is already set by MultiComponent.__init__; only direct
+        # feedthrough needs to be reflected on the wrapper.
         self.direct_feedthrough = self.active_comp.direct_feedthrough
 
         # Configure mode selector based on simulation type
-        if self._with_contact:
-            self.mode_selector = self._gap_based_mode_selector
-        else:
-            self.mode_selector = self._time_based_mode_selector
+        if self.mode_selector is None:
+            if self._with_contact:
+                self.mode_selector = self._gap_based_mode_selector
+            else:
+                self.mode_selector = self._time_based_mode_selector
 
     def _sync_parameters_from_fem(self) -> None:
         """Synchronize parameters from initialized FEM to other models."""
@@ -182,7 +188,7 @@ class MasterPendulum(MultiComponent):
     # ----------------------------------------------------------------------------
     # Mode Selection Logic
     # ----------------------------------------------------------------------------
-    def _time_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
+    def _time_based_mode_selector(self, t: float) -> str:
         """
         Cycle through modes 4 times within simulation time.
         Each complete cycle goes: FEM → FMU → OpenSim
@@ -197,9 +203,9 @@ class MasterPendulum(MultiComponent):
         else:
             return "FMU"
 
-    def _gap_based_mode_selector(self, t: float, state: dict[str, Any]) -> str:
+    def _gap_based_mode_selector(self, t: float) -> str:
         """
-        Select mode based on current angular position (theta) with hysteresis to prevent rapid switching.
+        Select mode based on the cached angular-position output.
         """
         theta_value = self.outputs["theta"].get()
         if theta_value is None:
@@ -207,6 +213,9 @@ class MasterPendulum(MultiComponent):
         theta = theta_value.magnitude if hasattr(theta_value, "magnitude") else float(theta_value)
 
         theta_abs_deg = abs(np.rad2deg(theta))
+
+        if theta_abs_deg < np.rad2deg(0.075) and t <= 0.025:
+            return self.active_mode  # Hysteresis: stay in current mode during initial transient
 
         # Mode selection based on angular position thresholds
         if theta_abs_deg > 15:

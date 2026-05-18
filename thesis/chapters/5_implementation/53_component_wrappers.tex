@@ -2,18 +2,19 @@
 \section{Component Wrappers}
 \label{sec:impl_wrappers}
 
-This section describes how backend-specific models are adapted to the common \texttt{CoSimComponent} contract.
-The wrappers differ in abstraction level because the supported backends expose different amounts of reusable interface information.
+This section describes the component wrappers for the supported simulation backends.
+Each wrapper adapts one external model type to the common component contract of \syssimx{}.
+The wrappers differ because the supported backends expose different amounts of reusable interface information.
 
-\texttt{FMUComponent} is the most generic wrapper.
-FMI already provides a standardized co-simulation interface, a model-description file, typed value references, parameters, and structural dependency metadata.
-\texttt{OpenSimComponent} is less generic.
-It provides a reusable runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}, but concrete subclasses must still define ports, parameters, and model assembly.
-\texttt{FEMComponent} is intentionally minimal.
-Finite-element models do not share a single descriptor, solver state, mesh format, weak form, or state-transfer convention.
+The \texttt{FMUComponent} class is the most generic wrapper.
+FMI provides a standardized co-simulation interface, a machine-readable model description, typed value references, parameters, and dependency metadata.
+The \texttt{OpenSimComponent} class provides a reusable runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}.
+Concrete OpenSim components still define their own ports, parameters, and model assembly.
+The \texttt{FEMComponent} class is a lightweight base for finite-element components.
+Finite-element models do not share one descriptor, solver state, mesh format, weak form, or state-transfer convention.
 
-This asymmetry is a deliberate implementation choice.
-Reusable base functionality is introduced only where a backend provides a stable interface or where repeated implementation patterns exist.
+This asymmetry is deliberate.
+The implementation adds reusable base functionality only where the backend provides a stable interface or where repeated patterns exist.
 
 \input{chapters/5_implementation/531_fmu_component}
 \input{chapters/5_implementation/532_opensim_component}

@@ -2,20 +2,18 @@
 \label{sec:impl_fem}
 
 Finite-element models are integrated through the same \texttt{CoSimComponent} contract as the other component types.
-The framework provides a lightweight \texttt{FEMComponent} base class for this purpose.
-The class derives from \texttt{CoSimComponent} and collects common attributes that are useful for FE implementations.
+The \texttt{FEMComponent} class provides the framework entry point for spatially discretized simulation units and realizes \ref{req:SR-07-01} under \ref{req:UR-07}.
+It derives from \texttt{CoSimComponent} and collects attributes that are commonly needed by finite-element implementations.
 These include geometry, mesh data, finite-element spaces, grid functions, forms, solver handles, and visualization state.
 
-The class does not implement a generic finite-element backend wrapper.
-It does not define ports from a descriptor file.
-It also does not prescribe a mesh format, weak form, material law, boundary condition, time integrator, or solver state representation.
-These choices depend on the concrete FE formulation and are therefore implemented by the concrete FE component.
+The reusable part of the finite-element wrapper is intentionally small.
+Finite-element components differ in mesh representation, weak form, material law, boundary conditions, time integration, and solver state.
+The concrete FE component therefore defines the port interface, discretization, numerical problem, time advancement, output projection, state transfer, and rollback behavior.
 
-The controlled-pendulum case study uses \texttt{FEMPendulum}.
-This component derives from \texttt{FEMComponent} and implements the NGSolve model used in the case study.
-It defines the port interface, constructs the finite-element spaces and grid functions, assembles the nonlinear problem, advances the model in time, and maps the FE state to the exposed pendulum outputs.
-State transfer and rollback are also implemented by \texttt{FEMPendulum}, because they depend on the selected time integration scheme and on the grid-function vectors that must be restored.
+The controlled-pendulum case study uses the \texttt{FEMPendulum} class as the concrete finite-element component.
+It implements the NGSolve model used for the contact-relevant pendulum phases.
+The component constructs the finite-element spaces and grid functions, assembles the nonlinear problem, advances the model in time, and maps the FE state to the exposed pendulum outputs.
+State transfer and rollback are implemented there because they depend on the selected time integration scheme and on the grid-function vectors that must be restored.
 
-The reusable behavior of \texttt{FEMComponent} is therefore intentionally small.
-Its implementation documents the framework entry point for FE-based components.
-The numerical formulation and verification of the concrete FE pendulum are part of the controlled-pendulum case study in Chapter~\ref{chap:case_study}.
+This compact wrapper keeps the framework interface consistent without imposing a generic finite-element backend abstraction.
+The numerical formulation and verification of the concrete FEM pendulum are part of the controlled-pendulum case study in Chapter~\ref{chap:case_study}.
