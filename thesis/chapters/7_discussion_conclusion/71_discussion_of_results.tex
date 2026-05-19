@@ -6,33 +6,36 @@ The results answer the central research question in a bounded form.
 They show that heterogeneous hybrid co-simulation can be implemented in one Python framework when the participating models are wrapped behind a common component interface and when the orchestration layer provides structural analysis, event handling, and state transfer.
 The contribution is the integration architecture that connects different simulation tools and model fidelities in one executable workflow.
 
-\paragraph{RQ1:}
+\paragraph{RQ1. Heterogeneous Integration.}
 The first research question asked how heterogeneous models from equation-based, musculoskeletal, and finite-element tools can be represented through a unified interface.
 The implementation answers this question through the port system and the \texttt{CoSimComponent} abstraction.
 FMUs, OpenSim models, FEM models, and multi-model components are exposed through the same input, output, parameter, state, and stepping concepts.
-This does not remove the differences between the backends.
-Instead, it confines them to wrapper-specific code and gives the system-level orchestration a common interface to work with.
-This result is consistent with the role of FMI as an interoperability standard~\cite{FMI2.0,FMI3.0}, but it extends the workflow beyond FMU-only coupling by including tool-specific OpenSim and FEM components.
+Backend differences remain inside wrapper-specific code.
+The system-level orchestration can therefore operate on a common interface.
+This result is consistent with the role of FMI as an interoperability standard~\cite{FMI2.0,FMI3.0}.
+It extends the workflow beyond FMU-only coupling by including tool-specific OpenSim and FEM components.
 
-\paragraph{RQ2:}
+\paragraph{RQ2. Dependency-Aware Orchestration.}
 The second research question concerned dependency analysis and execution ordering.
 The structural-analysis implementation derives persistent metadata from the registered components, signal connections, and direct-feedthrough information.
 This metadata is then reused by coupled initialization, master-algorithm execution, and algebraic-loop handling.
 The important point is that the execution order is not encoded manually in each scenario.
 It is derived from the assembled system structure.
 The feature-level verification in Chapter~\ref{chap:implementation} therefore supports the claim that \syssimx{} can identify instantaneous dependencies and algebraic-loop blocks before the simulation is run.
-The implementation remains more restricted than a general symbolic analysis of equations, but it is sufficient for the component-level dependency information available in the framework.
+The implementation operates on component-level dependency information rather than full symbolic equations.
+This scope is sufficient for the metadata available in the framework.
 
-\paragraph{RQ3:}
-The third research question addressed hybrid phenomena such as contact, switching, and discrete state changes.
+\paragraph{RQ3. Hybrid Event Handling.}
+The third research question addressed hybrid phenomena such as contact and discrete state changes.
 The hybrid algorithm answers this question by combining trial stepping, rollback, event localization, dense-time event handling, and event dispatch.
 The verification scenarios in Chapter~\ref{chap:implementation} show that this mechanism can localize zero-crossing events, process cascaded events at the same physical time, and check simultaneous event handling for commutativity.
 The controlled-pendulum contact scenario then shows the same mechanisms in the case-study context.
 The contact event is localized, routed to the controller, and used to reset the PID integrator.
-This confirms that the hybrid algorithm is not only an isolated implementation feature, but also part of the coupled system workflow.
-The result is aligned with the known requirements for hybrid co-simulation, where rollback, event ordering, and time representation are central issues~\cite{broman_requirements_2015,StepRevision_Cremona,cremona_hybrid_2019}.
+This connects the implementation feature with the coupled system workflow.
+This result follows known requirements for hybrid co-simulation.
+Rollback, event ordering, and time representation are central issues in this setting~\cite{broman_requirements_2015,cremona_hybrid_2019}.
 
-\paragraph{RQ4:}
+\paragraph{RQ4. Runtime Model Switching.}
 The fourth research question asked how alternative subsystem models can be switched at runtime.
 The multi-model component answers this through a fixed external interface and an internal active-model state.
 The \texttt{MasterPendulum} uses this concept to switch between FMU, OpenSim, and FEM pendulum models while the surrounding closed-loop system sees one pendulum component.
@@ -40,27 +43,28 @@ The switching verification shows that the exposed rigid-body quantities remain c
 The performance comparison also shows the consequence of this design choice.
 Switching into the FEM model reconstructs the finite-element state from reduced rigid-body variables.
 It therefore cannot reproduce deformation history that was not simulated before the switch.
-This is not a failure of the interface continuity.
-It is the modeling cost of projecting between model representations with different internal state spaces.
+The interface remains continuous.
+The projection still loses internal FEM history.
+This is the modeling cost of switching between representations with different internal state spaces.
 
-\paragraph{RQ5:}
+\paragraph{RQ5. Case-Study Behavior.}
 The fifth research question concerned representative system behavior and benchmark scenarios.
 The controlled-pendulum case study provides the system-level evidence.
 The baseline scenario verifies the FMU-only closed-loop co-simulation against a monolithic OpenModelica reference.
-The decreasing angle error for smaller macro step sizes confirms the expected macro-step dependence of explicit co-simulation~\cite{gomes_co-simulation_2019,arnold_error_2013,kubler_two_2000}.
+The decreasing angle error for smaller macro step sizes confirms the expected macro-step dependence.
+This behavior is consistent with the error mechanisms of explicit co-simulation~\cite{gomes_co-simulation_2019,arnold_error_2013}.
 The contact scenario verifies the combined workflow against a rigid-contact reference and shows that the framework can combine heterogeneous plant models, hybrid contact events, PID reset, and runtime switching in one simulation.
-The comparison does not establish physical validity of the contact law.
-It verifies numerical consistency with a model-based reference and demonstrates the workflow on a controlled hybrid system.
+It uses the rigid-contact reference as a numerical comparator and demonstrates the workflow on a controlled hybrid system.
 
-The performance benchmark gives the practical interpretation of runtime fidelity switching.
-For the reported configuration, the total median wall time was reduced from \(464.0\,\mathrm{s}\) to \(294.3\,\mathrm{s}\), which corresponds to a speedup of \(1.58\times\).
-The FEM solver time was reduced from \(455.0\,\mathrm{s}\) to \(224.3\,\mathrm{s}\), which corresponds to a reduction by \(2.03\times\).
+The performance benchmark gives the practical interpretation of runtime model switching.
+For the reported configuration, the total median wall time was reduced from \(467.6\,\mathrm{s}\) to \(289.6\,\mathrm{s}\), which corresponds to a speedup of \(1.62\times\).
+The FEM solver time was reduced from \(458.3\,\mathrm{s}\) to \(222.1\,\mathrm{s}\), which corresponds to a reduction by \(2.06\times\).
 The difference between both ratios is important.
-It shows that the switched configuration reduces the expensive FEM work, but it still carries orchestration overhead and the cost of the remaining components.
-The benchmark therefore supports the usefulness of model switching for the selected scenario, but it does not imply a general speedup for all multi-fidelity simulations.
+It shows that the switched configuration reduces the expensive FEM work.
+The total runtime still includes orchestration overhead and the cost of the remaining components.
+The benchmark therefore supports the usefulness of model switching for the selected scenario.
+It does not imply a general speedup for all multi-fidelity simulations.
 
 Taken together, the results support the thesis contribution.
-The framework mechanisms were first verified in isolation and then combined in the controlled-pendulum case study.
-The case study verifies selected numerical results against monolithic OpenModelica references and validates the workflow for a heterogeneous hybrid closed-loop simulation.
-The contribution is bounded by the selected models, solver settings, and benchmark configuration.
-Within this scope, the thesis shows that a unified co-simulation framework can combine FMI-based components, tool-specific wrappers, hybrid event handling, algebraic-loop treatment, and runtime model switching in one reproducible workflow.
+The framework mechanisms were verified in isolation and then combined in the controlled-pendulum case study.
+The next section defines the scope in which this claim holds.

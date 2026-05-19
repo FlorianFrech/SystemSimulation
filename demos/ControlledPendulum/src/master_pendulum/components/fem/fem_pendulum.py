@@ -82,6 +82,11 @@ class FEMPendulum(FEMComponent):
         }
         self._equivalent_length = 0.0
 
+        # When False, `_do_step_internal` skips appending to the multidim
+        # history grid functions. The hybrid algorithm flips this off around
+        # trial steps so the history reflects accepted simulation time only.
+        self._record_history: bool = True
+
     # ----------------------------------------------------------------------------
     # Setup Configuration Parameters before initialization
     # ----------------------------------------------------------------------------
@@ -193,6 +198,9 @@ class FEMPendulum(FEMComponent):
 
         self._deformation_gradient_w = self._material_wall.C
         self._psi_w                  = self._material_wall.psi
+        # Wall stress hooks for post-processing on the wall region.
+        self._cauchy_stress_w        = self._material_wall.cauchy_stress
+        self._von_mises_w            = self._material_wall.von_mises
 
     def _create_mesh(self):
         self._mesh = build_mesh(self.geom_params, self.mesh_params, self._with_contact)
@@ -257,20 +265,16 @@ class FEMPendulum(FEMComponent):
         self._fes = self._V * self._Q**2
         (self._u, self._q), (self._v, self._p) = self._fes.TnT()
 
-        # Scalar H1 space for stress in pendulum
+        # Stress spaces span pendulum and wall so that both regions carry
+        # post-processed stress values. The wall is included because it
+        # already participates in the simulation through its strain-energy
+        # contribution to the bilinear form, and visualizing its stress
+        # field makes the contact response symmetric across the interface.
         self._S_cauchy = MatrixValued(
-            H1(
-                self._mesh,
-                order=self.mesh_params.mesh_order,
-                definedon=self._mesh.Materials("pendulum"),
-            )
+            H1(self._mesh, order=self.mesh_params.mesh_order)
         )
-        # Scalar H1 space for stress norm visualization
-        self._V_vm = H1(
-            self._mesh,
-            order=self.mesh_params.mesh_order,
-            definedon=self._mesh.Materials("pendulum"),
-        )
+        # Scalar H1 space for stress norm visualization (full mesh)
+        self._V_vm = H1(self._mesh, order=self.mesh_params.mesh_order)
 
     def _initialize_grid_functions(self):
         """Initialize grid functions for state variables and stress."""
@@ -749,15 +753,32 @@ class FEMPendulum(FEMComponent):
                             indicator_after=self.gap,
                         )
 
-                # Compute stress
+                # Compute stress on both materials. The piecewise
+                # CoefficientFunction picks the pendulum or wall material
+                # law in the corresponding region.
                 u_cur = self._gf_u.components[0]
-                self._gf_cauchy_stress.Interpolate(self._cauchy_stress_p(u_cur))      # Cauchy stress tensor
-                self._gf_von_mises.Set(self._von_mises_p(u_cur))             # von Mises scalar
+                cauchy_per_mat = []
+                vm_per_mat = []
+                for mat in self._mesh.GetMaterials():
+                    if mat == "pendulum":
+                        cauchy_per_mat.append(self._cauchy_stress_p(u_cur))
+                        vm_per_mat.append(self._von_mises_p(u_cur))
+                    elif mat == "wall":
+                        cauchy_per_mat.append(self._cauchy_stress_w(u_cur))
+                        vm_per_mat.append(self._von_mises_w(u_cur))
+                    else:
+                        cauchy_per_mat.append(CF(((0, 0), (0, 0))))
+                        vm_per_mat.append(CF(0.0))
+                self._gf_cauchy_stress.Interpolate(CF(cauchy_per_mat))
+                self._gf_von_mises.Set(CF(vm_per_mat))
 
-                # Add current state to time series history for visualization
-                self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                self._gf_von_mises_history.AddMultiDimComponent(self._gf_von_mises.vec)
-                self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
+                # Add current state to time series history for visualization.
+                # Skipped during hybrid trial steps so that history only contains
+                # frames from accepted simulation time.
+                if self._record_history:
+                    self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
+                    self._gf_von_mises_history.AddMultiDimComponent(self._gf_von_mises.vec)
+                    self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
 
                 if self.anim_params.animate:
                     self.scene.Redraw()

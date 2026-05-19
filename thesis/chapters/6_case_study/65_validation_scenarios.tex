@@ -27,7 +27,7 @@ The expected behavior is a decreasing trajectory error as the macro step size is
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/6_case_study/controlled_pendulum/validation/baseline_step_convergence.pdf}
-    \caption{Baseline closed-loop co-simulation without contact.
+    \caption[Baseline closed-loop co-simulation without contact]{Baseline closed-loop co-simulation without contact.
     Panel~(a) compares the full angle trajectory for different macro step sizes with the monolithic OpenModelica reference.
     Panel~(b) magnifies the first \(0.4\,\mathrm{s}\), where the coarse macro step produces the largest visible deviation.
     Panel~(c) reports the sampled angle errors \(E_{\infty,\theta}\) and \(E_{2,\theta}\) against the interpolated reference solution.
@@ -71,10 +71,11 @@ The primary comparison variables are the exposed angle \(\theta\) and the contac
 The angle error is reported over the full horizon and over the contact window \(t\in[0.15,0.35]\,\mathrm{s}\).
 The event-time error is computed from the five paired contact events of the co-simulation and the rigid-contact reference.
 
-\begin{figure}[tbp]
+\begin{figure}[t]
+  
     \centering
     \includegraphics[width=\linewidth]{figures/6_case_study/controlled_pendulum/validation/multi_model_switching.pdf}
-    \caption{Multi-model contact scenario with runtime plant-model switching.
+    \caption[Multi-model contact scenario with runtime plant-model switching]{Multi-model contact scenario with runtime plant-model switching.
     Panel~(a) shows the switched pendulum trajectory against the monolithic OpenModelica rigid-contact reference, with the active internal plant model indicated by the mode strip below the axes.
     Panel~(b) magnifies the contact window, where the FEM model is active and resolves the stiff compliant contact.
     The remaining deviations from the reference occur mainly during contact because the co-simulation uses a compliant FEM contact law, whereas the reference uses an ideal rigid impact model.}
@@ -85,40 +86,39 @@ Figure~\ref{fig:case_multimodel_contact} shows that the switched trajectory foll
 The largest deviations occur during the repeated rebounds at the wall.
 This behavior is expected because the reference applies an ideal velocity reflection, while the co-simulation resolves contact through a stiff compliant FEM model.
 
-The mode strip records seven accepted mode switches.
-The early FMU\(\rightarrow\)FEM\(\rightarrow\)OpenSim\(\rightarrow\)FMU sequence is the start-up transient of the dwell-limited switching logic.
-During the contact-relevant interval, the FEM model remains active and resolves all five wall contacts.
+The mode strip records six accepted mode switches.
+The first two switches form a short FMU--OpenSim--FMU start-up transient.
+The second OpenSim interval hands over to FEM shortly before the contact-relevant phase.
+After the repeated contacts, the plant returns through OpenSim to FMU mode.
 
-\begin{table}[tbp]
+\begin{table}[htbp]
     \centering
     \small
-    \caption{Trajectory and event-time errors for the multi-model contact scenario, computed against the interpolated OpenModelica rigid-contact reference.}
+    \caption[Errors for the multi-model contact scenario]{Trajectory and event-time errors for the multi-model contact scenario, computed against the interpolated OpenModelica rigid-contact reference.}
     \label{tab:case_multimodel_metrics}
     \begin{tabular}{llrr}
         \toprule
         \textbf{Quantity} & \textbf{Interval} & \(\boldsymbol{E_\infty}\) & \(\boldsymbol{E_2}\) \\
         \midrule
-        \(\theta\) (rad)   & full horizon                     & \(5.244\cdot 10^{-3}\) & \(1.884\cdot 10^{-3}\) \\
-        \(\theta\) (rad)   & contact window \([0.15,0.35]\,\mathrm{s}\) & --- & \(1.460\cdot 10^{-3}\) \\
-        \(t_e\) (s)        & 5 paired contact events          & \(3.494\cdot 10^{-4}\) & --- \\
+        \(\theta\) (rad) & full horizon & \(5.309\cdot 10^{-3}\) & \(1.946\cdot 10^{-3}\) \\
+        \(\theta\) (rad) & contact window \([0.15,0.35]\,\mathrm{s}\) & --- & \(1.571\cdot 10^{-3}\) \\
+        \(t_e\) (s) & 5 paired contact events & \(3.729\cdot 10^{-4}\) & --- \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 Table~\ref{tab:case_multimodel_metrics} quantifies the trajectory and event-time deviations.
-The maximum angle error is \(5.244\cdot 10^{-3}\,\mathrm{rad}\), which corresponds to approximately \(0.30^\circ\).
+The maximum angle error is \(5.309\cdot 10^{-3}\,\mathrm{rad}\), which corresponds to approximately \(0.30^\circ\).
 This maximum occurs inside the contact window.
 The contact-window row therefore reports only \(E_{2,\theta}\), since the corresponding \(E_{\infty,\theta}\) is identical to the full-horizon value.
 
 All five contact events of the reference are reproduced.
-The largest event-time error is \(3.5\cdot 10^{-4}\,\mathrm{s}\), which is below one half of the macro communication step.
+The largest event-time error is \(3.729\cdot 10^{-4}\,\mathrm{s}\), which is below one half of the macro communication step.
 The PID reset event connection fires on each contact event.
 This confirms that contact detection, event routing, plant-state update, and controller reset are exercised in one closed-loop run.
 
 The switching consistency is evaluated from the \texttt{sync\_events} log of the \texttt{MasterPendulum}.
-Across the seven accepted switches, the maximum state jump is \(3.47\cdot 10^{-18}\,\mathrm{rad}\) for \(\theta\) and \(7.11\cdot 10^{-15}\,\mathrm{rad\,s^{-1}}\) for \(\omega\).
-These values are at numerical round-off level.
-The state transfer between internal plant models therefore does not introduce visible discontinuities in the exposed plant trajectory.
+Across the six accepted switches, the maximum state jump is \(8.33\cdot 10^{-17}\,\mathrm{rad}\) for \(\theta\) and \(1.24\cdot 10^{-14}\,\mathrm{rad\,s^{-1}}\) for \(\omega\).
 
 This scenario verifies the integrated workflow rather than the isolated hybrid algorithm.
 The isolated event-detection and event-handling mechanisms were verified in Section~\ref{sec:impl_hybrid}.
@@ -144,10 +144,10 @@ The switched contact workflow was already evaluated against the monolithic OpenM
 This scenario therefore reports a benchmark of computational cost.
 It does not establish correctness on its own.
 
-\begin{figure}[tbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/6_case_study/controlled_pendulum/validation/performance_switching.pdf}
-    \caption{Performance benchmark of full-FEM versus switched FEM execution.
+    \caption[Performance benchmark of full-FEM versus switched FEM execution]{Performance benchmark of full-FEM versus switched FEM execution.
     Panel~(a) compares the full-horizon angle trajectory of the full-FEM pendulum and the switched \texttt{MasterPendulum}.
     The mode strip below panel~(a) indicates when the switched run uses the FMU and FEM pendulum models.
     Panel~(b) magnifies the contact window, where the trajectory differences are concentrated.
@@ -163,10 +163,10 @@ It remains in FEM mode throughout the repeated bounce sequence and returns to FM
 The two trajectories agree closely outside the contact window.
 The visible differences are concentrated during the rebounds.
 
-\begin{table}[tbp]
+\begin{table}[htbp]
     \centering
     \small
-    \caption{Runtime and trajectory metrics for the performance benchmark over \(t_{\mathrm{end}}=0.4\,\mathrm{s}\).
+    \caption[Runtime and trajectory metrics for the performance benchmark]{Runtime and trajectory metrics for the performance benchmark over \(t_{\mathrm{end}}=0.4\,\mathrm{s}\).
     Wall times are reported as medians over five measured runs after excluding one warm-up run.}
     \label{tab:case_performance_metrics}
     \begin{tabular}{p{4.8cm} p{3.1cm} p{3.1cm} p{2.4cm}}

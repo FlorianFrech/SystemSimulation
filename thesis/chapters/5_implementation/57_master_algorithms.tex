@@ -35,7 +35,7 @@ Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level e
             \centering
             \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/Jacobi_Algorithm.pdf}
         \end{minipage}
-        \caption{Jacobi execution. All generations are prepared first. The component steps are executed only afterwards.}
+        \caption[Jacobi execution]{Jacobi execution. All generations are prepared first. The component steps are executed only afterwards.}
         \label{fig:impl_algorithms_jacobi}
     \end{subfigure}
     \hfill
@@ -46,10 +46,10 @@ Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level e
             \centering
             \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/Gauss_Seidel_Algorithm.pdf}
         \end{minipage}
-        \caption{Gauss--Seidel execution. Each generation is prepared and stepped before the next.}
+        \caption[Gauss--Seidel execution]{Gauss--Seidel execution. Each generation is prepared and stepped before the next.}
         \label{fig:impl_algorithms_gs}
     \end{subfigure}
-    \caption{Implementation-level execution flow of the explicit continuous master algorithms.}
+    \caption[Implementation-level execution flow]{Implementation-level execution flow of the explicit continuous master algorithms.}
     \label{fig:impl_algorithms_jacobi_gs}
 \end{figure}
 
@@ -121,7 +121,7 @@ Figure~\ref{fig:impl_algorithms_verification_system} shows the topology.
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/5_implementation/master_algorithms/master_algorithm_verification.pdf}
-    \caption{Feedback scenario for comparing the continuous master algorithms.
+    \caption[Feedback scenario for comparing the continuous master algorithms]{Feedback scenario for comparing the continuous master algorithms.
     The integrator has no direct feedthrough, so the zero-delay graph is acyclic.}
     \label{fig:impl_algorithms_verification_system}
 \end{figure}
@@ -139,7 +139,7 @@ Figure~\ref{fig:impl_algorithms_verification} compares all three algorithms agai
     \vspace{-1ex}
     \centering
     \includegraphics[width=0.9\linewidth]{figures/5_implementation/master_algorithms/algorithm_comparison.pdf}
-    \caption{Step-size comparison of the continuous master algorithms.
+    \caption[Step-size comparison of the continuous master algorithms]{Step-size comparison of the continuous master algorithms.
     The traces are compared against the analytical reference for decreasing macro step sizes.}
     \label{fig:impl_algorithms_verification}
 \end{figure}

@@ -54,7 +54,7 @@ Do not repeat the full motivation from Chapter 1.
 Explain only why the controlled pendulum is a suitable validation object for the framework.
 
 The controlled pendulum is suitable because it is simple enough to interpret and rich enough to exercise the framework features.
-It contains closed-loop control, sensor feedback, actuator dynamics, contact, strong coupling, and alternative plant models with different fidelity levels.
+It contains closed-loop control, sensor feedback, actuator dynamics, contact, and alternative plant models with different fidelity levels.
 It also permits a monolithic OpenModelica reference for numerical verification.
 
 §6.1 states the **objective** of the case study, namely which features of the framework are validated together and which results are verified numerically against the monolithic reference.
@@ -74,7 +74,7 @@ It also permits a monolithic OpenModelica reference for numerical verification.
 
 ```latex
 The controlled pendulum is chosen because it is simple enough to interpret but rich enough to exercise the main framework features.
-It combines closed-loop control, sensor feedback, actuator dynamics, contact, strong coupling, and alternative plant models with different fidelity levels.
+It combines closed-loop control, sensor feedback, actuator dynamics, contact, and alternative plant models with different fidelity levels.
 It also permits a monolithic OpenModelica reference model.
 This makes it suitable for numerical verification against a reference solution and for workflow validation of the heterogeneous co-simulation framework.
 ```
@@ -86,7 +86,7 @@ This makes it suitable for numerical verification against a reference solution a
 - Define the main signals.
 - Define the **port-level plant interface** that all pendulum variants must satisfy.
   - Inputs: torque.
-  - Outputs: angle, angular velocity, angular acceleration, contact event.
+  - Outputs: angle, angular velocity, contact event.
 - Keep component details short.
 
 The port-level interface defined here is the **single contract** that all pendulum variants share.
@@ -103,7 +103,7 @@ The shared port-level interface is defined in §6.2 and is not repeated here.
 - §6.3.4 `MasterPendulum`: multi-model plant wrapper.
 
 Do not repeat Chapter 5 wrapper implementation details.
-For OpenSim, state only the concrete pendulum interface: torque input, angle, angular velocity, angular acceleration, synchronized mass, center-of-mass length, pivot inertia, absence of muscle dynamics, and role as the intermediate-fidelity model.
+For OpenSim, state only the concrete pendulum interface: torque input, angle, angular velocity, synchronized mass, center-of-mass length, pivot inertia, absence of muscle dynamics, and role as the intermediate-fidelity model.
 For FEM, include the concrete geometry, mesh, boundary regions, hinge constraint, torque boundary, contact law, internal stepping, and output projection because these choices affect the interpretation of the contact scenarios.
 
 ### 6.4 Reference Model and Evaluation Metrics
@@ -112,12 +112,30 @@ This subsection defines all standards used in §6.5 once and for all.
 No metric is redefined in §6.5.
 
 **Reference solver.**
-The monolithic OpenModelica model is integrated with the DASSL solver.
-State the absolute tolerance, the relative tolerance, the integration order, and the maximum step size.
+The monolithic OpenModelica reference models are integrated with the DASSL solver.
+State the exact OpenModelica simulation options used for the exported reference trajectories.
+Use `research/tools/solvers.md` as the solver-background note when writing this paragraph.
+Do not invent DASSL settings that were not explicitly configured.
+In particular, distinguish the exported `stepSize` from the internal adaptive DASSL step size.
 Example wording.
 
 ```latex
-The reference uses the DASSL solver with absolute tolerance 1e-8, relative tolerance 1e-6, integration order up to 5, and maximum step size 1e-3 s.
+The OpenModelica reference simulations use DASSL.
+OpenModelica characterizes DASSL as an implicit BDF-based multistep solver with adaptive order and adaptive step-size control.
+The exported reference trajectories use \(\texttt{startTime}=0\), \(\texttt{stepSize}=10^{-3}\,\mathrm{s}\), \(\texttt{tolerance}=10^{-6}\), \(\texttt{solver}=\texttt{dassl}\), and \(\texttt{outputFormat}=\texttt{mat}\).
+The baseline reference uses \(\texttt{stopTime}=2\), while the contact reference uses \(\texttt{stopTime}=1\).
+The stored step size defines the output spacing of the reference trajectory.
+DASSL selects its internal integration steps adaptively.
+```
+
+For FMU-based co-simulation, state only the internal FMU solver family and the separation between FMU internal steps and the co-simulation macro step.
+Example wording.
+
+```latex
+The Co-Simulation FMUs use CVODE as their default internal solver.
+In OpenModelica, CVODE is a SUNDIALS solver for ODE initial value problems and uses variable-order, variable-step multistep methods.
+The exported stiff configuration uses BDF with order 1 to 5.
+The co-simulation macro step is set by the master algorithm and is separate from the FMU internal solver steps.
 ```
 
 **Compared variables.**
@@ -178,14 +196,10 @@ The baseline itself is kept simple. The variants demonstrate one extra feature e
 - Claim. Numerical verification of the FMU-only closed loop with discrete-time sensor and decoder against the corresponding monolithic OpenModelica variant.
 - Variant of 6.5.1 with the quantized sensor enabled.
 
-**6.5.B Strongly coupled drive and pendulum with algebraic loop (numerical verification, optional).**
-
-- Claim. Numerical verification that the SCC-local IJCSA solver produces the same closed-loop trajectory as the monolithic OpenModelica reference under strong coupling.
-- Variant of 6.5.1 with feedthrough coupling enabled in the drive-plant connection.
-
 #### Removed from the previous draft
 
 - Standalone rigid-contact scenario. Subsumed by 6.5.2. The multi-model switching scenario contains the same discrete event and the same PID-reset behavior. A separate scenario would duplicate evidence.
+- Strongly coupled drive and pendulum with algebraic loop. Algebraic-loop resolution is verified at feature level in Chapter 5. Adding the case-study variant would mostly duplicate that evidence and would distract from the contact, switching, and performance scenarios.
 
 ### 6.6 Discussion of Results
 
@@ -222,15 +236,15 @@ Include the following topics.
 
 - Geometry and hinge constraint.
 - Mesh and labeled boundary regions.
-- Neo-Hookean material choice.
+- Saint Venant--Kirchhoff material choice with steel-like parameters.
 - Newmark time integration.
 - Torque application.
 - Compliant contact boundary.
-- Rigid-body output mapping to `theta`, `omega`, and `alpha`.
+- Rigid-body output mapping to `theta` and `omega`.
 - Reason for using high stiffness to approximate rigid contact.
 - One FEM-specific figure with two panels:
-  - Panel A: FEM mesh or reference configuration with labeled regions: pivot or rotation boundary, torque boundary, contact boundary, and wall or contact surface.
-  - Panel B: representative deformed configuration during contact, optionally colored by displacement magnitude or von Mises stress.
+  - Panel A: reference mesh with material domains and labeled boundary regions.
+  - Panel B: representative contact state, preferably a zoomed von Mises stress field near the wall contact.
 
 Do not include the following details unless they are needed for interpreting a result.
 
@@ -250,6 +264,73 @@ They should not be inserted as notebook screenshots.
 Use them to generate one thesis-ready FEM model figure or, at most, one additional appendix figure.
 The main text should not contain a separate verification gallery for the FEM pendulum unless a plotted field directly supports a claim in §6.5 or §6.6.
 
+### FEM model figure setup
+
+The accepted FEM figure for §6.3.3 is generated from
+`demos/ControlledPendulum/notebooks/master_pendulum/fem/fem_mesh_export.ipynb`.
+Use the exported PDF files from
+`thesis/figures/6_case_study/controlled_pendulum/`.
+
+Use the figure only as a model-description and field-illustration figure.
+It is not one of the validation scenarios in §6.5.
+It must not be used as evidence for trajectory verification, runtime speedup, or physical validation of the contact stress.
+
+The figure-generation run uses the following setup.
+
+- Motion: free swing of the FEM pendulum under gravity.
+- Controller and drive: disabled for the figure run.
+- Drive torque: `0 N m`.
+- Initial angle: `theta_0 = 0.30 rad` (`17.19 deg`).
+- Initial angular velocity: `omega_0 = 0 rad/s`.
+- Horizon: `0.30 s`.
+- Contact: enabled.
+- Wall-contact event: registered with falling direction at `theta = 0`.
+- Event reaction: the event is recorded, but the compliant FEM contact law carries the physical rebound.
+- Material law: Saint Venant--Kirchhoff.
+- Pendulum material: `E = 2.1e11 Pa`, `nu = 0.3`, `rho = 7850 kg/m^3`.
+- Wall material: `E = 210e9 Pa`, `nu = 0.3`, `rho = 7850 kg/m^3`.
+- Thickness: `0.01 m`.
+- Contact stiffness: `k_n = 2e9 N/m`.
+- Geometry: `r_rod = 0.015 m`, `r_hole = 0.03 m`, `r_head = 0.06 m`, `l_center = 0.24 m`, `q_wall = 0 deg`, `wall_len_x = 0.025 m`, `wall_len_y = 0.25 m`, `wall_len_z = 0.05 m`.
+- Mesh: `max_element_size = 0.03`, `mesh_order = 2`, curved elements enabled, no refinement.
+- Mesh size in the exported figure: `1003` vertices and `1640` triangular elements (`1307` pendulum elements and `333` wall elements).
+- Boundary counts in the exported figure: `rotation = 20`, `contact_head = 118`, `contact_wall = 83`, `fix = 26`.
+- Figure time step: `0.01 s`. This value belongs to the figure-generation run and must not be cited as a scenario parameter.
+- Stress frame: selected automatically as the stored history frame with maximum absolute von Mises stress.
+
+Panel A should show `fem_mesh_boundaries.pdf`.
+It identifies the pendulum and wall material domains and the boundary roles.
+The boundary legend should contain only boundary colors.
+The material labels stay inside the plot.
+
+Panel B should show the zoomed contact stress field if it fits the page better than the full-body stress field.
+The preferred source is `fem_deformed_contact_von_mises_zoom.pdf`.
+Use the full-body stress field only if the zoomed panel lacks enough geometric context.
+The colorbar label is `sigma_vM in MPa`.
+If the color scale is clipped, state in the caption that clipping is used only for visual contrast.
+
+The prose before the figure should state why the figure is included.
+Suggested wording:
+
+```latex
+Figure~\ref{fig:case_fem_model} summarizes the FEM realization used for the contact-capable pendulum variant.
+The left panel shows the reference mesh, the two material domains, and the boundary regions used for the hinge constraint, torque application, and contact.
+The right panel shows a representative von Mises stress field during wall contact.
+The field plot illustrates the spatial quantities available inside the FEM model.
+The surrounding co-simulation uses only the projected angle and angular velocity.
+```
+
+The caption must contain the claim boundary.
+Suggested caption:
+
+```latex
+\caption{FEM pendulum model used for the contact-capable plant variant.
+Panel~(a) shows the reference mesh with the pendulum and wall domains and the boundary regions used by the model.
+Panel~(b) shows a representative von Mises stress field during a free-swing contact run from \(\theta_0=0.30\,\mathrm{rad}\) with gravity and zero drive torque.
+The stress field illustrates the spatial information available inside the FEM model.
+It is not used as experimental validation of the contact law.}
+```
+
 ---
 
 ## Scenario Priorities
@@ -258,12 +339,14 @@ The required and optional scenario lists in §6.5 are **binding**.
 
 If the chapter exceeds 15 pages, drop content in this order.
 
-1. Optional scenario 6.5.B (algebraic loop).
-2. Optional scenario 6.5.A (quantization).
-3. Reduce the 6.5.1 convergence study from four macro step sizes to three.
+1. Optional scenario 6.5.A (quantization).
+2. Reduce the 6.5.1 convergence study from four macro step sizes to three.
 
 Do not drop 6.5.2 or 6.5.3.
 Do not reduce the 6.5.1 convergence study below three step sizes.
+Do not add the algebraic-loop variant to Chapter 6.
+Chapter 5 already verifies algebraic-loop resolution as an implementation feature.
+Chapter 6 must therefore avoid claiming system-level validation of strong coupling unless a new scenario is explicitly reintroduced.
 
 ---
 
@@ -506,6 +589,104 @@ table footnotes in the chapter.
 
 ---
 
+## Physical Plausibility Procedure for FEM Results
+
+The case study does not claim physical validation of the FEM contact law.
+This procedure exists so that FEM-derived numbers and figures can still be
+checked against first-principles bounds before they appear in §6.3.3,
+§6.5.2, §6.5.3, or §6.6.
+
+Run every check in this list before including a new FEM-derived value
+or figure in the thesis. Document any check that fails in the §6.6
+discussion. Do not silently retune parameters until the checks pass
+without also updating the discussion text.
+
+### 1. Order-of-magnitude check
+
+For peak stresses and displacements reported from the FEM pendulum:
+
+- **Stress.** Compare the peak von Mises stress against the steel yield
+  stress (≈ 250 MPa for S235, ≈ 1 GPa for spring steel). The reported
+  contact scenarios should produce peak stresses far below yield because
+  the constitutive law is purely elastic (SVK or Neo-Hookean) and
+  plastic dissipation is not modeled. A peak approaching or exceeding
+  yield indicates either an unrealistic impact velocity, an
+  inappropriate contact stiffness, or a regime where the elastic law
+  no longer represents the physics.
+- **Displacement.** Compare peak displacement against the characteristic
+  geometry (head radius `r_head`, rod length `l_center`). Displacement
+  larger than `0.1 · r_head` near contact indicates a too-soft contact
+  stiffness or a too-large impact velocity.
+
+### 2. Impact energy budget
+
+Estimate the impact kinetic energy from a rigid-body argument:
+
+- Drop height: `h ≈ l_center · (1 − cos θ_0)`.
+- Free-fall angular velocity: `ω_imp ≈ √(2 g h / l_center)`. Add the
+  PID-driven contribution if the controller is active before contact.
+- Impact KE: `½ · I_pivot · ω_imp²` with `I_pivot` from `_compute_inertia`.
+
+The peak strain energy in the FEM body during contact must be a
+bounded fraction of this KE — most of the KE is returned to the body
+as elastic rebound. If `calculate_energy()` reports strain energy
+comparable to the kinetic budget, the contact stiffness is too low
+and the body is absorbing energy instead of reflecting it.
+
+### 3. Penalty-contact consistency
+
+The penalty formulation has two coupled scales:
+
+- Penetration `δ ≈ F_contact / (k_n · ℓ_contact)`.
+- Contact pressure `p ≈ 2 · k_n · δ / thickness` (plane stress).
+
+With `k_n = 2·10⁹ N/m`, expected penetrations are in the
+`10⁻⁵`–`10⁻⁴ m` range. Penetrations larger than `10⁻³ m` indicate that
+the penalty stiffness has been overwhelmed by the impact and is no
+longer approximating rigid contact.
+
+### 4. Time-step refinement
+
+Re-run the same scenario with the FEM internal step `τ` halved. The
+peak von Mises stress and the contact-event time should change by less
+than 10 %. Larger changes mean the reported numbers are dominated by
+time-discretization error.
+
+### 5. Contact-stiffness sensitivity
+
+Re-run with `k_n` increased by a factor of two. The peak contact
+pressure should grow by approximately `√2` and the penetration should
+drop by approximately `√2`. If the response is not self-consistent in
+this way, the penalty formulation has saturated either against the
+time discretization or at the floating-point level.
+
+### 6. Reference comparison
+
+For quantities that map onto the rigid-body output interface (angle,
+angular velocity, contact time), the OpenModelica rigid-contact model
+is the numerical reference. Report `E_∞,θ` and `E_2,θ` against this
+reference as already required by §6.5.2. Stress and displacement
+fields are not covered by this reference and must rely on Checks 1–5
+above.
+
+### What this procedure does and does not establish
+
+- It establishes that the reported FEM numbers are *internally
+  consistent* and *within the elastic regime* of the chosen
+  constitutive law.
+- It does not establish that the simulated contact dynamics match a
+  real pendulum-on-wall impact. That would require experimental data
+  and a calibrated material model, neither of which is part of the
+  case study.
+
+The case-study claim therefore remains: numerical verification of the
+co-simulation against the monolithic OpenModelica reference, and
+workflow validation that the framework can integrate heterogeneous
+plant models in one closed-loop simulation. Plausibility checks
+support these claims but do not extend them.
+
+---
+
 ## Reproducibility
 
 The case-study scenarios are reproducible from the public `SystemSimulation` repository.
@@ -542,19 +723,20 @@ Each recommended figure is tagged with the scenario it serves.
 | Figure | Scenario | Required? |
 |---|---|---|
 | Closed-loop system architecture diagram | §6.2 | required |
-| Assembled `syssimx` system graph | §6.2 | required |
+| Assembled `syssimx` system graph | §6.2 | not included |
 | Baseline convergence figure against OpenModelica | §6.5.1 | required |
 | Multi-model switching figure with active-mode timeline and contact-event overlay | §6.5.2 | required |
 | Performance figure comparing full-FEM and switched-FEM execution | §6.5.3 | required |
 | FEM model figure with mesh/boundaries and representative contact deformation or stress field | §6.3.3 | recommended |
 | Quantization comparison figure | §6.5.A | only if 6.5.A is included |
-| Algebraic-loop result figure | §6.5.B | only if 6.5.B is included |
 
 The multi-model switching figure (§6.5.2) and the performance figure (§6.5.3) **may share one two-panel figure** if the trajectory comparison and the active-mode timeline can be combined cleanly.
 Otherwise keep them as separate figures.
 
 Avoid duplicating figures from Chapter 5.
 Chapter 6 figures must show the case-study system and its results, not implementation mechanisms.
+The assembled system graph is not included as a separate Chapter 6 figure.
+The closed-loop architecture diagram is sufficient for Section 6.2.
 
 ---
 
@@ -575,7 +757,7 @@ Do not describe repository paths in the thesis text unless they are needed for r
 - `docs/05_case_study/00_overview.ipynb` gives the scenario roadmap and the conceptual block-level overview.
 - `docs/05_case_study/01_baseline.ipynb` covers the required Scenario 6.5.1.
 - `docs/05_case_study/02_quantization.ipynb` covers the optional Scenario 6.5.A.
-- `docs/05_case_study/03_algebraic_loop.ipynb` covers the optional Scenario 6.5.B.
+- `docs/05_case_study/03_algebraic_loop.ipynb` is retained as background material and author verification, but it is not part of the Chapter 6 scenario set.
 - `docs/05_case_study/04_rigid_contact.ipynb` is superseded by `05_multi_model_switching.ipynb` for the thesis. Keep for documentation purposes.
 - `docs/05_case_study/05_multi_model_switching.ipynb` covers the required Scenarios 6.5.2 and 6.5.3.
 - `docs/05_case_study/figures/graphs/` contains exported system graph visualizations for the case-study scenarios.
@@ -605,7 +787,7 @@ Do not describe repository paths in the thesis text unless they are needed for r
 
 - `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/NoContact/Baseline.mo` defines the baseline monolithic reference.
 - `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/NoContact/Quantization.mo` defines the quantization reference.
-- `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/NoContact/AlgebraicLoop.mo` defines the strongly coupled reference.
+- `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/NoContact/AlgebraicLoop.mo` defines a strongly coupled reference used for background checks, not for the reported Chapter 6 scenarios.
 - `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/Contact/RigidContact.mo` defines the rigid-contact reference.
 - `demos/ControlledPendulum/src/modelica/ControlledPendulum/Examples/Contact/CompliantContact.mo` defines the compliant-contact reference.
 - `demos/ControlledPendulum/src/modelica/ControlledPendulum/Actuators/` contains drive models.

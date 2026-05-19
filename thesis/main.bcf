@@ -2528,11 +2528,9 @@
     <bcf:citekey order="109" intorder="1">FMI2.0</bcf:citekey>
     <bcf:citekey order="109" intorder="2">FMI3.0</bcf:citekey>
     <bcf:citekey order="110" intorder="1">broman_requirements_2015</bcf:citekey>
-    <bcf:citekey order="110" intorder="2">StepRevision_Cremona</bcf:citekey>
-    <bcf:citekey order="110" intorder="3">cremona_hybrid_2019</bcf:citekey>
+    <bcf:citekey order="110" intorder="2">cremona_hybrid_2019</bcf:citekey>
     <bcf:citekey order="111" intorder="1">gomes_co-simulation_2019</bcf:citekey>
     <bcf:citekey order="111" intorder="2">arnold_error_2013</bcf:citekey>
-    <bcf:citekey order="111" intorder="3">kubler_two_2000</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">

@@ -21,7 +21,7 @@ Table~\ref{tab:component_methods} summarizes this organization.
 \begin{table}[!htbp]
   \centering
   \small
-  \caption{Runtime roles of the main \texttt{CoSimComponent} methods.
+  \caption[Runtime roles of the \texttt{CoSimComponent} methods]{Runtime roles of the main \texttt{CoSimComponent} methods.
   Template methods define the public lifecycle.
   Primitive operations provide backend-specific behavior.
   Hook operations expose optional capabilities.}
@@ -103,7 +103,7 @@ It records the outputs in the component history and marks the component as initi
 \begin{figure}[btbp]
   \centering
   \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Initialization.pdf}
-  \caption{Initialization sequence of \texttt{CoSimComponent}.
+  \caption[Initialization sequence of \texttt{CoSimComponent}]{Initialization sequence of \texttt{CoSimComponent}.
   The base template creates ports, delegates backend setup, derives feedthrough metadata, publishes initial outputs, and records history.}
   \label{fig:impl_comp_initialization}
 \end{figure}
@@ -117,7 +117,7 @@ Afterwards, the base class updates the time, refreshes the output ports, and rec
 \begin{figure}[btbp]
   \centering
   \includegraphics[width=0.8\linewidth]{diagrams/out/pdf/execution/CoSimComponent_Stepping.pdf}
-  \caption{Delegation during a simulation step.
+  \caption[Simulation step of \texttt{CoSimComponent}]{Delegation during a simulation step.
   The template method performs the common bookkeeping and delegates model-specific computation and output refresh to primitive operations.}
   \label{fig:impl_comp_stepping}
 \end{figure}

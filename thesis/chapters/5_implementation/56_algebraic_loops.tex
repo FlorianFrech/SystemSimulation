@@ -77,7 +77,7 @@ The labels on the ports define the notation used below.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\linewidth]{figures/5_implementation/algebraic_loop/algebraic_loop_verification.pdf}
-  \caption{Verification scenario for algebraic loops. The dashed red rectangle marks the SCC node set $\mathcal{L}=\{\texttt{Inner}\}$. Wire routing is purely visual and does not indicate SCC membership.}
+  \caption[Verification scenario for algebraic loops]{Verification scenario for algebraic loops. The dashed red rectangle marks the SCC node set $\mathcal{L}=\{\texttt{Inner}\}$. Wire routing is purely visual and does not indicate SCC membership.}
   \label{fig:algebraic_loop_verification}
 \end{figure}
 
@@ -120,7 +120,7 @@ Starting IJCSA iterations:
   Converged in 1 iterations.
 Committed solved input Inner.neg = 0.5000000000412155
 \end{lstlisting}
-  \caption{IJCSA solver trace for the algebraic-loop verification scenario.
+  \caption[IJCSA solver trace]{IJCSA solver trace for the algebraic-loop verification scenario.
     The local solver identifies the scalar interface problem and converges to the analytical solution in one Newton step.}
   \label{lst:ijcsa_verification_log}
 \end{listing}

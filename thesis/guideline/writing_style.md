@@ -426,7 +426,8 @@ They should not repeat the full surrounding paragraph.
 Preferred caption pattern:
 
 ```latex
-\caption{Step-size convergence of the baseline closed-loop co-simulation.
+\caption[Baseline step-size convergence.]{%
+Step-size convergence of the baseline closed-loop co-simulation.
 Panels~(a) and~(b) compare the pendulum angle with the OpenModelica reference.
 Panel~(c) reports the maximum and integrated angle errors for decreasing macro
 step sizes.}
@@ -438,6 +439,29 @@ Avoid:
 \caption{The figure shows that the results are good and that the proposed
 method works very well for the baseline case.}
 ```
+
+### Short caption for LoF and LoT
+
+Every `\caption` must use the optional short-form argument:
+
+```latex
+\caption[<short for LoF/LoT>]{<long descriptive caption under the figure>}
+```
+
+The List of Figures and List of Tables are navigation aids and must remain
+scannable. The short form rules:
+
+- Noun phrase when possible: "Baseline convergence figure",
+  "FEM mesh and boundaries", "Hybrid event chain".
+- Single line, ideally under ~70 characters.
+- Ends with a period.
+- No inline math, no `\texttt{...}`, no `\ref{...}` unless unavoidable —
+  these can break the LoF/LoT in some thesis classes.
+- Stable across drafts: the long caption can grow during revision without
+  forcing a change in the short form.
+
+The same rule applies to `\caption` inside `\begin{table}` and
+`\begin{listing}` for the List of Tables and List of Listings.
 
 ---
 
@@ -658,3 +682,58 @@ If one of these checks fails, fix the draft before returning it.
 
 Write naturally first, then make the text shorter, clearer, and more precise.
 Every paragraph must either prepare, explain, show, interpret, or conclude.
+
+---
+
+## 21. Central Open Polish Tasks
+
+This section tracks polish tasks that span the whole thesis and are not
+specific to a single chapter guideline. Resolve them before the final
+compile.
+
+### Short captions for List of Figures, Tables, and Listings
+
+**Status:** open. Applies to all chapters and to the front-matter
+unnumbered figures and tables.
+
+**Goal.** Every `\caption` in the thesis must use the optional short
+argument so that the List of Figures, List of Tables, and List of
+Listings remain scannable navigation aids.
+
+**Required form:**
+
+```latex
+\caption[<short for LoF/LoT>]{<long descriptive caption under the figure>}
+```
+
+**Short-form rules** (see §10 of this document for the full style):
+
+- Noun phrase, ideally under ~70 characters, on one line.
+- Ends with a period.
+- No inline math, no `\texttt{...}`, no `\ref{...}` unless unavoidable.
+- Stable across drafts: long caption can grow without changing the short form.
+
+**Sweep procedure.**
+
+1. For each chapter source file (`thesis/chapters/<n>_*/...tex`), search for
+   `\caption{` with no `[` immediately following. Each match is a
+   missing short form.
+2. Also sweep `thesis/figures/**/*.tex` for inline TikZ figure files that
+   include their own `\caption`.
+3. Also sweep `\begin{table}` and `\begin{listing}` environments — the
+   List of Tables and List of Listings have the same problem if the
+   short form is missing.
+4. Convert each match to `\caption[<short>]{<long>}`.
+5. Compile the thesis twice so the `.aux` and `.lof` / `.lot` files
+   update, then verify the lists in the front matter visually.
+
+**Known offenders identified so far:**
+
+- Chapter 2 `List of Figures` entries 2.1, 2.2, 2.3, 2.4 currently wrap to
+  multiple lines because the full long caption is used in the LoF.
+  These were the first entries flagged.
+- Other chapters have not yet been audited.
+
+Do not silently rephrase the long caption while adding the short form.
+If the long caption needs rewording, do so as a separate edit so the
+diff for the LoF/LoT cleanup remains mechanical and reviewable.

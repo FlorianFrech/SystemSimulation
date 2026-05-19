@@ -2,10 +2,11 @@
 \section{Limitations}
 \label{sec:discussion_limitations}
 
-The results are bounded by the scope of the implemented framework and by the selected case-study models.
-The controlled-pendulum comparison verifies numerical consistency against monolithic OpenModelica reference models.
+The scope of this claim is limited by the implemented framework and by the selected case-study models.
+The controlled-pendulum comparison verifies numerical consistency with monolithic OpenModelica reference models.
 It does not validate the physical pendulum, the drive model, or the contact law against experimental measurements.
-The OpenModelica models are therefore numerical references, not physical ground truth.
+The OpenModelica models serve as numerical references.
+They are not physical ground truth.
 
 A first limitation concerns backend capabilities.
 The FMU-based components in the case study use FMI~2.0 Co-Simulation exports.
@@ -16,25 +17,24 @@ The hybrid algorithm can therefore only use rollback and event-localization mech
 The backend wrappers also differ in generality.
 The FMU wrapper can be implemented in a comparatively generic way because the FMU description provides ports, variables, parameters, and dependency metadata.
 The OpenSim and FEM integrations are more model-specific.
-The OpenSim wrapper covers the functionality required for the pendulum example, but it is not a general-purpose OpenSim co-simulation interface.
+The OpenSim wrapper covers the functionality required for the pendulum example.
+Its scope is narrower than a general-purpose OpenSim co-simulation interface.
 The FEM component implements the concrete NGSolve pendulum model and does not yet provide a generic FEM wrapper comparable to the FMU wrapper.
 
 The master algorithms do not implement adaptive macro-step-size control.
 All case-study scenarios use prescribed macro step sizes.
-An error-controlled master algorithm would need to reject and repeat macro steps when the estimated coupling error is too large.
-This requires rollback or state reconstruction for all components affected by the rejected step.
-The present framework provides rollback where it is needed for the implemented hybrid event handling, but it does not provide a general rollback contract for every backend and every component.
+Accuracy control therefore depends on the selected communication step size and on backend-specific solver settings.
+The present framework provides rollback where it is needed for the implemented hybrid event handling.
+It does not provide a general rollback contract for every backend and every component.
 
 The dense-time representation is also pragmatic.
 The implementation represents dense time by a floating-point physical time and an integer microstep index.
-This is sufficient for the tested scenarios, but floating-point time values cannot be compared as exactly as integer tick values.
-A stricter hybrid-simulation implementation would represent physical time on an exact time grid or use another exactly comparable representation for event ordering.
-This would reduce the risk of tolerance-dependent behavior in long simulations with many closely spaced events.
+This is sufficient for the tested scenarios.
+It does not provide an exact physical-time representation for event ordering.
 
 The algebraic-loop implementation is limited to the interface form used by \syssimx{}.
-It follows the interface-Jacobian idea, but it is not a full optimized IJCSA implementation.
-In particular, the current solver does not reuse a Jacobian across iterations or time steps even when the loop structure is constant.
-For loops with an unchanged local linearization, reusing the Jacobian could reduce computational cost.
+It implements a practical subset of the interface-Jacobian idea for signal-assignment loops.
+The current solver does not reuse a Jacobian across iterations or time steps when the loop structure is constant.
 This limitation affects efficiency and generality rather than the correctness of the verified loop examples.
 
 The contact comparison has a modeling limitation.
@@ -45,7 +45,8 @@ A physical validation of the contact model would require experimental impact dat
 
 Runtime switching introduces another limitation.
 When the simulation switches from a rigid-body model to the FEM model, the FEM state is reconstructed from reduced rigid-body quantities.
-This preserves the exposed plant interface, but it cannot reconstruct deformation history, vibrational modes, or Newmark history that were not simulated before the switch.
+This preserves the exposed plant interface.
+The reconstruction cannot recover deformation history, vibrational modes, or Newmark history that were not simulated before the switch.
 The contact-window deviations between the switched and full-FEM trajectories follow from this state-projection boundary.
 
 The performance benchmark is scenario-specific.
@@ -53,7 +54,7 @@ The measured speedup depends on the FEM mesh, solver tolerances, contact stiffne
 The benchmark shows that runtime switching reduced computational cost for the selected pendulum configuration.
 It does not establish a general speedup for all multi-fidelity co-simulation problems.
 
-Finally, the implementation does not exploit parallel execution.
-Components in independent execution generations, or components within a Jacobi-style stage, could in principle be evaluated concurrently.
-The current implementation executes them sequentially.
-This keeps the orchestration simple and reproducible, but it leaves potential performance gains unused for larger systems with many independent components.
+Finally, the implementation executes components sequentially.
+This also applies to independent execution generations and Jacobi-style stages.
+The sequential execution keeps the orchestration simple and reproducible.
+It leaves potential scalability gains unused for larger systems with many independent components.

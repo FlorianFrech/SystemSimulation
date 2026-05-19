@@ -70,21 +70,21 @@
         %     }
         % \end{scope}
 
-        \draw[ultra thick, ->] (-5.5,7) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{ref}$} (0.5,7);
+        \draw[ultra thick, -] (-5.5,7) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{ref}$} (0.5,7);
 
-        \draw[ultra thick, ->] (-1.5,0.5) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{meas}$} (3,0.5) -- (3, 1.5);
+        \draw[ultra thick, -] (-1.5,0.5) -- node[fill=white, above=3pt,font=\Large] {$\theta_\mathrm{meas}$} (3,0.5) -- (3, 1.5);
 
         \draw[ultra thick, ->] (12.5,1.5) -- node[fill=white, left=4pt,font=\Large] {$\color{red!90!black}u_\mathrm{control}$} (12.5,-1.5);
 
-        \draw[ultra thick, ->] (4,-4) -- node[fill=white, above=3pt, font=\Large] {$\color{green!80!black}\tau$} (2.5, -4);
+        \draw[ultra thick, ->] (4,-4) -- node[fill=white, above=3pt, font=\Large] {$\color{torqueSignalColor}\tau$} (2.5, -4);
 
-        \draw[ultra thick, ->] (2.5,-7) -- node[fill=white, above=3pt,font=\Large] {$\color{orange!90!black}\omega$} (4, -7);
+        \draw[ultra thick, ->] (2.5,-7) -- node[fill=white, above=3pt,font=\Large] {$\color{omegaSignalColor}\omega$} (4, -7);
 
-        \draw[ultra thick, ->] (-6.5,-5.5) -- node[fill=white, above=3pt, font=\Large] {$\theta$} (-8, -5.5);
+        \draw[ultra thick, ->] (-6.5,-5.5) -- node[fill=white, above=3pt, font=\Large] {$\color{thetaSignalColor}\theta$} (-8, -5.5);
 
         \draw[ultra thick, ->] (-8, 0.5) -- node[fill=white, above=3pt, font=\Large] {$V_\mathrm{adc}$} (-6.5, 0.5);
 
-        \draw[ultra thick, ->, color=red, dashed] (1, -1.5) -- (1, -0.5) -- (4.5, -0.5) node[midway, above=3pt, font=\Large] {contact flag} -- (4.5, 1.5);
+        \draw[ultra thick, ->, color=red, dashed] (1, -1.5) -- (1, -0.5) -- (4.5, -0.5) node[midway, above=3pt, font=\Large, fill=white, inner sep=1pt] {contact event} -- (4.5, 1.5);
 
     \end{scope}
 \end{tikzpicture}

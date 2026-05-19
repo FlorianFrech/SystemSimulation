@@ -327,6 +327,10 @@ class HybridAlgorithm(Algorithm):
             if hasattr(comp, "_allow_mode_switching"):
                 original_flag = comp._allow_mode_switching
                 comp._allow_mode_switching = False
+            # Disable history recording for trial step
+            original_record = getattr(comp, "_record_history", None)
+            if original_record is not None:
+                comp._record_history = False
             try:
                 # b) Save the state snapshot, input cache, and indicators at t_left
                 snapshots[comp.name] = comp.snapshot_state()
@@ -383,6 +387,9 @@ class HybridAlgorithm(Algorithm):
                 # i) Re-enable mode switching
                 if hasattr(comp, "_allow_mode_switching"):
                     comp._allow_mode_switching = original_flag
+                # Re-enable history recording
+                if original_record is not None:
+                    comp._record_history = original_record
 
         return snapshots, input_cache, indicators_left, crossings, internal_hints
 
@@ -468,13 +475,21 @@ class HybridAlgorithm(Algorithm):
                     # Return events from hints since indicator check may miss them
                     if events_from_hints:
                         return DenseTime(t=t_event, micro=0), events_from_hints
-                    # Fallback to indicator-based collection
+                    # Fallback to indicator-based collection (trial step,
+                    # so suppress history recording on event sources that support it)
                     for comp in event_sources:
-                        self._restore_with_inputs(
-                            comp, snapshots_left[comp.name], input_cache[comp.name], t_left
-                        )
-                        comp._do_step_internal(t_left, t_event - t_left)
-                        comp._update_output_states()
+                        original_record = getattr(comp, "_record_history", None)
+                        if original_record is not None:
+                            comp._record_history = False
+                        try:
+                            self._restore_with_inputs(
+                                comp, snapshots_left[comp.name], input_cache[comp.name], t_left
+                            )
+                            comp._do_step_internal(t_left, t_event - t_left)
+                            comp._update_output_states()
+                        finally:
+                            if original_record is not None:
+                                comp._record_history = original_record
                     all_events = self._collect_events_at_time(event_sources)
                     self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
                     return DenseTime(
@@ -499,15 +514,23 @@ class HybridAlgorithm(Algorithm):
         logger.debug("Indicators at right (t=%.8f): %s", right, indicators_right_vals)
 
         # 6) Working snapshots - start from t_left_ref
+        # Stepping here is a trial advance, so suppress history recording.
         working_snapshots = {}
         for comp in event_sources:
-            self._restore_with_inputs(
-                comp, snapshots_left[comp.name], input_cache[comp.name], t_left
-            )
-            if t_left_ref > t_left + 1e-12:
-                comp._do_step_internal(t_left, t_left_ref - t_left)
-                comp._update_output_states()
-            working_snapshots[comp.name] = comp.snapshot_state()
+            original_record = getattr(comp, "_record_history", None)
+            if original_record is not None:
+                comp._record_history = False
+            try:
+                self._restore_with_inputs(
+                    comp, snapshots_left[comp.name], input_cache[comp.name], t_left
+                )
+                if t_left_ref > t_left + 1e-12:
+                    comp._do_step_internal(t_left, t_left_ref - t_left)
+                    comp._update_output_states()
+                working_snapshots[comp.name] = comp.snapshot_state()
+            finally:
+                if original_record is not None:
+                    comp._record_history = original_record
 
         # 7) Bisection loop
         for iteration in range(self.max_iter):
@@ -553,13 +576,22 @@ class HybridAlgorithm(Algorithm):
                 t_event = right
 
         # 8) Collect all events at located time
-        #    Step all components to t_event and check indicators
+        #    Step all components to t_event and check indicators.
+        #    The components are restored to t_left afterwards, so this is
+        #    a trial advance and must not record history.
         for comp in event_sources:
-            self._restore_with_inputs(
-                comp, snapshots_left[comp.name], input_cache[comp.name], t_left
-            )
-            comp._do_step_internal(t_left, t_event - t_left)
-            comp._update_output_states()
+            original_record = getattr(comp, "_record_history", None)
+            if original_record is not None:
+                comp._record_history = False
+            try:
+                self._restore_with_inputs(
+                    comp, snapshots_left[comp.name], input_cache[comp.name], t_left
+                )
+                comp._do_step_internal(t_left, t_event - t_left)
+                comp._update_output_states()
+            finally:
+                if original_record is not None:
+                    comp._record_history = original_record
 
         all_events_at_t = self._collect_events_at_time(event_sources)
 
@@ -674,6 +706,10 @@ class HybridAlgorithm(Algorithm):
         if hasattr(comp, "_allow_mode_switching"):
             original_flag = comp._allow_mode_switching
             comp._allow_mode_switching = False
+        # Disable history recording for trial step
+        original_record = getattr(comp, "_record_history", None)
+        if original_record is not None:
+            comp._record_history = False
         try:
             self._restore_with_inputs(comp, snapshot, inputs, t_left)
             comp._do_step_internal(t_left, t_target - t_left)
@@ -684,6 +720,8 @@ class HybridAlgorithm(Algorithm):
         finally:
             if hasattr(comp, "_allow_mode_switching"):
                 comp._allow_mode_switching = original_flag
+            if original_record is not None:
+                comp._record_history = original_record
 
     def _detect_crossing_between(
         self,

@@ -111,7 +111,8 @@ Constraints on this paragraph.
 ### Temporal Context for CoFMPy
 
 CoFMPy was published in 2025, after the implementation of \syssimx{} had begun.
-This temporal context is honest but is not the main argument.
+This temporal context is honest.
+It is not the main argument.
 The substantive argument is the four differentiating contributions listed above.
 If the temporal context is mentioned, use a footnote rather than body prose:
 
@@ -191,6 +192,30 @@ Recommended citation targets.
 This section states the limits of the thesis openly.
 It should separate framework limitations from modeling limitations.
 This is required by the Hengl and Gould rule to be self-critical and not hide unexpected findings.
+It must state what is limited and why the limit matters.
+It should not already develop the future-work solution.
+
+### Boundary to Outlook
+
+The same topic may appear in both limitations and outlook.
+The function must change.
+Section 7.2 states the boundary.
+Section 7.4 states the action.
+
+Good limitation wording:
+
+```latex
+The master algorithms use prescribed macro step sizes.
+The framework does not implement error-controlled macro-step rejection.
+```
+
+Good outlook wording:
+
+```latex
+Future work should add adaptive macro-step control with rollback-aware step rejection.
+```
+
+Avoid repeating the same explanation in both sections.
 
 ### Recommended Structure
 
@@ -218,31 +243,33 @@ Include these points unless later results invalidate them.
 - The switched FEM state cannot preserve deformation history that was never simulated.
 - Performance results depend on the FEM mesh, solver tolerances, macro step size, switching thresholds, and hardware.
 - The OpenSim integration path is demonstrated on a simple pendulum and not on a full musculoskeletal model.
-- The OpenSim wrapper covers the main functionality required by the case study, but it is not a general-purpose OpenSim co-simulation interface.
+- The OpenSim wrapper covers the main functionality required by the case study.
+- Its scope is narrower than a general-purpose OpenSim co-simulation interface.
 - The FEM integration is model-specific and does not yet provide a generic NGSolve wrapper comparable to the FMU wrapper.
 - The implementation is constrained by the capabilities exposed by the exported FMUs.
 - The thesis uses FMI 2.0 Co-Simulation FMUs. It does not implement FMI 3.0 clocks, scheduled execution, or a full FMI 3.0 hybrid co-simulation workflow.
 - Some FMI capabilities that are useful for hybrid co-simulation, such as complete rollback support, are optional or backend-dependent.
 - OpenModelica FMU exports used in the thesis therefore limit which hybrid mechanisms can be realized through FMUs alone.
 - No adaptive macro-step-size or error-controlled master algorithm is implemented.
-- A general adaptive master algorithm would require rollback or state reconstruction support for all components that may need to be re-stepped.
 - Dense time is represented with floating-point physical time and an integer microstep index.
-- More rigorous hybrid semantics would represent physical time on an integer tick grid or another exactly comparable time base to avoid floating-point equality issues.
-- The algebraic-loop implementation is SCC-local and practical for the tested scenarios, but it is not a full optimized IJCSA implementation.
+- The algebraic-loop implementation is SCC-local and practical for the tested scenarios.
+- It is a practical subset of a full optimized IJCSA implementation.
 - The current loop solver does not reuse a constant Jacobian across iterations or time steps.
-- Reusing the Jacobian could reduce cost for loops whose local linearization remains unchanged.
 - Parallel execution of independent generations is not implemented.
 - Large-scale scalability was not systematically benchmarked.
 
 ### Limitation Evaluation Notes
 
 Use these points carefully.
-They are valid limitations, but they should not all be written with the same weight.
+They are valid limitations.
+Do not write all of them with the same weight.
 
 - The FMI and wrapper limitations are important because they bound framework generality.
 - The missing adaptive master algorithm is important because it affects accuracy control.
-- The dense-time floating-point limitation is technically important, but it should be stated briefly and linked to future work.
-- The algebraic-loop Jacobian limitation is an optimization and completeness limitation, not a correctness failure for the tested examples.
+- The dense-time floating-point limitation is technically important.
+  State it briefly.
+- The algebraic-loop Jacobian limitation is an optimization and completeness limitation.
+  It is not a correctness failure for the tested examples.
 - Missing parallel execution is a scalability limitation, not a conceptual limitation of the framework architecture.
 
 ### Wording Rule
@@ -307,7 +334,7 @@ Do not claim the following.
 Use this as a candidate final sentence.
 
 ```latex
-The main contribution of the thesis is therefore not a new pendulum model, but an implementation architecture that combines heterogeneous simulation tools, hybrid event handling, and runtime fidelity switching in one controlled co-simulation workflow.
+The main contribution of the thesis is an implementation architecture that combines heterogeneous simulation tools, dependency-aware orchestration, hybrid event handling, and runtime fidelity switching in one controlled co-simulation workflow.
 ```
 
 ---
@@ -319,19 +346,21 @@ The main contribution of the thesis is therefore not a new pendulum model, but a
 This section turns the limitations into concrete future work.
 It should not reopen the thesis.
 Use only realistic extensions.
+It may name the same topics as Section 7.2.
+It should not restate the limitation paragraphs.
+Write the outlook as concrete follow-up actions.
 
 ### Recommended Future Work Topics
 
 Use a small selection of these topics.
 
-- Experimental validation with a physical pendulum or comparable laboratory setup.
-- Improved state projection for switching into FEM models.
 - Adaptive switching thresholds based on error indicators or contact prediction.
 - Adaptive and error-controlled master algorithms with rollback-aware step rejection.
 - Larger FEM models and larger coupled systems for scalability studies.
 - Parallel execution of independent execution generations.
+- Hardware-in-the-loop workflows where a simulated component is replaced by a physical device.
+- Real-time execution requirements for hardware-in-the-loop simulations, including deterministic scheduling, bounded execution time, communication interfaces, and missed-deadline behavior.
 - More robust rollback support for additional backend wrappers.
-- Broader OpenSim examples with biomechanical models and muscle actuation.
 - FMI 3.0 clocks and scheduled execution for stronger support of sampled and event-driven behavior.
 - Exact or tick-based time representation for dense-time event ordering.
 - Optimized algebraic-loop solvers with Jacobian reuse when the local loop structure is constant.
@@ -459,6 +488,7 @@ Before drafting Chapter 7, check the following.
 ## Common Failure Modes
 
 - Repeating Chapter 6 results instead of interpreting them.
+- Repeating the same limitation text again in the outlook.
 - Hiding the lack of experimental validation.
 - Overstating the performance benchmark.
 - Treating OpenModelica as physical ground truth.

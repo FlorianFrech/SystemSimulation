@@ -23,7 +23,7 @@ Table~\ref{tab:structural_metadata} lists the stored fields, their producer rout
 \begin{table}[t]
   \centering
   \small
-  \caption{Structural metadata stored on a \texttt{System} instance.
+  \caption[Structural metadata stored on a \texttt{System} instance]{Structural metadata stored on a \texttt{System} instance.
     All fields are populated during \texttt{initialize(t0)} and remain valid for the rest of the simulation run.}
   \label{tab:structural_metadata}
   \begin{tabular}{p{3.2cm} p{3.6cm} p{8cm}}
@@ -96,7 +96,7 @@ This is a \syssimx{} implementation detail beyond the conceptual graph of Sectio
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/structural_analysis/structural_input_data.pdf}
-    \caption{Input data consumed by \texttt{build\_graphs()}.
+    \caption[Input data for structural analysis]{Input data consumed by \texttt{build\_graphs()}.
     The registered structure consists of the component set, the signal connections, and the per-component direct-feedthrough maps.}
     \label{fig:struct_worked_a}
   \end{subfigure}
@@ -104,7 +104,7 @@ This is a \syssimx{} implementation detail beyond the conceptual graph of Sectio
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/structural_analysis/structural_full_graph.pdf}
-    \caption{Full connection graph \texttt{graph} with port-labeled
+    \caption[Full connection graph]{Full connection graph \texttt{graph} with port-labeled
       edges. Parallel edges between~B and~C are preserved because
       \texttt{graph} is a \texttt{MultiDiGraph}.}
     \label{fig:struct_worked_b1}
@@ -115,7 +115,7 @@ This is a \syssimx{} implementation detail beyond the conceptual graph of Sectio
   \begin{subfigure}[t]{0.44\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/structural_analysis/structural_zero_delay.pdf}
-    \caption{Zero-delay graph \texttt{\_dag} after feedthrough filtering.
+    \caption[Zero-delay graph]{Zero-delay graph \texttt{\_dag} after feedthrough filtering.
     Ghosted edges are present in \texttt{graph} but omitted from \texttt{\_dag}.
     The dashed boundary marks the stored algebraic loop.}
     \label{fig:struct_worked_b2}
@@ -124,11 +124,11 @@ This is a \syssimx{} implementation detail beyond the conceptual graph of Sectio
   \begin{subfigure}[t]{0.52\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/structural_analysis/structural_condensed.pdf}
-    \caption{Condensed graph and \texttt{execution\_order}.
+    \caption[Condensed graph and execution order]{Condensed graph and \texttt{execution\_order}.
     Component~D is moved to the final generation because it is a delayed producer in the full graph.}
     \label{fig:struct_worked_d}
   \end{subfigure}
-  \caption{Implementation-level structural analysis on the worked four-component scenario.
+  \caption[Implementation-level structural analysis ]{Implementation-level structural analysis on the worked four-component scenario.
   The figure follows the stored metadata from registered connections to the final execution order and highlights the \syssimx{}-specific active-output filter and delayed-producer relocation.}
   \label{fig:struct_worked}
 \end{figure}

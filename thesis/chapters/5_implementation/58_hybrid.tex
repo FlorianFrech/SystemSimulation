@@ -25,7 +25,7 @@ The general component interface is described in Section~\ref{sec:impl_component_
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Hybrid-specific component operations used by \texttt{HybridAlgorithm}.}
+  \caption[Hybrid-specific component operations]{Hybrid-specific component operations used by \texttt{HybridAlgorithm}.}
   \label{tab:hybrid_component_contract}
   \begin{tabular}{lp{9.5cm}}
     \toprule
@@ -59,7 +59,7 @@ Figure~\ref{fig:impl_hybrid_macro_step} summarizes one pass through this loop.
 \begin{figure}[t]
     \centering
     \includegraphics[width=1\linewidth]{diagrams/out/pdf/execution/hybrid/Hybrid_Step.pdf}
-    \caption{Macro-step sequence of the hybrid co-simulation algorithm.
+    \caption[Macro-step sequence of the hybrid co-simulation algorithm]{Macro-step sequence of the hybrid co-simulation algorithm.
     The algorithm prepares inputs, tests the current interval for events, localizes the first crossing, and dispatches cascaded events in dense time.}
     \label{fig:impl_hybrid_macro_step}
 \end{figure}
@@ -170,7 +170,7 @@ The expected result is therefore one event at $(t_e,0)$ and one cascaded event a
 \begin{figure}[tbp]
     \centering
     \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/hybrid_event_chain.pdf}
-    \caption{Event chain resolved with superdense time.
+    \caption[Event chain resolved with superdense time]{Event chain resolved with superdense time.
     The dotted lines mark the original communication interval.
     The dashed line marks the localized event time.
     The annotations show the emitted and received events.}
@@ -223,7 +223,7 @@ Checking commutativity for ['v_invert', 'v_double'] on Listener
 Verifying commutativity dynamically for ['v_invert', 'v_double'] on Listener
 Commutativity verified (dynamic): ['v_invert', 'v_double'] on Listener
 \end{lstlisting}
-\caption{Log output for the strong-simultaneity scenario.
+\caption[Log output for the strong-simultaneity scenario]{Log output for the strong-simultaneity scenario.
 The two events are localized at the same dense time and confirmed commutative before dispatch.}
 \label{lst:hybrid_simultaneity_log}
 \end{listing}
@@ -255,7 +255,7 @@ Both located times match the analytical roots within machine precision.
     \begin{subfigure}[t]{0.48\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/strong_simultaneity.pdf}
-        \caption{Strong event simultaneity.
+        \caption[Strong event simultaneity]{Strong event simultaneity.
         Both source indicators cross zero at $(t_e,0)$.
         The listener responds to two commutative handlers at the same dense time.}
         \label{fig:impl_hybrid_verification_simultaneity}
@@ -264,10 +264,10 @@ Both located times match the analytical roots within machine precision.
     \begin{subfigure}[t]{0.48\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/5_implementation/hybrid/internal_event_reporting.pdf}
-        \caption{Internal event reporting. The events at $t = 0.45\,$s and $t = 0.55\,$s lie strictly inside the macro interval $[0.4, 0.6]\,$s and are localized through internal hints.}
+        \caption[Internal event reporting]{Internal event reporting. The events at $t = 0.45\,$s and $t = 0.55\,$s lie strictly inside the macro interval $[0.4, 0.6]\,$s and are localized through internal hints.}
         \label{fig:impl_hybrid_verification_internal}
     \end{subfigure}
-    \caption{Hybrid verification scenarios for simultaneous events and internal event reporting.
+    \caption[Verification scenarios for simultaneous events and internal event reporting]{Hybrid verification scenarios for simultaneous events and internal event reporting.
     The scenarios check dense-time dispatch and event localization from internally reported brackets.}
     \label{fig:impl_hybrid_verification_pair}
 \end{figure}

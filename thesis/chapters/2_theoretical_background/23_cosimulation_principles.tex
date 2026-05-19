@@ -159,7 +159,7 @@ Figure~\ref{fig:communication_grid} illustrates the communication pattern for tw
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/2_theoretical_background/communication_grid.pdf}
-    \caption{Communication pattern for two coupled simulation units.
+    \caption[Communication pattern]{Communication pattern for two coupled simulation units.
              At each communication point $T_k$, port values are exchanged
              (vertical arrows).
              Between communication points, each simulation unit advances
@@ -214,7 +214,7 @@ Independent simulation units within one generation may be evaluated in parallel,
 \begin{figure}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/2_theoretical_background/structural_analysis.pdf}
-    \caption{Conceptual structural analysis of a co-simulation scenario.
+    \caption[Conceptual structural analysis]{Conceptual structural analysis of a co-simulation scenario.
     (a)~Dependency graph: simulation units with direct feedthrough are marked in orange.
     An incoming connection to such a unit creates an instantaneous dependency at the current communication point and is drawn as a solid edge.
     Connections whose receiving unit has no relevant direct feedthrough are delayed and drawn as dashed edges.
@@ -265,7 +265,7 @@ sequentially.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/2_theoretical_background/execution_strategy.pdf}
-    \caption{Execution strategies for two coupled simulation units over two
+    \caption[Execution strategies]{Execution strategies for two coupled simulation units over two
              macro steps.
              Circled numbers indicate the order of operations.
              (a)~Jacobi scheme: data is exchanged at each communication

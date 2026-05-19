@@ -65,7 +65,7 @@
 \draw[dashed, forceColor!40] (FGrad) -- (FG);
 
 % Theta angle at pendulum head (between gravity and radial direction)
-\draw pic[-{Latex[length=3,width=2]},thin,"$\theta$",angleColor,draw=angleColor,
+\draw pic[-{Latex[length=3,width=2]},thin,"$\theta$",thetaSignalColor,draw=thetaSignalColor,
 angle radius=14, angle eccentricity=1.5] {angle=FG--M--FGrad};
 
 % Gravity direction indicator (general, on the left side)
@@ -73,7 +73,7 @@ angle radius=14, angle eccentricity=1.5] {angle=FG--M--FGrad};
 
 % Angle theta at hinge (between vertical and rod midline)
 \coordinate (B) at (0,-1.5);
-\draw pic[->,"$\theta$", draw, angle radius=60, angle eccentricity=1.15] {angle=B--O--M};
+\draw pic[->,"$\theta$", draw=thetaSignalColor, thetaSignalColor, angle radius=60, angle eccentricity=1.15] {angle=B--O--M};
 
 % Length L annotation (offset so it clears the hinge circle)
 \draw[<->,thick] (\ang-90+90:0.7) ++ (\ang-90:0) -- ++ (\ang-90:\L)
@@ -84,7 +84,7 @@ node[midway, above, sloped] {$L$};
 \draw[thick, fill=white] (O) circle(\W/2);
 
 % Drive torque at hinge
-\draw[<-, very thick, blue!70!black] (160:0.5) arc (160:70:0.5)
+\draw[<-, very thick, torqueSignalColor] (160:0.5) arc (160:70:0.5)
 node[left=15pt] {$\tau$};
 
 % Coordinate system at hinge (topmost layer)
@@ -94,12 +94,12 @@ node[left=15pt] {$\tau$};
 node [text width=3cm, information text]
 {Dynamics:
   \begin{align*}
-    \dot{\theta} & = \omega                           \\
-    \dot{\omega} & = \frac{\tau - mgL\sin(\theta)}{I}
+    \dot{\theta} & = {\color{omegaSignalColor}\omega}                           \\
+    \dot{\omega} & = \frac{{\color{torqueSignalColor}\tau} - mgL\sin(\theta)}{I}
   \end{align*}
   Rigid contact:
   \begin{align*}
-    \omega^+ &= -\omega^-
+    {\color{omegaSignalColor}\omega^+} &= -{\color{omegaSignalColor}\omega^-}
   \end{align*}
 };
 

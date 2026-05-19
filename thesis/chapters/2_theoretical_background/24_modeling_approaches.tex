@@ -47,7 +47,7 @@ equation
   der(omega) = (tau - m * g * L * sin(theta)) / I;
 end Pendulum;
 \end{lstlisting}
-\caption{Minimal Modelica realization of the pendulum from Section~\ref{sec:211_dynamical_systems}. Parameter values are omitted.}
+\caption[Modelica pendulum realization]{Modelica realization of the pendulum from Section~\ref{sec:211_dynamical_systems}. Parameter values are omitted.}
 \label{lst:modelica_pendulum}
 \end{listing}
 
@@ -95,7 +95,7 @@ This coordinate corresponds to the angular state variable used in Section~\ref{s
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/2_theoretical_background/multibody_topology.pdf}
-    \caption{Multibody topology of the pendulum used as running example.
+    \caption[Multibody pendulum topology]{Multibody topology of the pendulum used as running example.
     A fixed base is connected to the pendulum body by a pin joint.
     The pin joint introduces the generalized coordinate~$\theta$.}
     \label{fig:opensim_pendulum_topology}
@@ -360,7 +360,7 @@ It shows why the controlled-pendulum case study requires a coupled simulation in
 \begin{table}[htbp]
     \centering
     \small
-    \caption{Complementary roles of the modeling approaches used in this thesis.}
+    \caption[Roles of modeling approaches]{Complementary roles of the modeling approaches used in this thesis.}
     \label{tab:modeling_complementarity}
     \begin{tabular}{@{}p{3.0cm}p{3.5cm}p{4.0cm}p{3.2cm}@{}}
         \toprule

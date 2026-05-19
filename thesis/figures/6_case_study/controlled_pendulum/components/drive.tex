@@ -63,10 +63,10 @@
   % rotational arrows and labels
   \draw[line width=0.7pt,<-] (0.4,-0.5) arc (-30:30:1);
   \draw (0.4,0.7) node {$\omega_\mathrm{M}$};
-  \draw[line width=0.7pt,<-, color=green!80!black] (2,-1.7) arc (-30:30:1);
-  \draw[line width=0.7pt,<-, color=orange!90!black] (3,-1.7) arc (-30:30:1);
-  \draw[color=green!80!black] (2,-0.3) node {$\tau$};
-  \draw[color=orange!90!black] (3,-0.3) node {$\omega$};
+  \draw[line width=0.7pt,<-, color=torqueSignalColor] (2,-1.7) arc (-30:30:1);
+  \draw[line width=0.7pt,<-, color=omegaSignalColor] (3,-1.7) arc (-30:30:1);
+  \draw[color=torqueSignalColor] (2,-0.3) node {$\tau$};
+  \draw[color=omegaSignalColor] (3,-0.3) node {$\omega$};
   \draw (1,-2) node {$i,\, \eta$};
 }
 
@@ -92,9 +92,9 @@
   {
     \begin{align*}
       V_\mathrm{A} &= V_\mathrm{in}\,\color{red!90!black}u_\mathrm{control} \\
-      U_i &= k_e\,\omega_\mathrm{M}, \quad \omega_\mathrm{M} = \frac{\color{orange!90!black}\omega}{i} \\
+      U_i &= k_e\,\omega_\mathrm{M}, \quad \omega_\mathrm{M} = \frac{{\color{omegaSignalColor}\omega}}{i} \\
       V_\mathrm{A} &= L_A\,\dfrac{\mathrm{d}I_A}{\mathrm{d}t} + R_A\,I_A + U_i \\
-      \color{green!80!black}\tau \color{black}&= \eta\,i\,k_t\,I_A
+      {\color{torqueSignalColor}\tau} &= \eta\,i\,k_t\,I_A
     \end{align*}
   };
 }

@@ -48,9 +48,9 @@
   \node[font=\large] at ($(D)+(+0.3,0)$) {$K_d\,\dfrac{\mathrm{d}\theta_\mathrm{meas}(t)}{\mathrm{d}t}$};
 
   % --- reference, error, and branch split ---
-  \draw[->, ultra thick] (-3.5,2) --++ (2.5,0) -- ($(SumE)+(0, \rSum)$) node[midway,above=1.25cm, left,font=\Large] {$\theta_\mathrm{ref}$};
+  \draw[->, ultra thick] (-3.5,2) --++ (2.5,0) -- ($(SumE)+(0, \rSum)$);
   
-  \draw[->, ultra thick] (MeasIn) -- ($(SumE)+(0,-\rSum)$) node[font=\Large] at (\xErr-1, -2){$\theta_\mathrm{meas}$};
+  \draw[->, ultra thick] (MeasIn) -- ($(SumE)+(0,-\rSum)$);
   \node[font=\large\bfseries] at ($(SumE)+(-0.7,0.6)$) {$+$};
   \node[font=\large\bfseries] at ($(SumE)+(-0.35,-0.95)$) {$-$};
 
@@ -75,6 +75,6 @@
   \draw[->, ultra thick, dashed, red] (ResetIn) node[midway, below=1.0cm, right=0.5cm , font=\Large] {reset} -- (0.5, -0.4) -- (\xPID-\wPID/2, -0.4);
 
   % --- controller output and plant output ---
-  \draw[->, ultra thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1,0)$) -- (CtrlOut) node[above=0.75cm, left,font=\Large] {$u_\mathrm{control}$};
+  \draw[-, ultra thick] ($(SumU)+(\rSum,0)$) -- ($(SumU)+(\rSum+1,0)$) -- (CtrlOut);
 
 }

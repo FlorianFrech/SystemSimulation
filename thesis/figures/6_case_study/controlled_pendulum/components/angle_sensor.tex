@@ -10,6 +10,15 @@
   \def\Ts{0.45}       % sampling period
 
   \tikzset{as-default/.style={line cap=round, line join=round}}
+  \tikzset{
+    as-coordsys/.pic={
+      \fill[red] (0,0) circle(0.05);
+      \draw[->,thick, red] (0,0) -- (1.0,0)
+        node[below right=-1pt, font=\scriptsize] {$x$};
+      \draw[->,thick, red] (0,0) -- (0,1.0)
+        node[above left=-1pt, font=\scriptsize] {$y$};
+    }
+  }
 
   % --- Outer box ---
   \draw[thick, fill=white!95!black] (-\asW/2,-\asH/2) rectangle (\asW/2,\asH/2);
@@ -63,15 +72,15 @@
     \draw[dash dot, thick, black] (0,-\potRefR) -- (0,\potRefR);
     \draw[dash dot, thick, black] (0,0) -- (as-wray);
     \draw[<->] (40:{0.44*\potR}) arc (40:-220:{0.44*\potR});
-    \draw pic[->,"\,$\theta$", draw,
+    \draw pic[->,"\,$\theta$", draw=thetaSignalColor, thetaSignalColor,
       angle radius=\potRefR cm, angle eccentricity=1.15]
       {angle=as-down--as-center--as-wray};
 
     % Coordinate system at the potentiometer/rotation axis.
-    \pic at (as-center) {coordsys};
+    \pic at (as-center) {as-coordsys};
 
     % Sub-label
-    \node[font=\footnotesize\bfseries] at (0,\potR+1) {Potentiometer};
+    \node[font=\small\bfseries] at (0,\potR+1) {Potentiometer};
   \end{scope}
 
   % =========================================================================
@@ -83,7 +92,7 @@
   % =========================================================================
   % ADC mini-graph (upper half)
   % =========================================================================
-  \node[font=\footnotesize\bfseries] at (0,5) {ADC};
+  \node[font=\small\bfseries] at (0,5) {ADC};
 
   \begin{scope}[shift={(-\gW/2, 3-\gH/2)}]
     \draw[as-default,step=\Ts,color=black!30] (0,0) grid (\gW,\gH);

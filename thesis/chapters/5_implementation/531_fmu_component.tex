@@ -20,7 +20,7 @@ It stores the \texttt{FMU2Slave} instance provided by \texttt{fmpy} as the backe
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/class/components/FMUComponent.pdf}
-  \caption{Class diagram of the FMU wrapper.
+  \caption[Class diagram of the FMU wrapper]{Class diagram of the FMU wrapper.
   The \texttt{FMUComponent} class adapts an FMI~2.0 Co-Simulation FMU to the \texttt{CoSimComponent} contract.
   The parsed model description supplies ports, parameters, value references, and direct-feedthrough metadata.
   The \texttt{FMU2Slave} instance executes the FMI runtime operations.}
@@ -34,7 +34,7 @@ Table~\ref{tab:fmu_mapping} lists the correspondence between FMI artefacts and t
 \begin{table}[t]
   \centering
   \small
-  \caption{Mapping from FMI~2.0 model-description artefacts to \syssimx{} component abstractions.
+  \caption[Mapping from FMI model-description artefacts to \syssimx{} abstractions]{Mapping from FMI~2.0 model-description artefacts to \syssimx{} component abstractions.
   The \texttt{FMUComponent} class computes this mapping once during construction.}
   \label{tab:fmu_mapping}
   \begin{tabular}{@{}p{0.42\linewidth}p{0.54\linewidth}@{}}
