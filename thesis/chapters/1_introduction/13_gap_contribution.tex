@@ -10,15 +10,40 @@ The gap becomes more restrictive when heterogeneous tool coupling must be combin
 Such a combined workflow is still insufficiently addressed for systems whose relevant physics and suitable model representation change across operating phases.
 This is the case, for example, when a simulation transitions between free motion, human interaction, and contact-dominated behavior.
 
-This thesis addresses this gap by developing \syssimx{}, a Python-based framework for heterogeneous hybrid co-simulation.
-\syssimx{} provides a common orchestration layer for subsystem models that remain implemented in their domain-specific simulation tools.
-It connects heterogeneous models, analyzes their coupling structure, handles hybrid events, and supports runtime switching between alternative representations of the same subsystem.
-The thesis makes the following contributions:
+Table~\ref{tab:framework_comparison} summarizes this gap for representative \ac{FMI}-based co-simulation frameworks.
+These frameworks support \ac{FMU} coupling and algebraic-loop handling, but none combines native OpenSim and \ac{FEM} backends with hybrid event handling and runtime model switching.
 
+\begin{table}[t]
+  \centering
+  \small
+  \caption[Co-simulation framework capability comparison.]{%
+  Combined capabilities of representative \ac{FMI}-based co-simulation frameworks and \syssimx{}.
+  The columns list native \ac{FMU}, OpenSim, and \ac{FEM} backends, algebraic-loop handling, hybrid event handling with localization and rollback, and runtime model switching.
+  \(\checkmark\) denotes native support, \((\checkmark)\) indirect or partial support, and --- no support.
+  Partial entries reflect standard-level \ac{FMI} event handling or coupling through a generic Python proxy rather than a dedicated backend integration.}
+  \label{tab:framework_comparison}
+  \begin{tabular}{l c c c c c c}
+    \toprule
+    \textbf{Framework} & \textbf{\ac{FMU}} & \textbf{OpenSim} & \textbf{\ac{FEM}}
+      & \textbf{Alg.\ loops} & \textbf{Hybrid} & \textbf{Switching} \\
+    \midrule
+    OMSimulator~\cite{ochel_omsimulator_2019}    & \(\checkmark\) & ---             & ---             & \(\checkmark\) & \((\checkmark)\) & ---           \\
+    INTO-CPS Maestro~\cite{thule_maestro_2019}   & \(\checkmark\) & ---             & ---             & \(\checkmark\) & \((\checkmark)\) & ---           \\
+    CoFMPy~\cite{friedrich_cofmpy_2025}          & \(\checkmark\) & \((\checkmark)\) & \((\checkmark)\) & \(\checkmark\) & ---             & ---           \\
+    \textbf{\syssimx{}}                          & \(\checkmark\) & \(\checkmark\)  & \(\checkmark\)  & \(\checkmark\) & \(\checkmark\)  & \(\checkmark\) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This thesis addresses this gap with \syssimx{}.
+The main contribution is the design, implementation, and evaluation of its orchestration layer for heterogeneous hybrid co-simulation.
+Within this contribution, the thesis develops:
 \begin{itemize}
     \item a unified component abstraction for heterogeneous subsystem models,
     \item graph-based structural analysis for dependency detection, execution-order resolution, and algebraic-loop identification,
-    \item hybrid event handling for detection, localization, dispatch, and cascaded event processing,
-    \item a multi-model component concept for runtime switching between alternative subsystem models with state synchronization, and
-    \item a controlled-pendulum case study combining \acp{FMU}, OpenSim, and \ac{FEM} models.
+    \item hybrid event handling for detection, localization, dispatch, and cascaded event processing, and
+    \item a multi-model component concept for runtime switching between alternative subsystem models with state synchronization.
 \end{itemize}
+The controlled pendulum serves as the evaluation system for this framework.
+It is not a new modeling contribution.
+It combines \acp{FMU}, OpenSim, and \ac{FEM} models in one closed-loop scenario and exercises the framework features together.

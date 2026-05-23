@@ -5,6 +5,16 @@
 \definecolor{sxPanelGray}{HTML}{E6E6E6}
 \definecolor{sxSoftBlue}{HTML}{E9F2F7}
 
+% Chapter 4 architecture palette
+\definecolor{sxExec}{HTML}{405BA9}
+\definecolor{sxOrch}{HTML}{3B9C6B}
+\definecolor{sxCore}{HTML}{E75E73}
+\definecolor{sxAdapter}{HTML}{8E63A8}
+\definecolor{sxSwitch}{HTML}{B86B00}
+\definecolor{sxNeutralFill}{HTML}{F2F2F2}
+\definecolor{sxNeutralBox}{HTML}{E0E0E0}
+\definecolor{sxFrameworkBorder}{HTML}{666666}
+
 \tikzset{
   sx/base/.style={
     x=1cm,
@@ -77,6 +87,64 @@
   },
   sx/data heading/.style={
     font=\sffamily\bfseries\small
+  },
+  sx/ch4/framework/.style={
+    fill=sxNeutralFill,
+    draw=sxFrameworkBorder,
+    dashed,
+    line width=0.8pt,
+    rounded corners=5pt
+  },
+  sx/ch4/layerbg/.style={
+    rounded corners=3pt,
+    inner sep=3pt,
+    draw=none
+  },
+  sx/ch4/layer label/.style={
+    draw=white,
+    rounded corners=3pt,
+    minimum width=2.75cm,
+    minimum height=1.12cm,
+    text=white,
+    align=center,
+    font=\sffamily\footnotesize\bfseries
+  },
+  sx/ch4/item/.style={
+    draw=black!18,
+    rounded corners=3pt,
+    minimum width=2.75cm,
+    minimum height=1.12cm,
+    text=black!82,
+    align=center,
+    font=\sffamily\footnotesize
+  },
+  sx/ch4/external item/.style={
+    draw=black!20,
+    fill=sxNeutralBox,
+    rounded corners=3pt,
+    minimum width=3.35cm,
+    minimum height=1.12cm,
+    text=black!78,
+    align=center,
+    font=\sffamily\footnotesize
+  },
+  sx/ch4/neutral box/.style={
+    draw=black!38,
+    rounded corners=4pt,
+    fill=sxNeutralFill,
+    line width=0.7pt
+  },
+  sx/ch4/arrow/.style={
+    line width=1.0pt,
+    draw=black!58,
+    -{Latex[length=2.6mm, width=1.9mm]}
+  },
+  sx/ch4/toolcall/.style={
+    line width=0.9pt,
+    draw=black!50,
+    dashed,
+    -{Latex[length=2.4mm, width=1.8mm]},
+    shorten >=2pt
   }
 }
 

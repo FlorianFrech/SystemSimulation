@@ -378,3 +378,44 @@ Before considering Chapter 2 polished, check:
 - Figures are conceptual and not implementation-level.
 - The chapter does not duplicate the state-of-the-art review from Chapter 1.
 - The chapter does not pre-empt the architecture in Chapter 4 or implementation in Chapter 5.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Open items from the structural + cross-reference audit.
+
+### Medium Priority
+
+- **[Open] Macro step notation `$H_k$` vs `$\Delta t$` across the thesis.**
+  Chapter 2 uses `$H_k = T_{k+1} - T_k$` correctly per `notation.md`.
+  Chapters 4, 5, and 6 use `$\Delta t$` for the same quantity (the macro
+  step size). The cheapest cross-thesis fix is to add a dual-usage
+  sentence to the Chapter 2 notation table in
+  `20_notation_and_conventions.tex` and to `notation.md`:
+
+  > *In implementation and case-study contexts (Chapters 5–6), the macro
+  > step size is abbreviated as $\Delta t$ when the communication-point
+  > index is clear from context.*
+
+  Alternative: rename `\Delta t` → `H_k` throughout Chapters 4–6
+  (≈15 occurrences). The dual-usage note is recommended because
+  case-study scenarios read more naturally as
+  `\Delta t = 10^{-3}\,\mathrm{s}` than as `H_k = 10^{-3}\,\mathrm{s}`.
+- **[Open] Tool / textbook reference completeness.**
+  Verify that all bib keys cited in Chapter 2 exist in `references.bib`.
+  Likely candidates to double-check:
+  `seth_opensim_2018`, `sherman_simbody_2011`, `OpenSim_Delp`,
+  `knothe_finite_2017`, `kunkel_differential-algebraic_2024`,
+  `braess_finite_2007`, `kruzik_mathematical_2019`,
+  `kochmann_introduction_2025`, `newmark_method_1959`,
+  `andersson_omola_1990`, `andersson_object-oriented_1994`,
+  `urquia_moraleda_modeling_2018`, `astrom_feedback_2008`,
+  `karnopp_system_2012`, `css_cellier_kofman`. Best checked with a
+  full compile log (`Citation … undefined` warnings).
+
+### Resolved
+
+- ~~All captions use short-form `\caption[<short>]{<long>}`.~~ **Resolved**
+  (2026-05-19 audit). Chapter 2 is the only chapter where every caption
+  already follows the §10/§21 rule.

@@ -74,23 +74,23 @@ This structural property is referred to as direct feedthrough and is discussed f
 
 Many continuous-time systems can be described by ordinary differential equations.
 In this case, the time derivative of the state is given explicitly as a function of the current state, the input, and time \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
-A general nonlinear ODE can be written as
+A general nonlinear \ac{ODE} can be written as
 \begin{equation}
     \dot{x} = f(x,u,t),
 \end{equation}
 where $x$ is the state vector and $u$ is the input vector.
 
-However, not all continuous-time models are naturally expressed in explicit ODE form.
+However, not all continuous-time models are naturally expressed in explicit \ac{ODE} form.
 In many physical systems, algebraic constraints are present in addition to the differential equations.
 These constraints may arise, for example, from geometric relations, constitutive relations, or conservation laws \cite{css_cellier_kofman, karnopp_system_2012}.
 Such models are more naturally written as differential-algebraic equations.
 
-A general DAE can be written in implicit form as
+A general \ac{DAE} can be written in implicit form as
 \begin{equation}
    0 = G(\dot{x}, x, z, u, t),
 \end{equation}
 where $x$ collects the differential variables, $z$ collects the algebraic variables, and $u$ denotes the input.
-In contrast to an ODE, the derivatives are not given explicitly.
+In contrast to an \ac{ODE}, the derivatives are not given explicitly.
 Instead, differential and algebraic relations are stated together \cite{kunkel_differential-algebraic_2024}.
 
 A common semi-explicit form of a DAE is
@@ -104,7 +104,7 @@ The equation~\eqref{eq:semi_DAE_derivative} describes the time evolution of the 
 This representation is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
 
 The pendulum introduced in Section~\ref{sec:211_dynamical_systems} provides a simple example.
-In generalized coordinates, its dynamics are described by the ODE~\eqref{eq:pendulum_ode}.
+In generalized coordinates, its dynamics are described by the \ac{ODE}~\eqref{eq:pendulum_ode}.
 The same physical system can also be formulated in Cartesian coordinates $(r_x,\,r_y)$ for the bob position, related to the polar angle by $r_x = L\sin\theta$ and $r_y = -L\cos\theta$.
 In this representation, the rigid rod introduces the geometric constraint that the bob must remain on a circle of radius $L$.
 
@@ -120,7 +120,7 @@ Here, $(r_x,r_y,v_x,v_y)$ are the position and velocity components and $F$ is th
 Equations~\eqref{eq:pendulum_dae_x}--\eqref{eq:pendulum_dae_vy} are differential equations, whereas \eqref{eq:pendulum_constraint} is an algebraic constraint.
 In the semi-explicit form introduced above, $(r_x,r_y,v_x,v_y)$ are the differential variables and $F$ is the algebraic variable.
 
-The structural difficulty of a DAE can be characterized by its \emph{differentiation index} which defines the minimum number of times the algebraic constraints must be differentiated with respect to time before the system can be reduced to an explicit ODE~\cite{kunkel_differential-algebraic_2024}.
+The structural difficulty of a \ac{DAE} can be characterized by its \emph{differentiation index} which defines the minimum number of times the algebraic constraints must be differentiated with respect to time before the system can be reduced to an explicit \ac{ODE}~\cite{kunkel_differential-algebraic_2024}.
 For the Cartesian pendulum, repeated differentiation of the length constraint~\eqref{eq:pendulum_constraint} reveals hidden constraints at each level:
 %
 \begin{align}
@@ -142,15 +142,15 @@ For the Cartesian pendulum, repeated differentiation of the length constraint~\e
 The velocity-level constraint~\eqref{eq:dae_index2} requires the velocity to be tangential to the circular path.
 The acceleration-level constraint~\eqref{eq:dae_index1} expresses the centripetal acceleration required to maintain the circular motion, which depends on the constraint force $F$.
 It also yields an explicit expression for the constraint force, $F = \tfrac{m}{L}(v_x^2 + v_y^2 - g\,r_y)$.
-Three differentiations are required to obtain the ODE~\eqref{eq:dae_index0} for the algebraic variable~$F$, so the Cartesian pendulum is a DAE of differentiation index~3.
+Three differentiations are required to obtain the \ac{ODE}~\eqref{eq:dae_index0} for the algebraic variable~$F$, so the Cartesian pendulum is a \ac{DAE} of differentiation index~3.
 
 Equations~\eqref{eq:dae_index2} and~\eqref{eq:dae_index1} are \emph{hidden constraints} since they are not part of the original formulation but must be satisfied for the initial conditions to be consistent.
 A numerical solver that operates only on the original index-3 system may experience constraint drift, since the position-level constraint~\eqref{eq:dae_index3} is not explicitly enforced during integration.
-Modelica compilers address this by performing automatic index reduction, transforming the high-index DAE into an equivalent lower-index system that standard DAE solvers such as DASSL can handle~\cite{Modelica_Fritzson}.
+Modelica compilers address this by performing automatic index reduction, transforming the high-index \ac{DAE} into an equivalent lower-index system that standard \ac{DAE} solvers such as the \ac{DASSL} can handle~\cite{Modelica_Fritzson, petzold_description_1982}.
 
-This formulation shows that the same physical system may appear either as an ODE or as a DAE, depending on the choice of variables and coordinate system.
-The ODE form in generalized coordinates eliminates the geometric constraint explicitly.
-The Cartesian formulation retains the constraint and therefore leads naturally to a DAE.
+This formulation shows that the same physical system may appear either as an \ac{ODE} or as a \ac{DAE}, depending on the choice of variables and coordinate system.
+The \ac{ODE} form in generalized coordinates eliminates the geometric constraint explicitly.
+The Cartesian formulation retains the constraint and therefore leads naturally to a \ac{DAE}.
 This distinction is important in physical modeling, where algebraic constraints often arise directly from the chosen representation.
 
 In addition to such internal constraints, algebraic relations may also arise when subsystems are connected through their interfaces.

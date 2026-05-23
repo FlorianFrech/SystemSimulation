@@ -2,83 +2,93 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,calc,fit,positioning,backgrounds}
+\input{../shared/tikz_style.tex}
 
 \tikzset{
     portbox/.style={
         rectangle,
-        draw=gray!50!black,
-        fill=gray!12,
-        rounded corners=2pt,
+        draw=black!38,
+        fill=sxNeutralFill,
+        rounded corners=4pt,
+        line width=0.7pt,
         minimum width=15mm,
         minimum height=10mm,
         inner sep=2pt,
-        align=center
+        align=center,
+        text=black!82,
+        font=\sffamily\small
     },
     layerbox/.style={
         rectangle,
-        draw=gray!45,
-        fill=gray!6,
-        rounded corners=2pt,
-        line width=0.5pt
+        draw=black!28,
+        fill=sxNeutralFill,
+        rounded corners=4pt,
+        line width=0.7pt
     },
     arrow/.style={
-        ->,
-        thick,
-        >=Latex
+        -{Latex[length=2.6mm, width=1.9mm]},
+        line width=1.0pt,
+        draw=black!58
     },
     biarrow/.style={
-        <->,
-        thick,
-        >=Latex
+        {Latex[length=2.4mm, width=1.8mm]}-{Latex[length=2.4mm, width=1.8mm]},
+        line width=1.0pt,
+        draw=black!58
     },
     activemodelbox/.style={
         rectangle,
-        draw=green!60!black,
-        fill=green!18,
-        rounded corners=2pt,
+        draw=sxOrch!75!black,
+        fill=sxOrch!16,
+        rounded corners=4pt,
         minimum width=20mm,
         minimum height=10mm,
         inner sep=4pt,
         align=center,
-        very thick
+        line width=1.0pt,
+        text=black!82,
+        font=\sffamily\small
     },
     inactivemodelbox/.style={
         rectangle,
-        draw=green!55,
-        fill=green!8,
-        rounded corners=2pt,
+        draw=sxOrch!55,
+        fill=sxOrch!8,
+        rounded corners=4pt,
         minimum width=20mm,
         minimum height=10mm,
         inner sep=4pt,
         align=center,
+        line width=0.7pt,
+        text=black!82,
+        font=\sffamily\small
     },
     helperbox/.style={
         rectangle,
-        draw=orange!50!black,
-        fill=orange!12,
-        rounded corners=2pt,
+        draw=sxSwitch!85!black,
+        fill=sxSwitch!10,
+        rounded corners=4pt,
         minimum width=20mm,
         minimum height=10mm,
         inner sep=4pt,
-        align=center
+        align=center,
+        line width=0.7pt,
+        text=black!82,
+        font=\sffamily\small
     },
     selectarrow/.style={
-    ->,
-    dashed,
-    line width=0.8pt,
-    draw=orange!70!black,
-    >=Latex
+        -{Latex[length=2.4mm, width=1.8mm]},
+        dashed,
+        line width=0.9pt,
+        draw=sxSwitch!85!black
     },
     supportarrow/.style={
-    ->,
-    line width=0.8pt,
-    draw=orange!65!black,
-    >=Latex
-}
+        -{Latex[length=2.4mm, width=1.8mm]},
+        line width=0.95pt,
+        draw=sxSwitch!85!black
+    }
 }
 
 \begin{document}
-\begin{tikzpicture}
+\begin{tikzpicture}[every node/.style={font=\sffamily}]
     % Public interface layer
     \begin{scope}[yshift=4.5cm]
         \node[layerbox, minimum width=10cm, minimum height=2cm] (publiclayer) at (4.5,0) {};
@@ -95,21 +105,20 @@
 
     % Internal layer
     \begin{scope}
-        \node[layerbox, fill=blue!4, minimum width=10cm, minimum height=2cm] (internallayer) at (4.5,2) {};
+        \node[layerbox, fill=sxOrch!6, minimum width=10cm, minimum height=2cm] (internallayer) at (4.5,2) {};
         \node[anchor=south west, font=\scriptsize\bfseries\itshape, text=gray!55!black]
             at ($(internallayer.north west)+(0,-0.45)$) {internal};
         \node[inactivemodelbox, align=center] (modelA)   at (1, 2)  {Model A\\{\small(inactive)}};
         \node[activemodelbox, align=center]   (modelB)   at (8, 2)  {\textbf{Model B}\\{\small(active)}};
-        \node[helperbox, align=center, very thick]        (switching) at (4.5,2) {Mode\\Switching};
-        \node[above, font=\small, align=center] at (switching.north){selects active model};
-
+        \node[helperbox, align=center, line width=1.0pt]  (switching) at (4.5,2) {Mode\\Switching};
+        \node[above, font=\sffamily\small, align=center] at (switching.north){selects active model};
         % --- Control relationships: switcher activates/deactivates models ---
         \draw[selectarrow] (switching.east) -- (modelB.west);
     \end{scope}
 
     % Switching support layer
     \begin{scope}[yshift=-0.5cm]
-        \node[layerbox, fill=red!4, minimum width=10cm, minimum height=2cm] (switchingsupport) at (4.5,0) {};
+        \node[layerbox, fill=sxSwitch!6, minimum width=10cm, minimum height=2cm] (switchingsupport) at (4.5,0) {};
         \node[anchor=south west, font=\scriptsize\bfseries\itshape, text=gray!55!black]
             at ($(switchingsupport.north west)+(0,-0.45)$) {switching support};
         \node[helperbox, align=center] (selector)   at (2,   0) {Mode\\Selector};
@@ -119,12 +128,12 @@
 
     % --- Data path: interface delegates to whichever model is active ---
     \draw[arrow] (interface.south) --++(0, -0.75)
-                                   --++(3.5, 0) node[midway, font=\small, fill=white, inner sep=1pt] {delegate} 
+                                   --++(3.5, 0) node[midway, font=\sffamily\small, fill=white, inner sep=1pt] {delegate} 
                                    -- (modelB.north);
     \coordinate (supportJunction) at ($(switching.south)+(0,-0.75)$);
 
-    \draw[thick, draw=orange!60!black]
-    (switching.south) -- node[midway, font=\small, fill=white, inner sep=1pt] {uses} (supportJunction);
+    \draw[line width=0.95pt, draw=sxSwitch!85!black]
+    (switching.south) -- node[above left=2pt, font=\sffamily\small, inner sep=1pt] {uses} (supportJunction);
 
     \draw[supportarrow]
     (supportJunction) -- (hysteresis.north);

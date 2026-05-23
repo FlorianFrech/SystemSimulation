@@ -3,7 +3,7 @@
 \label{sec:impl_system}
 
 The \texttt{System} class assembles individual components into a running co-simulation scenario.
-It implements the system abstraction introduced in Section~\ref{sec:architecture_system_connections} and realizes \ref{req:SR-03-01} and \ref{req:SR-03-02} under \ref{req:UR-03}.
+It implements the \texttt{System} abstraction introduced in Section~\ref{sec:architecture_system_connections} and realizes \ref{req:SR-03-01} and \ref{req:SR-03-02} under \ref{req:UR-03}.
 The event-connection functionality additionally supports \ref{req:SR-04-02} under \ref{req:UR-04}.
 
 Figure~\ref{fig:impl_system_class} gives a class-level overview of the implementation objects involved in system composition and execution.
@@ -18,26 +18,23 @@ The structural analysis that derives the execution order from the registered con
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Responsibilities and Stored State}
+\subsection{System Definition}
 
 A \texttt{System} instance stores the structural definition of a co-simulation scenario.
 This includes the registered components, signal connections, event connections, selected algorithm, and aggregated history.
 It also tracks the current simulation time and the initialization state.
-Derived metadata such as dependency graphs, algebraic loops, and execution order is introduced in Section~\ref{sec:impl_structural}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Component Registration}
 
 Components are registered with \texttt{add\_component()} before any connection can reference them.
-Registration enforces unique component names within the system.
+Registration enforces unique component names within the \texttt{System} instance.
 It also rejects additions after \texttt{initialize()} has been called.
 This keeps the structural analysis valid for the complete simulation run.
 The component history is registered with the system-level \texttt{SystemHistory} instance.
 After the simulation, results from all components can therefore be retrieved through one call to \texttt{get\_history()}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Signal Connections}
+\subsection{Connection Registration}
 
+\paragraph{Signal Connection.}
 A signal connection is represented by an immutable \texttt{Connection} object.
 It stores the source component and output port together with the destination component and input port.
 The object is frozen and hashable, so it can be used during duplicate checks and graph construction.
@@ -48,58 +45,57 @@ The same validation rejects duplicate connections and enforces single assignment
 A new connection is rejected if another connection already drives the same destination input.
 This guarantees a unique source for every consumed input port.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Event Connections}
-
-Hybrid scenarios use \texttt{EventConnection} to route events from a source component to a target component.
+\paragraph{Event Connection.}
+Hybrid scenarios use \texttt{EventConnection} to route events from an event source to an event listener.
 The source port identifies the event indicator.
-The destination port identifies the event input of the target component.
+The destination port identifies the event input of the event listener.
 The zero-crossing direction is defined by the source component and inherited by the generated event subscription.
 
 The \texttt{add\_event\_connection()} method validates the connection and registers the event route.
-It also creates the corresponding \texttt{Event} subscription for the target component.
-The subscription is stored on the target and is consumed by the hybrid algorithm during event dispatch.
+It also creates the corresponding \texttt{Event} subscription for the event listener.
+The subscription is stored on the listener and is consumed by the hybrid algorithm during event dispatch.
 Section~\ref{sec:impl_hybrid} describes this dispatch step.
 Existing matching subscriptions are reused.
 Duplicate event connections are rejected at registration time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Algorithm Selection}
-
-The stepping algorithm is stored in the \texttt{algorithm} attribute and can be replaced through \texttt{set\_algorithm()}.
-A \texttt{GaussSeidelAlgorithm} is installed at construction as a default that is appropriate for systems without state events.
-At the start of \texttt{initialize()}, the system classifies the registered components into event sources, event listeners, and continuous-only components.
-If any event sources are present, the algorithm is replaced by \texttt{HybridAlgorithm} irrespective of whether the user has set a different algorithm explicitly.
-This ensures that the hybrid features of the framework are active whenever a component can produce state events and removes the need for the user to select the algorithm manually.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Lifecycle Orchestration}
 
-Once all components and connections are registered, the system is driven through three phases.
+The selected stepping algorithm is stored in the \texttt{algorithm} attribute.
+It can be replaced through \texttt{set\_algorithm()}.
+A \texttt{GaussSeidelAlgorithm} is installed by default for systems without state events.
+At the start of \texttt{initialize()}, the \texttt{System} instance classifies the registered components.
+If at least one event source is present, the algorithm is replaced by \texttt{HybridAlgorithm}.
+This activates hybrid event handling without requiring manual algorithm selection.
+
+Once all components and connections are registered, the \texttt{System} instance is driven through three phases.
 
 \paragraph{Initialization.}
 The \texttt{initialize(t0)} method first classifies the registered components and selects the hybrid algorithm when event sources are present.
 It then prepares the component ports, computes direct-feedthrough metadata, and invokes the structural analysis of Section~\ref{sec:impl_structural}.
-The resulting execution order initializes the system generation by generation, as shown in Figure~\ref{fig:impl_system_initialization}.
+The resulting execution order initializes the components generation by generation, as shown in Figure~\ref{fig:impl_system_initialization}.
 After initialization, the structural definition is fixed for the simulation run.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/System_Initialization.pdf}
   \caption[System initialization sequence.]{Initialization sequence of the \texttt{System} class.
-  The system prepares components, computes execution metadata, and initializes generations in structural order.}
+  The \texttt{System} instance prepares components, computes execution metadata, and initializes generations in structural order.}
   \label{fig:impl_system_initialization}
 \end{figure}
 
 \paragraph{Run.}
-\texttt{run(t0, tf, dt)} drives the coupled simulation by repeatedly delegating to the algorithm's \texttt{step()} method.
-The stepping loop advances the time pointer in fixed macro steps of size \texttt{dt} and clamps the final step to the end time.
-All orchestration details that depend on the chosen algorithm, such as input propagation between components, algebraic-loop iteration, and event localization, are owned by the algorithm (Section~\ref{sec:impl_algorithms}) and not by the \texttt{System} itself.
+The \texttt{run(t0, tf, dt)} method repeatedly delegates one macro step to the selected algorithm.
+The stepping loop advances the time pointer in fixed steps of size \texttt{dt} and clamps the final step to the end time.
+Algorithm-specific orchestration is handled by the selected algorithm.
+This includes input propagation, algebraic-loop iteration, and event localization (Section~\ref{sec:impl_algorithms}).
 
 \paragraph{Reset.}
-\texttt{reset()} releases the runtime state of the system without removing its structural definition.
-It clears the aggregated history, resets all registered components through their own \texttt{reset()} hooks, and marks the system as not initialized.
-The registered components, signal connections, event connections, and selected algorithm are retained, so the same scenario can be initialized and executed again without rebuilding the system configuration.
+The \texttt{reset()} method releases the runtime state of the \texttt{System} instance without removing its structural definition.
+It clears the aggregated history and resets all registered components through their own \texttt{reset()} hooks.
+It also marks the instance as not initialized.
+The registered components, connections, and selected algorithm are retained.
+The same scenario can therefore be initialized and executed again without rebuilding the \texttt{System} configuration.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
@@ -131,15 +127,15 @@ Table~\ref{tab:system_verification} summarizes the observed behavior.
       & A hybrid source declares an event indicator.
         A hybrid listener declares a matching event input.
         An \texttt{EventConnection} links the source indicator to the listener input.
-      & The target component receives exactly one matching event subscription.
+      & The event listener receives exactly one matching event subscription.
         The subscription direction is inherited from the source event indicator.
         The connection itself only represents event routing. \\
     \addlinespace
 
     Lifecycle protection
-      & The system is initialized after component and connection registration.
+      & The \texttt{System} instance is initialized after component and connection registration.
         A further component registration is attempted after initialization.
-      & Initialization stores the system time and marks the system as initialized.
+      & Initialization stores the current time and marks the instance as initialized.
         Further component registration is rejected.
         The structural definition is therefore fixed for the simulation run. \\
     \bottomrule
@@ -147,6 +143,6 @@ Table~\ref{tab:system_verification} summarizes the observed behavior.
 \end{table}
 
 The scenario confirms that the registration contract is enforced uniformly across signal connections, event connections, and lifecycle protection.
-The system rejects ambiguous or late structural changes before simulation starts.
+The \texttt{System} instance rejects ambiguous or late structural changes before simulation starts.
 Event routing is configured through \texttt{EventConnection}, while event semantics remain owned by the source-side event indicator.
 Structural-analysis properties are verified separately in Section~\ref{sec:impl_structural}.

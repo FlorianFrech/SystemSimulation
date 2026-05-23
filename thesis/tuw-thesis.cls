@@ -130,7 +130,17 @@
 \RequirePackage[english]{babel}
 
 % Bibliography
-\RequirePackage[backend=biber, style=chem-angew, articletitle=true]{biblatex}
+%\RequirePackage[backend=biber, style=chem-angew, articletitle=true]{biblatex}
+\RequirePackage[
+  backend=biber,
+  %style=ieee,
+  style=numeric-comp,
+  sorting=none,
+  giveninits=true,
+  doi=true,
+  url=false,
+  isbn=false
+]{biblatex}
 \addbibresource{references.bib}
 \RequirePackage{csquotes}
 
@@ -281,10 +291,26 @@
 }
 
 % Hyperref Color Settings
+% \ifcolorhyperref
+%     \hypersetup{colorlinks=false, linkcolor=violet, citecolor=green, urlcolor=blue}
+% \else
+%     \hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=black}
+% \fi
+% Hyperref Color Settings
 \ifcolorhyperref
-    \hypersetup{colorlinks=false, linkcolor=violet, citecolor=green, urlcolor=blue}
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=tuw-color!65!black,
+        citecolor=tuw-color!65!black,
+        urlcolor=tuw-color!65!black
+    }
 \else
-    \hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=black}
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=black,
+        citecolor=black,
+        urlcolor=black
+    }
 \fi
 
 \endinput

@@ -53,6 +53,7 @@ The performance benchmark is scenario-specific.
 The measured speedup depends on the FEM mesh, solver tolerances, contact stiffness, macro step size, switching thresholds, dwell time, and hardware.
 The benchmark shows that runtime switching reduced computational cost for the selected pendulum configuration.
 It does not establish a general speedup for all multi-fidelity co-simulation problems.
+This dependence is consistent with the observation that multi-fidelity speedups are problem-specific and require explicit cost-benefit reporting~\cite{fernandez-godino_review_2023}.
 
 Finally, the implementation executes components sequentially.
 This also applies to independent execution generations and Jacobi-style stages.

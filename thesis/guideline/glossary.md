@@ -36,6 +36,14 @@ The thesis distinguishes between the physical/modeling world and the framework/s
 | **Causal modeling** | A sub-style of equation-based modeling in which the computational direction is defined explicitly when the subsystem is formulated, typically through declared inputs and outputs. Example: state-space models, block diagrams, signal-flow models. | Use when the fixed input-output structure of a model matters, e.g., when discussing direct feedthrough or co-simulation coupling. |
 | **Acausal modeling** | A sub-style of equation-based modeling in which subsystem behavior is stated as equations without prescribing a fixed computational direction. Computational causality is derived later by the simulation tool from the overall connected model (structural analysis, BLT decomposition). Typical in Modelica-style physical modeling. | Use for equation-based physical modeling discussions. Note: acausal models are not *executed* acausally — they are translated into a causal computation before simulation. |
 
+## Evidence Terms
+
+| Term | Definition | Preferred Usage |
+|------|------------|-----------------|
+| **Verification** | A check that an implemented mechanism, numerical result, or simulation configuration behaves consistently with a specified reference, analytical result, or implementation contract. | Use for feature-level checks in Chapter 5 and for numerical comparisons against model-based references. Verification does not imply physical truth. |
+| **Validation** | An evaluation that the combined workflow is suitable for the intended thesis use case and satisfies the mandatory user-facing requirements in the controlled-pendulum scenario. | Use for the case-study workflow as a whole. State explicitly when validation is workflow validation rather than experimental physical validation. |
+| **Benchmark** | A measurement of computational cost or runtime behavior for a fixed scenario and configuration. | Use for performance results such as wall-clock time, speedup, call counts, and active simulated time. A benchmark is not correctness evidence on its own. |
+
 ## Hybrid Terms
 
 | Term | Definition | Preferred Usage |
@@ -44,9 +52,11 @@ The thesis distinguishes between the physical/modeling world and the framework/s
 | **Discrete event** | An instantaneous change or trigger that causes a change in system state, mode, or equations. | Use for contact, switching, controller actions, and sampled behavior. |
 | **Mode change** | A discrete transition from one system regime or equation set to another. | Use in hybrid modeling and event-handling discussions. |
 | **Event handling** | The processing of a discrete event, including detection, state update, and continuation of the simulation. | Use in hybrid-system and hybrid co-simulation contexts. |
+| **Event source** | A component that emits a discrete event through an event indicator. The emitting end of an event connection. | Use for the component that produces an event in `syssimx` event routing. |
+| **Event listener** | A component that receives a routed event and updates its state in response. The receiving end of an event connection. | Use consistently for this role. Do not use *event receiver* or *event target* for the component. |
 | **Event localization** | The numerical determination of the physical time at which an event occurs within a simulation step. | Use when discussing rollback, bisection, or root-finding. |
 | **Rollback** | The restoration of a previously stored simulation state in order to repeat part of a computation, for example during event localization. | Use in hybrid simulation and iterative co-simulation contexts. |
-| **Superdense time** | A time representation of the form $(t, k)$, where $t$ is the real-valued physical time and $k \in \mathbb{N}$ is a micro-instant index. Superdense time allows multiple logically simultaneous events at the same physical instant to be ordered without advancing the clock, enabling consistent event handling at communication points. | Use when discussing event ordering, zero-crossing handling, and hybrid co-simulation algorithms that must distinguish multiple events at the same time $t$. |
+| **Superdense time** | A time representation of the form $(t, \nu)$, where $t$ is the real-valued physical time and $\nu \in \mathbb{N}$ is a micro-instant index. Superdense time allows multiple logically simultaneous events at the same physical instant to be ordered without advancing the clock, enabling consistent event handling at communication points. | Use when discussing event ordering, zero-crossing handling, and hybrid co-simulation algorithms that must distinguish multiple events at the same time $t$. |
 
 ## Co-Simulation Terms
 
@@ -76,7 +86,7 @@ The thesis distinguishes between the physical/modeling world and the framework/s
 | **FMUComponent** | A concrete `syssimx` component that wraps an FMU and adapts it to the `CoSimComponent` interface. | Use only for the specific wrapper implementation. |
 | **Port** | In `syssimx`, a typed, unit-aware interface point on a component through which values are exchanged with other components. Ports are classified as input or output ports and carry physical unit information managed by Pint. | Use when describing the coupling interface of a component, both in architecture and in connection descriptions. |
 | **System (`syssimx`)** | The `syssimx` object that assembles interconnected components into a complete co-simulation model and runs the master algorithm. | Use for the concrete framework object, ideally written as `\texttt{System}` in the thesis. |
-| **MultiComponentModel** | A `syssimx` abstraction that groups multiple components representing the same physical subsystem at different fidelity levels and supports runtime switching between them during simulation. | Use when discussing multi-fidelity or model-switching scenarios, such as switching between a rigid-body FMU, a musculoskeletal OpenSim model, and a FEM model of the same pendulum. |
+| **MultiComponent** | A `syssimx` abstraction that groups multiple components representing the same physical subsystem at different fidelity levels and supports runtime switching between them during simulation. The concrete class is `MultiComponent` (`syssimx/core/multi_comp.py`); `MasterPendulum` is the case-study subclass. | Use when discussing multi-fidelity or model-switching scenarios, such as switching between a rigid-body FMU, a musculoskeletal OpenSim model, and a FEM model of the same pendulum. |
 | **Connection** | A directed relation that transfers values from an output port of one component to an input port of another component. | Use in framework and architecture chapters. |
 
 ## Recommended Usage Notes

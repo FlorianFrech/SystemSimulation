@@ -1,12 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Multi-Model Component and Mode Switching}
+\section{Multi-Model Component}
 \label{sec:impl_multi_model}
 
 Runtime model switching allows one physical subsystem to use different internal models in different operating regimes.
 The implementation realizes \ref{req:UR-09} and the derived requirements \ref{req:SR-09-01}--\ref{req:SR-09-04}.
 The \texttt{MultiComponent} class implements this behavior as a component wrapper with a fixed external interface and one active internal model.
-Section~\ref{sec:architecture_multicomponent} introduced the architectural roles of the wrapper, mode selector, hysteresis, and state adapter.
-This section describes how these roles are realized in the implementation.
+Section~\ref{sec:architecture_multicomponent} introduces the architectural roles of wrapper, mode selector, hysteresis, and state adapter.
+The following subsections describe how \texttt{MultiComponent} realizes these roles.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Scope and Component Contract}
@@ -30,7 +30,7 @@ Table~\ref{tab:multi_component_contract} summarizes the main contract.
 
 \begin{table}[t]
   \centering
-  \caption{Main extension points and state fields of \texttt{MultiComponent}.}
+  \caption[Multi-component extension points.]{Main extension points and state fields of \texttt{MultiComponent}.}
   \label{tab:multi_component_contract}
   \begin{tabular}{lp{9.5cm}}
     \toprule
@@ -74,27 +74,29 @@ If a model misses a required port or exposes an incompatible specification, cons
 This ensures that a later mode switch cannot change the external interface of the component.
 
 Direct-feedthrough metadata must also remain fixed.
-The \pyfn{\_detect\_direct\_feedthrough()} method compares the feedthrough dictionaries of all registered models.
-A mismatch is rejected during initialization.
-The structural analysis of Section~\ref{sec:impl_structural} assumes fixed zero-delay behavior for every component during a simulation run.
-The \texttt{MultiComponent} class can therefore switch the internal model only when the externally visible dependency structure remains unchanged.
+The wrapper compares the feedthrough dictionaries of all registered models during initialization.
+A mismatch is rejected.
+Section~\ref{sec:impl_structural} assumes fixed zero-delay behavior for every component during a simulation run.
+The \texttt{MultiComponent} class can therefore switch models only when the externally visible dependency structure remains unchanged.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Runtime Mode Switching}
+\subsection{Runtime Model Switching}
 \label{sec:impl_multi_model_switching}
 
 Runtime switching is part of the component step.
 When a master algorithm calls \texttt{do\_step(t, dt)} on the wrapper, the base component logic delegates to \texttt{\_do\_step\_internal(t, dt)}.
-Zero-duration calls are treated as output-refresh evaluations and are delegated to the current active model without mode selection.
+Zero-duration calls are treated as output-refresh evaluations.
+They are delegated to the current active model without mode selection.
 For positive step sizes, the wrapper first checks the switching guards.
 Mode selection is skipped when switching is disabled, when no selector is configured, or when the hysteresis dwell window is active.
-Only then is the selector evaluated at the current simulation time.
+The selector is evaluated only after these guards pass.
 Figure~\ref{fig:impl_multi_model_switching} summarizes the switching path.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\textwidth]{diagrams/out/pdf/execution/MultiComponent_Switching.pdf}
-  \caption[Runtime switching sequence]{Runtime switching sequence of the \texttt{MultiComponent} class for a positive macro step. The wrapper applies the switching guards, transfers state and cached inputs on an accepted switch, and then delegates the step to the active model.}
+  \caption[Runtime switching sequence.]{Runtime switching sequence of the \texttt{MultiComponent} class for a positive macro step.
+  The wrapper applies switching guards, transfers state and cached inputs on an accepted switch, and delegates the step to the active model.}
   \label{fig:impl_multi_model_switching}
 \end{figure}
 
@@ -137,18 +139,23 @@ Event ports are handled in the same update step.
 Ports corresponding to triggered events are set to \texttt{True}, while inactive event ports are reset to \texttt{False}.
 
 Algebraic output evaluation uses the same active-model delegation.
-\texttt{evaluate\_outputs()} temporarily disables mode switching, evaluates the active model for the supplied trial inputs, and copies the resulting values to the wrapper ports.
-This prevents direct-feedthrough detection and IJCSA residual evaluations from changing the active model.
+The wrapper temporarily disables runtime model switching during \pyfn{evaluate\_outputs()}.
+It evaluates the active model for the supplied trial inputs.
+The resulting values are copied to the wrapper ports.
+This prevents direct-feedthrough detection from changing the active model.
+It also prevents \ac{IJCSA} residual evaluations from changing the active model.
 
 State access is routed through the active model.
-\texttt{get\_state()} returns the state of \texttt{active\_comp}.
-\texttt{set\_state()} adapts the provided state to the active mode and writes it to \texttt{active\_comp}.
-The wrapper therefore provides one access point, while the concrete state schema remains defined by the active model and the subclass adaptation logic.
+The \texttt{get\_state()} method returns the state of \texttt{active\_comp}.
+The \texttt{set\_state()} method adapts the provided state to the active mode and writes it to \texttt{active\_comp}.
+The wrapper therefore provides one access point.
+The concrete state schema remains defined by the active model and the subclass adaptation logic.
 
 The hybrid hooks are delegated to the active model as well.
-Event indicator evaluation, crossing detection, rollback snapshots, event handling, and internal event hints are all forwarded to \texttt{active\_comp}.
-Mode switching can be disabled through \texttt{\_allow\_mode\_switching}.
-The hybrid algorithm uses this flag during trial steps so that event detection and localization do not change the active model while a rollback snapshot is valid.
+Event indicator evaluation, crossing detection, rollback snapshots, event handling, and internal event hints are forwarded to \texttt{active\_comp}.
+Runtime model switching can be disabled through \texttt{\_allow\_mode\_switching}.
+The hybrid algorithm uses this flag during trial steps.
+Event detection and localization therefore cannot change the active model while a rollback snapshot is valid.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
@@ -165,10 +172,10 @@ The state must remain continuous at $t_s$, since \texttt{\_switch\_mode()} adapt
 
 Figure~\ref{fig:impl_multi_model_verification} compares the numerical trajectory with the analytical reference and shows the active mode over time.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{figures/5_implementation/multi_component/multi_component_switching_verification.pdf}
-  \caption[Two-mode integrator check for runtime mode switching]{Two-mode integrator check for runtime mode switching.
+  \includegraphics[width=0.82\linewidth]{figures/5_implementation/multi_component/multi_component_switching_verification.pdf}
+  \caption[Two-model integrator check for runtime model switching]{Two-model integrator check for runtime model switching.
     The trajectory follows the analytical reference and remains continuous at the accepted switch time.}
   \label{fig:impl_multi_model_verification}
 \end{figure}

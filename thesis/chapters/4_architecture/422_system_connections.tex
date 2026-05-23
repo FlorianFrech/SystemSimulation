@@ -12,10 +12,9 @@ The implementation-level structural metadata derived from this definition is dis
 
 \begin{figure}[htbp]
   \centering
+  \includegraphics[width=0.7\textwidth]{figures/4_architecture/system_architecture.pdf}
   \vspace{-1em}
-  \includegraphics[width=0.75\textwidth]{figures/4_architecture/system_architecture.pdf}
-  \vspace{-1em}
-  \caption[User-defined system structure in \syssimx{}]{User-defined system structure in \syssimx{}.
+  \caption[User-defined system structure]{User-defined system structure in \syssimx{}.
   Solid black arrows denote signal connections between output and input ports.
   Dashed blue arrows denote event connections between event ports.
   Dashed red arrows denote direct-feedthrough paths inside components.}
@@ -25,7 +24,7 @@ The implementation-level structural metadata derived from this definition is dis
 
 The \texttt{System} supports signal connections and event connections.
 A signal connection defines directed data flow from an output port of one component to an input port of another component.
-An event connection routes a named event from an event source to an event receiver.
+An event connection routes a named event from an event source to an event listener.
 This supports discrete interactions between components, such as mode changes or contact-triggered resets.
 
 The \texttt{System} validates connections when they are added.
@@ -34,9 +33,6 @@ This makes coupling assumptions explicit at the system boundary.
 
 The registered components and connections define the structural context for orchestration.
 Together with the direct-feedthrough declarations of the components, this context determines which components can be evaluated independently and which components require coupled treatment.
-The relevant structural concepts are introduced in Section~\ref{sec:233_cosim_structural_analysis}.
-Chapter~\ref{chap:implementation} describes how \syssimx{} derives and stores the corresponding metadata.
-
 
 The \texttt{System} does not own the numerical stepping scheme.
 It holds the assembled model structure and delegates time advancement to an algorithm object.

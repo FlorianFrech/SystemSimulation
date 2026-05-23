@@ -1,5 +1,18 @@
 \chapter*{Kurzfassung}
 
-Deine Kurzfassung fasst deine Forschungsarbeit prägnant zusammen, indem sie zuerst die Motivation oder das Problem deiner Arbeit darlegt, gefolgt von den spezifischen Zielen oder Forschungsfragen, die du beantworten wolltest. \newline
+Die Systemsimulation von cyber-physischen und biomechanischen Systemen erfordert die Kopplung von Subsystemmodellen aus verschiedenen Modellierungsumgebungen.
+Jedes Modell bringt einen eigenen Solver und Schnittstellen mit, was die direkte Integration in einem monolithischen Solver erschwert.
+Bestehende Frameworks auf Basis des Functional Mock-up Interface (FMI) decken die standardisierte Kopplung ab, stoßen aber an Grenzen, sobald nicht standardisierte Modelle, hybride Ereignisse, algebraische Schleifen und Laufzeitmodellwechsel gemeinsam auftreten.
 
-Beschreibe anschließend kurz die wichtigsten Methoden oder Ansätze, die du verwendet hast, und präsentiere dann die wichtigsten Ergebnisse oder Erkenntnisse. Abschließend fasst du die wichtigsten Schlussfolgerungen und die breitere Bedeutung oder Implikationen deiner Forschung zusammen. Stelle sicher, dass die Kurzfassung in sich geschlossen, klar, prägnant (in der Regel 100-200 Wörter, prüfe spezifische Richtlinien) ist und relevante Schlüsselwörter enthält.
+Die vorliegende Arbeit stellt mit \syssimx{} ein Python-Framework für heterogene hybride Co-Simulation mit Laufzeitmodellwechsel vor.
+Das Framework ermöglicht die strukturelle Analyse der gekoppelten Systemstruktur, die Handhabung von hybriden Ereignissen und algebraischen Schleifen sowie den Laufzeitwechsel zwischen alternativen Modellen desselben Subsystems.
+Über eine gemeinsame Komponentenabstraktion koppelt es Functional Mock-up Units (FMUs), OpenSim-Modelle und Finite-Elemente-Methoden (FEM) Modelle.
+
+Die Implementierung wurde durch Feature-Level-Szenarien verifiziert.
+Eine Fallstudie mit einem geregelten Pendel und Kontaktereignissen verglich den integrierten Workflow mit monolithischen OpenModelica-Referenzmodellen und einem Full-FEM-Benchmark.
+Mit kleinerer Makroschrittgröße konvergierte das Basisszenario monoton gegen das monolithische Referenzmodell.
+Das Kontaktszenario mit Laufzeitmodellwechsel zwischen FMU-, OpenSim- und FEM-Pendelmodellen verfolgte die Referenztrajektorie mit einem maximalen Winkelfehler von etwa $0{,}30^\circ$ und reproduzierte alle fünf Kontaktereignisse.
+Die Aktivierung des FEM-Modells nur in der Nähe des Kontakts reduzierte die mediane Gesamtlaufzeit von $467{,}6\,\mathrm{s}$ auf $289{,}6\,\mathrm{s}$, was einer Beschleunigung um den Faktor $1{,}61$ gegenüber der Full-FEM-Konfiguration entspricht.
+
+Insgesamt belegt die Fallstudie, dass sich der heterogene hybride Co-Simulations-Workflow mit Laufzeitmodellwechsel in einer einheitlichen Architektur umsetzen lässt.
+Diese Einordnung bleibt auf die numerische Verifikation gegen modellbasierte Referenzen sowie auf die Workflow-Validierung und den Laufzeit-Benchmark der Pendel-Fallstudie beschränkt.

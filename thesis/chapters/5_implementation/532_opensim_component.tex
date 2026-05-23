@@ -6,9 +6,10 @@ It realizes \ref{req:SR-06-01} under \ref{req:UR-06}.
 The wrapper delegates multibody and muscle dynamics to OpenSim and Simbody.
 It exposes the OpenSim realize--integrate cycle through the primitive operations of the component contract.
 
-As described in Section~\ref{sec:242_modeling_musculoskeletal}, an OpenSim model advances a \texttt{State} through a \texttt{Manager}.
-Derived quantities are obtained by staged realization of that state.
-Concrete OpenSim-based components define their own ports, parameters, model assembly, and transferable state.
+OpenSim represents a model through three runtime objects.
+The \texttt{Model} holds the multibody system introduced in Section~\ref{sec:242_modeling_musculoskeletal}.
+The \texttt{State} holds its time-dependent quantities, and the \texttt{Manager} advances the \texttt{State} through a numerical integrator.
+Derived quantities are obtained by the staged realization of that state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Architecture and Interface Mapping}
@@ -16,7 +17,8 @@ Concrete OpenSim-based components define their own ports, parameters, model asse
 Figure~\ref{fig:impl_opensim_class} shows how the OpenSim wrapper connects the framework contract to the OpenSim runtime objects.
 The \texttt{OpenSimComponent} class is an abstract base class.
 OpenSim does not provide a standardized co-simulation descriptor comparable to \texttt{modelDescription.xml}.
-Each concrete subclass therefore defines the ports, parameters, model assembly, stepping logic, and state-transfer methods.
+Each concrete subclass defines its ports, parameters, and model assembly.
+It also implements stepping logic and state-transfer methods for the selected model.
 The base class provides only the OpenSim infrastructure shared by these subclasses.
 
 \begin{figure}[t]
@@ -108,7 +110,7 @@ Table~\ref{tab:opensim_verification} summarizes the checked properties.
 \begin{table}[t]
   \centering
   \small
-  \caption[Verification targets for a OpenSim-based component]{Verification targets for a minimal concrete OpenSim-based component.}
+  \caption[Verification targets for an OpenSim-based component]{Verification targets for a minimal concrete OpenSim-based component.}
   \label{tab:opensim_verification}
   \begin{tabular}{p{5.8cm} p{8.8cm}}
     \toprule
@@ -133,4 +135,4 @@ Table~\ref{tab:opensim_verification} summarizes the checked properties.
 \end{table}
 
 These properties confirm that \texttt{OpenSimComponent} exposes the OpenSim realize--integrate cycle through the common component contract.
-The integration with the FMI control stack and the FEM-based contact element of the controlled pendulum is evaluated in Chapter~\ref{chap:case_study}.
+The integration with the \ac{FMI} control stack and the \ac{FEM}-based contact element of the controlled pendulum is evaluated in Chapter~\ref{chap:case_study}.

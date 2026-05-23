@@ -12,7 +12,7 @@ The limitation of this approach is that all subsystem models must be
 expressible within one common environment.
 
 A single host solver can integrate models from different tools when each exporting tool provides its governing equations.
-This approach is called \emph{model exchange} or \emph{strong coupling}~\cite{kubler_two_2000,gomes_co-simulation_2019}.
+This approach is commonly described as \emph{strong coupling}~\cite{kubler_two_2000,gomes_co-simulation_2019}.
 Because one solver processes all equations, numerical consistency across subsystem boundaries is enforced directly.
 The drawback is that the host solver must meet the numerical and structural requirements of every subsystem at once.
 This becomes impractical when subsystems originate from different tools or rely on domain-specific solvers.
@@ -27,9 +27,9 @@ It enables tool-independent coupling but introduces a coupling error that is abs
 
 The three approaches differ in how model formulation and numerical solving are distributed.
 Monolithic simulation uses one environment and one solver for the complete equation system.
-Model exchange separates model authoring from integration, but still relies on a host solver for the coupled system.
+Strong coupling separates model authoring from integration, but still relies on a host solver for the coupled system.
 Co-simulation distributes both model execution and numerical solving across simulation units.
-This enables tool-independent coupling, but introduces coupling errors through discrete data exchange.
+The coupling error in co-simulation arises from the discrete data exchange at communication points.
 In the case study of this thesis, a monolithic Modelica model is used as the numerical reference for the co-simulation results.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,7 +37,7 @@ In the case study of this thesis, a monolithic Modelica model is used as the num
 \label{sec:232_cosim_formulation}
 
 \paragraph{Internal Subsystem Model.}
-Each subsystem~$i$ is internally described by the semi-explicit DAE form introduced in Section~\ref{sec:212_ode_dae}, with differential state vector~$x_i$, algebraic variable vector~$z_i$, input vector~$u_i$, and output vector~$y_i$.
+Each subsystem~$i$ is internally described by the semi-explicit \ac{DAE} form introduced in Section~\ref{sec:212_ode_dae}, with differential state vector~$x_i$, algebraic variable vector~$z_i$, input vector~$u_i$, and output vector~$y_i$.
 For hybrid subsystems, the continuous-time model is extended by the event indicators and reset maps of Section~\ref{sec:221_hybrid_system_representation}.
 In co-simulation, the master algorithm has no access to the internal functions $f_i$, $g_i$, or $h_i$.
 It interacts with each subsystem exclusively through the interface of a simulation unit, defined next.
@@ -207,9 +207,10 @@ These form groups of simulation units whose interface variables depend on each o
 
 \paragraph{Condensed Graph.}
 
-For scheduling purposes, each algebraic loop is collapsed to a single \emph{loop block}, which yields an acyclic condensed graph (see Figure~\ref{fig:dependency_graph}c).
-Topological generations of this condensed graph define the execution stages used by the master algorithm~\cite{gomes_co-simulation_2018,petridis_test_2015}.
-Independent simulation units within one generation may be evaluated in parallel, whereas an algebraic loop block within that generation requires an additional interface-consistency treatment before its participating units can advance.
+For scheduling purposes, each algebraic loop is collapsed to a single \emph{loop block}.
+The result is a condensed \ac{DAG} (see Figure~\ref{fig:dependency_graph}c).
+Topological generations of this graph define the execution stages used by the master algorithm~\cite{gomes_co-simulation_2018,petridis_test_2015}.
+Independent simulation units within one generation may be evaluated in parallel, whereas an algebraic-loop block within that generation requires an additional interface-consistency treatment before its participating units can advance.
 
 \begin{figure}[t]
     \centering
@@ -327,7 +328,7 @@ The zero-step operator $\operatorname{step}_i(\cdot,0)$ introduced in Section~\r
 
 This formulation makes explicit that algebraic-loop treatment acts only on interface variables and does not require access to the internal equations of the participating simulation units.
 In the present thesis, algebraic loops are resolved by an interface Jacobian-based procedure~\cite{sicklinger_interface_2014}.
-The concrete realization used in \syssimx{}, including the SCC-local formulation, numerical Jacobian approximation, and convergence handling, is described in Chapter~\ref{chap:implementation}.
+The concrete realization used in \syssimx{}, including the \ac{SCC}-local formulation, numerical Jacobian approximation, and convergence handling, is described in Chapter~\ref{chap:implementation}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hybrid Co-Simulation}
@@ -366,29 +367,29 @@ The concrete realization used in \syssimx{}, including event localization, state
 \label{sec:237_cosim_fmi}
 
 The co-simulation concepts introduced above assume that each simulation unit exposes an interface for variable exchange, time advancement, and structural metadata.
-The \ac{FMI} standard provides such a tool-independent interface for packaged simulation models~\cite{FMI2.0}.
+The \ac{FMI} standard provides such a tool-independent interface for packaged simulation models~\cite{modelica_association_project_fmi_functional_2014}.
 In this thesis, the practically relevant case is \ac{FMI}~2.0 Co-Simulation.
 
 An \ac{FMU} is a portable model package.
-It combines a standardized C interface, an XML model description, and the binaries or source code required for execution.
+It combines a standardized C interface, a machine-readable model description, and the binaries or source code required for execution.
 The file \texttt{modelDescription.xml} declares the exposed variables, including causality, variability, data type, and physical units.
-It therefore provides the importing environment with static interface information without exposing the original model equations~\cite{FMI2.0}.
+It therefore provides the importing environment with static interface information without exposing the original model equations~\cite{modelica_association_project_fmi_functional_2014}.
 
-\ac{FMI} distinguishes between Model Exchange and Co-Simulation.
-In Model Exchange, the importing environment provides the numerical solver.
-In Co-Simulation, the \ac{FMU} retains its own internal solver and is advanced through standardized interface calls.
-The importing environment provides the master algorithm and interacts with the FMU as a black-box simulation unit.
-The master algorithm stages input values, requests time advancement, and retrieves outputs, but it does not access the internal equations or solver state of the FMU directly.
+\ac{FMI} distinguishes between \emph{Model Exchange} and \emph{Co-Simulation}.
+In \emph{Model Exchange}, the importing environment provides the numerical solver.
+In \emph{Co-Simulation}, the \ac{FMU} retains its own internal solver and is advanced through standardized interface calls.
+The importing environment provides the master algorithm and interacts with the \ac{FMU} as a black-box simulation unit.
+The master algorithm stages input values, requests time advancement, and retrieves outputs, but it does not access the internal equations or solver state of the \ac{FMU} directly.
 
 For the structural-analysis concepts of this thesis, the most important part of the FMI metadata is the \texttt{ModelStructure} element.
 It declares dependencies between exposed variables and thereby communicates direct-feedthrough and related structural information to the master algorithm.
-This metadata enables the importing environment to derive dependency relations, execution orderings, and algebraic-loop candidates without inspecting the internal model equations~\cite{FMI2.0}.
+This metadata enables the importing environment to derive dependency relations, execution orderings, and algebraic-loop candidates without inspecting the internal model equations~\cite{modelica_association_project_fmi_functional_2014}.
 
 The FMI standard also defines an initialization phase and a set of capability flags.
-The initialization phase is important because coupled initialization is not purely local since initial outputs of one FMU may define initial inputs of another.
-Capability flags describe which optional services an FMU provides.
+The initialization phase is important because coupled initialization is not purely local since initial outputs of one \ac{FMU} may define initial inputs of another.
+Capability flags describe which optional services an \ac{FMU} provides.
 In the context of this thesis, particularly relevant examples are \texttt{canGetAndSetFMUstate}, \texttt{canHandleVariableCommunicationStepSize}, and \texttt{providesDirectionalDerivative}, since such capabilities constrain whether rollback-based event handling, adaptive communication, or derivative-assisted interface iterations are available.
 
-Thus, FMI standardizes the interface contract of a simulation unit, but it does not prescribe the master algorithm of the coupled scenario.
+Thus, \ac{FMI} standardizes the interface contract of a simulation unit, but it does not prescribe the master algorithm of the coupled scenario.
 Execution ordering, algebraic-loop treatment, hybrid event handling, and the establishment of a consistent coupled initialization remain the responsibility of the importing framework~\cite{gomes_co-simulation_2019}.
-The concrete FMI~2.0 wrapper used in \syssimx{} is described in Sections~\ref{sec:impl_component_interface} and~\ref{sec:impl_fmu}.
+The concrete \ac{FMI}~2.0 wrapper used in \syssimx{} is described in Sections~\ref{sec:impl_component_interface} and~\ref{sec:impl_fmu}.

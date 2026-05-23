@@ -53,6 +53,13 @@ It should be written explicitly when a named time instant such as $t_0$, $T_k$, 
 | $H$ | Generic requested step duration | Simulation-unit interface or generic co-simulation operator |
 | $\Delta t_{i,r}$ | Internal step size of subsystem $i$ at local step $r$ | Internal stepping between communication points |
 
+In implementation and case-study prose, the scalar symbol $\Delta t$ may be used
+as an abbreviation for a constant macro communication step size when the
+communication-point index is not relevant. This abbreviation refers to $H_k$,
+not to an internal solver step. Internal step sizes remain denoted by
+$\Delta t_{i,r}$ or by a locally defined variant such as
+$\Delta t_{\mathrm{FE}}$.
+
 ## 2.2 Continuous-Time and DAE Models
 
 | Symbol | Meaning | Usage |
@@ -251,7 +258,7 @@ The following conventions are fixed.
 | Physical time | $t$ | `t` |
 | Initial time | $t_0$ | `t0` |
 | Final time | $t_f$ | `tf` |
-| Macro step size | $H_k$ or $T_{k+1}-T_k$ | `dt` in `System.run()` and `Algorithm.step()` |
+| Macro step size | $H_k$, $T_{k+1}-T_k$, or scalar $\Delta t$ in Chapters 5--6 | `dt` in `System.run()` and `Algorithm.step()` |
 | Continuous state | $x_i$ | backend-internal state, exposed via `get_state()` / `set_state()` |
 | Algebraic variables | $z_i$ | backend-internal variables, usually not explicit in `CoSimComponent` |
 | Input | $u_i$ | `inputs`, `set_inputs()` |
@@ -271,6 +278,10 @@ The following conventions are fixed.
 # 6. Practical Usage Rules
 
 - Use the symbols in this document as the default notation for Chapter 2.
+- Use scalar $\Delta t$ only as the implementation and case-study abbreviation
+  for a macro communication step. Do not use scalar $\Delta t$ for an internal
+  subsystem solver step unless a local subsection explicitly defines that local
+  convention.
 - If a local subsection introduces additional symbols, define only the symbols that are new in that subsection.
 - If a symbol listed here is not used anymore in the thesis text, remove it from this document before regenerating the Chapter 2 notation table.
 - Do not duplicate symbol choices in `research/guideline.md`; that file should refer here instead.

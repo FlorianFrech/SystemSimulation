@@ -260,16 +260,9 @@ Before considering Chapter 3 polished, check:
 
 Items pending before Chapter 3 can be considered finalized.
 
-- Add bib entries and `\cite{...}` calls for the alternatives named in §3.2.2 (Musculoskeletal Modeling):
-  - **AnyBody Modeling System**: suggested reference `damsgaard_analysis_2006` (Damsgaard et al., 2006) or the AnyBody Technology corporate reference.
-  - **MuJoCo**: suggested reference `todorov_mujoco_2012` (Todorov, Erez, Tassa, 2012).
-  - Add citations at first mention in the *Alternatives considered* paragraph and in `tab:musc_tool_comparison`.
-- Fix the CoFMPy bib key used in §3.2.2:
-  - Current key: `friedrich_cofmupy_nodate` (contains a spelling error and `_nodate` suffix).
-  - Correct key: `friedrich_cofmpy_2025`.
-  - Add the DOI `10.1109/MODELS-C68889.2025.00027` and the year 2025 to the bib entry.
-  - Update all uses across `12_state_of_the_art.tex`, `32_tool_comparison.tex`, and the planned §7.1 paragraph.
-  - The framework name in prose is *CoFMPy* (no `u`); fix the typo *CoFmuPy* at [12_state_of_the_art.tex:83](../chapters/1_introduction/12_state_of_the_art.tex#L83).
+- ~~Add bib entries and `\cite{...}` calls for the alternatives named in §3.2.2 (Musculoskeletal Modeling)~~ **Resolved** (2026-05-19 audit). `damsgaard_analysis_2006` and `todorov_mujoco_2012` are now cited in `32_tool_comparison.tex:126,128`. Verify the bib entries exist with the next full compile.
+- ~~Fix the CoFMPy bib key used in §3.2.2~~ **Resolved** (2026-05-19 audit). The source now uses `friedrich_cofmpy_2025`. Note: a duplicate `friedrich_cofmpy_2025-1` entry exists in `references.bib` and is uncited — delete the duplicate.
+- ~~Fix the *CoFmuPy* typo at `12_state_of_the_art.tex:83`~~ **Resolved** (2026-05-19 audit). Grep confirms no `CoFmuPy` occurrence remains in the thesis sources.
 
 ## CoFMPy Note for §3.2.2
 
@@ -283,3 +276,38 @@ The framework-level contribution boundary against CoFMPy belongs in Chapter 7.
 
 Chapter 3 should say what the framework must do, what features realize each capability, and which external tools the framework depends on.
 Everything else belongs in another chapter.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Open items from the structural + cross-reference audit.
+
+### Medium Priority
+
+- **[Open] Short-form captions missing on the four UR/SR tables.**
+  Bare `\caption{...}` at `311_general_modeling.tex:15`,
+  `312_heterogeneous.tex:15`, `313_simulation.tex:17`,
+  `314_interaction.tex:12`. Convert to
+  `\caption[<short>]{<long>}` per `writing_style.md` §10/§21.
+  Short forms can be the existing titles
+  ("User and system requirements: General system modeling", etc.).
+- **[Open] Short-form caption missing on the equation-based tool table.**
+  `32_tool_comparison.tex:45`. The other three tool-comparison tables
+  in §3.2 already use `\caption[...]{...}` — only this one is bare.
+
+### Low Priority
+
+- **[Open] Duplicate CoFMPy bib entry.**
+  `references.bib` contains both `friedrich_cofmpy_2025` (`@article`) and
+  `friedrich_cofmpy_2025-1` (`@book` with DOI). The `-1` entry is uncited
+  in the thesis. Delete the duplicate and, if needed, copy the DOI to
+  the surviving entry. The natural type for the MODELS Companion 2025
+  paper is `@inproceedings`.
+- **[Open] Zotero auto-generated bib keys.**
+  Several bib entries use `noauthor_*_nodate` keys, indicating Zotero
+  imports without author/date fields:
+  `noauthor_simulink_nodate`, `noauthor_simscape_nodate`,
+  `noauthor_calculix_nodate`, `noauthor_omsimulator_nodate`,
+  `andersson_pyfmi_nodate`, `schoberl_c11_nodate`. Replace with proper
+  author/year keys where possible.

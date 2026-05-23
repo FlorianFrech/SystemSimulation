@@ -44,11 +44,13 @@ When the dependence on time is clear from context, the argument $(t)$ may be omi
         $\mathcal{U}_i$ & Set of input ports of simulation unit $i$ \\
         $\mathcal{Y}_i$ & Set of output ports of simulation unit $i$ \\
         $\mathcal{V}_i$ & Value domain of the ports of simulation unit $i$ \\
+        $j \rightarrow i$ & Directed dependency edge from producer simulation unit $j$ to consumer simulation unit $i$ \\
         $\mathcal{U}$ & Global set of indexed input ports \\
         $\mathcal{Y}$ & Global set of indexed output ports \\
         $F_i$ & Direct-feedthrough relation of simulation unit $i$ \\
         $\mathcal{L}$ & Set of directed port connections in a co-simulation scenario \\
         $\mathcal{C}$ & Co-simulation scenario \\
+        $A \subseteq I$ & Set of simulation units in one algebraic loop \\
         $\Gamma_i$ & Coupling operator mapping outputs to the inputs of simulation unit $i$ \\
         $\Gamma_A$ & Coupling operator restricted to one algebraic loop \\
         $\hat{u}_i(t)$ & Extrapolated input of simulation unit $i$ between communication points \\
@@ -69,3 +71,5 @@ When the dependence on time is clear from context, the argument $(t)$ may be omi
 In the physical and mathematical discussion, the term \emph{subsystem} denotes a constituent part of the modeled system.
 In a tool-neutral co-simulation context, the executable software unit that encapsulates a subsystem model is called a \emph{simulation unit}.
 In \emph{SysSimX}, the concrete realization of this concept is called a \emph{component} and is implemented through the \texttt{CoSimComponent} interface.
+
+In implementation and case-study contexts (Chapters 5–6), the macro step size is abbreviated as $\Delta t$ when the communication-point index is clear from context.

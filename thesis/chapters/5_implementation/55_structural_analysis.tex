@@ -2,11 +2,10 @@
 \section{Structural Analysis and Execution Ordering}
 \label{sec:impl_structural}
 
-The structural-analysis implementation derives persistent execution metadata from the registered system structure.
+The structural-analysis implementation derives persistent execution metadata for initialization and master-algorithm execution.
 It realizes \ref{req:SR-10-02} and \ref{req:SR-10-03} for execution ordering under \ref{req:UR-10}.
 It also realizes \ref{req:SR-11-02} for algebraic-loop detection under \ref{req:UR-11}.
-The analysis uses the registered components, signal connections, and direct-feedthrough information.
-Coupled initialization and the master algorithms consume the resulting metadata during simulation.
+The resulting metadata is computed once during initialization and reused during simulation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Inputs, Outputs, and Stored Metadata}
@@ -86,6 +85,8 @@ Downstream routines can therefore resolve the driver of an input port without tr
 \paragraph{Zero-Delay Graph and Active-Output Filter.}
 Execution ordering uses only instantaneous dependencies.
 The \texttt{\_dag} graph therefore contains only connections that contribute to direct feedthrough.
+The implementation stores this zero-delay dependency graph in \texttt{\_dag}.
+Despite its name, this graph may contain cycles before condensation.
 A connection into a component is inserted when the destination input influences at least one active output of that component.
 Figure~\ref{fig:struct_worked_b2} shows the resulting zero-delay graph for the worked example.
 The active-output filter removes dependencies that cannot affect another component during the same communication point.
@@ -138,14 +139,14 @@ After assembling the zero-delay graph, the graph builder detects instantaneous c
 It computes the strongly connected components of \texttt{\_dag} with NetworkX.
 Each component set with more than one node is stored as one loop block in \texttt{algebraic\_loops}.
 In Figure~\ref{fig:struct_worked_b2}, the dashed red boundary marks the detected loop block formed by components~B and~C.
-The IJCSA solver of Section~\ref{sec:impl_algebraic_loops} treats this block as an unordered set of interface unknowns and equations.
+The \ac{IJCSA} solver of Section~\ref{sec:impl_algebraic_loops} treats this block as an unordered set of interface unknowns and equations.
 
 \paragraph{Self-Loops.}
 A one-component algebraic loop arises when an outer connection feeds an active output of a component back into one of its own direct-feedthrough inputs.
 Such a configuration produces a self-loop in \texttt{\_dag}.
-Singleton SCCs are not sufficient to identify this case because isolated components are also returned as singleton sets.
+Singleton \acp{SCC} are not sufficient to identify this case because isolated components are also returned as singleton sets.
 A second pass therefore appends every node with a self-loop edge as a singleton entry of \texttt{algebraic\_loops}.
-This unified representation lets the IJCSA solver apply the same iteration scheme to multi-component and one-component loops.
+This unified representation lets the \ac{IJCSA} solver apply the same iteration scheme to multi-component and one-component loops.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Execution Order}
@@ -158,8 +159,9 @@ The resulting schedule is stored in \texttt{execution\_order} and consumed by in
 \paragraph{Condensation.}
 The condensation is obtained through \texttt{networkx.condensation()}.
 The result is a directed acyclic graph whose nodes are identifiers of the strongly connected components of \texttt{\_dag} and whose edges reflect the inter-component dependencies that survive the collapse.
+This condensed graph is the \ac{DAG} used for topological generation ordering.
 Figure~\ref{fig:struct_worked_d} shows the resulting condensed graph and the corresponding \texttt{execution\_order} before delayed-producer post-processing.
-The mapping from component names to condensation identifiers is stored in \texttt{\_scc\_index} so that the initialization loop and the IJCSA solver can locate the loop block of any component in constant time.
+The mapping from component names to condensation identifiers is stored in \texttt{\_scc\_index} so that the initialization loop and the \ac{IJCSA} solver can locate the loop block of any component in constant time.
 
 \paragraph{Topological Generations.}
 The condensed graph is acyclic and can therefore be ordered generation by generation.
@@ -225,7 +227,7 @@ The execution-order computation condenses this loop block into one generation an
     \addlinespace
     \texttt{algebraic\_loops}
       & Contains one loop block with components~B and~C
-      & One SCC is detected with member set \(\{B,C\}\) \\
+      & One \ac{SCC} is detected with member set \(\{B,C\}\) \\
     \addlinespace
     \texttt{execution\_order}
       & Places A before the loop block and D after delayed-producer relocation

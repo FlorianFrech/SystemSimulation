@@ -1,19 +1,15 @@
 \subsection{Multi-Model Component}
 \label{sec:architecture_multicomponent}
 
-The \texttt{MultiComponent} abstraction extends the component interface to several interchangeable model realizations of the same physical subsystem.
-It exposes one public component interface to the surrounding \texttt{System}.
-Internally, it owns a registry of compatible models and delegates execution to one active model at a time.
-This supports runtime switching between models with different fidelity levels or different modeling approaches.
+The \texttt{MultiComponent} abstraction extends the component interface to several interchangeable model realizations of one physical subsystem.
+It exposes one public component interface to the surrounding \texttt{System} and delegates execution to one active internal model.
+This supports runtime switching between models with different fidelity levels or modeling approaches.
 
-Figure~\ref{fig:multi_component} shows this architecture.
-The public layer exposes the same port interface as a regular \texttt{CoSimComponent}.
-The internal layer contains the registered model realizations.
-The switching-support layer contains the responsibilities used to change the active model.
+Figure~\ref{fig:multi_component} shows the public interface, the internal model registry, and the switching-support responsibilities.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.72\textwidth]{figures/4_architecture/multi_model.pdf}
+  \includegraphics[width=0.7\textwidth]{figures/4_architecture/multi_model.pdf}
   \caption[Architectural view of the \texttt{MultiComponent} abstraction]{Architectural view of the \texttt{MultiComponent} abstraction.
   The wrapper exposes one unified component interface and delegates execution to one active model from a registered set.
   A mode selector, hysteresis, and state adapter together change the active model when the switching criteria require it.}
@@ -32,5 +28,3 @@ The state adapter maps the physical state exported by the outgoing model to a re
 The abstraction separates model choice from system assembly.
 The surrounding \texttt{System} connects only to the public interface of the \texttt{MultiComponent}.
 The implementation details of port unification, state transfer, and switching are described in Section~\ref{sec:impl_multi_model}.
-
-Chapter~\ref{chap:implementation} describes how the architectural abstractions introduced in this chapter are implemented and verified.

@@ -3,8 +3,8 @@
 
 This section describes the typed and unit-aware port system used by all \texttt{CoSimComponent} instances.
 It realizes \ref{req:SR-01-01} under \ref{req:UR-01} and \ref{req:SR-02-01}--\ref{req:SR-02-03} under \ref{req:UR-02}.
-The implementation provides the port interface introduced in Section~\ref{sec:architecture_cosimcomponent}.
-The same machinery supports connection validation, value propagation, history recording, and event-port creation.
+The port system implements the interface introduced in Section~\ref{sec:architecture_cosimcomponent}.
+It also supports connection validation, value propagation, history recording, and event-port creation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Specification and State}
@@ -23,17 +23,15 @@ The \texttt{PortState} class stores the current value and validates every runtim
 \end{figure}
 
 \paragraph{Port Types.}
-Table~\ref{tab:impl_port_types} lists the supported data types.
-They are implemented by the \texttt{PortType} enumeration.
+Table~\ref{tab:impl_port_types} lists the data types represented by the \texttt{PortType} enumeration.
 Physical units are allowed only for \texttt{REAL} ports.
 The \texttt{EVENT} type represents boolean trigger ports.
-Such ports are created automatically for registered event indicators during component initialization, as described in Section~\ref{sec:impl_component_interface}.
+Event ports are created automatically for registered event indicators during component initialization, as described in Section~\ref{sec:impl_component_interface}.
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Supported port data types in the \texttt{PortType} enumeration.}
-  \label{tab:impl_port_types}
+  \caption[Supported port data types]{Supported port data types in the \texttt{PortType} enumeration.}  \label{tab:impl_port_types}
   \begin{tabular}{lll}
     \toprule
     \textbf{Type}   & \textbf{Python value}                    & \textbf{Unit allowed} \\
@@ -71,14 +69,14 @@ Port states are instantiated from the registered specifications during component
 \subsection{Physical Unit Handling}
 \label{sec:impl_units}
 
-Physical units are handled through Pint~\cite{grecco_pint_nodate}.
+Physical units are handled through Pint~\cite{grecco_pint_2026}.
 The framework uses one shared unit registry for all ports and components.
 Unit checks occur at three points.
 First, unit strings are validated when a \texttt{PortSpec} is constructed.
 Second, \texttt{System.\_validate\_connection()} checks dimensional compatibility between connected ports through \texttt{PortSpec.compatible()}.
 Third, \texttt{PortState.set()} converts incoming values to the declared port unit and rejects incompatible dimensions.
 
-FMI~2.0 FMUs exported from OpenModelica may use compact unit strings such as \texttt{"m.s-2"} for $\mathrm{m}\,\mathrm{s}^{-2}$.
+\ac{FMI}~2.0 \acp{FMU} exported from OpenModelica may use compact unit strings such as \texttt{"m.s-2"} for $\mathrm{m}\,\mathrm{s}^{-2}$.
 These strings are normalized before they are passed to Pint.
 This keeps the public port interface consistent even when backend tools use different unit-string conventions.
 
@@ -86,14 +84,13 @@ This keeps the public port interface consistent even when backend tools use diff
 \subsection{Verification}
 
 The port-system verification checks the acceptance and rejection behavior of the runtime value layer.
-The representative cases in Table~\ref{tab:port_verification} cover type validation, unit compatibility, automatic conversion, and FMI unit-string normalization.
+The representative cases in Table~\ref{tab:port_verification} cover type validation, unit compatibility, automatic conversion, and \ac{FMI} unit-string normalization.
 Together, these cases confirm that invalid values and incompatible connections are rejected before they can affect a simulation run.
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Acceptance and rejection cases for port values and port connections.}
-  \label{tab:port_verification}
+  \caption[Port verification cases]{Acceptance and rejection cases for port values and port connections.}  \label{tab:port_verification}
   \begin{tabular}{lll}
     \toprule
     \textbf{Operation}                       & \textbf{Input}     & \textbf{Result}                     \\
@@ -104,7 +101,7 @@ Together, these cases confirm that invalid values and incompatible connections a
     Connect \texttt{m/s} $\to$ \texttt{km/h} & n/a                & compatible (same dimension)         \\
     Connect \texttt{m/s} $\to$ \texttt{N}    & n/a                & incompatible (different dimension)  \\
     Connect \texttt{REAL} $\to$ \texttt{INT} & n/a                & incompatible (type mismatch)        \\
-    Normalize FMI unit string                & \texttt{"m.s-2"}   & parsed as $\text{m}\,\text{s}^{-2}$ \\
+    Normalize \ac{FMI} unit string           & \texttt{"m.s-2"}   & parsed as $\text{m}\,\text{s}^{-2}$ \\
     \bottomrule
   \end{tabular}
 \end{table}

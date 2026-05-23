@@ -4,11 +4,11 @@
 
 The numerical references define the comparison basis for the scenarios in Section~\ref{sec:case_study_scenarios}.
 The baseline and contact scenarios are compared with monolithic OpenModelica models of the corresponding closed-loop configuration.
-The performance scenario uses a full-FEM co-simulation run as the high-fidelity benchmark.
+The performance scenario uses a full-\ac{FEM} co-simulation run as the high-fidelity benchmark.
 All references are numerical comparison models.
 No experimental ground truth is used.
 
-The case-study scenarios are reproducible from the \syssimx{} repository.
+The case-study scenarios are reproducible from the \syssimx{} repository and documentation~\cite{frech_syssimx_2026}.
 The scenario notebooks define the co-simulation configurations used for the figures in this chapter.
 The OpenModelica reference models belong to the controlled-pendulum Modelica package.
 The reference trajectories are exported once and loaded by the plotting scripts.
@@ -19,13 +19,13 @@ Reproducing the exported reference trajectories requires OpenModelica \texttt{1.
 Table~\ref{tab:case_reference_models} lists the monolithic reference models used in the reported scenario evaluation.
 Each reference contains the setpoint, controller, actuator, sensor blocks when required, and pendulum plant in one equation-based system.
 Both references start at $0\,\mathrm{s}$ and use an output interval of $10^{-3}\,\mathrm{s}$.
-The baseline reference stops at $2\,\mathrm{s}$.
-The contact reference stops at $1\,\mathrm{s}$.
+The baseline reference stops at $1\,\mathrm{s}$.
+The contact reference stops at $0.4\,\mathrm{s}$.
 
 \begin{table}[tbp]
   \centering
   \small
-  \caption{Monolithic OpenModelica reference models used in the case study.}
+  \caption[Monolithic OpenModelica reference models]{Monolithic OpenModelica reference models used in the case study.}
   \label{tab:case_reference_models}
   \begin{tabular}{p{4.0cm} p{5.0cm} p{5.2cm}}
     \toprule
@@ -43,29 +43,29 @@ The contact reference stops at $1\,\mathrm{s}$.
 \end{table}
 
 \paragraph{Solver Configuration.}
-The OpenModelica reference simulations use DASSL.
-OpenModelica describes DASSL as an implicit BDF-based multistep solver with adaptive order and adaptive step-size control.
-The exported reference trajectories use \(\texttt{startTime}=0\), \(\texttt{stopTime}=0.4\), \(\texttt{stepSize}=10^{-3}\,\mathrm{s}\), \(\texttt{tolerance}=10^{-6}\), and \(\texttt{solver}=\texttt{dassl}\).
+The OpenModelica reference simulations use \ac{DASSL}.
+OpenModelica describes \ac{DASSL} as an implicit \ac{BDF}-based multistep solver with adaptive order and adaptive step-size control~\cite{openmodelica_users_guide_2026}.
+The exported reference trajectories use \(\texttt{startTime}=0\), \(\texttt{stepSize}=10^{-3}\,\mathrm{s}\), \(\texttt{tolerance}=10^{-6}\), and \(\texttt{solver}=\texttt{dassl}\).
 The stored step size defines the output spacing of the reference trajectory.
-DASSL selects its internal integration steps adaptively.
+\ac{DASSL} selects its internal integration steps adaptively.
 
-The Co-Simulation FMUs use CVODE as their default internal solver.
-OpenModelica describes CVODE as a SUNDIALS solver for ordinary differential equation initial-value problems.
-The exported stiff configuration uses variable-order and variable-step BDF integration with order 1 to 5.
+\ac{FMI} Co-Simulation \acp{FMU} use \ac{CVODE} as their default internal solver.
+OpenModelica describes \ac{CVODE} as a \ac{SUNDIALS} solver for ordinary differential equation initial-value problems~\cite{openmodelica_users_guide_2026}.
+The exported stiff configuration uses variable-order and variable-step \ac{BDF} integration with order 1 to 5.
 The co-simulation macro step is set by the master algorithm.
-It is separate from the internal FMU solver steps.
+It is separate from the internal \ac{FMU} solver steps.
 
 \paragraph{Full-FEM Benchmark Reference.}
-The performance benchmark uses a full-FEM co-simulation run as its reference.
-In this run, the FEM pendulum remains active over the full trajectory.
+The performance benchmark uses a full-\ac{FEM} co-simulation run as its reference.
+In this run, the \ac{FEM} pendulum remains active over the full trajectory.
 The switched \texttt{MasterPendulum} run is then compared against this high-fidelity benchmark.
-The benchmark measures the computational benefit of switching relative to the trajectory deviation against full-FEM execution.
+The benchmark measures the computational benefit of switching relative to the trajectory deviation against full-\ac{FEM} execution.
 
 \paragraph{Compared Quantities.}
 The main trajectory variable is the pendulum angle $\theta$.
 For the baseline scenario, the angle is compared across multiple macro step sizes.
-For the multi-model contact scenario, the contact event time and the PID integrator state are also evaluated.
-For the performance scenario, wall-clock runtime and FEM-active time are reported in addition to the trajectory deviation.
+For the multi-model contact scenario, the contact event time and the \ac{PID} integrator state are also evaluated.
+For the performance scenario, wall-clock runtime and \ac{FEM}-active time are reported in addition to the trajectory deviation.
 
 \paragraph{Trajectory Error.}
 All trajectory errors are evaluated on a common comparison grid.
@@ -84,13 +84,14 @@ The maximum angle error is
   =
   \max_j |e_{\theta,j}| .
 \end{equation}
+Let $w_j=t_{j+1}-t_j$ denote the quadrature weight on the comparison grid.
 The integrated angle error is
 \begin{equation}
   E_{2,\theta}
   =
   \left(
     \frac{1}{T - T_0}
-    \sum_j e_{\theta,j}^{2}\,\Delta t_j
+    \sum_j e_{\theta,j}^{2}\,w_j
   \right)^{1/2}.
 \end{equation}
 The maximum error identifies the worst trajectory deviation.
@@ -120,7 +121,7 @@ The trajectory is expected to approach the monolithic reference as \(\Delta t\) 
 A scenario is interpreted as numerically verified when \(E_{\infty,\theta}\) and \(E_{2,\theta}\) decrease under refinement and the remaining deviations match the stated modeling differences.
 
 \paragraph{Performance Criterion.}
-The performance benchmark compares full-FEM execution with a switched configuration that activates FEM only near contact.
-The full-FEM run defines the high-fidelity benchmark for this comparison.
+The performance benchmark compares full-\ac{FEM} execution with a switched configuration that activates \ac{FEM} only near contact.
+The full-\ac{FEM} run defines the high-fidelity benchmark for this comparison.
 The switched configuration is evaluated by its trajectory deviation against this benchmark and by its reduction in computational cost.
-The computational benefit is reported as wall-clock speedup and reduction of FEM-active simulated time.
+The computational benefit is reported as wall-clock speedup and reduction of \ac{FEM}-active simulated time.

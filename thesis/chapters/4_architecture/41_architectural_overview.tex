@@ -4,7 +4,7 @@
 Figure~\ref{fig:syssimx_architecture} summarizes the layered architecture of \syssimx{}.
 It shows how user code delegates simulation tasks to framework layers and external simulation backends.
 The framework contains four internal layers.
-The adapter layer maps backend APIs to the component interface.
+The adapter layer maps backend \acp{API} to the component interface.
 The core abstraction layer defines components, ports, connections, and multi-model components.
 The system-orchestration layer owns the assembled system structure.
 The execution layer advances the system through interchangeable algorithms.
@@ -26,25 +26,25 @@ The following paragraphs describe the layers from the external tools upward.
   \includegraphics[width=\textwidth]{figures/4_architecture/syssimx_architecture.pdf}
   \caption[Layered architecture of \syssimx{}]{Layered architecture of the \syssimx{} framework.
   Solid arrows show delegation between framework layers.
-  Dashed arrows show calls to external tool APIs across the framework boundary.}
+  Dashed arrows show calls to external tool \acp{API} across the framework boundary.}
   \label{fig:syssimx_architecture}
 \end{figure}
 
 \paragraph{External simulation tools.}
 External simulation tools provide the backend model representations and numerical solvers.
-They include FMI~2.0 Co-Simulation FMUs exported from equation-based modeling environments, OpenSim for musculoskeletal dynamics, and Netgen/NGSolve for finite element analysis.
+They include \ac{FMI}~2.0 Co-Simulation \acp{FMU} exported from equation-based modeling environments, OpenSim for musculoskeletal dynamics, and Netgen/NGSolve for finite element analysis.
 Each backend provides its own solver, model representation, and programmatic Python interface.
-\syssimx{} accesses these backends through their respective APIs.
+\syssimx{} accesses these backends through their respective \acp{API}.
 
 \paragraph{Adapter layer.}
 The adapter layer connects external simulation tools to the common \texttt{CoSimComponent} contract.
 Each adapter translates the runtime interface of one backend into framework-level ports, parameters, lifecycle operations, and optional capabilities.
 The amount of translation depends on the backend.
-FMUs already provide standardized metadata and co-simulation calls.
-OpenSim and Netgen/NGSolve require more model-specific wrapper code because their Python APIs expose simulation objects rather than FMI-style descriptors.
+\acp{FMU} already provide standardized metadata and co-simulation calls.
+OpenSim and Netgen/NGSolve require more model-specific wrapper code because their Python \acp{API} expose simulation objects rather than \ac{FMI}-style descriptors.
 
 This layer keeps the framework core tool-agnostic.
-The layers above interact with all backends through the same component contract, while the backend-specific API calls remain inside the adapters.
+The layers above interact with all backends through the same component contract, while the backend-specific \ac{API} calls remain inside the adapters.
 
 \paragraph{Core abstractions.}
 The core abstraction layer defines the architectural primitives of the framework.
@@ -64,7 +64,6 @@ The \texttt{System} abstraction owns the coupling relation between them.
 
 This layer realizes the separation between model behavior and orchestration.
 The structural concepts used by this layer are introduced in Section~\ref{sec:233_cosim_structural_analysis}.
-Their implementation is described in Chapter~\ref{chap:implementation}.
 
 \paragraph{Execution layer.}
 The execution layer contains the master algorithms that advance the coupled system in time.

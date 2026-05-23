@@ -3,9 +3,10 @@
 \label{sec:discussion_outlook}
 
 Future work should first extend the master algorithms with adaptive and error-controlled macro stepping.
+Local communication-step error estimates provide a theoretical basis for such control, but they must account for the direct-feedthrough structure of the coupled system and for the internal integration errors of the heterogeneous backends~\cite{arnold_error_2013}.
 Such an extension requires rollback-aware step rejection and clear fallback rules for backends that cannot restore arbitrary past states.
 Hybrid event handling should also use an exact physical-time representation.
-A tick-based time base would make event ordering independent of floating-point comparisons.
+A integer-based time base would make event ordering independent of floating-point comparisons.
 
 Algorithmic scalability should be improved in two places.
 The algebraic-loop solver could reuse Jacobians when the local loop structure is constant.
@@ -24,6 +25,11 @@ In such a workflow, one simulated component is replaced by a physical device tha
 This use case would add requirements that are not addressed by the present framework.
 The master algorithm would require bounded execution time, deterministic scheduling, real-time communication interfaces, and defined behavior for missed deadlines.
 These requirements are especially relevant when a controller, actuator, or sensor is connected as physical hardware while the surrounding plant remains simulated.
+
+A further comparison could evaluate \syssimx{} against CoFMPy on the controlled-pendulum scenario.
+The FMU-only baseline could be rebuilt in CoFMPy to compare trajectory agreement, runtime, and available master algorithms.
+The comparison could also test whether CoFMPy's Python FMU proxy can represent the OpenSim and FEM pendulum wrappers.
+This would clarify which parts of the \syssimx{} workflow are covered by an FMI-centered Digital-Twin framework and which parts require the heterogeneous hybrid orchestration developed in this thesis.
 
 Finally, the user-facing diagnostics of the framework should be expanded.
 The structural-analysis metadata, algebraic-loop blocks, event traces, switching decisions, and benchmark measurements are already available internally or through selected visualizations.

@@ -158,26 +158,21 @@ Use this list for the next Chapter 4 polishing pass.
 
 ### High Priority
 
-- Replace or simplify the system architecture figure in
-  `422_system_connections.tex`.
-  The current figure/caption must not show the result of
-  `system.initialize(t0)`, dependency graphs, execution-order indices, or
-  SCC shading.
-  Chapter 4 should show only the user-defined `System`: components, typed
-  ports, signal connections, one event connection, and direct-feedthrough
-  markers.
-- Rewrite the `System orchestration` paragraph in
-  `41_architectural_overview.tex`.
-  Remove implementation-level statements about dependency graph construction,
-  topological sorting, direct-feedthrough identification, and SCC-based
-  algebraic-loop detection.
-  Keep only the architectural responsibility and refer to Chapter 5 for the
-  implementation.
-- Reduce API-level detail in `423_algorithms.tex`.
-  Avoid method signatures such as `step(system, t, dt)` and implementation
-  behavior such as automatic hybrid-algorithm upgrades.
-  Explain algorithms as interchangeable orchestration strategies that operate
-  on a `System`.
+All three high-priority items from the previous Chapter 4 pass are
+resolved as of the 2026-05-19 structural audit.
+
+- ~~System architecture figure in `422_system_connections.tex`~~
+  **Resolved.** The current figure shows the user-defined system
+  (components, typed ports, signal/event connections, feedthrough
+  markers) without derived graphs or SCC shading.
+- ~~System orchestration paragraph in `41_architectural_overview.tex`~~
+  **Resolved.** Implementation-level dependency-graph wording has been
+  removed; the paragraph now describes architectural responsibility and
+  refers to Chapter 5 for the implementation.
+- ~~API-level detail in `423_algorithms.tex`~~
+  **Resolved.** Method signatures and the automatic-upgrade behavior
+  have been removed. Algorithms are now presented as interchangeable
+  orchestration strategies on a `System`.
 
 ### Medium Priority
 
@@ -205,8 +200,36 @@ Use this list for the next Chapter 4 polishing pass.
 
 ### Suggested Order
 
-1. Fix Section 4.2.2 and the system figure first.
-2. Clean the architectural overview.
-3. Polish the algorithm subsection.
+1. ~~Fix Section 4.2.2 and the system figure first.~~ Resolved.
+2. ~~Clean the architectural overview.~~ Resolved.
+3. ~~Polish the algorithm subsection.~~ Resolved.
 4. Run a final style pass for captions, semicolons, double spaces, and
    cross-references.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Open items from the structural + cross-reference audit.
+
+### Medium Priority
+
+- **[Open] Macro step notation inconsistency.**
+  `423_algorithms.tex:9` uses `$\Delta t$` for the macro step size, while
+  Chapter 2 notation (`notation.md` and the Chapter 2 table) defines
+  `$H_k = T_{k+1} - T_k$`. See the cross-cutting notation note added to
+  Chapter 2 (dual-usage clarification) or change Chapter 4 to `H_k`.
+
+### Low Priority
+
+- **[Open] Short captions contain inline macros.**
+  Figure captions in `421_cosimcomponent.tex`, `422_system_connections.tex`,
+  and `424_multimodel.tex` use `\texttt{}` and `\syssimx{}` inside the
+  short-form bracket. `writing_style.md` §10 recommends avoiding macros
+  in the short form because they can mis-render in the LoF. Verify
+  after the next full compile; replace with plain English noun phrases
+  if the rendering is problematic.
+- **[Open] Hard-coded vertical-spacing tweaks.**
+  `\vspace{-1em}` and `\vspace{-0.5em}` appear around figures in
+  `421_cosimcomponent.tex` and `422_system_connections.tex`. Re-tune
+  after the final compile pass.

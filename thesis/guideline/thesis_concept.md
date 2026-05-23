@@ -103,14 +103,16 @@ The thesis follows this argument.
    different modeling tools and execution semantics.
 2. Co-simulation provides the conceptual basis for coupling executable
    subsystem models.
-3. The framework architecture defines the abstractions needed to represent
+3. Requirements derived from the target application scenario define the
+   framework capabilities and justify the choice of external modeling tools.
+4. The framework architecture defines the abstractions needed to represent
    components, ports, connections, systems, and algorithms.
-4. The implementation realizes these abstractions in `syssimx` and verifies
+5. The implementation realizes these abstractions in `syssimx` and verifies
    the main features in focused scenarios.
-5. The controlled-pendulum case study evaluates the combined workflow on a
+6. The controlled-pendulum case study evaluates the combined workflow on a
    closed-loop system with heterogeneous plant models, contact events, and
    model switching.
-6. The discussion interprets what the framework demonstrates, where the
+7. The discussion interprets what the framework demonstrates, where the
    results are limited, and what remains for future work.
 
 ---

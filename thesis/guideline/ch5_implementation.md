@@ -76,10 +76,10 @@ It must be read together with the following documents.
 - No new standalone implementation sections should be added unless a missing requirement cannot be covered by an existing section.
 
 ### Required cleanup before calling the draft complete
-- Remove the obsolete reference to `sec:impl_visualization` from `5_implementation.tex`.
+- ~~Remove the obsolete reference to `sec:impl_visualization` from `5_implementation.tex`.~~ **Resolved** (2026-05-19 audit: grep confirms 0 matches in thesis sources).
 - Keep the system graph visualizer as a short metadata-consumer paragraph in the structural-analysis section.
 - Do not reintroduce `510_visualization.tex` as a standalone section.
-- Ensure that the structural-analysis verification table is complete and referenced.
+- ~~Ensure that the structural-analysis verification table is complete and referenced.~~ **Resolved** (table at `55_structural_analysis.tex:212`).
 - Fix small prose and spelling issues before compilation.
 - Compile the full thesis and check unresolved references, float placement, and overfull boxes.
 
@@ -391,3 +391,35 @@ The polish pass should only reduce or align prose in these sections, not extend 
 2. Resolve the section-structure deviation in `56_algebraic_loops.tex`.
 3. Run a final style pass for the long sentences, repeated definitions, and verification-table captions.
 4. Compile the full thesis and check unresolved references, float placement, and overfull boxes.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Open items from the structural + cross-reference audit.
+
+### Medium Priority
+
+- **[Open] IJCSA not using the `\ac{}` macro.**
+  `IJCSA` is defined in `other/acronyms.tex` but appears as plain text
+  throughout Chapter 5 (e.g. `55_structural_analysis.tex:141,148,162`,
+  `56_algebraic_loops.tex`, `57_master_algorithms.tex:21,86`,
+  `59_multi_component.tex:141`). Use `\ac{IJCSA}` at the first occurrence
+  in §5.6 motivation, then let the acronym package handle subsequent
+  uses.
+- **[Open] Macro step notation inconsistency.**
+  Chapter 5 uses `$\Delta t$` for the macro step at
+  `531_fmu_component.tex:82`, `532_opensim_component.tex:82`,
+  `57_master_algorithms.tex:23,147`, `58_hybrid.tex:53,238`. Chapter 2
+  notation defines `$H_k$`. Either change Chapter 5 references to `H_k`
+  or add the dual-usage note to the Chapter 2 notation table (cheaper).
+  `\texttt{dt}` in `54_system.tex` is correct as a code identifier and
+  should remain.
+
+### Low Priority
+
+- **[Open] Short-form captions missing on verification tables.**
+  Tables in `51_port_system.tex:35,95`, `52_co_sim_component.tex:150`,
+  `531_fmu_component.tex:117`, `55_structural_analysis.tex:212`,
+  `59_multi_component.tex:33` use bare `\caption{...}`. Convert to
+  `\caption[<short>]{<long>}` per `writing_style.md` §10/§21.

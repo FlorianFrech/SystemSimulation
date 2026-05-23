@@ -468,3 +468,32 @@ Before accepting Chapter 1, check:
 
 Chapter 1 should move from problem to gap to contribution.
 Do not explain the solution before the reader understands why it is needed.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Status from the structural + cross-reference audit.
+
+### Resolved
+
+- ~~CoFMPy belongs in the frameworks paragraph, not next to the FMI libraries.~~ **Resolved.**
+  `12_state_of_the_art.tex:78` cites CoFMPy in the frameworks paragraph,
+  alongside OMSimulator and INTO-CPS Maestro. FMPy and PyFMI are in
+  the libraries paragraph.
+- ~~Bib key `friedrich_cofmpy_2025` is used.~~ **Resolved.** No
+  `friedrich_cofmupy_nodate` references remain.
+- ~~Prose typo `CoFmuPy`.~~ **Resolved.** Grep confirms 0 occurrences in
+  thesis sources.
+- ~~FMI introduced before FMU.~~ **Resolved.**
+  `12_state_of_the_art.tex:28` introduces `\ac{FMI}` before `\acp{FMU}`.
+- ~~Duplicate Gomes co-simulation key.~~ **Resolved.**
+  Chapter 1 now cites `gomes_co-simulation_2019` consistently.
+
+### Low Priority (Open)
+
+- **[Open] Zotero-imported bib keys.**
+  Several entries used in Chapter 1 still have placeholder keys:
+  `noauthor_omsimulator_nodate`, `lee_cyber_2008` (verify date),
+  `andersson_pyfmi_nodate`. Replace with proper author/year keys where
+  possible. See also the corresponding item in `ch3_requirements.md`.

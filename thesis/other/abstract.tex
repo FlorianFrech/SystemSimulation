@@ -1,5 +1,18 @@
 \chapter*{Abstract}
 
-An abstract should concisely summarize your research by first stating the motivation or problem your work addresses, followed by the specific objectives or research questions you aimed to answer. \newline
+System-level simulation of cyber-physical and biomechanical systems often requires subsystem models from different tools and modeling paradigms.
+These models keep their own solvers, interfaces, and event semantics, which makes direct integration in one monolithic solver impractical.
+Existing workflows based on the Functional Mock-up Interface support standardized coupling, but provide limited combined support for tool-specific models, hybrid events, algebraic-loop handling, and runtime model switching.
 
-Next, briefly describe the key methods or approaches you employed, then present the most significant results or findings obtained. Finally, conclude by highlighting the main conclusions and the broader significance or implications of your research. Ensure the abstract is self-contained, clear, concise (typically 150-300 words), and includes relevant keywords.
+This thesis develops and evaluates \syssimx{}, a Python framework for heterogeneous hybrid co-simulation with runtime model switching.
+The framework couples Functional Mock-up Units (FMUs), OpenSim models, and finite-element method (FEM) models through a shared component abstraction.
+Its orchestration layer derives structural execution metadata and reuses it for initialization, master algorithm execution, and algebraic-loop handling.
+Additional framework mechanisms support hybrid event localization and runtime switching between alternative models of the same subsystem.
+
+The implementation was verified through focused feature-level scenarios, and a controlled-pendulum case study evaluated the integrated workflow against monolithic OpenModelica references and a full-FEM benchmark.
+The FMU-only baseline converged monotonically toward the monolithic reference under macro-step refinement.
+The switched contact scenario tracked the rigid-contact reference within a maximum angle error of about $0.30^\circ$ and reproduced all five contact events.
+Activating the FEM model only near contact reduced the median total wall time from $467.6\,\mathrm{s}$ to $289.6\,\mathrm{s}$, a speedup of $1.61\times$ over the full-FEM configuration.
+
+The results show that \syssimx{} provides a coherent implementation architecture for heterogeneous hybrid co-simulation with runtime model switching.
+The evidence is limited to numerical verification against model-based references, a selected runtime benchmark, and workflow validation through the controlled-pendulum case study.

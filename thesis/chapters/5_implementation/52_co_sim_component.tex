@@ -85,9 +85,9 @@ It may also declare default parameters and event indicators.
 
 \paragraph{Configuration.}
 A component is configured through \texttt{set\_parameters()} before initialization.
-The method validates keyword arguments against the parameter dictionary of the component.
+The method validates keyword arguments against the component parameter dictionary.
 Subclasses define the available parameters and their default values.
-The actual backend-specific application of these parameters happens during \texttt{\_initialize\_component()}.
+Backend-specific parameter application occurs during \texttt{\_initialize\_component()}.
 
 \paragraph{Initialization.}
 The initialization sequence is shown in Figure~\ref{fig:impl_comp_initialization}.
@@ -123,15 +123,16 @@ Afterwards, the base class updates the time, refreshes the output ports, and rec
 \end{figure}
 
 \paragraph{Event Handling.}
-The hybrid algorithm calls \texttt{handle\_event(event\_names, t)} at event times (Section~\ref{sec:impl_hybrid}).
+At event times, the hybrid algorithm calls \pyfn{handle\_event(event\_names,\codebreak{}t)} (Section~\ref{sec:impl_hybrid}).
 The template method delegates the state update to the component-specific event hook \texttt{\_handle\_events\_internal()}.
 It then refreshes the output ports and records the updated values in the component history.
-Components that do not participate in hybrid simulation inherit an empty default implementation.
+Components outside hybrid simulation inherit an empty default implementation.
 For these components, event handling is a no-op.
 
 \paragraph{Reset and Cleanup.}
-After the simulation loop, the hook operation \pyfn{reset()} supports component reuse.
-It clears the simulation time, history buffer, and initialization flag, allowing the component to be re-initialized with \pyfn{initialize()} for a new run.
+After the simulation loop, the \pyfn{reset()} hook supports component reuse.
+It clears the simulation time, history buffer, and initialization flag.
+The component can then be initialized for a new run.
 Subclasses call \pyfn{super().reset()} before clearing their own internal state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -147,8 +148,7 @@ Table~\ref{tab:cosimcomp_verification} summarizes the verified base-class invari
 \begin{table}[htbp]
   \centering
   \small
-  \caption{Base-class invariants checked with lightweight mock components.}
-  \label{tab:cosimcomp_verification}
+  \caption[Base-class invariant checks]{Base-class invariants checked with lightweight mock components.}  \label{tab:cosimcomp_verification}
   \begin{tabular}{p{5.3cm} p{9cm}}
     \toprule
     \textbf{Verified invariant} & \textbf{Expected outcome} \\

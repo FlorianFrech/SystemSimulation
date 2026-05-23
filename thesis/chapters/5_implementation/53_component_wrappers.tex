@@ -2,19 +2,18 @@
 \section{Component Wrappers}
 \label{sec:impl_wrappers}
 
-This section describes the component wrappers for the supported simulation backends.
-Each wrapper adapts one external model type to the common component contract of \syssimx{}.
-The wrappers differ because the supported backends expose different amounts of reusable interface information.
+This section describes the wrappers that adapt supported simulation backends to the common component contract of \syssimx{}.
+Each backend exposes a different amount of reusable interface information, so the wrappers differ in scope.
 
 The \texttt{FMUComponent} class is the most generic wrapper.
-FMI provides a standardized co-simulation interface, a machine-readable model description, typed value references, parameters, and dependency metadata.
+\ac{FMI} provides a standardized co-simulation interface, a machine-readable model description, typed value references, parameters, and dependency metadata.
 The \texttt{OpenSimComponent} class provides a reusable runtime pattern based on \texttt{Model}, \texttt{State}, and \texttt{Manager}.
 Concrete OpenSim components still define their own ports, parameters, and model assembly.
 The \texttt{FEMComponent} class is a lightweight base for finite-element components.
 Finite-element models do not share one descriptor, solver state, mesh format, weak form, or state-transfer convention.
 
 This asymmetry is deliberate.
-The implementation adds reusable base functionality only where the backend provides a stable interface or where repeated patterns exist.
+Reusable base functionality is implemented only where a backend provides stable metadata or a repeated runtime pattern.
 
 \input{chapters/5_implementation/531_fmu_component}
 \input{chapters/5_implementation/532_opensim_component}

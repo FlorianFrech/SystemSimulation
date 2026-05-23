@@ -4,6 +4,7 @@
 \usetikzlibrary{arrows.meta, calc}
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
+\input{../shared/tikz_style.tex}
 
 % ─── Coordinate layout (y in cm, origin top-left, downward = negative) ────────
 %
@@ -41,23 +42,23 @@
   % Arrow for PortSpec -> PortState
   arr/.style = {
     -{Latex[length=2.2mm, width=1.6mm]},
-    draw=Mahogany!85, line width=1.1pt,
+    draw=sxCore!85!black, line width=1.0pt,
   },
   % Dashed golden border: optional capability
   optbox/.style = {
-    draw=Goldenrod, dashed, line width=1.5pt,
+    draw=sxSwitch!85!black, dashed, line width=1.0pt,
     rounded corners=3pt,
   },
   % Lifecycle step box (main phases)
   lifestep/.style = {
-    fill=Mahogany!24, rounded corners=2pt,
+    fill=sxCore!16, rounded corners=2pt,
     inner xsep=8pt, inner ysep=4pt,
     minimum width=4.80cm,
     anchor=west, text=black, font=\sffamily\small,
   },
   % Lifecycle step box (indented simulation-loop sub-steps)
   simstep/.style = {
-    fill=Mahogany!24, rounded corners=2pt,
+    fill=sxCore!16, rounded corners=2pt,
     inner xsep=8pt, inner ysep=4pt,
     minimum width=3.50cm,
     anchor=west, text=black, font=\sffamily\small,
@@ -76,37 +77,39 @@
 % ============================================================================
 \begin{pgfonlayer}{background}
 
+  \clip[rounded corners=4pt] (0,0) rectangle (13cm,-10.85cm);
+
   % ── Title ──────────────────────────────────────────────────────────────────
-  \fill[TealBlue!75!black] (0,0) rectangle (13cm,-0.85cm);
+  \fill[sxCore] (0,0) rectangle (13cm,-0.85cm);
 
   % ── Port Interface ─────────────────────────────────────────────────────────
-  \fill[black!46] (0,-0.85cm) rectangle (13cm,-1.35cm);
-  \fill[black!17] (0,-1.35cm) rectangle (13cm,-2.85cm);
+  \fill[sxFrameworkBorder!85] (0,-0.85cm) rectangle (13cm,-1.35cm);
+  \fill[sxNeutralBox]         (0,-1.35cm) rectangle (13cm,-2.85cm);
 
   % ── Left: Lifecycle header + content ───────────────────────────────────────
-  \fill[Mahogany!80]   (0,-2.85cm)    rectangle (5.5cm,-3.35cm);
-  \fill[Mahogany!12]   (0,-3.35cm)    rectangle (5.5cm,-10.85cm);
+  \fill[sxCore!85!black] (0,-2.85cm) rectangle (5.5cm,-3.35cm);
+  \fill[sxCore!8]        (0,-3.35cm) rectangle (5.5cm,-10.85cm);
 
   % ── Right: State Handling ──────────────────────────────────────────────────
-  \fill[OliveGreen!78!black] (5.5cm,-2.85cm) rectangle (13cm,-3.35cm);
-  \fill[OliveGreen!11]       (5.5cm,-3.35cm) rectangle (13cm,-5.85cm);
+  \fill[sxOrch!85!black] (5.5cm,-2.85cm) rectangle (13cm,-3.35cm);
+  \fill[sxOrch!8]        (5.5cm,-3.35cm) rectangle (13cm,-5.85cm);
   % Physical State sub-fill (slightly darker, mandatory sub-box)
-  \fill[OliveGreen!22] (5.65cm,-3.50cm) rectangle (9.10cm,-5.70cm);
+  \fill[sxOrch!16] (5.65cm,-3.50cm) rectangle (9.10cm,-5.70cm);
 
   % ── Right: Structural Metadata ─────────────────────────────────────────────
-  \fill[Plum!75!black] (5.5cm,-5.85cm) rectangle (13cm,-6.35cm);
-  \fill[Plum!8]        (5.5cm,-6.35cm) rectangle (13cm,-8.35cm);
+  \fill[sxAdapter!85!black] (5.5cm,-5.85cm) rectangle (13cm,-6.35cm);
+  \fill[sxAdapter!8]        (5.5cm,-6.35cm) rectangle (13cm,-8.35cm);
 
   % ── Right: Hybrid Capabilities ─────────────────────────────────────────────
-  \fill[MidnightBlue!80] (5.5cm,-8.35cm) rectangle (13cm,-8.85cm);
-  \fill[MidnightBlue!7]  (5.5cm,-8.85cm) rectangle (13cm,-10.85cm);
+  \fill[sxExec!85!black] (5.5cm,-8.35cm) rectangle (13cm,-8.85cm);
+  \fill[sxExec!8]        (5.5cm,-8.85cm) rectangle (13cm,-10.85cm);
 
   % ── Column separator + outer border ────────────────────────────────────────
   \draw[black!28, line width=0.6pt] (5.5cm,-2.85cm) -- (5.5cm,-10.85cm);
-  \draw[TealBlue!60!black, line width=1.3pt, rounded corners=4pt]
-    (0,0) rectangle (13cm,-10.85cm);
-
 \end{pgfonlayer}
+
+\draw[sxCore!70!black, line width=1.0pt, rounded corners=4pt]
+  (0,0) rectangle (13cm,-10.85cm);
 
 % ============================================================================
 % TITLE
@@ -181,7 +184,7 @@
   at (9.25cm,-3.10cm) {\textbf{State Management}};
 
 % ── Physical State sub-box (mandatory: solid border) ─────────────────────────
-\draw[OliveGreen!60!black, line width=0.7pt, rounded corners=3pt]
+\draw[sxOrch!65!black, line width=0.7pt, rounded corners=3pt]
   (5.65cm,-3.50cm) rectangle (9.10cm,-5.70cm);
 
 \node[text=black!82, font=\sffamily\small, align=center, anchor=center]
@@ -190,7 +193,7 @@
    Inspection and\\State Transfer};
 
 % ── Rollback sub-box (optional: dashed golden border) ────────────────────────
-\draw[optbox, fill=OliveGreen!22] (9.40cm,-3.50cm) rectangle (12.80cm,-5.70cm);
+\draw[optbox, fill=sxOrch!16] (9.40cm,-3.50cm) rectangle (12.80cm,-5.70cm);
 
 \node[text=black!82, font=\sffamily\small, align=center, anchor=center]
   at (11.10cm,-4.60cm)
@@ -204,7 +207,7 @@
   at (9.25cm,-6.10cm) {\textbf{Model Structure}};
 
 % ── Content (optional: dashed golden box) ────────────────────────────────────
-\draw[optbox, fill=Plum!18] (5.75cm,-6.55cm) rectangle (12.75cm,-8.20cm);
+\draw[optbox, fill=sxAdapter!13] (5.75cm,-6.55cm) rectangle (12.75cm,-8.20cm);
 
 \node[text=black!82, font=\sffamily\small, align=center, anchor=center]
   at (9.25cm,-7.375cm)
@@ -218,7 +221,7 @@
   at (9.25cm,-8.60cm) {\textbf{Hybrid Capabilities}};
 
 % ── Content (optional: dashed golden box) ────────────────────────────────────
-\draw[optbox, fill=MidnightBlue!15] (5.75cm,-9.05cm) rectangle (12.75cm,-10.65cm);
+\draw[optbox, fill=sxExec!13] (5.75cm,-9.05cm) rectangle (12.75cm,-10.65cm);
 
 \node[text=black!82, font=\sffamily\small, align=center, anchor=center]
   at (9.25cm,-9.85cm)

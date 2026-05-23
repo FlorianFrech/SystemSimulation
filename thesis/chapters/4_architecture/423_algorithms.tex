@@ -13,5 +13,5 @@ Algebraic-loop algorithms add coupled treatment for instantaneous dependencies.
 Hybrid algorithms add event detection, event localization, and event dispatch.
 
 All algorithms use the same component and system interfaces.
-The user can therefore change the execution strategy without changing the component implementations or the system definition.
-The concrete algorithms and their numerical procedures are described in Sections~\ref{sec:impl_algorithms} through~\ref{sec:impl_hybrid}.
+The same system definition can therefore be executed with different continuous strategies without changing the component implementations.
+When a component can produce state events, the \texttt{System} abstraction activates the hybrid algorithm automatically so that event handling stays correct.

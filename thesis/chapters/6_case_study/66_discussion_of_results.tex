@@ -3,8 +3,8 @@
 
 The three scenarios of Section~\ref{sec:case_study_scenarios} address different aspects of the controlled-pendulum case study.
 The baseline scenario evaluates numerical convergence for a continuous closed-loop system.
-The contact scenario evaluates the combined use of heterogeneous plant models, hybrid event handling, PID reset, and runtime model switching.
-The performance scenario evaluates the computational effect of using the FEM model only during the contact-relevant part of the trajectory.
+The contact scenario evaluates the combined use of heterogeneous plant models, hybrid event handling, \ac{PID} reset, and runtime model switching.
+The performance scenario evaluates the computational effect of using the \ac{FEM} model only during the contact-relevant part of the trajectory.
 Together, the scenarios show how the case-study workflow combines numerical reference comparison, hybrid contact handling, runtime model switching, and performance benchmarking in one controlled-pendulum system.
 
 \paragraph{Baseline Numerical Verification.}
@@ -12,19 +12,19 @@ The baseline scenario shows monotonic convergence toward the monolithic OpenMode
 This result supports the numerical verification of the continuous co-simulation path for the tested closed-loop configuration.
 It also shows the expected limitation of explicit co-simulation.
 A coarse macro step of \(\Delta t=0.02\,\mathrm{s}\) produces visible trajectory errors, while smaller steps reduce both the maximum and the integrated angle error.
-The result therefore verifies the numerical behavior of the FMU-only closed loop, but it does not establish a general convergence order for all possible systems.
+The result therefore verifies the numerical behavior of the \ac{FMU}-only closed loop, but it does not establish a general convergence order for all possible systems.
 
 \paragraph{Integrated Hybrid Contact Workflow.}
 The multi-model contact scenario verifies the coupled workflow that is not visible in the baseline case.
-The simulation combines the shared plant interface, the \texttt{MasterPendulum}, hybrid contact events, PID reset, and the FEM contact model in one run.
+The simulation combines the shared plant interface, the \texttt{MasterPendulum}, hybrid contact events, \ac{PID} reset, and the \ac{FEM} contact model in one run.
 The switched co-simulation reproduces all five contact events of the OpenModelica rigid-contact reference and keeps the maximum event-time error below one half of the macro communication step.
 The angle error remains small during free motion and increases mainly during the contact rebounds.
 
 The remaining contact deviation is expected.
 The reference model uses an ideal rigid impact law.
-The \syssimx{} model uses a stiff compliant FEM contact formulation.
+The \syssimx{} model uses a stiff compliant \ac{FEM} contact formulation.
 The comparison therefore verifies the angle trajectory and contact-event timing against the rigid-contact reference.
-It does not validate the FEM contact law against physical measurements.
+It does not validate the \ac{FEM} contact law against physical measurements.
 A closer match to the rigid reference could be obtained by tuning the contact stiffness.
 Such tuning would not establish physical validity without experimental data.
 
@@ -36,25 +36,21 @@ The result supports the intended role of the \texttt{MasterPendulum} as a model-
 Different tool-specific plant models can be used behind one port-level interface.
 The surrounding co-simulation sees the same exposed state variables across accepted switches.
 
-A separate effect appears when the switched trajectory is compared with a full-FEM trajectory.
-The switched configuration enters FEM mode from a rigid-body projection of the FMU state.
-The full-FEM run has already accumulated deformation, vibrational modes, and Newmark history before the first impact.
-The switched run therefore cannot reproduce the full internal FEM state at the switch boundary.
-This explains why the contact-window deviation against the full-FEM benchmark is larger than the state jumps reported by the switching log.
-The switch is continuous at the exposed interface, but it is not equivalent to having simulated the FEM model over the complete previous trajectory.
+A separate effect appears when the switched trajectory is compared with a full-\ac{FEM} trajectory.
+The switched configuration enters \ac{FEM} mode from a rigid-body projection of the \ac{FMU} state.
+The full-\ac{FEM} run has already accumulated deformation, vibrational modes, and Newmark history before the first impact.
+The switched run therefore cannot reproduce the full internal \ac{FEM} state at the switch boundary.
+This explains why the contact-window deviation against the full-\ac{FEM} benchmark is larger than the state jumps reported by the switching log.
+The switch is continuous at the exposed interface, but it is not equivalent to having simulated the \ac{FEM} model over the complete previous trajectory.
 
 \paragraph{Runtime Performance.}
-The performance benchmark shows that runtime model switching reduces computational cost for the reported FEM model and contact scenario.For the reported configuration, the median total wall-clock time is reduced from \(467.6\,\mathrm{s}\) to \(289.6\,\mathrm{s}\).
-This corresponds to an end-to-end speedup of \(1.62\times\).
-The time spent in the FEM solver decreases from \(458.3\,\mathrm{s}\) to \(222.1\,\mathrm{s}\), which corresponds to a reduction by \(2.06\times\).
-This is consistent with the reduced FEM-active share of the simulated time, which decreases from the full \(0.400\,\mathrm{s}\) horizon to \(0.189\,\mathrm{s}\).
-The result confirms the intended benefit of activating the high-fidelity model only where its contact representation is needed.
-
-The end-to-end speedup is smaller than the FEM solver speedup.
-The switched run still includes orchestration work, mode selection, state transfer, and the non-FEM parts of the simulation.
+The performance benchmark shows that runtime model switching reduced computational cost for the reported \ac{FEM} model and contact scenario.
+The end-to-end speedup was \(1.61\times\), while the \ac{FEM} solver time was reduced by \(2.06\times\).
+The difference between both ratios is important.
+It shows that the switched configuration reduces the expensive \ac{FEM} work, while the total runtime still includes orchestration, mode selection, state transfer, and the non-\ac{FEM} parts of the simulation.
 The benchmark therefore shows both the benefit and the practical limit of the approach for the present model size.
-This result does not quantify larger FEM meshes.
-The fixed orchestration overhead would become less dominant when FEM solver work dominates the runtime.
+This result does not quantify larger \ac{FEM} meshes.
+The fixed orchestration overhead would become less dominant when \ac{FEM} solver work dominates the runtime.
 
 \paragraph{Overall Interpretation.}
 The case study provides numerical verification for selected co-simulation results and workflow validation for the combined framework concept.
@@ -64,7 +60,7 @@ The performance case shows a runtime benefit when the high-fidelity model is nee
 
 The results also define the limits of the demonstrated claims.
 The OpenModelica comparisons verify numerical consistency with the chosen reference models.
-They do not constitute experimental validation of the physical pendulum or of the FEM contact law.
-The switched FEM benchmark demonstrates an accuracy and runtime tradeoff.
-It reduces computation time, but it cannot preserve FEM internal history that was not simulated before the switch.
+They do not constitute experimental validation of the physical pendulum or of the \ac{FEM} contact law.
+The switched \ac{FEM} benchmark demonstrates an accuracy and runtime tradeoff.
+It reduces computation time, but it cannot preserve \ac{FEM} internal history that was not simulated before the switch.
 These limitations are inherent to the selected modeling and switching strategy and motivate the concluding assessment of the framework in Chapter~\ref{chap:discussion_conclusion}.

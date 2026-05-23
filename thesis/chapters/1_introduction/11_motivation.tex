@@ -7,7 +7,7 @@ Together, they form tightly coupled multi-domain systems.
 Such systems are typical \ac{CPS} because computation and physical behavior are linked through sensing, actuation, and feedback \cite{lee_cyber_2008}.
 A change in one subsystem can influence the behavior of the whole device.
 For example, modifications in the control law, actuator design, or geometry of the mechanical structure can affect loads, stability, performance, and safety.
-System-level simulation is therefore needed early in the design process, before physical prototypes are available~\cite{VirtualEngineeringSystems}.
+System-level simulation is therefore needed early in the design process, before physical prototypes are available~\cite{van_der_auweraer_virtual_2013}.
 
 This need becomes more demanding when technical devices interact with the human body.
 The performance of a prosthetic knee or an active exoskeleton cannot be evaluated from the device model alone, because the behavior depends on the coupling with the user's musculoskeletal system.
@@ -22,11 +22,11 @@ These modeling environments serve different purposes, operate at different abstr
 Modern system development therefore requires suitable models within the individual domains and a practical way to integrate them into a system-level simulation workflow.
 
 Co-simulation provides a natural integration strategy for such heterogeneous models.
-Each subsystem retains its domain-specific solver and model representation, while a master algorithm orchestrates data exchange at discrete communication points \cite{gomes_co-simulation_2019-1}.
-The \ac{FMI} standardizes the interface for this purpose and is widely adopted in industry \cite{FMI2.0}.
+Each subsystem retains its domain-specific solver and model representation, while a master algorithm orchestrates data exchange at discrete communication points \cite{gomes_co-simulation_2019}.
+The \ac{FMI} standardizes the interface for this purpose and is widely adopted in industry \cite{modelica_association_project_fmi_functional_2014}.
 
 Several challenges remain when heterogeneous models are coupled.
-\ac{FMI} standardizes the simulation-unit interface, but it does not prescribe how multiple subsystem models are orchestrated into a consistent system simulation \cite{gomes_co-simulation_2019-1}.
+\ac{FMI} standardizes the simulation-unit interface, but it does not prescribe how multiple subsystem models are orchestrated into a consistent system simulation \cite{gomes_co-simulation_2019}.
 The master algorithm must determine a valid execution order when outputs depend instantaneously on inputs \cite{broman_requirements_2015}.
 It must also detect and resolve circular dependencies between simulation units \cite{sicklinger_interface_2014}.
 For hybrid systems, it must handle discrete events such as mechanical contact or mode changes during otherwise continuous operation \cite{broman_determinate_2013,StepRevision_Cremona,cremona_hybrid_2019}.
@@ -37,3 +37,6 @@ A continuum-mechanical finite element model can resolve these local field quanti
 This motivates selective model use during simulation.
 For example, the finite element representation may only be needed during contact phases in which local deformation is relevant, whereas a computationally cheaper rigid-body model may be sufficient during free motion.
 Such workflows require runtime switching between alternative models of the same subsystem and consistent state transfer across model boundaries \cite{Choi2014}.
+
+This thesis develops \syssimx{}, a Python framework for heterogeneous hybrid co-simulation.
+The framework keeps each subsystem model in its domain-specific tool and adds the orchestration layer that runs them as one coupled hybrid simulation.

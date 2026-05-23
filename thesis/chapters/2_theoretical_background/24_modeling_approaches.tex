@@ -135,24 +135,18 @@ Forward dynamics computes the state trajectory from initial coordinates, initial
 The generalized accelerations follow from Equation~\eqref{eq:multibody_eom}, and numerical integration advances the generalized coordinates and speeds.
 This differs from inverse dynamics, where a prescribed motion is given and the required generalized forces are computed~\cite{OpenSim_Delp,seth_opensim_2018}.
 
-\paragraph{Runtime Architecture.}
-OpenSim separates the model definition from the simulation state.
-The \emph{Model} contains the bodies, joints, coordinates, force elements, and constraints.
-The \emph{State} contains the time-dependent quantities, including generalized coordinates, generalized speeds, auxiliary continuous states, and discrete state variables.
-The \emph{Manager} advances the State through time by using a numerical integrator.
-
-Derived quantities are computed through staged realization.
-A State can be realized to stages such as Position, Velocity, Dynamics, and Acceleration.
-Each stage depends on the preceding stages.
-For example, accelerations can only be evaluated after positions, velocities, and forces have been realized.
-This staged realization is important for co-simulation because selected realized quantities become the outputs of the simulation unit.
+\paragraph{Staged Computation.}
+OpenSim computes derived quantities through staged realization, in which each stage depends on the preceding ones.
+Accelerations, for example, can be evaluated only after positions, velocities, and forces are available.
+The selected realized quantities then become the outputs of the simulation unit.
 
 \paragraph{Interface Consequence.}
 A musculoskeletal model does not define a standardized co-simulation descriptor comparable to an \ac{FMI} model description.
 The exchanged quantities must therefore be selected for the concrete model.
 Typical inputs are actuator controls, prescribed generalized forces, or external loads.
 Typical outputs are generalized coordinates, speeds, accelerations, body kinematics, contact quantities, or muscle-related quantities.
-This model-specific interface selection is the main consequence for co-simulation; the concrete wrapper mapping is described in Section~\ref{sec:impl_opensim}.
+This model-specific interface selection is the main consequence for co-simulation.
+The concrete wrapper mapping is described in Section~\ref{sec:impl_opensim}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Finite Element Modeling}
@@ -303,11 +297,15 @@ In the average-acceleration form used here, the inertial contribution in the wea
     \mathrm{d}V .
     \label{eq:fem_newmark_inertia}
 \end{equation}
+
+For the finite-element simulation unit~$i$, local integration step~$r$ uses the step size $\Delta t_{i,r}$.
+This notation distinguishes the internal finite-element step from the macro communication step of the co-simulation.
+It is also suitable when the finite-element solver reduces its local step size near contact.
 The new velocity and acceleration are expressed from the unknown displacement and the stored previous states by
 \begin{align}
     \dot{\mathbf{u}}^{n+1}
     &=
-    \frac{2}{\Delta t}
+    \frac{2}{\Delta t_{i,r}}
     \left(
         \mathbf{u}^{n+1}
         -
@@ -319,7 +317,7 @@ The new velocity and acceleration are expressed from the unknown displacement an
     \\
     \ddot{\mathbf{u}}^{n+1}
     &=
-    \frac{2}{\Delta t}
+    \frac{2}{\Delta t_{i,r}}
     \left(
         \dot{\mathbf{u}}^{n+1}
         -
@@ -329,30 +327,30 @@ The new velocity and acceleration are expressed from the unknown displacement an
     \ddot{\mathbf{u}}^{n}.
     \label{eq:fem_newmark_acceleration}
 \end{align}
+
 The time-discrete problem is therefore solved by first finding $\mathbf{u}^{n+1}$, typically with Newton's method.
 The velocity $\dot{\mathbf{u}}^{n+1}$ and the acceleration $\ddot{\mathbf{u}}^{n+1}$ are then updated from the Newmark relations.
 This time-discretization concept is sufficient to interpret the dynamic finite element model used in the controlled-pendulum case study.
 
 \paragraph{Relation to the Pendulum Model.}
 The pendulum of Section~\ref{sec:211_dynamical_systems} can also be represented as a deformable body.
-In this formulation, the rigid rod and point mass are replaced by a continuum body whose motion is described by the displacement field $\mathbf{u}(\mathbf{X},t)$ rather than by a single generalized coordinate.
+In this formulation, the rigid rod and point mass are replaced by a continuum body.
+Its motion is described by the displacement field $\mathbf{u}(\mathbf{X},t)$ rather than by a single generalized coordinate.
 Loads such as gravity and actuation enter as volume or boundary forces, and the material law determines how deformation produces internal stress.
-Because the finite element model resolves a spatial displacement field, scalar interface quantities such as the pendulum angle must be obtained by projection onto a rigid-body proxy.
-This projection makes the finite element pendulum comparable to the lumped-parameter and musculoskeletal pendulum models at the co-simulation interface level.
-The concrete geometry, mesh, material parameters, constraints, contact formulation, and stress post-processing are described in the case study and implementation chapters.
 
 \paragraph{Interface Consequence.}
-A finite element model contains many internal degrees of freedom, while a co-simulation interface usually exchanges only selected quantities.
-Inputs are typically prescribed forces, tractions, or displacements on boundary regions.
-Outputs may be reaction forces, displacements at selected locations, field-derived quantities, or projections of the field solution onto scalar variables.
-For the pendulum case, this means that the spatial displacement, velocity, and acceleration fields must be projected to the shared rigid-body quantities \(\theta\), \(\omega\), and \(\alpha\).
-The concrete boundary regions, contact formulation, projection, and state-transfer choices are part of the case-study model in Section~\ref{sec:case_study_pendulum_fem}.
+A finite element model contains many internal degrees of freedom, while a co-simulation interface exchanges only selected quantities.
+Typical inputs are prescribed forces, tractions, or displacements on boundary regions.
+Typical outputs are reaction forces, point displacements, field-derived quantities, or projected scalar variables.
+If a finite element model is coupled to lower-dimensional models, selected field quantities must therefore be mapped to the shared interface variables.
+For the pendulum case study, this mapping yields the same exposed angle and angular velocity as the rigid-body variants.
+The concrete geometry, boundary regions, contact formulation, projection, and state-transfer choices are described in Section~\ref{sec:case_study_pendulum_fem}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Complementarity of Modeling Approaches}
 \label{sec:modeling_complementarity}
 
-The three modeling approaches introduced in this section represent the system at different levels of abstraction.
+The three modeling approaches introduced in this section represent the subsystems at different levels of abstraction.
 Table~\ref{tab:modeling_complementarity} summarizes their role in the thesis.
 The table is not a ranking of methods.
 It shows why the controlled-pendulum case study requires a coupled simulation instead of one monolithic modeling approach.
@@ -401,15 +399,15 @@ Chapter~\ref{chap:architecture} defines the framework architecture that realizes
 \section*{Summary}
 \addcontentsline{toc}{section}{Summary}
 
-This chapter introduced the theoretical concepts used in the remainder of the thesis.
+This chapter introduced the concepts used in the remainder of the thesis.
 Continuous-time models define states, inputs, outputs, and direct-feedthrough relations.
-Hybrid-system concepts add events, guards, resets, modes, and dense-time ordering.
-Co-simulation then combines several simulation units through communication points and requires a master algorithm to coordinate their advancement.
+Hybrid systems extend this view with events, resets, and dense-time ordering.
+Co-simulation then combines several simulation units through communication points, with a master algorithm coordinating their advancement.
 
 Two consequences are central for the framework developed in the following chapters.
 First, the interconnection structure affects the admissible execution order.
 Instantaneous dependencies may form algebraic loops, which must be detected and resolved before the simulation can advance consistently.
-Second, heterogeneous simulation units keep their own internal solvers.
+Second, simulation units keep their own internal solvers.
 The master algorithm therefore coordinates data exchange and event handling without direct access to the internal equations of each unit.
 
 The modeling approaches introduced in Section~\ref{sec:24_modeling_approaches} explain why this coupling is needed in the controlled-pendulum case study.

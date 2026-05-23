@@ -95,10 +95,11 @@ The discussion must therefore include one paragraph that bounds the contribution
 Recommended paragraph:
 
 ```latex
-The framework contributions of this thesis should be positioned against the closest existing peer.
-CoFMPy is a Python-native co-simulation framework that provides FMU coupling, Jacobi and Gauss-Seidel master algorithms, fixed-point algebraic-loop handling, and a Python FMU proxy for non-FMU components~\cite{friedrich_cofmpy_2025}.
-The FMU coupling core of \syssimx{} overlaps with CoFMPy in scope and language.
-The differentiating contributions of \syssimx{} are the hybrid co-simulation algorithm with event localization and state restoration, the multi-model component for runtime switching between heterogeneous backends, and the Newton-type interface-Jacobian loop solver, which are not provided by CoFMPy at the time of writing.
+CoFMPy is the closest Python-native peer for this thesis~\cite{friedrich_cofmpy_2025}.
+It provides \ac{FMI}-based co-simulation with Jacobi and Gauss--Seidel master algorithms, fixed-point algebraic-loop handling, and a Python \ac{FMU} proxy for non-\ac{FMU} components.
+The overlap with \syssimx{} lies in Python-based \ac{FMU} orchestration and algebraic-loop handling.
+The contribution boundary of \syssimx{} lies in the shared component interface for \ac{FMU}, OpenSim, and FEM backends, hybrid event localization with state restoration, runtime model switching, and Newton-type interface-Jacobian loop solving.
+These mechanisms are verified in Chapter~\ref{chap:implementation} and combined in Chapter~\ref{chap:case_study}.
 ```
 
 Constraints on this paragraph.
@@ -369,6 +370,22 @@ Use a small selection of these topics.
 - More user-facing diagnostics for structural analysis, algebraic loops, and switching decisions.
 - Comparative benchmarking against CoFMPy or other Python-native co-simulation frameworks on the controlled-pendulum scenario, including the implementation effort required to add hybrid event handling and runtime model switching on top of a non-hybrid framework.
 
+### CoFMPy Comparative Benchmarking
+
+A future comparison with CoFMPy should be framed as comparative evaluation, not as evidence already provided by the thesis.
+
+Useful comparison tasks:
+
+- Rebuild the FMU-only controlled-pendulum baseline in CoFMPy.
+- Compare the baseline trajectory and runtime against the corresponding \syssimx{} scenario.
+- Compare available master algorithms for the same FMU-only setup.
+- Evaluate how CoFMPy handles algebraic-loop examples compared with the \syssimx{} IJCSA implementation.
+- Investigate whether the Python FMU proxy can represent the OpenSim and FEM pendulum wrappers.
+- Document which parts require native CoFMPy features and which parts require additional extension code.
+
+The comparison should not claim that CoFMPy is generally worse or better.
+It should identify the boundary between an FMI-centered Digital-Twin framework and the heterogeneous hybrid orchestration scope of \syssimx{}.
+
 ### What Not To Add
 
 - Do not add speculative features that are not connected to a limitation.
@@ -505,3 +522,53 @@ Use this rule while writing Chapter 7.
 ```text
 State what was demonstrated, defend it with the evidence already shown, state the limits, and end with the contribution.
 ```
+
+---
+
+## Audit Findings (2026-05-19)
+
+Open items from the structural + cross-reference audit.
+
+### High Priority
+
+- **[Open] CoFMPy contribution-boundary paragraph missing in §7.1.**
+  `71_discussion_of_results.tex` contains no mention of CoFMPy.
+  The "Contribution Boundary against CoFMPy" subsection above prescribes
+  one paragraph that must be inserted after the first paragraph of §7.1,
+  before the RQ1 answer. The recommended paragraph is reproduced verbatim
+  in that subsection. Bib key `friedrich_cofmpy_2025` exists and is
+  already used in Ch 1 and Ch 3.
+- **[Open] Multi-fidelity / related-work citations missing in §7.1.**
+  The §7.1 citation guidance above lists
+  `peherstorfer_survey_2018`, `fernandez-godino_review_2023`,
+  `Choi2017`, `williams_switched-fidelity_2014` as recommended targets.
+  These are already in `references.bib` (cited in Ch 1) but **not cited
+  in Ch 7**. Suggested insertion points:
+  - RQ4 paragraph: cite `peherstorfer_survey_2018` and
+    `williams_switched-fidelity_2014` after the state-projection
+    discussion of model switching cost.
+  - RQ5 / performance paragraph: place the 1.62× benchmark in
+    multi-fidelity context with one of these citations.
+
+### Medium Priority
+
+- **[Open] RQ4 state-projection wording is abstract.**
+  `71_discussion_of_results.tex:48` ends with *"This is the modeling cost
+  of switching between representations with different internal state
+  spaces."* The §6.6 engineering notes in `ch6_case_study.md` provide a
+  more concrete phrasing (penetration depth decreases per bounce, ~1 ms
+  drift in contact times). Decide whether the concrete phrasing belongs
+  in §7.1 RQ4 or only in §6.6.
+- **[Open] Benchmark numbers cross-reference.**
+  `73_conclusions.tex:16` and `71_discussion_of_results.tex:60` quote
+  headline benchmark values (1.62×, 2.06×, 467.6 s, 289.6 s,
+  458.3 s, 222.1 s). These match the engineering notes in
+  `ch6_case_study.md` but recompute after any final benchmark re-run.
+
+### Low Priority
+
+- **[Open] Outlook may add CoFMPy comparative benchmark item.**
+  The §7.4 future-work suggestions above include *"Comparative
+  benchmarking against CoFMPy or other Python-native co-simulation
+  frameworks on the controlled-pendulum scenario"*. Currently absent
+  from `74_outlook.tex`. Add only if in scope.

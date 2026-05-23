@@ -14,15 +14,13 @@ Hybrid event handling is covered separately in Section~\ref{sec:impl_hybrid}.
 \label{sec:impl_algorithms_scope}
 
 All master algorithms use the structural metadata computed during system initialization.
-The execution order defines the generation order.
-The algebraic-loop metadata identifies loop blocks.
+The execution order defines the generation order, and the algebraic-loop metadata identifies loop blocks.
 Input propagation is performed generation by generation.
 Jacobi and Gauss--Seidel reuse the \ac{SCC}-local solver of Section~\ref{sec:impl_algebraic_loops}.
-The global IJCSA algorithm solves one coupled interface problem before component stepping.
+The global \ac{IJCSA} algorithm solves one coupled interface problem before component stepping.
 
-One macro step prepares interface values and then advances the components from $t$ to $t+\Delta t$.
-The algorithms differ in how this preparation and stepping are ordered across generations.
-They also differ in whether interface correction is local to loop blocks or global to the complete zero-delay interface.
+One macro step first prepares interface values and then advances the components from $t$ to $t+\Delta t$.
+The algorithms differ in the ordering of preparation, correction, and stepping.
 
 Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level execution flow of the two explicit continuous master algorithms.
 
@@ -35,7 +33,8 @@ Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level e
             \centering
             \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/Jacobi_Algorithm.pdf}
         \end{minipage}
-        \caption[Jacobi execution]{Jacobi execution. All generations are prepared first. The component steps are executed only afterwards.}
+        \caption[Jacobi execution.]{Jacobi execution.
+        All generations are prepared first, and component steps are executed afterwards.}
         \label{fig:impl_algorithms_jacobi}
     \end{subfigure}
     \hfill
@@ -46,10 +45,11 @@ Figure~\ref{fig:impl_algorithms_jacobi_gs} summarizes the implementation-level e
             \centering
             \includegraphics[width=\linewidth]{diagrams/out/pdf/execution/Gauss_Seidel_Algorithm.pdf}
         \end{minipage}
-        \caption[Gauss--Seidel execution]{Gauss--Seidel execution. Each generation is prepared and stepped before the next.}
+        \caption[Gauss--Seidel execution.]{Gauss--Seidel execution.
+        Each generation is prepared and stepped before the next generation is processed.}
         \label{fig:impl_algorithms_gs}
     \end{subfigure}
-    \caption[Implementation-level execution flow]{Implementation-level execution flow of the explicit continuous master algorithms.}
+    \caption[Continuous master-algorithm execution flow.]{Implementation-level execution flow of the explicit continuous master algorithms.}
     \label{fig:impl_algorithms_jacobi_gs}
 \end{figure}
 
@@ -74,13 +74,13 @@ The component steps of the second phase could be parallelized in principle, but 
 \subsection{Gauss--Seidel Algorithm}
 \label{sec:impl_algorithms_gs}
 
-The \texttt{GaussSeidelAlgorithm} class collapses preparation and stepping into one pass over \texttt{execution\_order}.
-For each generation, it stages the interface values, solves local loop blocks, and then advances the contained components.
+The \texttt{GaussSeidelAlgorithm} class combines preparation and stepping in one pass over \texttt{execution\_order}.
+For each generation, it stages the interface values, solves local loop blocks, and advances the contained components.
 Outputs from earlier generations are therefore already updated when later generations receive their inputs.
-This within-step visibility is the algorithmic difference to the Jacobi implementation.
+This within-step visibility distinguishes the implementation from the Jacobi algorithm.
 
 The local \ac{SCC} solver, the input-staging routine, and the structural metadata are reused unchanged.
-The sequential generation order means that this implementation does not exploit parallelism.
+Because generations are advanced sequentially, this implementation does not exploit parallelism.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Global IJCSA Algorithm}
@@ -89,7 +89,8 @@ The sequential generation order means that this implementation does not exploit 
 The \texttt{IJCSAAlgorithm} class provides a global variant of the interface Newton solve.
 It follows the interface-Jacobian idea of Sicklinger et al.~\cite{sicklinger_interface_2014}.
 The implementation restricts this idea to the signal-assignment form used by \syssimx{}.
-Instead of solving each SCC locally, it collects all zero-delay interface inputs and solves one coupled residual problem.
+It collects all zero-delay interface inputs and solves one coupled residual problem.
+This differs from the \ac{SCC}-local solver, which treats each loop block separately.
 
 The \texttt{step()} method runs in two phases.
 The first phase solves the global zero-delay interface.
@@ -115,7 +116,7 @@ The default continuous path remains \texttt{GaussSeidelAlgorithm}, while \texttt
 
 The verification uses a small feedback scenario with a constant source, a gain block, a subtractor, and an integrator.
 The integrator has no direct feedthrough.
-The zero-delay graph is therefore acyclic and the structural analysis produces three generations without SCCs.
+The zero-delay graph is therefore acyclic and the structural analysis produces three generations without \acp{SCC}.
 Figure~\ref{fig:impl_algorithms_verification_system} shows the topology.
 
 \begin{figure}[!htbp]
@@ -126,14 +127,14 @@ Figure~\ref{fig:impl_algorithms_verification_system} shows the topology.
     \label{fig:impl_algorithms_verification_system}
 \end{figure}
 
-The continuous dynamics reduce to the scalar ODE $\dot{y}=k\,r-y$ with $y(0)=0$.
+The continuous dynamics reduce to the scalar \ac{ODE} $\dot{y}=K\,r-y$ with $y(0)=0$.
 Its analytical solution
 \begin{equation}
-    y(t) = k\,r\,\bigl(1-e^{-t}\bigr)
+    y(t) = K\,r\,\bigl(1-e^{-t}\bigr)
 \end{equation}
 serves as the reference.
 
-Figure~\ref{fig:impl_algorithms_verification} compares all three algorithms against this reference for four macro step sizes with $k=2$ and $r=1$.
+Figure~\ref{fig:impl_algorithms_verification} compares all three algorithms against this reference for four macro step sizes with $K=2$ and $r=1$.
 
 \begin{figure}[t]
     \vspace{-1ex}
@@ -144,17 +145,13 @@ Figure~\ref{fig:impl_algorithms_verification} compares all three algorithms agai
     \label{fig:impl_algorithms_verification}
 \end{figure}
 
-At $\Delta t = 0.5\,$s, the Jacobi trace overshoots the analytical solution.
+At $\Delta t = 0.5\,\mathrm{s}$, the Jacobi trace overshoots the analytical solution.
 This is the largest coarse-step error in the comparison.
-The cause is the two-phase structure of the Jacobi algorithm.
-Later generations read outputs from the previous communication point.
-The feedback through the integrator therefore reaches the subtractor with one macro-step delay.
+It is caused by the two-phase structure of the Jacobi algorithm.
+Later generations read outputs from the previous communication point, so the feedback through the integrator reaches the subtractor with one macro-step delay.
 
 The Gauss--Seidel trace stays closer to the analytical solution at the same step size.
-Its generation-wise pass propagates the updated subtractor output within the same macro step.
-
-The Gauss--Seidel trace stays close to the analytical solution at the same step size.
-The Gauss--Seidel pass propagates the updated subtractor output within the same macro step and therefore tracks the reference more closely.
+Its generation-wise pass propagates the updated subtractor output within the same macro step and therefore tracks the reference more closely.
 
 The \texttt{IJCSAAlgorithm} trace overlaps the Gauss--Seidel trace in this scenario because the zero-delay graph is acyclic.
 The global solve handles the zero-delay interface inputs of the Gain and Subtractor components but does not resolve an algebraic loop.

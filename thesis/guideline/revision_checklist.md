@@ -101,8 +101,140 @@ Perform this pass after Chapter 5 is fully drafted.
 
 ---
 
+## 8. Reproducibility and Software Archival
+
+Pin the case study to an archived, citable software release before
+submission. This is the availability statement an examiner expects for a
+framework thesis and removes any need for code-listing appendices
+(supersedes audit item LIT-03).
+
+**Status (2026-05-23):** drafted, blocked on the Zenodo DOI. The DOI can
+only be minted from the tagged submission release. `HEAD` is currently
+`b29e887`, which is 34 commits past the `v0.1.5` tag, so no existing tag
+points at the thesis-figure state — a fresh release is required.
+
+- [ ] Cut a tagged submission release at the final figure-producing commit,
+  e.g. `git tag -a v0.1.6 -m "Thesis submission"; git push origin v0.1.6`,
+  then create the GitHub Release from that tag.
+- [ ] Enable the Zenodo–GitHub integration **before** creating the release.
+  zenodo.org → avatar → GitHub (`https://zenodo.org/account/settings/github/`)
+  → toggle `FlorianFrech/SystemSimulation` ON; use "Sync now" if it is
+  missing. Only releases made after the toggle is on are archived.
+- [ ] Take the **version DOI** (not the concept DOI) from the Zenodo record
+  so the cite pins the exact release.
+- [ ] (Optional) Add a `CITATION.cff` at the repo root before releasing so
+  Zenodo records the correct author, title, ORCID, and MIT license instead
+  of guessing from GitHub metadata.
+- [ ] Upgrade the `frech_syssimx_2026` entry in `references.bib` to a
+  software release with version, commit, and DOI. The class sets
+  `url=false, doi=true`, so the repo URL must stay inside `note`:
+
+  ```bibtex
+  @misc{frech_syssimx_2026,
+    author = {Frech, Florian},
+    title  = {{SysSimX}: A {Python} Framework for Heterogeneous Hybrid Co-Simulation},
+    year   = {2026},
+    % doi  = {10.5281/zenodo.XXXXXXX},  % uncomment after the Zenodo version DOI is minted
+    note   = {Software release, version~0.1.6, Git commit~\texttt{b29e887}. Available: \url{https://github.com/FlorianFrech/SystemSimulation}},
+  }
+  ```
+  Replace `0.1.6` / `b29e887` with the final submission tag and commit.
+
+- [ ] Update the §6.4 reproducibility paragraph (`64_reference_model.tex:11`)
+  to pin the version and commit:
+
+  ```latex
+  The case-study scenarios are reproducible from the archived \syssimx{} release~\cite{frech_syssimx_2026}.
+  The reported results were produced with the framework at version~0.1.6, Git commit~\texttt{b29e887}.
+  The scenario notebooks in the repository define the co-simulation configurations used for the figures in this chapter.
+  The OpenModelica reference models belong to the controlled-pendulum Modelica package.
+  The reference trajectories are exported once and loaded by the plotting scripts.
+  This allows the thesis figures to be regenerated without recompiling the Modelica models.
+  Reproducing the exported reference trajectories requires OpenModelica~\texttt{1.26.3}.
+  ```
+
+- [ ] Recompile (biber + pdflatex ×2) and confirm the DOI renders in the
+  bibliography and the `frech_syssimx_2026` cite resolves.
+
+---
+
 ## Short Rule
 
 Temporary cleanup tasks belong here.
 Stable thesis concept, chapter roles, terminology, notation, and writing style
 belong in their dedicated guideline documents.
+
+---
+
+## Audit Findings (2026-05-19)
+
+Cross-cutting items from the structural + cross-reference audit.
+Chapter-specific items are tracked in each chapter guideline.
+
+### High Priority
+
+- [ ] **Front matter — placeholder text.** All four front-matter files
+  still contain template placeholder text:
+  - `other/abstract.tex` (English abstract)
+  - `other/kurzfassung.tex` (German short summary)
+  - `other/acknowledgements.tex`
+  - `other/affidavit.tex` (also has `<Organisation>`, `<project name>`,
+    `<project number>` placeholders in the funding statement)
+
+  Decide which are required for submission and write them.
+- [ ] **Affidavit and appendix not included from `main.tex`.**
+  `main.tex` calls `\appendix` on line 114 but no appendix chapter
+  follows, and `other/affidavit.tex` is not `\include`d. Decide whether
+  to include both or remove the `\appendix` call and the `other/appendix.tex`
+  file.
+
+### Medium Priority
+
+- [ ] **Macro step notation `$H_k$` vs `$\Delta t$`.**
+  Chapter 2 uses `H_k`; Chapters 4, 5, and 6 use `\Delta t`. See the
+  audit-findings section of `ch2_theory.md` for the recommended fix
+  (dual-usage clarification in the notation table).
+- [ ] **Acronym macro usage.** Defined acronyms that are never used via
+  `\ac{}` in the chapters:
+  - `IJCSA` — used as plain text throughout Chapter 5 (`55_structural_analysis.tex`,
+    `56_algebraic_loops.tex`, `57_master_algorithms.tex`,
+    `59_multi_component.tex`).
+  - `PID`, `ADC`, `BLDC` — appear in Chapter 6 as plain text only.
+  - `API` — appears in `41_architectural_overview.tex` as plain text only.
+
+  For each, either use `\ac{...}` at first occurrence or remove the
+  entry from `other/acronyms.tex`. Acronyms defined but unused at all:
+  `CSV`, `DOF`, `PDE`, `SR`, `UR` — consider removing.
+- [ ] **Caption short forms (`\caption[<short>]{<long>}`).**
+  65 of 82 captions in chapter sources already use the short form.
+  Remaining bare `\caption{...}` calls:
+  - Chapter 3: four UR/SR tables and the equation-based tool table
+    (`311_general_modeling.tex:15`, `312_heterogeneous.tex:15`,
+    `313_simulation.tex:17`, `314_interaction.tex:12`,
+    `32_tool_comparison.tex:45`).
+  - Chapter 5: verification tables in `51_port_system.tex:35,95`,
+    `52_co_sim_component.tex:150`, `531_fmu_component.tex:117`,
+    `55_structural_analysis.tex:212`, `59_multi_component.tex:33`.
+  - Chapter 6: `62_controlled_pendulum_system.tex:39`,
+    `63_pendulum_models.tex:21`, `64_reference_model.tex:28`.
+- [ ] **Duplicate CoFMPy bib entry.** `references.bib` contains both
+  `friedrich_cofmpy_2025` and `friedrich_cofmpy_2025-1`. The latter is
+  uncited. Delete the duplicate; move the DOI to the surviving entry.
+- [ ] **Compile log inspection.** No log was provided to the audit.
+  Compile `pdflatex` twice → `biber` → `pdflatex` twice and grep the
+  `.log` for `Warning|Error|Overfull|Underfull|undefined`. Resolve
+  unresolved refs, multiply-defined labels, and overfull boxes.
+
+### Low Priority
+
+- [ ] **`\input{...}` style inconsistency.**
+  `2_theoretical_background.tex` mixes `.tex` and no-`.tex` extensions
+  within one file (lines 13 and 17 use `.tex`; lines 14–16 do not).
+  Chapters 5/6/7 use `.tex`; Chapters 1/3/4 use no extension. Pick one
+  convention thesis-wide.
+- [ ] **Zotero-imported bib keys.**
+  Several entries use `noauthor_*_nodate` or `*_nodate` keys, indicating
+  Zotero imports without proper author/date fields. Clean up where
+  possible. See `ch3_requirements.md` audit findings for the list.
+- [x] **Possible duplicate `gomes_co-simulation_2019` bib entry.**
+  Resolved by using `gomes_co-simulation_2019` consistently.

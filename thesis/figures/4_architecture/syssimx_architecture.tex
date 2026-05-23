@@ -7,62 +7,10 @@
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
 
-\tikzset{
-  every node/.style={font=\sffamily},
-  % Row background highlight (no border, just fill)
-  layerbg/.style={
-    rounded corners=3pt,
-    inner sep=3pt,
-    draw=none,
-  },
-  % Left-column layer label box
-  layerbox/.style={
-    draw=white,
-    rounded corners=3pt,
-    minimum width=2.75cm,
-    minimum height=1.12cm,
-    text=white,
-    align=center,
-    font=\footnotesize\bfseries,
-  },
-  % Content item box
-  itembox/.style={
-    draw=white,
-    rounded corners=3pt,
-    minimum width=2.75cm,
-    minimum height=1.12cm,
-    text=white,
-    align=center,
-    font=\footnotesize,
-  },
-  % External tool box
-  extbox/.style={
-    draw=white,
-    rounded corners=3pt,
-    minimum width=3.35cm,
-    minimum height=1.12cm,
-    text=white,
-    align=center,
-    font=\footnotesize,
-  },
-  % Solid arrow: delegates-to (within framework, top-to-bottom)
-  layerarrow/.style={
-    line width=1.2pt,
-    draw=black!55,
-    -{Latex[length=2.7mm, width=2.0mm]},
-  },
-  % Dashed arrow: tool API call (adapter to external backend)
-  toolcall/.style={
-    line width=1.0pt,
-    draw=black!50,
-    dashed,
-    -{Latex[length=2.4mm, width=1.8mm]},
-    shorten >=2pt,
-  },
-}
+\input{../shared/tikz_style.tex}
 
 \begin{document}
-\begin{tikzpicture}
+\begin{tikzpicture}[every node/.style={font=\sffamily}]
 
   % ---------------------------------------------------------------------------
   % Framework background matrix  (4 rows × 5 cols)
@@ -72,10 +20,7 @@
   % ---------------------------------------------------------------------------
   \begin{pgfonlayer}{background}
     \matrix[
-      fill=red!5,
-      draw=red!70!black,
-      dashed,
-      line width=1.1pt,
+      sx/ch4/framework,
       rounded corners=5pt,
       inner sep=7pt,
       row sep=0.42cm,
@@ -93,10 +38,10 @@
     };
 
     % Horizontal layer backgrounds
-    \node[layerbg, fill=Blue!15,        fit=(r1c1)(r1c5)] (bg1) {};
-    \node[layerbg, fill=ForestGreen!15, fit=(r2c1)(r2c5)] (bg2) {};
-    \node[layerbg, fill=OrangeRed!15,   fit=(r3c1)(r3c5)] (bg3) {};
-    \node[layerbg, fill=Purple!15,      fit=(r4c1)(r4c5)] (bg4) {};
+    \node[sx/ch4/layerbg, fill=sxExec!10,    fit=(r1c1)(r1c5)] (bg1) {};
+    \node[sx/ch4/layerbg, fill=sxOrch!10,    fit=(r2c1)(r2c5)] (bg2) {};
+    \node[sx/ch4/layerbg, fill=sxCore!10,    fit=(r3c1)(r3c5)] (bg3) {};
+    \node[sx/ch4/layerbg, fill=sxAdapter!10, fit=(r4c1)(r4c5)] (bg4) {};
   \end{pgfonlayer}
 
   % Framework boundary label
@@ -104,54 +49,51 @@
     anchor=north,
     fill=white,
     inner sep=2.5pt,
-    font=\bfseries\small,
-    text=red!70!black,
+    font=\sffamily\bfseries\small,
+    text=sxFrameworkBorder,
   ] at ([yshift=5mm]framework.north) {SysSimX Framework};
 
   % ---------------------------------------------------------------------------
   % Execution Layer  (row 1)
   % ---------------------------------------------------------------------------
-  \node[layerbox, fill=Blue!80]  (exec_lbl) at (r1c1.center) {Execution\\Layer};
-  \node[itembox,  fill=Blue!68]             at (r1c2.center) {Jacobi};
-  \node[itembox,  fill=Blue!68]             at (r1c3.center) {Gauss-Seidel};
-  \node[itembox,  fill=Blue!68]             at (r1c4.center) {IJCSA};
-  \node[itembox,  fill=Blue!68]             at (r1c5.center) {Hybrid};
+  \node[sx/ch4/layer label, fill=sxExec] (exec_lbl) at (r1c1.center) {Execution\\Layer};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c2.center) {Jacobi};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c3.center) {Gauss--Seidel};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c4.center) {IJCSA};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c5.center) {Hybrid};
 
   % ---------------------------------------------------------------------------
   % System Orchestration  (row 2)
   % ---------------------------------------------------------------------------
-  \node[layerbox, fill=ForestGreen!80] (orch_lbl) at (r2c1.center) {System\\Orchestration};
-  \node[itembox,  fill=ForestGreen!68]            at (r2c2.center) {\texttt{System}};
-  \node[itembox,  fill=ForestGreen!68]            at (r2c3.center) {Dependency\\Graph};
-  \node[itembox,  fill=ForestGreen!68]            at (r2c4.center) {Execution\\Order};
-  \node[itembox,  fill=ForestGreen!68]            at (r2c5.center) {Algebraic\\Loops};
+  \node[sx/ch4/layer label, fill=sxOrch] (orch_lbl) at (r2c1.center) {System\\Orchestration};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c2.center) {\texttt{System}};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c3.center) {Dependency\\Graph};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c4.center) {Execution\\Order};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c5.center) {Algebraic\\Loops};
 
   % ---------------------------------------------------------------------------
   % Core Abstractions  (row 3)
   % ---------------------------------------------------------------------------
-  \node[layerbox, fill=OrangeRed!85]  (core_lbl) at (r3c1.center) {Core\\Abstractions};
-  \node[itembox,  fill=OrangeRed!73]             at (r3c2.center) {\texttt{CoSimComponent}};
-  \node[itembox,  fill=OrangeRed!73]             at (r3c3.center) {\texttt{MultiComponent}};
-  \node[itembox,  fill=OrangeRed!73]             at (r3c4.center) {\texttt{Connection}};
-  \node[itembox,  fill=OrangeRed!73]             at (r3c5.center) {\texttt{EventConnection}};
+  \node[sx/ch4/layer label, fill=sxCore] (core_lbl) at (r3c1.center) {Core\\Abstractions};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c2.center) {\texttt{CoSimComponent}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c3.center) {\texttt{MultiComponent}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c4.center) {\texttt{Connection}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c5.center) {\texttt{EventConnection}};
 
   % ---------------------------------------------------------------------------
   % Adapter Layer  (row 4)
   % ---------------------------------------------------------------------------
-  \node[layerbox, fill=Purple!80] (adp_lbl) at (r4c1.center) {Adapter\\Layer};
-  \node[itembox,  fill=Purple!68] (adp_fmu) at (r4c2.center) {\texttt{FMUComponent}};
-  \node[itembox,  fill=Purple!68] (adp_osim)at (r4c3.center) {\texttt{OpenSimComponent}};
-  \node[itembox,  fill=Purple!68] (adp_fem) at (r4c4.center) {\texttt{FEMComponent}};
-  \node[itembox,  fill=Purple!45]            at (r4c5.center) {(extensible)};
+  \node[sx/ch4/layer label, fill=sxAdapter] (adp_lbl) at (r4c1.center) {Adapter\\Layer};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_fmu)     at (r4c2.center) {\texttt{FMUComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_osim)    at (r4c3.center) {\texttt{OpenSimComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_fem)     at (r4c4.center) {\texttt{FEMComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!10]               at (r4c5.center) {(extensible)};
 
   % ---------------------------------------------------------------------------
   % External Tools  —  outside framework boundary
   % ---------------------------------------------------------------------------
   \node[
-    draw=black!45,
-    rounded corners=4pt,
-    line width=1pt,
-    fill=Gray!12,
+    sx/ch4/neutral box,
     minimum width=14.7cm,
     minimum height=2.1cm,
     anchor=north,
@@ -159,17 +101,17 @@
 
   \node[
     anchor=south,
-    font=\bfseries\small,
+    font=\sffamily\bfseries\small,
     text=black!65,
   ] at ([yshift=1mm]extrow.south)
     {External Simulation Tools%
      \enspace\normalfont\small(not part of the framework)};
 
-  \node[extbox, fill=Gray!55] (fmi)  at ([xshift=-4.5cm, yshift=3mm]extrow.center)
+  \node[sx/ch4/external item] (fmi)  at ([xshift=-4.5cm, yshift=3mm]extrow.center)
     {FMI 2.0\\Co-Simulation FMUs};
-  \node[extbox, fill=Gray!55] (osim) at ([yshift=3mm]extrow.center)
+  \node[sx/ch4/external item] (osim) at ([yshift=3mm]extrow.center)
     {OpenSim};
-  \node[extbox, fill=Gray!55] (ngs)  at ([xshift=+4.5cm, yshift=3mm]extrow.center)
+  \node[sx/ch4/external item] (ngs)  at ([xshift=+4.5cm, yshift=3mm]extrow.center)
     {Netgen / NGSolve};
 
   % ---------------------------------------------------------------------------
@@ -178,13 +120,10 @@
   \coordinate (topcenter) at ($(r1c1.north)!0.5!(r1c5.north)$);
 
   \node[
-    draw=black!40,
-    rounded corners=4pt,
-    fill=Gray!10,
-    line width=0.9pt,
+    sx/ch4/neutral box,
     minimum width=14.7cm,
     minimum height=0.95cm,
-    font=\footnotesize,
+    font=\sffamily\footnotesize,
     text=black!70,
     align=center,
     anchor=south,
@@ -198,18 +137,18 @@
   % ---------------------------------------------------------------------------
 
   % 1. User Code → Execution Layer
-  \draw[layerarrow]
+  \draw[sx/ch4/arrow]
     (userbar.south -| exec_lbl.north) -- node[pos=0.45, anchor=west, font=\scriptsize] {delegates to} (exec_lbl.north);
 
   % 2. Inter-layer delegation chain (left label column)
-  \draw[layerarrow] (exec_lbl.south) -- (orch_lbl.north);
-  \draw[layerarrow] (orch_lbl.south) -- (core_lbl.north);
-  \draw[layerarrow] (core_lbl.south) -- (adp_lbl.north);
+  \draw[sx/ch4/arrow] (exec_lbl.south) -- (orch_lbl.north);
+  \draw[sx/ch4/arrow] (orch_lbl.south) -- (core_lbl.north);
+  \draw[sx/ch4/arrow] (core_lbl.south) -- (adp_lbl.north);
 
   % 3. Adapter → External Tools (dashed: crosses framework boundary)
-  \draw[toolcall] (adp_fmu.south)  -- (fmi.north);
-  \draw[toolcall] (adp_osim.south) -- (osim.north);
-  \draw[toolcall] (adp_fem.south)  -- (ngs.north);
+  \draw[sx/ch4/toolcall] (adp_fmu.south)  -- (fmi.north);
+  \draw[sx/ch4/toolcall] (adp_osim.south) -- (osim.north);
+  \draw[sx/ch4/toolcall] (adp_fem.south)  -- (ngs.north);
 
 \end{tikzpicture}
 \end{document}

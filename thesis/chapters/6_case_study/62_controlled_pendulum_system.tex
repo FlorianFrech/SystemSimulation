@@ -5,13 +5,13 @@ The case-study system is a closed-loop controlled pendulum with sensor feedback,
 Figure~\ref{fig:case_controlled_pendulum_system} shows the signal flow used in the co-simulation scenarios.
 The setpoint block generates the reference angle.
 The angle sensor and decoder provide the measured feedback angle.
-The PID controller computes the drive command.
+The \ac{PID} controller computes the drive command.
 The drive maps this command to the actuator torque applied to the pendulum plant.
 
 The main continuous input signals are the reference angle \(\theta_{\mathrm{ref}}\), the measured feedback angle \(\theta_{\mathrm{meas}}\), the control signal \(u_{\mathrm{control}}\), and the actuator torque \(\tau\).
 The plant outputs used in the case study are the pendulum angle \(\theta\) and the angular velocity \(\omega\).
 The contact event is a discrete signal emitted by the pendulum plant when wall contact occurs.
-In contact scenarios, this event triggers the pendulum contact response and the reset of the PID integrator.
+In contact scenarios, this event triggers the pendulum contact response and the reset of the \ac{PID} integrator.
 
 \begin{landscape}
 \begin{figure}[p]
@@ -24,7 +24,7 @@ In contact scenarios, this event triggers the pendulum contact response and the 
   ]{figures/6_case_study/controlled_pendulum/system_assembly.pdf}
   \vspace{-5ex}
   \caption[Closed-loop signal flow of the controlled-pendulum case study]{Closed-loop signal flow of the controlled-pendulum case study.
-  The pendulum plant is the interchangeable subsystem used by the FMU, OpenSim, FEM, and \texttt{MasterPendulum} variants.}
+  The pendulum plant is the interchangeable subsystem used by the \ac{FMU}, OpenSim, \ac{FEM}, and \texttt{MasterPendulum} variants.}
   \label{fig:case_controlled_pendulum_system}
 \end{figure}
 \end{landscape}
@@ -36,7 +36,7 @@ Model-specific details of the pendulum variants are introduced in Section~\ref{s
 \begin{table}[tbp]
     \centering
     \small
-    \caption{Subsystems of the controlled-pendulum case study.}
+    \caption[Subsystems of the controlled-pendulum case study]{Subsystems of the controlled-pendulum case study.}
     \label{tab:case_study_subsystems}
     \begin{tabular}{p{3.0cm}p{5.0cm}p{5.6cm}}
         \toprule
@@ -50,7 +50,7 @@ Model-specific details of the pendulum variants are introduced in Section~\ref{s
         & Converts the plant angle into the feedback signal \(\theta_{\mathrm{meas}}\)
         & Used as exact or quantized feedback path depending on the scenario \\
         \addlinespace
-        PID controller
+        \ac{PID} controller
         & Computes the normalized drive command \(u_{\mathrm{control}}\)
         & The reset-capable variant clears the integrator state after contact \\
         \addlinespace
@@ -60,7 +60,7 @@ Model-specific details of the pendulum variants are introduced in Section~\ref{s
         \addlinespace
         Pendulum plant
         & Receives the actuator torque and returns \(\theta\), \(\omega\), and contact events
-        & Exchanged between FMU, OpenSim, FEM, and \texttt{MasterPendulum} variants \\
+        & Exchanged between \ac{FMU}, OpenSim, \ac{FEM}, and \texttt{MasterPendulum} variants \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -68,7 +68,7 @@ Model-specific details of the pendulum variants are introduced in Section~\ref{s
 All pendulum variants implement the same plant interface.
 The input is the actuator torque \(\tau\).
 The required outputs are the angle \(\theta\), the angular velocity \(\omega\), and the contact event.
-This interface allows the FMU, OpenSim, FEM, and multi-model pendulum variants to be exchanged without changing the controller, drive, sensor, or decoder.
+This interface allows the \ac{FMU}, OpenSim, \ac{FEM}, and multi-model pendulum variants to be exchanged without changing the controller, drive, sensor, or decoder.
 
 The following sections separate the system architecture from the pendulum models.
 Section~\ref{sec:case_study_pendulum_models} describes how the individual pendulum variants realize the shared interface.
