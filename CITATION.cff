@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use SysSimX in academic work, please cite it using the metadata below."
+title: "SysSimX: A Python Framework for Heterogeneous Hybrid Co-Simulation"
+type: software
+authors:
+  - given-names: Florian
+    family-names: Frech
+    # orcid: "https://orcid.org/0000-0000-0000-0000"   # add your ORCID before the release
+    # email: your-public-contact@example.org           # optional
+version: 0.1.6
+date-released: 2026-05-23   # set to the actual submission/release date
+license: MIT
+repository-code: "https://github.com/FlorianFrech/SystemSimulation"
+url: "https://syssimx.readthedocs.io/"
+# doi: "10.5281/zenodo.XXXXXXX"   # uncomment after Zenodo mints the version DOI
+abstract: >-
+  SysSimX is a Python framework for heterogeneous hybrid co-simulation
+  with runtime model switching. It couples Functional Mock-up Units
+  (FMUs), OpenSim models, and finite-element method (FEM) models through
+  a shared component abstraction, derives structural execution metadata
+  for initialization, master algorithm execution, and algebraic-loop
+  handling, and supports hybrid event localization and runtime switching
+  between alternative models of the same subsystem.
+keywords:
+  - co-simulation
+  - hybrid systems
+  - heterogeneous simulation
+  - runtime model switching
+  - FMI
+  - OpenSim
+  - finite-element method
+  - Python
