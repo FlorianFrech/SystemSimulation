@@ -173,27 +173,21 @@ Chapter-specific items are tracked in each chapter guideline.
 
 ### High Priority
 
-- [ ] **Front matter — placeholder text.** All four front-matter files
-  still contain template placeholder text:
-  - `other/abstract.tex` (English abstract)
-  - `other/kurzfassung.tex` (German short summary)
-  - `other/acknowledgements.tex`
-  - `other/affidavit.tex` (also has `<Organisation>`, `<project name>`,
-    `<project number>` placeholders in the funding statement)
-
-  Decide which are required for submission and write them.
-- [ ] **Affidavit and appendix not included from `main.tex`.**
-  `main.tex` calls `\appendix` on line 114 but no appendix chapter
-  follows, and `other/affidavit.tex` is not `\include`d. Decide whether
-  to include both or remove the `\appendix` call and the `other/appendix.tex`
-  file.
+- [x] **Front matter — placeholder text.** Resolved (2026-05-26):
+  abstract, Kurzfassung, acknowledgements, and affidavit are written;
+  the funding-statement block with `<Organisation>` / `<project name>`
+  placeholders has been removed from `other/affidavit.tex`.
+- [ ] **Empty `\appendix` in `main.tex`.** Affidavit is now included via
+  the frontmatter path. The `\appendix` call on line 115 of `main.tex`
+  remains, but no appendix chapter follows. Decide: remove the call, or
+  add intended appendix content. Either is acceptable for the supervisor
+  draft; finalize before submission.
 
 ### Medium Priority
 
-- [ ] **Macro step notation `$H_k$` vs `$\Delta t$`.**
-  Chapter 2 uses `H_k`; Chapters 4, 5, and 6 use `\Delta t`. See the
-  audit-findings section of `ch2_theory.md` for the recommended fix
-  (dual-usage clarification in the notation table).
+- [x] **Macro step notation `$H_k$` vs `$\Delta t$`.** Resolved
+  (TN-02, audit log): `notation.md` now permits scalar `\Delta t` as a
+  Chapter 5–6 macro-step abbreviation.
 - [ ] **Acronym macro usage.** Defined acronyms that are never used via
   `\ac{}` in the chapters:
   - `IJCSA` — used as plain text throughout Chapter 5 (`55_structural_analysis.tex`,
@@ -217,9 +211,9 @@ Chapter-specific items are tracked in each chapter guideline.
     `55_structural_analysis.tex:212`, `59_multi_component.tex:33`.
   - Chapter 6: `62_controlled_pendulum_system.tex:39`,
     `63_pendulum_models.tex:21`, `64_reference_model.tex:28`.
-- [ ] **Duplicate CoFMPy bib entry.** `references.bib` contains both
-  `friedrich_cofmpy_2025` and `friedrich_cofmpy_2025-1`. The latter is
-  uncited. Delete the duplicate; move the DOI to the surviving entry.
+- [x] **Duplicate CoFMPy bib entry.** Resolved (2026-05-22): the
+  `friedrich_cofmpy_2025-1` duplicate has been removed from
+  `references.bib`; the DOI is preserved on the surviving entry.
 - [ ] **Compile log inspection.** No log was provided to the audit.
   Compile `pdflatex` twice → `biber` → `pdflatex` twice and grep the
   `.log` for `Warning|Error|Overfull|Underfull|undefined`. Resolve
@@ -238,3 +232,57 @@ Chapter-specific items are tracked in each chapter guideline.
   possible. See `ch3_requirements.md` audit findings for the list.
 - [x] **Possible duplicate `gomes_co-simulation_2019` bib entry.**
   Resolved by using `gomes_co-simulation_2019` consistently.
+
+---
+
+## Status Check (2026-05-26)
+
+Cross-check of the 2026-05-19 audit against the current PDF and source.
+Most drafted drop-ins have been applied; this section records the state
+on the day the draft was prepared for supervisor submission.
+
+### Verified resolved since the 2026-05-19 audit
+
+- Front-matter writing (abstract, Kurzfassung, acknowledgements,
+  affidavit) and removal of the funding-statement placeholders.
+- Drafted drop-ins VE-01–VE-04, TH-02, IC-02, IC-03, IC-04, ST-01,
+  ST-02, TN-03, TN-04, TN-05 are present in the compiled PDF.
+- LIT-01: §6.4 DASSL/CVODE sentences cite the OpenModelica User's Guide.
+- PDF-01: abstract names SysSimX in paragraph 2.
+- PDF-02 / FIG-01: 1.61× speedup reconciled across abstract,
+  Kurzfassung, §6.5.3, Table 6.5, §7.1, §7.3, and Fig 6.6.
+- PDF-07: affidavit page is present.
+- FIG-02: Fig 5.9 figure label is `A = {Inner}`, matching the §5.6
+  prose (verified 2026-05-26 against the compiled figure).
+- NC-04 / ST-04: no duplicated Gauss–Seidel paragraph remains in
+  `57_master_algorithms.tex` (verified 2026-05-26 — lines 153–154
+  describe Gauss–Seidel; lines 156–158 describe IJCSA).
+- Software-release bib entry `frech_syssimx_2026` carries version,
+  Git commit, and repo URL.
+
+### Open before sending the supervisor draft
+
+- Decide on the empty `\appendix` in `main.tex:115` — remove the call
+  or add intended appendix content.
+- Final compile-log inspection (biber + `pdflatex` ×2, then grep the
+  `.log` for `Warning|Error|Overfull|Underfull|undefined`).
+
+### Optional polish (defer to post-feedback revision)
+
+- PDF-03 (`\ac{UR}` / `\ac{SR}` sentence starts on p. 37).
+- PDF-04 ("FEMs models" plural acronym before "models" in §7.1).
+- PDF-05 ("Section 2" → "Notation section" on p. 10).
+- PDF-08 (numbered but unreferenced equations in §2.4.3).
+- FIG-03 (Fig 6.1 sub-label legibility at print size).
+- Remaining acronym `\ac{}` consistency (IJCSA, PID, ADC, BLDC, API).
+- Re-verify the listed caption short forms in Chapters 3, 5, and 6
+  against the current PDF — most may already be done.
+- §8 reproducibility paragraph expansion (drafted in §8 above; the
+  current minimal wording already cites the upgraded software entry).
+
+### Verdict
+
+All HIGH-severity items are closed. The remaining MEDIUM-severity work
+is contained to the empty `\appendix` call and the final compile-log
+scan. The thesis is ready for supervisor draft submission once those
+two items are addressed.

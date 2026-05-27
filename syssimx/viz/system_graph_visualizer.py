@@ -288,18 +288,27 @@ def _legend_label() -> str:
         <TR>
             <TD ALIGN="LEFT" VALIGN="TOP">
                 <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Edges:</B></FONT></TD></TR>
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">───&gt; Data flow</FONT></TD></TR>
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444">───&gt; Algebraic loop</FONT></TD></TR>
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff">┄┄┄o Event connection</FONT></TD></TR>
+                    <TR><TD COLSPAN="2" ALIGN="LEFT"><FONT POINT-SIZE="8"><B>Edges:</B></FONT></TD></TR>
+                    <TR>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="9">──▶</FONT></TD>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="8">Data flow</FONT></TD>
+                    </TR>
+                    <TR>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="9" COLOR="#ef4444"><B>━━▶</B></FONT></TD>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="8">Algebraic loop</FONT></TD>
+                    </TR>
+                    <TR>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="9" COLOR="#0b84ff"><B>╍╍○</B></FONT></TD>
+                        <TD ALIGN="LEFT" VALIGN="MIDDLE"><FONT POINT-SIZE="8">Event connection</FONT></TD>
+                    </TR>
                 </TABLE>
             </TD>
-            <TD WIDTH="6"></TD>
+            <TD WIDTH="8"></TD>
             <TD ALIGN="LEFT" VALIGN="TOP">
                 <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9"><B>Ports:</B></FONT></TD></TR>
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>red</B></FONT> Direct feedthrough</TD></TR>
-                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>blue</B></FONT> Event port</TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8"><B>Ports:</B></FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#ef4444"><B>Direct feedthrough</B></FONT></TD></TR>
+                    <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8" COLOR="#0b84ff"><B>Event port</B></FONT></TD></TR>
                 </TABLE>
             </TD>
         </TR>
@@ -418,9 +427,9 @@ class SystemGraphVisualizer:
                 color=COLOR_LEGEND_BORDER,
                 bgcolor=COLOR_LEGEND_BG,
                 fontname=FONT_BOLD,
-                fontsize="10",
-                penwidth="1.5",
-                margin="8",
+                fontsize="9",
+                penwidth="1.0",
+                margin="3",
                 rank="sink",
             )
             legend.node("legend_node", label=_legend_label(), shape="plaintext", fontsize="8")
