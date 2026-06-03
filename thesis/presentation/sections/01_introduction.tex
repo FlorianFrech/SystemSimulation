@@ -1,0 +1,88 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 1 — Introduction
+%% Budget: 3 minutes / 3 slides
+%%   S1  Motivation         — application class + heterogeneous-tool reality
+%%   S2  Research gap       — capability table + central RQ + sub-RQ keywords
+%%   S3  Contribution       — what was built + forward pointers
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+
+%---------------------------------------------------------------------------
+\begin{frame}[fragile]{Heterogeneous Device--Human Systems}
+    \centering
+    \vspace{-0.35em}
+    \begingroup
+        \resizebox{!}{0.86\textheight}{%
+            \input{figures/introduction/exo.tex}%
+        }
+    \endgroup
+\end{frame}
+
+%---------------------------------------------------------------------------
+\begin{frame}{Co-Simulation Challenges}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \centering
+      \resizebox{\linewidth}{!}{%
+        \input{figures/introduction/orchestration.tex}%
+      }
+    \end{column}
+    \begin{column}{0.43\textwidth}
+        \begin{enumerate}
+            \item \textbf{Execution order}\\
+            Which simulation unit runs first?
+            \vspace{0.8em}
+            \item \textbf{Algebraic loops}\\
+            Cyclic dependencies require an interface solve.
+            \vspace{0.8em}
+            \item \textbf{Hybrid events}\\
+            Detect, localize, and restore consistent state.
+        \end{enumerate}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+
+%---------------------------------------------------------------------------
+% \begin{frame}{Research Gap}
+%     \begin{itemize}
+%         \item \ac{FMI}-based frameworks handle \ac{FMU} coupling and algebraic loops.
+%         \item None combines native \ac{FMU}, OpenSim, and \ac{FEM} backends with hybrid event handling and runtime model switching.
+%     \end{itemize}
+
+%     \vspace{0.3em}
+%     \begin{table}[h]
+%         \centering\footnotesize
+%         \begin{tabular}{l c c c c c c}
+%             \toprule
+%             \textbf{Framework}  & \textbf{\ac{FMU}}    & \textbf{OpenSim} & \textbf{\ac{FEM}}
+%                                 & \textbf{Alg.\ loops} & \textbf{Hybrid}  & \textbf{Switching}                                            \\
+%             \midrule
+%             OMSimulator         & \checkmark           & ---              & ---                & \checkmark & ($\checkmark$) & ---        \\
+%             INTO-CPS Maestro    & \checkmark           & ---              & ---                & \checkmark & ($\checkmark$) & ---        \\
+%             CoFMPy              & \checkmark           & ($\checkmark$)   & ($\checkmark$)     & \checkmark & ---            & ---        \\
+%             \textbf{\syssimx{}} & \checkmark           & \checkmark       & \checkmark         & \checkmark & \checkmark     & \checkmark \\
+%             \bottomrule
+%         \end{tabular}
+%     \end{table}
+% \end{frame}
+
+%---------------------------------------------------------------------------
+% \begin{frame}{Contribution}
+%     \begin{block}{\syssimx{} --- a Python framework for heterogeneous hybrid co-simulation}
+%         This thesis designs, implements, and evaluates:
+%         \begin{itemize}
+%             \item a unified component abstraction for heterogeneous subsystem models,
+%             \item graph-based structural analysis (dependency detection, execution order, algebraic loops),
+%             \item hybrid event handling (detection, localization, dispatch, cascaded events),
+%             \item a multi-model component for runtime switching with state synchronization.
+%         \end{itemize}
+%     \end{block}
+
+%     \begin{itemize}
+%         \item Evaluated on a controlled-pendulum case study combining \acp{FMU}, OpenSim, and \ac{FEM} models in one closed-loop scenario.
+%         \item Evidence path: architecture $\to$ implementation $\to$ case study.
+%     \end{itemize}
+% \end{frame}

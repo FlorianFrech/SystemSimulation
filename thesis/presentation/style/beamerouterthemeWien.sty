@@ -16,6 +16,7 @@
 
 \RequirePackage{tikz}
 \RequirePackage{calc}
+\RequirePackage{graphicx}
 \usetikzlibrary{calc}
 
 % Theme options:
@@ -53,7 +54,7 @@
 \setbeamertemplate{frametitle}
 {%
   \ifbeamercolorempty[bg]{frametitle}{}{\nointerlineskip}%
-  \begin{beamercolorbox}[sep=0.3cm,center,wd=\paperwidth]{frametitle}
+  \begin{beamercolorbox}[sep=0.16cm,center,wd=\paperwidth]{frametitle}
     \usebeamerfont{frametitle}%
     % If the title is set in reverse background, we use less space
     % than if it is set in white background:
@@ -103,11 +104,13 @@
 
 % width of the border
 \newlength{\beamer@borderwidth}
-\setlength{\beamer@borderwidth}{0.8mm} % as small is the thickness of the border the whole circle goes up
+\setlength{\beamer@borderwidth}{0.35mm} % progress-circle border thickness
  
 % inner radius of border of the framenumber frame
+% Sized so the outer diameter matches the TU logo height (0.48cm),
+% i.e. outer radius 0.24cm => inner = 0.24cm - \beamer@borderwidth.
 \newlength{\beamer@fninnerradius}
-\setlength{\beamer@fninnerradius}{0.6\beamer@height/2}
+\setlength{\beamer@fninnerradius}{0.205cm}
 
 % radius of the outer border of the framenumber frame
 \newlength{\beamer@fnouterradius}
@@ -159,7 +162,16 @@
     (0,0.95\beamer@height); % upper left corner of the footline
     \coordinate (LRF) at
     (1\paperwidth,0); % lower right corner of the footline
-    \coordinate (fnpos) at ($ (LRF) + (-0.41cm,0.41cm) $);
+    \coordinate (footercenter) at (0,0.475\beamer@height);
+    \coordinate (fnpos) at ($ (LRF) + (-0.34cm,0.475\beamer@height) $);
+
+    % rectangular bottom bar (disabled to gain vertical space)
+    % \fill[fill=ictbgcolor] (ULF) rectangle (LRF);
+
+    % TU logo on the left
+    \path (0.12cm,0.475\beamer@height)
+      node[anchor=west, inner sep=0pt]
+      {\includegraphics[height=0.48cm]{assets/logos/TU-Signet.png}};
     % The center is positioned such, that the
     % circle ends 0.7cm from botten and 0.7cm
     % from the right, which is the thickness
@@ -180,7 +192,7 @@
 
        % Calculate the fraction of frames in terms of a full circle:
        \pgfmathsetmacro{\progress}{%
-         ((\insertframenumber-\theunnumberedframe)/\effectivetotalframe*(-360))+90};
+         ((\insertframenumber-\theunnumberedframe)/\effectivetotalframe*(-360))+90}
 
        % Place a small line at the beginning of the circle:
        \draw[color=tucolor,line width=0.1*\beamer@borderwidth]
@@ -201,7 +213,7 @@
 
     % place the framenumber in the center of the circle:
     \ifshowframenumber
-       \node[font=\tiny] at (fnpos) {{\usebeamercolor[fg]{normal
+       \node[font=\footnotesize] at (fnpos) {{\usebeamercolor[fg]{normal
              text}\usebox{\appstr}\insertframenumber}};
        \fi
 
@@ -210,15 +222,15 @@
     \ifshowauthor
        \ifshowtitle 
           % show both author and title in the foot line:
-          \node at (0.5\paperwidth,0.5\beamer@height) {{\insertshortauthor\ |\ \insertshorttitle}};
+          \node at (0.5\paperwidth,0.475\beamer@height) {{\insertshortauthor\ |\ \insertshorttitle}};
        \else
           % show only author in the foot line:
-         \node at (0.5\paperwidth,0.5\beamer@height) {{\insertshortauthor}};
+         \node at (0.5\paperwidth,0.475\beamer@height) {{\insertshortauthor}};
        \fi
     \else
        \ifshowtitle
           % show only the title in the foot line:
-          \node at (0.5\paperwidth,0.5\beamer@height) {{\insertshorttitle}};
+          \node at (0.5\paperwidth,0.475\beamer@height) {{\insertshorttitle}};
        \fi
     \fi
     

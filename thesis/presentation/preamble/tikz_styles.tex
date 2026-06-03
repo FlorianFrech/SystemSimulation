@@ -1,0 +1,143 @@
+% preamble/tikz_styles.tex
+
+\usetikzlibrary{
+  arrows.meta,
+  backgrounds,
+  calc,
+  decorations,
+  fit,
+  patterns,
+  positioning,
+  shapes.geometric
+}
+
+\tikzset{
+  pres/.style={
+    font=\sffamily,
+    line cap=round,
+    line join=round
+  },
+  pres component/.style={
+    draw=presBoundary,
+    fill=presComponentFill,
+    rounded corners=2pt,
+    line width=0.8pt,
+    align=center,
+    font=\sffamily\small,
+    minimum width=2.4cm,
+    minimum height=0.85cm,
+    inner sep=4pt
+  },
+  pres active component/.style={
+    pres component,
+    fill=presActiveFill
+  },
+  pres orchestration component/.style={
+    draw=presBoundary!75,
+    fill=presComponentFill,
+    rounded corners=2pt,
+    line width=0.8pt
+  },
+  pres orchestration loop component/.style={
+    pres orchestration component,
+    fill=presLoopFill
+  },
+  pres master component/.style={
+    pres component,
+    fill=presMasterFill,
+    minimum width=2.8cm,
+    minimum height=1.0cm
+  },
+  pres subsystem box/.style={
+    pres component,
+    fill=white,
+    minimum width=3.5cm,
+    minimum height=3.5cm,
+    font=\sffamily
+  },
+  pres signal/.style={
+    -{Stealth[length=6pt]},
+    thick,
+    draw=presSignal
+  },
+  pres bidirectional signal/.style={
+    {Stealth[length=6pt]}-{Stealth[length=6pt]},
+    thick,
+    draw=presSignal
+  },
+  pres coupling/.style={
+    {Stealth[length=7pt]}-{Stealth[length=7pt]},
+    line width=1.4pt,
+    draw=presCoupling,
+    rounded corners=5pt
+  },
+  pres event/.style={
+    -{Stealth[length=6pt]},
+    thick,
+    dashed,
+    draw=presEvent
+  },
+  pres event signal/.style={
+    -{Stealth[length=6pt]},
+    thick,
+    dashed,
+    draw=presEventPort
+  },
+  pres direct feedthrough/.style={
+    -{Stealth[length=6pt]},
+    thick,
+    dashed,
+    draw=presEvent
+  },
+  pres port/.style={
+    rectangle,
+    draw=presPort,
+    fill=presPort,
+    minimum width=5mm,
+    minimum height=5mm,
+    inner sep=0pt,
+    font=\bfseries\small
+  },
+  pres event port/.style={
+    pres port,
+    draw=presEventPort,
+    fill=presEventPort,
+    line width=0.6pt,
+    font=\small\ttfamily,
+    inner sep=1pt
+  },
+  pres loop area/.style={
+    draw=presEvent!60,
+    dotted,
+    fill=presEvent!8,
+    fill opacity=0.5
+  },
+  pres loop label/.style={
+    align=center,
+    font=\sffamily\footnotesize\bfseries,
+    text=presBoundary!85
+  },
+  pres badge/.style={
+    circle,
+    draw=presBadgeFill,
+    fill=presBadgeFill,
+    text=presBadgeText,
+    minimum size=4mm,
+    font=\sffamily\small\bfseries,
+    inner sep=0pt
+  },
+  pres leader/.style={
+    -{Circle[length=5pt]},
+    line width=1pt,
+    draw=presBoundary,
+    rounded corners=3pt
+  },
+  pres ground line/.style={
+    line width=1.5pt,
+    draw=presGround
+  },
+  pres ground hatch/.style={
+    pattern=north east lines,
+    pattern color=presGround
+  }
+}

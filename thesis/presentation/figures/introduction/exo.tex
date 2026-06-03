@@ -1,0 +1,83 @@
+% Reusable TikZ body for the exoskeleton motivation figure.
+% Define \exopath and \exologopath before input if assets are not resolved from
+% this directory.
+\providecommand{\exopath}{figures/introduction/}
+\providecommand{\exologopath}{assets/logos/}
+
+\begin{tikzpicture}[pres]
+    \coordinate (min) at (0, 0);
+    \coordinate (max) at (16, 10);
+    \useasboundingbox (0,0.4) rectangle (16, 9.6);
+
+    % Grid help lines (optional, for alignment)
+    % \draw[help lines, step=0.5, draw=gray!50, very thin] (min) grid (max);
+
+    \begin{scope}[yshift=0cm]
+        % Figure content
+        \node[inner sep=0, anchor=south west] (img) at (4.5,1.5) {%
+            \includegraphics[height=7.5cm]{\exopath exo.png}%
+        };
+        
+        % Ground line and hatch
+        \coordinate (A) at (4.5, 1.5);
+        \coordinate (B) at (11.75, 1.5);
+        \draw[pres ground line] (A) -- (B);
+        \fill[pres ground hatch] ([yshift=-5mm]A) rectangle (B);
+        
+        % Biomechanics subsystem box
+        \coordinate (muscleLabel) at (2, 7.25);
+        \node[pres subsystem box] (n-bio) at (muscleLabel) {%
+            \begin{tabular}{@{}c@{}}
+                \textbf{Human}\\
+                \textbf{Biomechanics}\\[1pt]
+                {\footnotesize\itshape Musculoskeletal}\\
+                {\footnotesize\itshape Modeling}\\[2pt]
+                \IfFileExists{\exologopath OpenSim.png}
+                    {\includegraphics[height=10mm]{\exologopath OpenSim.png}}
+                    {{\scriptsize OpenSim}}
+            \end{tabular}%
+        };
+        
+        % Control subsystem box
+        \coordinate (controlLabel) at (14, 5);
+        \node[pres subsystem box] (n-control) at (controlLabel) {%
+            \begin{tabular}{@{}c@{}}
+                \textbf{Actuators, Control,}\\
+                \textbf{and Sensors}\\[1pt]
+                {\footnotesize\itshape Equation-Based}\\
+                {\footnotesize\itshape Modeling}\\[2pt]
+                \IfFileExists{\exologopath Modelica.pdf}
+                    {\includegraphics[height=10mm]{\exologopath Modelica.pdf}}
+                    {{\scriptsize Modelica}}
+            \end{tabular}%
+        };
+        
+        % FEM subsystem box
+        \coordinate (structureLabel) at (2, 2.75);
+        \node[pres subsystem box] (n-structure) at (structureLabel) {%
+            \begin{tabular}{@{}c@{}}
+                \textbf{Mechanical}\\
+                \textbf{Structure}\\[1pt]
+                {\footnotesize\itshape Finite Element}\\
+                {\footnotesize\itshape Analysis}\\[2pt]
+                \IfFileExists{\exologopath NGSolve.png}
+                    {\includegraphics[height=8mm]{\exologopath NGSolve.png}}
+                    {{\scriptsize NGSolve}}\\
+                {\scriptsize\itshape Netgen/NGSolve}
+            \end{tabular}%
+        };
+        
+        % Leaders from boxes to image
+        \coordinate (p-muscle) at (8.1, 6.8);
+        \coordinate (p-control) at (9, 7);
+        \coordinate (p-structure) at (10, 1.5);
+
+        \draw[pres leader] (n-bio.east) -- (p-muscle);
+        \draw[pres leader] (n-control.west) -- (p-control);
+        \draw[pres leader] (n-structure.east) -- (p-structure);
+
+        \draw[pres coupling] (n-bio.north) --++ (0, 0.5) --++ (12, 0) -- (n-control.north);
+        \draw[pres coupling] (n-structure.south) --++ (0, -0.5) --++ (12, 0) -- (n-control.south);
+        \draw[pres coupling] (n-structure.north) -- (n-bio.south);
+    \end{scope}
+\end{tikzpicture}

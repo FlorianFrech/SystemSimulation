@@ -1,0 +1,154 @@
+% Source style adapted from https://tex.stackexchange.com/a/681912
+\documentclass[tikz, margin=6mm]{standalone}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+
+\usetikzlibrary{fit, matrix, positioning, backgrounds, arrows.meta, calc}
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+
+\input{../shared/tikz_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[every node/.style={font=\sffamily}]
+
+  % ---------------------------------------------------------------------------
+  % Framework background matrix  (4 rows × 5 cols)
+  %   Rows top-to-bottom: Execution | Orchestration | Core | Adapter
+  %   Cols: Label | Item | Item | Item | Item
+  % Row sep is kept wide enough so inter-layer arrows are visible.
+  % ---------------------------------------------------------------------------
+  \begin{pgfonlayer}{background}
+    \matrix[
+      sx/ch4/framework,
+      rounded corners=5pt,
+      inner sep=7pt,
+      row sep=0.42cm,
+      column sep=0.25cm,
+      nodes={minimum width=2.75cm, minimum height=1.12cm},
+    ] (framework) {
+      \node (r1c1) {}; & \node (r1c2) {}; & \node (r1c3) {};
+                       & \node (r1c4) {}; & \node (r1c5) {}; \\
+      \node (r2c1) {}; & \node (r2c2) {}; & \node (r2c3) {};
+                       & \node (r2c4) {}; & \node (r2c5) {}; \\
+      \node (r3c1) {}; & \node (r3c2) {}; & \node (r3c3) {};
+                       & \node (r3c4) {}; & \node (r3c5) {}; \\
+      \node (r4c1) {}; & \node (r4c2) {}; & \node (r4c3) {};
+                       & \node (r4c4) {}; & \node (r4c5) {}; \\
+    };
+
+    % Horizontal layer backgrounds
+    \node[sx/ch4/layerbg, fill=sxExec!10,    fit=(r1c1)(r1c5)] (bg1) {};
+    \node[sx/ch4/layerbg, fill=sxOrch!10,    fit=(r2c1)(r2c5)] (bg2) {};
+    \node[sx/ch4/layerbg, fill=sxCore!10,    fit=(r3c1)(r3c5)] (bg3) {};
+    \node[sx/ch4/layerbg, fill=sxAdapter!10, fit=(r4c1)(r4c5)] (bg4) {};
+  \end{pgfonlayer}
+
+  % Framework boundary label
+  \node[
+    anchor=north,
+    fill=white,
+    inner sep=2.5pt,
+    font=\sffamily\bfseries\small,
+    text=sxFrameworkBorder,
+  ] at ([yshift=5mm]framework.north) {SysSimX Framework};
+
+  % ---------------------------------------------------------------------------
+  % Execution Layer  (row 1)
+  % ---------------------------------------------------------------------------
+  \node[sx/ch4/layer label, fill=sxExec] (exec_lbl) at (r1c1.center) {Execution\\Layer};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c2.center) {Jacobi};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c3.center) {Gauss--Seidel};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c4.center) {IJCSA};
+  \node[sx/ch4/item, fill=sxExec!18]                 at (r1c5.center) {Hybrid};
+
+  % ---------------------------------------------------------------------------
+  % System Orchestration  (row 2)
+  % ---------------------------------------------------------------------------
+  \node[sx/ch4/layer label, fill=sxOrch] (orch_lbl) at (r2c1.center) {System\\Orchestration};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c2.center) {\texttt{System}};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c3.center) {Dependency\\Graph};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c4.center) {Execution\\Order};
+  \node[sx/ch4/item, fill=sxOrch!18]                at (r2c5.center) {Algebraic\\Loops};
+
+  % ---------------------------------------------------------------------------
+  % Core Abstractions  (row 3)
+  % ---------------------------------------------------------------------------
+  \node[sx/ch4/layer label, fill=sxCore] (core_lbl) at (r3c1.center) {Core\\Abstractions};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c2.center) {\texttt{CoSimComponent}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c3.center) {\texttt{MultiComponent}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c4.center) {\texttt{Connection}};
+  \node[sx/ch4/item, fill=sxCore!18]                at (r3c5.center) {\texttt{EventConnection}};
+
+  % ---------------------------------------------------------------------------
+  % Adapter Layer  (row 4)
+  % ---------------------------------------------------------------------------
+  \node[sx/ch4/layer label, fill=sxAdapter] (adp_lbl) at (r4c1.center) {Adapter\\Layer};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_fmu)     at (r4c2.center) {\texttt{FMUComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_osim)    at (r4c3.center) {\texttt{OpenSimComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!18] (adp_fem)     at (r4c4.center) {\texttt{FEMComponent}};
+  \node[sx/ch4/item, fill=sxAdapter!10]               at (r4c5.center) {(extensible)};
+
+  % ---------------------------------------------------------------------------
+  % External Tools  —  outside framework boundary
+  % ---------------------------------------------------------------------------
+  \node[
+    sx/ch4/neutral box,
+    minimum width=14.7cm,
+    minimum height=2.1cm,
+    anchor=north,
+  ] (extrow) at ([yshift=-13mm]framework.south) {};
+
+  \node[
+    anchor=south,
+    font=\sffamily\bfseries\small,
+    text=black!65,
+  ] at ([yshift=1mm]extrow.south)
+  {External Simulation Tools%
+    \enspace\normalfont\small(not part of the framework)};
+
+  \node[sx/ch4/external item] (fmi)  at ([xshift=-4.5cm, yshift=3mm]extrow.center)
+  {FMI 2.0\\Co-Simulation FMUs};
+  \node[sx/ch4/external item] (osim) at ([yshift=3mm]extrow.center)
+  {OpenSim};
+  \node[sx/ch4/external item] (ngs)  at ([xshift=+4.5cm, yshift=3mm]extrow.center)
+  {Netgen / NGSolve};
+
+  % ---------------------------------------------------------------------------
+  % User Code bar  —  above framework boundary
+  % ---------------------------------------------------------------------------
+  \coordinate (topcenter) at ($(r1c1.north)!0.5!(r1c5.north)$);
+
+  \node[
+    sx/ch4/neutral box,
+    minimum width=14.7cm,
+    minimum height=0.95cm,
+    font=\sffamily\footnotesize,
+    text=black!70,
+    align=center,
+    anchor=south,
+  ] (userbar) at ([yshift=11mm]topcenter)
+  {\textbf{User Code}\enspace·\enspace
+    \texttt{System}, \texttt{CoSimComponent}s, \texttt{Connection}s,
+    \texttt{system.run()}, \texttt{system.get\_history()}};
+
+  % ---------------------------------------------------------------------------
+  % Arrows  — solid: delegates-to  |  dashed: external API call
+  % ---------------------------------------------------------------------------
+
+  % 1. User Code → Execution Layer
+  \draw[sx/ch4/arrow]
+  (userbar.south -| exec_lbl.north) -- node[pos=0.45, anchor=west, font=\scriptsize] {delegates to} (exec_lbl.north);
+
+  % 2. Inter-layer delegation chain (left label column)
+  \draw[sx/ch4/arrow] (exec_lbl.south) -- (orch_lbl.north);
+  \draw[sx/ch4/arrow] (orch_lbl.south) -- (core_lbl.north);
+  \draw[sx/ch4/arrow] (core_lbl.south) -- (adp_lbl.north);
+
+  % 3. Adapter → External Tools (dashed: crosses framework boundary)
+  \draw[sx/ch4/toolcall] (adp_fmu.south)  -- (fmi.north);
+  \draw[sx/ch4/toolcall] (adp_osim.south) -- (osim.north);
+  \draw[sx/ch4/toolcall] (adp_fem.south)  -- (ngs.north);
+
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,61 @@
+\begin{tikzpicture}[pres]
+  % Force identical bounding box across all four panels
+  \coordinate (min) at (0,0.7);
+  \coordinate (max) at (6.8, 7.3);
+  \useasboundingbox (min) rectangle (max);
+  % \draw[help lines, step=0.5] (min) grid (max);
+
+  % SCC Block
+  \draw[pres loop area] (3.2, 0.7) rectangle (6.8, 7.3);
+  \node[pres loop label] at (5.15, 4) {algebraic loop};
+
+  % Component A
+  \begin{scope}[shift={(0,4.5)}]
+    \draw[pres orchestration component] (0,0) rectangle (2,2.5);
+    \node[anchor=north, font=\Large\bfseries] (A) at (1,2.45) {A};
+    \node[anchor=north, inner sep=1pt, font=\normalsize] at (A.south) {\faCog};
+    \node[pres port] (A-y1) at (1.75, 1.75) {};
+  \end{scope}
+
+  % Component B
+  \begin{scope}[shift={(4,4.5)}]
+    \draw[pres orchestration loop component] (0,0) rectangle (2,2.5);
+    \node[anchor=north, font=\Large\bfseries] (B) at (1,2.45) {B};
+    \node[anchor=north, inner sep=1pt, font=\normalsize] at (B.south) {\faCog};
+    \node[pres port] (B-u1) at (0.25,1.75) {};
+    \node[pres port] (B-u2) at (0.25,0.75) {};
+    \node[pres port] (B-y2) at (1.75,0.75) {};
+  \end{scope}
+
+  % Component C
+  \begin{scope}[shift={(4,1)}]
+    \draw[pres orchestration loop component] (0,0) rectangle (2,2.5);
+    \node[anchor=north, font=\Large\bfseries] (C) at (1,2.45) {C};
+    \node[anchor=north, inner sep=1pt, font=\normalsize] at (C.south) {\faCog};
+    \node[pres port] (C-y1) at (0.25,1.75) {};
+    \node[pres event port] (C-y2) at (0.25,0.75) {};
+    \node[pres port] (C-u1) at (1.75,1.75) {};
+  \end{scope}
+
+  % Component D
+  \begin{scope}[shift={(0,1)}]
+    \draw[pres orchestration component] (0,0) rectangle (2,2.5);
+    \node[anchor=north, font=\Large\bfseries] (D) at (1,2.45) {D};
+    \node[anchor=north, inner sep=1pt, font=\normalsize] at (D.south) {\faCog};
+    \node[pres event port] (D-listener) at (1.75,0.75) {};
+  \end{scope}
+
+  % Connections
+  \draw[pres signal] (A-y1) -- (B-u1);
+  \draw[pres signal] (B-y2) --++(0.25+0.5,0) --++(0,-2.5) --(C-u1);
+  \draw[pres signal] (C-y1) --++(-0.25-0.5,0) --++(0,2.5) -- (B-u2);
+  \draw[pres event signal] (C-y2.west) -- (D-listener.east);
+
+  % Badges
+  \node[pres badge] (b1) at (2.8,6) {1};
+
+  \node[pres badge] (b2) at (3.9,4) {2};
+
+  \node[pres badge] (b3) at (2.8,2) {3};
+
+\end{tikzpicture}
