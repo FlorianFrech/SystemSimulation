@@ -1,34 +1,13 @@
-\documentclass[tikz,border=0pt]{standalone}
-\usepackage{geometry}
-\usepackage{tikz}
-\usepackage[european,siunitx]{circuitikz}
-\usepackage{pagecolor}
-\input{../../../figures/6_case_study/controlled_pendulum/styles.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/pendulum.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/potentiometer.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/adc.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/angle_sensor.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/decoder.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/pid.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/drive.tex}
-\input{../../../figures/6_case_study/controlled_pendulum/components/setpoint.tex}
-
-% \pagecolor{red!15}
-
-\begin{document}
-\thispagestyle{empty}
-
-\noindent
 \begin{tikzpicture}[axes/.style=,]
     %\path[use as bounding box] (0.5,0.5) rectangle (28,19);
     
-    \coordinate (min) at (0.5, 0);
+    \coordinate (min) at (0, 0);
     \coordinate (max) at (28, 19);
     \fill[white] (min) rectangle (max);
     \useasboundingbox (min) rectangle (max);
     % \draw[help lines, step=0.5, draw=gray!50, very thin] (min) grid (max);
     
-    \begin{scope}[shift={(13.5, 10.5)}]
+    \begin{scope}[shift={(14, 9.75)}]
         
         %\node[font=\Large\bfseries] at (0,0.5\textheight-0.5cm) {Controlled Pendulum System};
         
@@ -94,5 +73,3 @@
     \end{scope}
 
 \end{tikzpicture}
-
-\end{document}

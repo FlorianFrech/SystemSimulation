@@ -1,33 +1,16 @@
-\begin{tikzpicture}[
-    block/.style={
-        draw,
-        rounded corners=2pt,
-        minimum width=2.4cm,
-        minimum height=0.85cm,
-        align=center,
-        fill=white,
-        font=\small
-    },
-    plant/.style={block, fill=orange!14, minimum width=2.9cm},
-    signal/.style={->, thick},
-    event/.style={->, thick, red!75!black, dashed}
-]
-    \node[block] (setpoint) at (0, 2.2) {Setpoint};
-    \node[block] (pid) at (3.2, 2.2) {PID\\controller};
-    \node[block] (drive) at (6.4, 2.2) {Drive};
-    \node[plant] (pendulum) at (9.8, 2.2) {Pendulum\\plant};
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage[european,siunitx]{circuitikz}
+\providecommand{\pendulumassetspath}{../../../figures/6_case_study/controlled_pendulum/}
+\input{\pendulumassetspath styles.tex}
+\input{\pendulumassetspath components/pendulum.tex}
+\input{\pendulumassetspath components/potentiometer.tex}
+\input{\pendulumassetspath components/adc.tex}
+\input{\pendulumassetspath components/angle_sensor.tex}
+\input{\pendulumassetspath components/decoder.tex}
+\input{\pendulumassetspath components/pid.tex}
+\input{\pendulumassetspath components/drive.tex}
+\input{\pendulumassetspath components/setpoint.tex}
 
-    \node[block] (sensor) at (9.8, 0) {Angle\\sensor};
-    \node[block] (decoder) at (3.2, 0) {Decoder};
-
-    \draw[signal] (setpoint) -- node[above, font=\scriptsize] {$\theta_\mathrm{ref}$} (pid);
-    \draw[signal] (pid) -- node[above, font=\scriptsize] {$u_\mathrm{control}$} (drive);
-    \draw[signal] (drive) -- node[above, font=\scriptsize] {$\tau$} (pendulum);
-
-    \draw[signal] (pendulum) -- node[right, font=\scriptsize] {$\theta,\omega$} (sensor);
-    \draw[signal] (sensor) -- node[below, font=\scriptsize] {$V_\mathrm{adc}$} (decoder);
-    \draw[signal] (decoder.west) -| node[pos=0.25, below, font=\scriptsize] {$\theta_\mathrm{meas}$} (pid.south);
-
-    \draw[event] (pendulum.south) .. controls +(0,-1.1) and +(0.9,-1.1) ..
-        node[below, font=\scriptsize] {contact event} (pid.south east);
-\end{tikzpicture}
+\begin{document}
+\input{system_assembly_body.tex}
+\end{document}

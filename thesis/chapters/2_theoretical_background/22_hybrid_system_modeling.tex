@@ -9,7 +9,7 @@ To analyze and simulate the hybrid systems introduced in Section~\ref{sec:intro_
 
 In this thesis, we use the reduced hybrid representation
 \begin{equation}
-    \left(q(t), x(t), z(t), u(t), y(t)\right),
+    \Big(q(t), x(t), z(t), u(t), y(t)\Big),
 \end{equation}
 where $q(t)$ is the discrete state, $x(t)$ is the continuous state, $z(t)$ collects algebraic variables, $u(t)$ is the input, and $y(t)$ is the output.
 The discrete state $q$ may represent an operating mode, a Boolean logic state, or an internal controller state.
@@ -20,13 +20,13 @@ Between events, the discrete state is constant, and the continuous part follows 
     0 = G_{q}\!\left(\dot{x}, x, z, u, t\right),
     \qquad
     y = h_{q}\!\left(x, z, u, t\right),
-    \qquad t \neq t_e .
+    \qquad t \neq t_\mathrm{e} .
 \end{equation}
-At an event time $t_e$, the model performs an event update that may change its discrete state and may assign new values to selected continuous states:
+At an event time $t_\mathrm{e}$, the model performs an event update that may change its discrete state and may assign new values to selected continuous states:
 \begin{equation}
-    x^{+} = R_j\!\left(x^{-}, z^{-}, q^{-}, u^{-}, t_e\right),
+    x^{+} = R_j\!\left(x^{-}, z^{-}, q^{-}, u^{-}, t_\mathrm{e}\right),
     \qquad
-    q^{+} = \delta_j\!\left(x^{-}, z^{-}, q^{-}, u^{-}, t_e\right).
+    q^{+} = \delta_j\!\left(x^{-}, z^{-}, q^{-}, u^{-}, t_\mathrm{e}\right).
 \end{equation}
 The function $R_j(\cdot)$ computes the post-event values of the continuous states, and the function $\delta_j(\cdot)$ updates the discrete state.
 Here, $x^{-}$ and $q^{-}$ denote the values immediately before the event, and $x^{+}$ and $q^{+}$ denote the values immediately after the event.
@@ -54,12 +54,12 @@ The pendulum example introduced in Section~\ref{sec:211_dynamical_systems} can b
         \centering
         \includegraphics[width=\textwidth]{figures/2_theoretical_background/pendulum_wall_trajectory.pdf}
         \caption[State trajectories]{State trajectories at ideal elastic impact ($e=1$).
-                 The angle $\theta$ has a kink at $t_e$, the angular
+                 The angle $\theta$ has a kink at $t_\mathrm{e}$, the angular
                  velocity $\omega$ jumps discontinuously.}
         \label{fig:pendulum_wall_trajectory}
     \end{subfigure}
     \caption[Pendulum with rigid wall contact]{Pendulum with rigid wall contact as a hybrid system example.
-             At the event time $t_e$, the reset map applies
+             At the event time $t_\mathrm{e}$, the reset map applies
              $\theta^+ = \theta^-$ and $\omega^+ = -\omega^-$.}
     \label{fig:pendulum_wall}
 \end{figure}
@@ -103,7 +103,7 @@ The simulator first detects that a zero-crossing occurred within a time interval
 It then localizes the event time inside this interval with a root-finding procedure.
 This avoids integrating across a discontinuity without resolving its time of occurrence \cite{andersson_omola_1990,cellier_combined_1986}.
 
-Once the event time $t_e$ has been found, the event update maps introduced in Section~\ref{sec:221_hybrid_system_representation} are evaluated.
+Once the event time $t_\mathrm{e}$ has been found, the event update maps introduced in Section~\ref{sec:221_hybrid_system_representation} are evaluated.
 This step is the same for pure switching events and for events that reset continuous states.
 The resulting post-event state must satisfy the active continuous and algebraic equations before simulation can continue.
 This step is called state re-initialization or restart \cite{andersson_omola_1990,urquia_moraleda_modeling_2018}.

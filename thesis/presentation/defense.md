@@ -21,7 +21,7 @@ project) can stay or be cleaned up — they are not referenced by the new slides
 | # | Block                        | Min | Slides | File                              |
 |---|------------------------------|----:|-------:|-----------------------------------|
 |   | Title + outline              |   1 |      2 | `slides.tex`                      |
-| 1 | Introduction                 |   3 |      3 | `chapters/01_introduction.tex`    |
+| 1 | Introduction                 |   3 |      4 | `chapters/01_introduction.tex`    |
 | 2 | Background *(optional)*      |   0 |    0–1 | `chapters/02_background.tex`      |
 | 3 | Requirements                 |   1 |      1 | `chapters/03_requirements.tex`    |
 | 4 | Architecture                 | 3.5 |      3 | `chapters/04_architecture.tex`    |
@@ -29,7 +29,7 @@ project) can stay or be cleaned up — they are not referenced by the new slides
 | 6 | Case study *(centerpiece)*   |   8 |      5 | `chapters/06_case_study.tex`      |
 | 7 | Discussion & Conclusion      |   2 |      2 | `chapters/07_conclusion.tex`      |
 |   | Thank you                    |  <1 |      1 | `slides.tex`                      |
-|   | **Total**                    |  20 |    ~18 |                                   |
+|   | **Total**                    |  20 |    ~19 |                                   |
 
 Backup slides in `chapters/99_backup.tex` (numbered separately via
 `appendixnumberbeamer`) — only shown if asked.
@@ -44,7 +44,7 @@ drift past one main message.
 - **S0 Title** — title, author, supervisor, date.
 - **S1 Outline** — one line per section; no sub-bullets.
 
-### 1. Introduction (3 min)
+### 1. Introduction (3 min, 4 slides ≈ 45 s each)
 - **S2 Heterogeneous simulation need** - active prostheses and exoskeletons
   form one coupled dynamic system with the human body. Biomechanics,
   structural mechanics, and control/electronics are naturally modeled in
@@ -54,13 +54,17 @@ drift past one main message.
   direct-feedthrough dependencies, algebraic loops, and hybrid events. The
   slide motivates why structural analysis, loop handling, and event handling
   are needed before introducing implementation details.
-- **S4 Runtime switching and gap** - one subsystem may need different model
-  fidelities in different phases. Runtime switching motivates selective use of
-  high-fidelity models, and the gap statement explains why SysSimX is needed as
-  one Python-based orchestration workflow.
+- **S4 Multi-fidelity and runtime switching** - one subsystem may need
+  different model fidelities in different phases. Runtime switching with state
+  transfer is introduced as a generic concept (M_L / M_H, no tool names).
+- **S5 Research gap and contribution** - capability comparison table (4 rows
+  × 6 columns) showing that no evaluated FMI-based framework combines all six
+  capabilities introduced in S2–S4; SysSimX row tick-marks all and is named
+  in one contribution block beneath. RQ chip strip (RQ1–RQ5 keywords) at the
+  bottom. Full RQ wording spoken-only or in backup B-RQs.
 
 ### 3. Requirements (1 min)
-- **S5 Requirements** — 4 categories (general modeling, heterogeneous
+- **S6 Requirements** — 4 categories (general modeling, heterogeneous
   integration, simulation, interaction) shown as a compact 2×2 table; one row
   beneath shows the traceability (SR → implementation features, UR →
   case-study validation). No derivation methodology on the slide — only what
@@ -69,29 +73,29 @@ drift past one main message.
   (Skip ch2 unless rehearsal proves it is needed.)
 
 ### 4. Architecture (3.5 min)
-- **S6 Overview** — the SysSimX block diagram. One sentence per layer.
-- **S7 Core abstractions** — Component / Port / System; unit-aware coupling.
-- **S8 Algorithms** — when to use Gauss-Seidel, Jacobi, Hybrid, IJCSA.
+- **S7 Overview** — the SysSimX block diagram. One sentence per layer.
+- **S8 Core abstractions** — Component / Port / System; unit-aware coupling.
+- **S9 Algorithms** — when to use Gauss-Seidel, Jacobi, Hybrid, IJCSA.
 
 ### 5. Implementation (1.5 min)
-- **S9 Wrappers + units** — three tool wrappers behind one Component interface;
-  Pint at the port boundary.
-- **S10 Loops + switching** — algebraic-loop detection (SCC) and runtime
+- **S10 Wrappers + units** — three tool wrappers behind one Component
+  interface; Pint at the port boundary.
+- **S11 Loops + switching** — algebraic-loop detection (SCC) and runtime
   MultiComponent switching used in the case study.
 
 ### 6. Case study (8 min — centerpiece)
-- **S11 System** — full control loop, one diagram.
-- **S12 Three backends** — fidelity/cost trade-off in one row of figures.
-- **S13 Validation** — reference model + scenarios; what is being measured.
-- **S14 Results** — the single most convincing plot + headline number.
-- **S15 Multi-model switching** — runtime model swap demo.
+- **S12 System** — full control loop, one diagram.
+- **S13 Three backends** — fidelity/cost trade-off in one row of figures.
+- **S14 Validation** — reference model + scenarios; what is being measured.
+- **S15 Results** — the single most convincing plot + headline number.
+- **S16 Multi-model switching** — runtime model swap demo.
 
 ### 7. Discussion (2 min)
-- **S16 Answers + limitations** — one bullet per RQ; honest single-bullet limit.
-- **S17 Outlook** — 2–3 concrete next steps.
+- **S17 Answers + limitations** — one bullet per RQ; honest single-bullet limit.
+- **S18 Outlook** — 2–3 concrete next steps.
 
 ### Close
-- **S18 Thanks** — supervisors, collaborators, institute.
+- **S19 Thanks** — supervisors, collaborators, institute.
 
 ## Introduction Storyboard
 
@@ -149,26 +153,145 @@ Use mostly figures and make each slide answer one "why" question:
   *simulation unit*, never *subsystem*, for the ported boxes. No communication-
   pattern time diagram on this slide — that belongs in backup (B-CommGrid).
 
-### S4 Runtime switching and framework gap - why SysSimX exists
+### S4 Multi-fidelity and runtime model switching - concept and need
 
-- **Show:** one subsystem with alternative representations along a fidelity/cost
-  axis: `rigid / FMU`, `musculoskeletal / OpenSim`, and `deformable / FEM`.
-  Add a short time strip below it that shows when different models are active.
-  End the slide with a small `needs -> SysSimX -> evaluation` graphic.
-- **Tell:** low-fidelity models are useful for global motion and controller
-  behavior. High-fidelity models are useful for local effects such as
-  deformation, stress, or contact. Runtime switching targets the useful
-  fidelity/cost compromise, but it also requires consistent state transfer and
-  a stable shared interface.
-- **Gap statement:** "Existing FMI-centered frameworks support important parts
-  of co-simulation, but the evaluated alternatives did not provide the complete
-  combination of Python-side heterogeneous wrappers, structural dependency
-  analysis, algebraic-loop handling, hybrid events, and runtime model switching
-  required for this workflow."
-- **Landing sentence:** "SysSimX is the implemented orchestration layer for this
-  combined workflow, evaluated on the controlled-pendulum case study."
-- **Avoid:** full research-question text on the slide. Use short chips such as
-  `heterogeneous tools`, `dependencies`, `events`, `loops`, and `switching`.
+- **Title:** "Multi-Fidelity and Runtime Switching".
+- **Show:** a two-row figure split by a horizontal divider, with row labels
+  *Definition* and *Execution* on the left margin:
+  - **Definition (top):** a "Subsystem" container wrapping two generic models
+    M_L (low-fidelity, low cost, global behavior) and M_H (high-fidelity, high
+    cost, local behavior), with bidirectional state-transfer arrows between
+    them and a "State transfer" label in the middle.
+  - **Execution (bottom):** a horizontal time axis showing the active model
+    per phase as a colored bar (M_L → M_H → M_L sandwich), with dashed
+    vertical lines at the two switch points and a "high-fidelity interest
+    region" bracket beneath the M_H phase.
+  Color-match M_L / M_H boxes to their timeline phases (carries the link
+  between rows). A small legend ties the dashed switch markers to the
+  state-transfer arrows. No tool names, no specific subsystem
+  (pendulum/exoskeleton), no MultiComponent internals.
+- **Tell:** different simulation phases need different fidelity. The detailed
+  model is only required in a region of interest (e.g., contact, local
+  deformation). Runtime switching uses the cheap model elsewhere and the
+  detailed one only when needed --- reducing cost without losing resolution
+  where it matters. Switching requires a stable shared interface and
+  consistent state transfer.
+- **Landing sentence:** "Multi-fidelity simulation must work at runtime --- not
+  only at design time. The framework provides a multi-model component with a
+  shared interface and state transfer, used in the case study to swap pendulum
+  representations on the fly."
+- **Avoid:** any tool names (OpenSim, FEM, Modelica/FMU); the pendulum or
+  exoskeleton as the concrete subsystem (case study territory); three
+  alternative lenses (the case-study layout); the MultiComponent block
+  diagram (architecture territory). Use M_L / M_H or M_1 / M_2 --- generic
+  labels only.
+
+### S5 Research gap and contribution - capability table + SysSimX claim
+
+- **Title:** "Research Gap and Contribution".
+- **Show:** the chapter-1.3 capability comparison table, four rows × six
+  columns. Rows: OMSimulator, INTO-CPS Maestro, CoFMPy, **SysSimX** (bold,
+  separated by an extra `\midrule`). Columns map directly to the capabilities
+  introduced in S2–S4: *FMU · MBD · FEM · Loops · Hybrid · Switching*. A
+  one-line legend beneath the table explains `\checkmark` native / `(\checkmark)`
+  partial / `---` none. Below the legend, a Beamer block titled
+  *"Contribution"* names SysSimX in one sentence. At the bottom, a `\scriptsize`
+  RQ chip strip: `RQ1 interface · RQ2 dependencies · RQ3 events ·
+  RQ4 switching · RQ5 evaluation`.
+- **Tell:** the columns of the table are the capabilities just introduced —
+  heterogeneous tools (S2), orchestration challenges (S3), runtime switching
+  (S4). Each existing framework is missing two or more. SysSimX combines all
+  six in one Python-native framework, evaluated on the controlled-pendulum
+  case study.
+- **Progressive reveal:** table visible → contribution block (`<2->`) →
+  RQ chip strip (`<3->`). Three clicks, ~15 s each.
+- **Landing sentence:** "The next sections describe its architecture,
+  implementation, and case-study evaluation."
+- **Avoid:** full RQ sentences on the slide (chips only); citations in row
+  labels (defense slide, not paper); a separate contribution slide (one slide
+  carries gap + claim together). The `(\checkmark)` notation requires the
+  legend — never omit it.
+
+### Division of labor across slides (no overlap)
+
+Multi-fidelity content is split across three slides at three abstraction levels:
+
+| Slide | Level | What it shows | What it avoids |
+|---|---|---|---|
+| **S4 (Intro)** | Concept | Generic M_L / M_H, timeline, region of interest, switch points | Tool names, pendulum, architecture |
+| **Architecture (S7 or S8)** | Mechanism | MultiComponent block: shared interface, switch criterion, state translator, hysteresis | Concrete models, results |
+| **Case study (S12, S15)** | Realization | Three pendulum backends (FMU rigid / OpenSim musculoskeletal / FEM deformable) + runtime swap demo | Generic multi-fidelity arguments |
+
+This guarantees tool labels appear on **one** slide (case study) and the
+MultiComponent diagram appears on **one** slide (architecture).
+
+## Architecture vs Implementation: editorial discipline
+
+In a software-framework defense, Architecture and Implementation overlap by
+nature --- the "what" (abstraction) and the "how" (realization) are not
+physically separated as they are in hardware. With 20 min total, redrawing
+the same picture twice is the most common time leak.
+
+The working principle:
+
+> **Architecture slide --- present the abstraction (the WHAT).**
+> **Implementation slide --- present ONE non-obvious insight that the
+> abstraction alone does not reveal (the HOW).**
+
+If an implementation slide redraws the architectural picture or restates the
+contract, it adds nothing --- cut it. If it shows a *sequence*, a *guard*, a
+*complexity claim*, or a *verification number* that the abstraction cannot
+show, it earns its place.
+
+### The "one new insight" test
+
+Before committing any implementation slide, ask:
+
+> *"If the audience already understands the architecture slide, does this
+> slide tell them something new?"*
+
+- **Yes** → slide earns its place
+- **No** → cut it, or replace its content with something that does
+
+### What belongs where, per topic
+
+| Topic | Architecture slide owns | Implementation slide owns |
+|---|---|---|
+| **CoSimComponent** | The contract (ports, lifecycle, state, hybrid hooks) | (no separate impl slide --- covered by tool wrappers) |
+| **System Assembly** | The structural model + dependency-graph concept | (covered by structural-analysis half of S13) |
+| **MultiComponent** | The 3-layer wrapper diagram (public / internal / switching support) | The trial-step guard + switching sequence (cached inputs → adapt → delegate) |
+| **Master Algorithms** | Pluggable algorithm interface + decision table | (no separate impl slide --- choice is the point) |
+| **Tool Wrappers** | (covered abstractly in adapter layer of S7) | The three concrete wrappers + Pint at the port boundary |
+| **Algebraic Loops** | Named on the algorithms slide as "IJCSA needs interface Jacobian" | Interface-Jacobian Newton step + SCC condensation |
+| **Hybrid Events** | Named on the algorithms slide as "Hybrid algorithm handles events" | Three event cases (single / simultaneous / cascaded) |
+
+Implementation slides become **insight slides**, not redundant restatements.
+
+### Implications for slide count
+
+This discipline reduces Implementation to the irreducibly interesting bits.
+Two slides suffice:
+
+- **S12 Tool Wrappers + Units** --- three concrete wrappers + Pint at the port boundary
+- **S13 Loops & Switching** --- two halves on one slide:
+  - *Top:* SCC condensation + interface-Jacobian Newton step (one formula)
+  - *Bottom:* switching-sequence pseudocode with the trial-step guard highlighted
+
+The other implementation chapters (Component, System Assembly, Algorithms)
+do not get dedicated slides --- their architecture slide is sufficient and
+their realization details live in the wrapper / loop slides above.
+
+### Verbal cross-reference (not visual)
+
+On implementation slides, refer back to architecture verbally rather than
+redrawing:
+
+> *"As shown in the architecture, the MultiComponent has a state adapter
+> and a mode selector. The interesting realization detail is the trial-step
+> guard: ..."*
+
+This keeps the visual on the new insight while honoring the audience's
+prior knowledge.
 
 ## Visual Drafting Rules
 
@@ -195,6 +318,7 @@ Fill in as you draft. Format: *expected question → which backup slide answers 
 - "Why these specific tools and not alternatives?" → backup: tool comparison (B4)
 - "What does Heterogeneous Integration actually require?"
   → backup: three-tool integration diagram (B-Het, covers UR-05..08; UR-09 runtime switching shown on S4)
+- "What is the exact wording of RQ-X?" → backup: research-question table (B-RQs)
 
 ## Drafting workflow
 

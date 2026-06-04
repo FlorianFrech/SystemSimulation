@@ -43,46 +43,64 @@
   \end{columns}
 \end{frame}
 
+%---------------------------------------------------------------------------
+\begin{frame}{Multi-Fidelity and Runtime Switching}
+    \centering
+    \vspace{-0.2em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.92\textheight,
+        keepaspectratio
+    ]{figures/introduction/multi_fidelity_draft.png}
+\end{frame}
 
 
 %---------------------------------------------------------------------------
-% \begin{frame}{Research Gap}
-%     \begin{itemize}
-%         \item \ac{FMI}-based frameworks handle \ac{FMU} coupling and algebraic loops.
-%         \item None combines native \ac{FMU}, OpenSim, and \ac{FEM} backends with hybrid event handling and runtime model switching.
-%     \end{itemize}
+\begin{frame}{Research Gap and Contribution}
+    \centering
+    \footnotesize
 
-%     \vspace{0.3em}
-%     \begin{table}[h]
-%         \centering\footnotesize
-%         \begin{tabular}{l c c c c c c}
-%             \toprule
-%             \textbf{Framework}  & \textbf{\ac{FMU}}    & \textbf{OpenSim} & \textbf{\ac{FEM}}
-%                                 & \textbf{Alg.\ loops} & \textbf{Hybrid}  & \textbf{Switching}                                            \\
-%             \midrule
-%             OMSimulator         & \checkmark           & ---              & ---                & \checkmark & ($\checkmark$) & ---        \\
-%             INTO-CPS Maestro    & \checkmark           & ---              & ---                & \checkmark & ($\checkmark$) & ---        \\
-%             CoFMPy              & \checkmark           & ($\checkmark$)   & ($\checkmark$)     & \checkmark & ---            & ---        \\
-%             \textbf{\syssimx{}} & \checkmark           & \checkmark       & \checkmark         & \checkmark & \checkmark     & \checkmark \\
-%             \bottomrule
-%         \end{tabular}
-%     \end{table}
-% \end{frame}
+    % --- Capability comparison table ----------------------------------------
+    \begin{tabular}{l c c c c c c}
+        \toprule
+        \textbf{Framework}     & \textbf{\ac{FMU}}   & \textbf{MBD}        & \textbf{\ac{FEM}}
+                               & \textbf{Loops}      & \textbf{Hybrid}     & \textbf{Switching}     \\
+        \midrule
+        OMSimulator            & \checkmark          & ---                 & ---
+                               & \checkmark          & ($\checkmark$)      & ---                    \\
+        INTO-CPS Maestro       & \checkmark          & ---                 & ---
+                               & \checkmark          & ($\checkmark$)      & ---                    \\
+        CoFMPy                 & \checkmark          & ($\checkmark$)      & ($\checkmark$)
+                               & \checkmark          & ---                 & ---                    \\
+        \midrule
+        \textbf{\syssimx{}}    & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark}
+                               & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark}    \\
+        \bottomrule
+    \end{tabular}
 
-%---------------------------------------------------------------------------
-% \begin{frame}{Contribution}
-%     \begin{block}{\syssimx{} --- a Python framework for heterogeneous hybrid co-simulation}
-%         This thesis designs, implements, and evaluates:
-%         \begin{itemize}
-%             \item a unified component abstraction for heterogeneous subsystem models,
-%             \item graph-based structural analysis (dependency detection, execution order, algebraic loops),
-%             \item hybrid event handling (detection, localization, dispatch, cascaded events),
-%             \item a multi-model component for runtime switching with state synchronization.
-%         \end{itemize}
-%     \end{block}
+    \vspace{0.4em}
+    {\scriptsize\itshape%
+        \checkmark{} native \,$\cdot$\,
+        ($\checkmark$) partial \,$\cdot$\,
+        --- none%
+    }
 
-%     \begin{itemize}
-%         \item Evaluated on a controlled-pendulum case study combining \acp{FMU}, OpenSim, and \ac{FEM} models in one closed-loop scenario.
-%         \item Evidence path: architecture $\to$ implementation $\to$ case study.
-%     \end{itemize}
-% \end{frame}
+    \vspace{1em}
+    \onslide<2->{%
+        \begin{block}{Contribution}
+            \syssimx{} --- a Python framework combining all six capabilities,
+            evaluated on the controlled-pendulum case study.
+        \end{block}%
+    }
+
+    \vspace{0.3em}
+    \onslide<3->{%
+        {\scriptsize
+            \textbf{RQ1} interface \,$\cdot$\,
+            \textbf{RQ2} dependencies \,$\cdot$\,
+            \textbf{RQ3} events \,$\cdot$\,
+            \textbf{RQ4} switching \,$\cdot$\,
+            \textbf{RQ5} evaluation
+        }%
+    }
+\end{frame}

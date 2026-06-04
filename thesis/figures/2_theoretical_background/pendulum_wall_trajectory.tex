@@ -15,7 +15,7 @@
     width=8cm, height=3.8cm,
     xmin=0, xmax=1.0,
     xtick={0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0},
-    xticklabels={$0$, $0.2$, $0.4$, $t_e$, $0.6$, $0.8$, $1.0$},
+    xticklabels={$0$, $0.2$, $0.4$, $t_\mathrm{e}$, $0.6$, $0.8$, $1.0$},
     tick align=inside,
     grid=both,
     grid style={dashed, gray!40},
@@ -36,7 +36,7 @@
 \node[right, font=\small] at (axis cs:0.02, 0.06) {$\theta_\text{wall}$};
 \addplot[dashed, red!70, thick] coordinates {(0.5, -0.1) (0.5, 0.6)};
 
-%% Panel 2: omega(t) — jump at t_e, velocity discontinuous
+%% Panel 2: omega(t) — jump at t_\mathrm{e}, velocity discontinuous
 \nextgroupplot[
     ylabel={$\omega$ in rad/s},
     xlabel={Time $t$ in s},

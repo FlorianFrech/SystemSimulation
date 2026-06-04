@@ -32,17 +32,68 @@
 %---------------------------------------------------------------------------
 \begin{frame}{Core Abstractions: System Assembly}
     \begin{center}
-        \vspace{-1.2em}
         \includegraphics[
             width=0.98\textwidth,
-            height=0.82\textheight,
+            height=0.92\textheight,
             keepaspectratio
         ]{4_architecture/system_architecture.pdf}
     \end{center}
 \end{frame}
 
 %---------------------------------------------------------------------------
+\begin{frame}{Multi-Component Architecture}
+    \centering
+    \vspace{-0.35em}
+    \begingroup
+        \resizebox{!}{0.82\textheight}{%
+            \input{figures/architecture/multi_component_architecture.tex}%
+        }
+    \endgroup
+\end{frame}
+
+%---------------------------------------------------------------------------
 \begin{frame}{Master Algorithms}
-    % TODO: 4-way comparison — GS, Jacobi, Hybrid (event-driven), IJCSA.
-    % Mention when each is appropriate (1 sentence per algorithm).
+  \centering
+  {\small\itshape Pluggable algorithm interface --- System and
+   time-advancement strategy are separated.}
+  \vspace{0.8em}
+
+  \footnotesize
+  \begin{tabular}{
+      l
+      >{\raggedright\arraybackslash}p{0.42\textwidth}
+      >{\raggedright\arraybackslash}p{0.30\textwidth}}
+    \toprule
+    \textbf{Algorithm} & \textbf{Strategy} & \textbf{Use when} \\
+    \midrule
+
+    Jacobi &
+    Prepare all interfaces $\to$ step all components. \newline
+    \ac{SCC}-local solver for loops. &
+    Loose coupling; \newline parallelism matters \\
+    \addlinespace[3pt]
+
+    Gauss--Seidel &
+    Generation-wise: prepare $\to$ step per generation. \newline
+    \ac{SCC}-local solver for loops. &
+    \textbf{Default continuous}; \newline tighter coupling \\
+    \addlinespace[3pt]
+
+    \ac{IJCSA} &
+    \textbf{Global} interface Newton solve --- one coupled residual
+    for all zero-delay inputs $\to$ step all. &
+    Many or strongly-coupled loops across the system \\
+    \midrule
+
+    Hybrid &
+    Wraps a continuous algorithm; adds event detect / localize /
+    dispatch. &
+    \emph{Auto-selected} when any component declares an event indicator \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \footnotesize
+  \emph{Hybrid is automatically activated by the framework;
+        the user only chooses the continuous algorithm.}
 \end{frame}

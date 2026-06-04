@@ -12,12 +12,13 @@
 
 %---------------------------------------------------------------------------
 \begin{frame}{Controlled Pendulum System}
-    % TODO: system diagram — setpoint -> PID -> drive -> pendulum -> sensors -> feedback
-    % Reuse figure from thesis/figures/6_case_study/
-    \vspace{-0.5em}
-    \begin{center}
-        \resizebox{0.95\textwidth}{!}{\input{figures/case_study/system_assembly.tex}}
-    \end{center}
+    \centering
+    \vspace{-0.2em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.92\textheight,
+        keepaspectratio
+    ]{figures/case_study/system_assembly.pdf}
 \end{frame}
 
 %---------------------------------------------------------------------------
@@ -28,18 +29,84 @@
 
 %---------------------------------------------------------------------------
 \begin{frame}{Validation Strategy}
-    % TODO: reference model + validation scenarios from thesis 6.4 / 6.5.
-    % What are we measuring, against what.
+  \centering
+  \small\itshape Three claim types --- different evidence, separate scenarios.
+  \vspace{0.8em}
+
+  \footnotesize
+  \begin{tabular}{
+      >{\raggedright\arraybackslash}p{0.30\textwidth}
+      >{\raggedright\arraybackslash}p{0.30\textwidth}
+      >{\raggedright\arraybackslash}p{0.30\textwidth}}
+    \toprule
+    \textbf{Numerical verification} &
+    \textbf{Workflow validation} &
+    \textbf{Performance benchmark} \\
+    \midrule
+
+    \textbf{Reference:}\newline
+    OpenModelica monolithic model &
+    \textbf{Scenario:}\newline
+    Closed-loop with contact and runtime switching &
+    \textbf{Comparison:}\newline
+    Full \ac{FEM} run vs.\ switched configuration \\
+    \addlinespace[4pt]
+
+    \textbf{Strategy:}\newline
+    Macro-step refinement \mbox{$\to$ convergence evidence} &
+    \textbf{Exercises:}\newline
+    heterogeneous assembly, structural analysis, event handling, controller reset, runtime model switching &
+    \textbf{Reports:}\newline
+    wall-clock speedup and trajectory deviation \\
+    \addlinespace[4pt]
+
+    \textbf{Metrics:}\newline
+    \(E_{\infty,\theta}\), \(E_{2,\theta}\) on the trajectory &
+    \textbf{Reference:}\newline
+    OpenModelica monolithic with ideal elastic contact \newline
+    (\ac{FEM}~$\approx$ highly stiff contact) &
+    \textbf{Reference:}\newline
+    full-\ac{FEM} run within the case study \\
+    \midrule
+
+    \(\to\) Baseline (next) &
+    \(\to\) Multi-Model Switching &
+    \(\to\) Performance \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.2em}
+  \footnotesize
+  \emph{No experimental validation is claimed --- framework-level evidence only.}
+\end{frame}
+
+
+%---------------------------------------------------------------------------
+\begin{frame}{Numerical Verification: Baseline Convergence}
+    \centering
+    \vspace{-0.2em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.92\textheight,
+        keepaspectratio]{figures/case_study/baseline_step_convergence.pdf}
 \end{frame}
 
 %---------------------------------------------------------------------------
-\begin{frame}{Results}
-    % TODO: the single most convincing plot from the case study.
-    % Quantitative claim: "matches reference to within X% over T seconds".
+\begin{frame}{Workflow Validation: Multi-Model Switching}
+    \centering
+    \vspace{-0.2em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.92\textheight,
+        keepaspectratio]{figures/case_study/multi_model_switching.pdf}
 \end{frame}
 
 %---------------------------------------------------------------------------
-\begin{frame}{Multi-Model Switching}
-    % TODO: animation or before/after frames showing model swap at runtime.
-    % Why this matters: different phases need different fidelity.
+\begin{frame}{Performance Benchmark: Multi-Model Switching}
+    \centering
+    \vspace{-0.2em}
+    \includegraphics[
+        width=\linewidth,
+        height=0.92\textheight,
+        keepaspectratio]{figures/case_study/performance_switching.pdf}
 \end{frame}

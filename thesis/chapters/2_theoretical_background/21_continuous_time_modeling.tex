@@ -100,7 +100,7 @@ A common semi-explicit form of a DAE is
     0 &= g(x,z,u,t)\label{eq:semi_DAE_algebraic},
 \end{align}
 where $x$ contains the differential state and $z$ contains the algebraic variables.
-The equation~\eqref{eq:semi_DAE_derivative} describes the time evolution of the states, equation~\eqref{eq:semi_DAE_output} defines the outputs, and equation~\eqref{eq:semi_DAE_algebraic} imposes algebraic constraints that must hold at every time instant.
+The equation~\eqref{eq:semi_DAE_derivative} describes the time evolution of the states, equation~\eqref{eq:semi_DAE_output} defines the outputs $y$, and equation~\eqref{eq:semi_DAE_algebraic} imposes algebraic constraints that must hold at every time instant.
 This representation is useful because it separates dynamic behavior from purely algebraic relations \cite{kunkel_differential-algebraic_2024,css_cellier_kofman}.
 
 The pendulum introduced in Section~\ref{sec:211_dynamical_systems} provides a simple example.
@@ -185,16 +185,16 @@ An \emph{algebraic loop} arises only when direct input-output dependencies form 
 
 A simple example is obtained by two interconnected subsystems
 \begin{align}
-    \dot{x}_A &= f_A(x_A,u_A,t),
-    & y_A &= h_A(x_A,u_A,t), \\
-    \dot{x}_B &= f_B(x_B,u_B,t),
-    & y_B &= h_B(x_B,u_B,t),
+    \dot{x}_\mathrm{A} &= f_\mathrm{A}(x_\mathrm{A},u_\mathrm{A},t),
+    & y_\mathrm{A} &= h_\mathrm{A}(x_\mathrm{A},u_\mathrm{A},t), \\
+    \dot{x}_\mathrm{B} &= f_\mathrm{B}(x_\mathrm{B},u_\mathrm{B},t),
+    & y_\mathrm{B} &= h_\mathrm{B}(x_\mathrm{B},u_\mathrm{B},t),
 \end{align}
 with the coupling conditions
 \begin{equation}
-    u_A = y_B,
+    u_\mathrm{A} = y_\mathrm{B},
     \qquad
-    u_B = y_A.
+    u_\mathrm{B} = y_\mathrm{A}.
 \end{equation}
 The structure of this mutual interconnection is illustrated in Figure~\ref{fig:algebraic_loop}.
 

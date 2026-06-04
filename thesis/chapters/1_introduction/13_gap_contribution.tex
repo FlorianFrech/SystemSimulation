@@ -11,20 +11,20 @@ Such a combined workflow is still insufficiently addressed for systems whose rel
 This is the case, for example, when a simulation transitions between free motion, human interaction, and contact-dominated behavior.
 
 Table~\ref{tab:framework_comparison} summarizes this gap for representative \ac{FMI}-based co-simulation frameworks.
-These frameworks support \ac{FMU} coupling and algebraic-loop handling, but none combines native OpenSim and \ac{FEM} backends with hybrid event handling and runtime model switching.
+These frameworks support \ac{FMU} coupling and algebraic-loop handling, but none combines native musculoskeletal \ac{MBD} and \ac{FEM} backends with hybrid event handling and runtime model switching.
 
 \begin{table}[t]
   \centering
   \small
   \caption[Co-simulation framework capability comparison.]{%
   Combined capabilities of representative \ac{FMI}-based co-simulation frameworks and \syssimx{}.
-  The columns list native \ac{FMU}, OpenSim, and \ac{FEM} backends, algebraic-loop handling, hybrid event handling with localization and rollback, and runtime model switching.
+  The columns list native \ac{FMU}, musculoskeletal \ac{MBD}, and \ac{FEM} backends, algebraic-loop handling, hybrid event handling with localization and rollback, and runtime model switching.
   \(\checkmark\) denotes native support, \((\checkmark)\) indirect or partial support, and --- no support.
   Partial entries reflect standard-level \ac{FMI} event handling or coupling through a generic Python proxy rather than a dedicated backend integration.}
   \label{tab:framework_comparison}
   \begin{tabular}{l c c c c c c}
     \toprule
-    \textbf{Framework} & \textbf{\ac{FMU}} & \textbf{OpenSim} & \textbf{\ac{FEM}}
+    \textbf{Framework} & \textbf{\ac{FMU}} & \textbf{MBD} & \textbf{\ac{FEM}}
       & \textbf{Alg.\ loops} & \textbf{Hybrid} & \textbf{Switching} \\
     \midrule
     OMSimulator~\cite{ochel_omsimulator_2019}    & \(\checkmark\) & ---             & ---             & \(\checkmark\) & \((\checkmark)\) & ---           \\
