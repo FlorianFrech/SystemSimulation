@@ -784,7 +784,11 @@ class FEMPendulum(FEMComponent):
                     self.scene.Redraw()
                 self._update_output_states(t_current)
 
-                self._record_outputs(t_current)
+                # Skip port-history recording during hybrid trial steps so the
+                # history reflects accepted simulation time only. Mirrors the
+                # multidim-history guard above and the base do_step contract.
+                if self._record_history:
+                    self._record_outputs(t_current)
                 self.update_monitoring()
         self.t = t_current
         
