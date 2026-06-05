@@ -156,6 +156,65 @@ class TestCoSimComponentBasics:
 
 
 # ============================================================================
+# Test History Recording Flag (trial-step suppression)
+# ============================================================================
+class TestRecordHistoryFlag:
+    """Test the ``_record_history`` flag used to suppress trial-step recording.
+
+    The hybrid master algorithm advances event sources over candidate
+    intervals during event localization and then rolls them back. Those
+    trial advances must not append samples to a component's history. This
+    is controlled by the ``_record_history`` flag.
+    """
+
+    def test_record_history_defaults_true(self):
+        """A freshly constructed component records history by default."""
+        comp = IntegratorComponent(x0=0.0)
+        assert comp._record_history is True
+
+    def test_do_step_records_when_enabled(self):
+        comp = IntegratorComponent(x0=0.0)
+        comp.initialize(t0=0.0)
+        comp.set_inputs({"u": 1.0}, t=0.0)
+
+        before = len(comp.history.get_port_history("y"))
+        comp.do_step(t=0.0, dt=1.0)
+        after = len(comp.history.get_port_history("y"))
+
+        assert after == before + 1
+
+    def test_do_step_skips_recording_when_disabled(self):
+        """With ``_record_history`` False, ``do_step`` advances state but
+        does not append to history (the trial-step contract)."""
+        comp = IntegratorComponent(x0=0.0)
+        comp.initialize(t0=0.0)
+        comp.set_inputs({"u": 1.0}, t=0.0)
+
+        before = len(comp.history.get_port_history("y"))
+        comp._record_history = False
+        comp.do_step(t=0.0, dt=1.0)
+        after = len(comp.history.get_port_history("y"))
+
+        # State advanced ...
+        assert np.isclose(comp.t, 1.0)
+        # ... but no history sample was recorded.
+        assert after == before
+
+    def test_recording_resumes_after_reenabling(self):
+        comp = IntegratorComponent(x0=0.0)
+        comp.initialize(t0=0.0)
+        comp.set_inputs({"u": 1.0}, t=0.0)
+
+        comp._record_history = False
+        comp.do_step(t=0.0, dt=1.0)  # suppressed
+        comp._record_history = True
+        comp.do_step(t=1.0, dt=1.0)  # recorded
+
+        # Initial sample from initialize() + the one recorded step.
+        assert len(comp.history.get_port_history("y")) == 2
+
+
+# ============================================================================
 # Test CoSimComponent Hybrid Functionality
 # ============================================================================
 class TestCoSimComponentHybrid:

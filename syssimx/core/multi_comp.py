@@ -440,11 +440,16 @@ class MultiComponent(CoSimComponent):
             change the active model while a rollback snapshot is valid.
         """
         if dt <= 0.0:
+            self.active_comp._record_history = self._record_history
             self.active_comp.do_step(t, dt)
             return
         target_mode = self._select_target_mode(t)
         if target_mode != self.active_mode:
             self._switch_mode(target_mode, t)
+        # Propagate the history-recording flag so that trial steps performed by
+        # the hybrid algorithm (which disable recording on this MultiComponent)
+        # also suppress recording on the active model's own history buffer.
+        self.active_comp._record_history = self._record_history
         self.active_comp.do_step(t, dt)
 
 
