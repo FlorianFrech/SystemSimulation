@@ -59,7 +59,7 @@ Example:
 
 See Also:
     - :class:`syssimx.components.FMUComponent`: FMI 2.0 wrapper
-    - :class:`syssimx.components.FEMComponent`: Finite element wrapper
+    - :class:`syssimx.components.FEMComponent`: NGSolve transient structural FEM wrapper
     - :class:`syssimx.components.OpenSimComponent`: Biomechanics wrapper
 """
 

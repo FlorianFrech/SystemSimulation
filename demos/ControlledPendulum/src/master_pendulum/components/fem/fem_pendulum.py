@@ -103,6 +103,16 @@ class FEMPendulum(FEMComponent):
         # Visualization helper (NGSolve webgui scenes / animations).
         self._viz = FEMPendulumVisualizer(self)
 
+        # Register the multidim history fields the base records each sub-step.
+        # Resolved by attribute name so they survive reallocation in reset().
+        self._register_history_field(
+            "_gf_u_history", lambda: self._gf_u.components[0].vec
+        )
+        self._register_history_field("_gf_von_mises_history", lambda: self._gf_von_mises.vec)
+        self._register_history_field(
+            "_gf_cauchy_stress_history", lambda: self._gf_cauchy_stress.vec
+        )
+
     # ----------------------------------------------------------------------------
     # Setup Configuration Parameters before initialization
     # ----------------------------------------------------------------------------
@@ -292,13 +302,8 @@ class FEMPendulum(FEMComponent):
 
     def _initialize_grid_functions(self):
         """Initialize grid functions for state variables and stress."""
-        self._gf_u = GridFunction(self._fes)  # Current state
-        self._gf_v = GridFunction(self._fes)  # Velocity
-        self._gf_a = GridFunction(self._fes)  # Acceleration
-
-        self._gf_uold = GridFunction(self._fes)  # Previous displacement
-        self._gf_vold = GridFunction(self._fes)  # Previous velocity
-        self._gf_aold = GridFunction(self._fes)  # Previous acceleration
+        # Newmark state (u, v, a and previous-step buffers) is owned by the base.
+        self._init_newmark_state(self._fes)
 
         self._gf_cauchy_stress = GridFunction(self._S_cauchy)  # Stress
         self._gf_von_mises = GridFunction(self._V_vm)  # Stress norm (scalar)
@@ -583,68 +588,18 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     # Hybrid methods for snapshot/restore and event handling
     # ----------------------------------------------------------------------------
-    def snapshot_state(self):
-        """
-        Capture complete Newmark time integration state.
-        Must include current AND previous time step data.
-        """
+    def _extra_snapshot(self) -> dict[str, Any]:
+        """Add the contact-gap state to the base Newmark snapshot."""
         return {
-            # Mode Identifier
-            "mode": "FEM",
-            # Current state
-            "u": self._gf_u.vec.FV().NumPy().copy(),
-            "v": self._gf_v.vec.FV().NumPy().copy(),
-            "a": self._gf_a.vec.FV().NumPy().copy(),
-            # Previous time step  for Newmark
-            "u_old": self._gf_uold.vec.FV().NumPy().copy(),
-            "v_old": self._gf_vold.vec.FV().NumPy().copy(),
-            "a_old": self._gf_aold.vec.FV().NumPy().copy(),
-            # Time step size (may vary during contact)
-            "tau": self.tau.Get(),
-            # Contact gap info
             "gap": self.gap if self._with_contact else None,
             "gap_prev": self.gap_prev if self._with_contact else None,
-            # Time
-            "t": self.t,
         }
 
-    def restore_state(self, snapshot: dict[str, Any], t: float):
-        """
-        Restore complete Newmark state from snapshot.
-        Critical: Must restore BOTH current and old states.
-        """
-        # Check mode
-        if snapshot.get("mode", "") != "FEM":
-            raise ValueError(
-                f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'."
-            )
-
-        self.internal_event_hints.clear()
-
-        # Restore time
-        self.t = t
-
-        # Restore current state
-        self._gf_u.vec.FV().NumPy()[:] = snapshot["u"]
-        self._gf_v.vec.FV().NumPy()[:] = snapshot["v"]
-        self._gf_a.vec.FV().NumPy()[:] = snapshot["a"]
-
-        # Restore previous time step (THIS IS CRITICAL!)
-        self._gf_uold.vec.FV().NumPy()[:] = snapshot["u_old"]
-        self._gf_vold.vec.FV().NumPy()[:] = snapshot["v_old"]
-        self._gf_aold.vec.FV().NumPy()[:] = snapshot["a_old"]
-
-        # Update contact gap info
+    def _restore_extra(self, snapshot: dict[str, Any]) -> None:
+        """Restore the contact-gap state captured by ``_extra_snapshot``."""
         if self._with_contact:
             self.gap = snapshot.get("gap", float("inf"))
             self.gap_prev = snapshot.get("gap_prev", float("inf"))
-
-        # Restore time step size
-        self.tau.Set(snapshot["tau"])
-
-        # Update outputs and record
-        self._update_output_states(t)
-        self._record_outputs(t)
 
     def _handle_events_internal(self, event_names, t):
         if "wall_hit" not in event_names:
@@ -667,145 +622,88 @@ class FEMPendulum(FEMComponent):
             self._record_outputs(t)
 
     # ----------------------------------------------------------------------------
-    # Time stepping method
+    # Time stepping hooks (the micro-step loop lives in FEMComponent)
     # ----------------------------------------------------------------------------
-    def do_step(self, t, dt):
-        """Override base-class method to implement micro-stepping with internal event hints.
-
-        Outputs are updated and recorded within each micro-step to ensure accurate recording.
-        """
-        self._do_step_internal(t, dt)
-
-    def _do_step_internal(self, t, dt):
-        """
-        Advance FEM pendulum simulation from t to t+dt (called by base-class).
-
-        Reports internal event hints when wall contact is detected during
-        micro-stepping, enabling precise event localization by the master algorithm.
-        """
-        # Clear any stale internal event hints from previous steps
-        self.internal_event_hints.clear()
-
+    def _effective_substep(self, dt):
+        """Nominal internal sub-step: the macro step, capped at sim_params.tau."""
         if dt < 1e-4:
-            effective_dt = dt
+            return dt
         elif dt < self.sim_params.tau:
-            effective_dt = dt
+            return dt
+        return self.sim_params.tau
+
+    def _pre_solve(self, t_current, effective_dt):
+        """Update the contact set and reduce the sub-step near contact."""
+        if not self._with_contact:
+            return
+        self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
+        self.gap_prev = self._get_contact_gap_distance()
+        self._t_prev = t_current
+        self.monitoring_state.gap = self.gap_prev
+
+        # Reduce time step if the pendulum is close to contact.
+        if effective_dt <= 1e-4:
+            self.tau.Set(effective_dt)
+        elif self.gap_prev < 0.001:
+            self.tau.Set(1e-4)
+        elif self.gap_prev < 0.005:
+            self.tau.Set(5e-4)
+        elif self.gap_prev < 0.01:
+            self.tau.Set(1e-3)
         else:
-            effective_dt = self.sim_params.tau
+            self.tau.Set(self.sim_params.tau)
 
-        t_current = t
-        t_end = t + dt
+    def _solve_step(self):
+        """Solve the nonlinear elasticity system for the current sub-step."""
+        NewtonMinimization(
+            a=self._bfa,
+            u=self._gf_u,
+            printing=False,
+            inverse="sparsecholesky",
+            maxerr=self.sim_params.max_err,
+            maxit=self.sim_params.max_it,
+        )
 
-        with TaskManager():
-            while t_current < t_end - 1e-12:
-                tau = min(effective_dt, t_end - t_current)
-                self.tau.Set(tau)
-
-                # Time step update
-                self._gf_uold.vec[:] = self._gf_u.vec
-                self._gf_vold.vec[:] = self._gf_v.vec
-                self._gf_aold.vec[:] = self._gf_a.vec
-
-                # Update contact with the current displacement
-                if self._with_contact:
-                    # Update contact conditions
-                    self._contact.Update(
-                        self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5
-                    )
-                    self.gap_prev = self._get_contact_gap_distance()
-                    t_prev = t_current
-                    self.monitoring_state.gap = self.gap_prev
-
-                    # Reduce time step if pendulum is close to contact
-                    if effective_dt <= 1e-4:
-                        self.tau.Set(effective_dt)
-                    elif self.gap_prev < 0.001:
-                        self.tau.Set(1e-4)
-                    elif self.gap_prev < 0.005:
-                        self.tau.Set(5e-4)
-                    elif self.gap_prev < 0.01:
-                        self.tau.Set(1e-3)
-                    else:
-                        self.tau.Set(self.sim_params.tau)
-
-                # Update time settings
-                tau = self.tau.Get()
-                t_current += tau
-                self.monitoring_state.time = t_current
-                self.monitoring_state.dt = tau
-
-                # Solve nonlinear system with Newton
-                NewtonMinimization(
-                    a=self._bfa,
-                    u=self._gf_u,
-                    printing=False,
-                    inverse="sparsecholesky",
-                    maxerr=self.sim_params.max_err,
-                    maxit=self.sim_params.max_it,
+    def _post_solve(self, t_current):
+        """Detect the wall-contact event and recompute the stress fields."""
+        # Check for wall contact event (gap crossing zero).
+        if self._with_contact:
+            self.gap = self._get_contact_gap_distance()
+            if self.gap_prev > 0.0 and self.gap <= 0.0:
+                # Report internal event with precise timing from the micro-steps.
+                self.report_internal_event(
+                    event_name="wall_hit",
+                    t_before=self._t_prev,
+                    t_after=t_current,
+                    indicator_before=self.gap_prev,
+                    indicator_after=self.gap,
                 )
 
-                # Update kinematic variables (velocity, acceleration)
-                self._gf_v.vec[:] = (
-                    2 / tau * (self._gf_u.vec - self._gf_uold.vec) - self._gf_vold.vec
-                )
-                self._gf_a.vec[:] = (
-                    2 / tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
-                )
+        # Compute stress on both materials. The piecewise CoefficientFunction
+        # picks the pendulum or wall material law in the corresponding region.
+        u_cur = self._gf_u.components[0]
+        cauchy_per_mat = []
+        vm_per_mat = []
+        for mat in self._mesh.GetMaterials():
+            if mat == "pendulum":
+                cauchy_per_mat.append(self._cauchy_stress_p(u_cur))
+                vm_per_mat.append(self._von_mises_p(u_cur))
+            elif mat == "wall":
+                cauchy_per_mat.append(self._cauchy_stress_w(u_cur))
+                vm_per_mat.append(self._von_mises_w(u_cur))
+            else:
+                cauchy_per_mat.append(CF(((0, 0), (0, 0))))
+                vm_per_mat.append(CF(0.0))
+        self._gf_cauchy_stress.Interpolate(CF(cauchy_per_mat))
+        self._gf_von_mises.Set(CF(vm_per_mat))
 
-                # Check for wall contact event (gap crossing zero)
-                if self._with_contact:
-                    self.gap = self._get_contact_gap_distance()
-
-                    # Detect zero-crossing: gap went from positive to non-positive
-                    if self.gap_prev > 0.0 and self.gap <= 0.0:
-                        # Report internal event with precise timing from micro-steps
-                        self.report_internal_event(
-                            event_name="wall_hit",
-                            t_before=t_prev,
-                            t_after=t_current,
-                            indicator_before=self.gap_prev,
-                            indicator_after=self.gap,
-                        )
-
-                # Compute stress on both materials. The piecewise
-                # CoefficientFunction picks the pendulum or wall material
-                # law in the corresponding region.
-                u_cur = self._gf_u.components[0]
-                cauchy_per_mat = []
-                vm_per_mat = []
-                for mat in self._mesh.GetMaterials():
-                    if mat == "pendulum":
-                        cauchy_per_mat.append(self._cauchy_stress_p(u_cur))
-                        vm_per_mat.append(self._von_mises_p(u_cur))
-                    elif mat == "wall":
-                        cauchy_per_mat.append(self._cauchy_stress_w(u_cur))
-                        vm_per_mat.append(self._von_mises_w(u_cur))
-                    else:
-                        cauchy_per_mat.append(CF(((0, 0), (0, 0))))
-                        vm_per_mat.append(CF(0.0))
-                self._gf_cauchy_stress.Interpolate(CF(cauchy_per_mat))
-                self._gf_von_mises.Set(CF(vm_per_mat))
-
-                # Add current state to time series history for visualization.
-                # Skipped during hybrid trial steps so that history only contains
-                # frames from accepted simulation time.
-                if self._record_history:
-                    self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                    self._gf_von_mises_history.AddMultiDimComponent(self._gf_von_mises.vec)
-                    self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
-
-                if self.anim_params.animate:
-                    self._viz.redraw()
-                self._update_output_states(t_current)
-
-                # Skip port-history recording during hybrid trial steps so the
-                # history reflects accepted simulation time only. Mirrors the
-                # multidim-history guard above and the base do_step contract.
-                if self._record_history:
-                    self._record_outputs(t_current)
-                self.update_monitoring()
-        self.t = t_current
-        
+    def _after_substep(self, t_current):
+        """Update the live monitoring state and redraw the scene."""
+        self.monitoring_state.time = t_current
+        self.monitoring_state.dt = self.tau.Get()
+        if self.anim_params.animate:
+            self._viz.redraw()
+        self.update_monitoring()
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
@@ -872,14 +770,9 @@ class FEMPendulum(FEMComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self):
-        # Reset all grid functions and time series
+        # The base zeros the Newmark state (u, v, a and previous-step buffers).
         super().reset()
-        self._gf_u.vec[:] = 0
-        self._gf_v.vec[:] = 0
-        self._gf_a.vec[:] = 0
-        self._gf_uold.vec[:] = 0
-        self._gf_vold.vec[:] = 0
-        self._gf_aold.vec[:] = 0
+        # Reset the stress fields and reallocate the time-series history.
         self._gf_cauchy_stress.vec[:] = 0
         self._gf_von_mises.vec[:] = 0
         self._gf_u_history = GridFunction(self._V, multidim=0)
