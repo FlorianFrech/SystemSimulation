@@ -14,7 +14,6 @@ from IPython.display import display
 from netgen.occ import *
 from ngsolve import *
 from ngsolve.solvers import NewtonMinimization
-from ngsolve.webgui import Draw
 
 from .material_laws import NeoHookeanMaterial, SVKMaterial
 from .pendulum_config import (
@@ -27,6 +26,7 @@ from .pendulum_config import (
     SimulationParameters,
 )
 from .pendulum_mesh import build_mesh
+from .visualization import FEMPendulumVisualizer
 from ...monitoring import PendulumMonitor, PendulumMonitoringState
 from syssimx.components.fem import FEMComponent
 from syssimx.core.port import PortSpec, PortType
@@ -99,6 +99,9 @@ class FEMPendulum(FEMComponent):
         self.monitoring_state = PendulumMonitoringState()
         self.monitoring_state.mode = "FEM"
         self._monitor: PendulumMonitor | None = None
+
+        # Visualization helper (NGSolve webgui scenes / animations).
+        self._viz = FEMPendulumVisualizer(self)
 
     # ----------------------------------------------------------------------------
     # Setup Configuration Parameters before initialization
@@ -792,7 +795,7 @@ class FEMPendulum(FEMComponent):
                     self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
 
                 if self.anim_params.animate:
-                    self.scene.Redraw()
+                    self._viz.redraw()
                 self._update_output_states(t_current)
 
                 # Skip port-history recording during hybrid trial steps so the
@@ -1026,101 +1029,27 @@ class FEMPendulum(FEMComponent):
         return KE, PE, SE
 
     # ----------------------------------------------------------------------------
-    # Visualization methods
+    # Visualization methods (delegated to FEMPendulumVisualizer)
     # ----------------------------------------------------------------------------
     def initialize_scene(self):
-        """
-        Initialize the stress visualization scene.
-        """
-        self.scene = Draw(
-            self._gf_von_mises,
-            self._mesh,
-            "von_mises_stress",
-            deformation=self._gf_u.components[0],
-            show=True,
-        )
+        """Initialize the live stress visualization scene."""
+        return self._viz.initialize_scene()
 
     def update_scene(self, q: float | Quantity, t: float):
-        """
-        Update the visualization scene with new state.
-
-        Args:
-            q (Union[float, Quantity]): The new state value.
-            t (float): The current time.
-        """
-        if self.scene:
-            self.set_state({"theta": {"value": q}}, t)
-            self.scene.Redraw()
+        """Update the live scene with a new pendulum angle ``q`` at time ``t``."""
+        self._viz.update_scene(q, t)
 
     def visualize_state(self, draw_u: bool = True, draw_v: bool = True, draw_a: bool = True):
-        """
-        Visualizes the current state of the FEM pendulum (displacement, velocity, and acceleration field.)
-
-        Args:
-            draw_u (bool, optional): Whether to draw the displacement field. Defaults to True.
-            draw_v (bool, optional): Whether to draw the velocity field. Defaults to True.
-            draw_a (bool, optional): Whether to draw the acceleration field. Defaults to True.
-        """
-        # Displacement
-        if draw_u:
-            Draw(self._gf_u.components[0], deformation=True)
-
-        # Velocity
-        if draw_v:
-            Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
-
-        # Acceleration
-        if draw_a:
-            Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+        """Draw the current displacement, velocity, and/or acceleration fields."""
+        self._viz.visualize_state(draw_u=draw_u, draw_v=draw_v, draw_a=draw_a)
 
     def animate_displacement(self, settings: dict | None = None):
-        """
-        Animate displacement history.
+        """Animate the recorded displacement history."""
+        self._viz.animate_displacement(settings)
 
-        Requires that `anim_params.animate` was True during simulation so
-        histories were recorded.
-        """
-        if settings is None:
-            settings = {"Multidim": {"speed": 15}}
-        if not hasattr(self, "_gf_u_history") or len(self._gf_u_history.vecs) == 0:
-            raise RuntimeError(
-                f"{self.name}: No displacement history recorded. "
-                "Run with anim_params.animate=True to collect history."
-            )
-        Draw(
-            self._gf_u_history,
-            self._mesh,
-            deformation=self._gf_u_history,
-            animate=True,
-            settings=settings,
-        )
-    
-    
     def animate_stress(self, settings: dict | None = None):
-        """
-        Animate stress norm history with deformation.
-
-        Requires that `anim_params.animate` was True during simulation so
-        histories were recorded.
-        """
-        if settings is None:
-            settings = {"Multidim": {"speed": 15}}
-        if not hasattr(self, "_gf_von_mises_history") or len(self._gf_von_mises_history.vecs) == 0:
-            raise RuntimeError(
-                f"{self.name}: No stress history recorded. "
-                "Run with anim_params.animate=True to collect history."
-            )
-        Draw(
-            self._gf_von_mises_history,
-            self._mesh,
-            interpolation_multidim=True,
-            deformation=self._gf_u_history,
-            animate=True,
-            autoscale=False,
-            min=0,
-            max=np.max([v.FV().NumPy().max() for v in self._gf_von_mises_history.vecs]),
-            settings=settings,
-        )
+        """Animate the recorded von Mises stress history with deformation."""
+        self._viz.animate_stress(settings)
 
     # ----------------------------------------------------------------------------
     # Monitoring interface methods (delegated to the shared PendulumMonitor)
