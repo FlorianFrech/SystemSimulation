@@ -1,254 +1,159 @@
-# ----------------------------------------------------------------------------
-# Pendulum configuration parameters
-# ----------------------------------------------------------------------------
+"""Configuration parameter objects for the FEM pendulum.
+
+Each group of parameters is a small ``@dataclass`` so it carries sensible
+defaults, a generated ``__repr__``, and field-level documentation. They are
+plain mutable containers — ``FEMPendulum`` overwrites individual fields (e.g.
+``sim_params.t_start``) during initialization.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, fields, is_dataclass
+from typing import Any
+
+
+@dataclass
 class GeometryParameters:
+    """Geometry of the pendulum and the contact wall.
+
+    Attributes:
+        r_rod: Radius of the pendulum rod.
+        r_hole: Radius of the hole in the pendulum head.
+        r_head: Radius of the pendulum head.
+        l_center: Length from pivot to center of mass.
+        q_wall_deg: Angle of the wall in degrees.
+        wall_len_x: Wall extent in the x-direction.
+        wall_len_y: Wall extent in the y-direction.
+        wall_len_z: Wall extent in the z-direction.
     """
-    Geometry parameters for the pendulum and wall.
-    Args:
-        r_rod (float): Radius of the pendulum rod.
-        r_hole (float): Radius of the hole in the wall.
-        r_head (float): Radius of the pendulum head.
-        l_center (float): Length from pivot to center of mass.
-        q_wall_deg (float): Angle of the wall in degrees.
-        wall_len_x (float): Length of the wall in x-direction.
-        wall_len_y (float): Length of the wall in y-direction.
-        wall_len_z (float): Length of the wall in z-direction.
-    """
 
-    def __init__(
-        self,
-        r_rod=0.015, #0.015
-        r_hole=0.03, #0.03
-        r_head=0.06, #0.06
-        l_center=0.24, #0.24
-        q_wall_deg=0.0,
-        wall_len_x=0.025, #0.015
-        wall_len_y=0.25, #0.15
-        wall_len_z=0.05, #0.03
-    ):
-        self.r_rod = r_rod
-        self.r_hole = r_hole
-        self.r_head = r_head
-        self.l_center = l_center
-        self.q_wall_deg = q_wall_deg
-        self.wall_len_x = wall_len_x
-        self.wall_len_y = wall_len_y
-        self.wall_len_z = wall_len_z
-        pass
-
-    def __str__(self):
-        return (
-            f"Pendulum Geometry:\n"
-            f"  Rod Radius:    {self.r_rod}\n"
-            f"  Hole Radius:   {self.r_hole}\n"
-            f"  Head Radius:   {self.r_head}\n"
-            f"  Center Length: {self.l_center}\n"
-            f"Wall Geometry:\n"
-            f"  Wall Angle:    {self.q_wall_deg}\n"
-            f"  Wall Length X: {self.wall_len_x}\n"
-            f"  Wall Length Y: {self.wall_len_y}\n"
-            f"  Wall Length Z: {self.wall_len_z}"
-        )
+    r_rod: float = 0.015
+    r_hole: float = 0.03
+    r_head: float = 0.06
+    l_center: float = 0.24
+    q_wall_deg: float = 0.0
+    wall_len_x: float = 0.025
+    wall_len_y: float = 0.25
+    wall_len_z: float = 0.05
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class MaterialParameters:
+    """Material properties for the pendulum and wall.
+
+    Attributes:
+        model: Constitutive law key, ``"svk"`` or ``"neo_hookean"``.
+        E_pendulum: Young's modulus of the pendulum material in Pa.
+        nu_pendulum: Poisson's ratio of the pendulum material.
+        rho_pendulum: Density of the pendulum material in kg/m³.
+        E_wall: Young's modulus of the wall material in Pa.
+        nu_wall: Poisson's ratio of the wall material.
+        rho_wall: Density of the wall material in kg/m³.
+        thickness: Out-of-plane thickness in m (plane-stress assumption).
     """
-    Material properties for the pendulum and wall.
-    Args:
-        E_pendulum (float): Young's modulus of the pendulum material in Pa.
-        nu_pendulum (float): Poisson's ratio of the pendulum material.
-        rho_pendulum (float): Density of the pendulum material in kg/m^3.
-        E_wall (float): Young's modulus of the wall material in Pa.
-        nu_wall (float): Poisson's ratio of the wall material.
-        rho_wall (float): Density of the wall material in kg/m^3.
-        thickness (float): Thickness of the pendulum and wall in m.
-    """
 
-    def __init__(
-        self,
-        model="svk", # or "svk"
-        E_pendulum=2.1e11,
-        nu_pendulum=0.3,
-        rho_pendulum=7850,
-        E_wall=210e9,
-        nu_wall=0.3,
-        rho_wall=7850,
-        thickness=0.01,  # thin (plane-stress assumption)
-    ):
-        self.model = model
-        self.E_pendulum = E_pendulum
-        self.nu_pendulum = nu_pendulum
-        self.rho_pendulum = rho_pendulum
-        self.E_wall = E_wall
-        self.nu_wall = nu_wall
-        self.rho_wall = rho_wall
-        self.thickness = thickness
-
-    def __str__(self):
-        return (
-            f"Material Parameters Pendulum:\n"
-            f"  Young's Modulus: {self.E_pendulum}\n"
-            f"  Poisson's Ratio: {self.nu_pendulum}\n"
-            f"  Density:         {self.rho_pendulum}\n"
-            f"Material Parameters Wall:\n"
-            f"  Young's Modulus: {self.E_wall}\n"
-            f"  Poisson's Ratio: {self.nu_wall}\n"
-            f"  Density:         {self.rho_wall}\n"
-            f"General Thickness: {self.thickness}"
-        )
+    model: str = "svk"
+    E_pendulum: float = 2.1e11
+    nu_pendulum: float = 0.3
+    rho_pendulum: float = 7850
+    E_wall: float = 210e9
+    nu_wall: float = 0.3
+    rho_wall: float = 7850
+    thickness: float = 0.01
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class MeshParameters:
+    """Mesh generation parameters.
+
+    Attributes:
+        max_element_size: Maximum element size in the mesh.
+        mesh_order: Polynomial order of the finite elements.
+        curved_elements: Whether to use curved elements.
+        refinement_levels: Number of uniform refinement levels.
     """
-    Mesh generation parameters for the pendulum and wall.
-    Args:
-        max_element_size (float): Maximum element size in the mesh.
-        mesh_order (int): Order of the finite elements.
-        curved_elements (bool): Whether to use curved elements.
-        refinement_levels (int): Number of refinement levels for the mesh.
-    """
 
-    def __init__(
-        self, max_element_size=0.03, mesh_order=2, curved_elements=True, refinement_levels=0
-    ):
-        self.max_element_size = max_element_size
-        self.mesh_order = mesh_order
-        self.curved_elements = curved_elements
-        self.refinement_levels = refinement_levels
-
-    def __str__(self):
-        return (
-            f"Mesh Parameters:\n"
-            f"  Max Element Size: {self.max_element_size}\n"
-            f"  Mesh Order:       {self.mesh_order}\n"
-            f"  Curved Elements:  {self.curved_elements}\n"
-            f"  Refinement Levels:{self.refinement_levels}"
-        )
+    max_element_size: float = 0.03
+    mesh_order: int = 2
+    curved_elements: bool = True
+    refinement_levels: int = 0
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class InitialConditionParameters:
+    """Initial conditions for the pendulum simulation.
+
+    Attributes:
+        angular_position_deg: Initial angular position in degrees.
+        angular_velocity: Initial angular velocity in rad/s.
+        drive_torque: Initial drive torque in N·m.
     """
-    Initial conditions for the pendulum simulation.
-    Args:
-        angular_position_deg (float): Initial angular position in degrees.
-        angular_velocity (float): Initial angular velocity in rad/s.
-        drive_torque (float): Initial drive torque in Nm.
-    """
 
-    def __init__(self, angular_position_deg=0, angular_velocity=0, drive_torque=0):
-        self.angular_position_deg = angular_position_deg
-        self.angular_velocity = angular_velocity
-        self.drive_torque = drive_torque
-
-    def __str__(self):
-        return (
-            f"Initial Conditions:\n"
-            f"  Angular Position:     {self.angular_position_deg} deg\n"
-            f"  Angular Velocity:     {self.angular_velocity} rad/s\n"
-            f"  Drive Torque:         {self.drive_torque} Nm"
-        )
+    angular_position_deg: float = 0
+    angular_velocity: float = 0
+    drive_torque: float = 0
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class ContactParameters:
+    """Contact parameters for the pendulum simulation.
+
+    Attributes:
+        kn: Contact (penalty) stiffness in N/m.
     """
-    Contact parameters for the pendulum simulation.
-    Args:
-        kn (float): Contact stiffness in N/m.
-    """
 
-    def __init__(self, kn=2e9):
-        self.kn = kn
-
-    def __str__(self):
-        return f"Contact Parameters:\n   Contact Stiffness: {self.kn:.2e} N/m"
+    kn: float = 2e9
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class SimulationParameters:
+    """Time integration and solver parameters.
+
+    Attributes:
+        t_start: Start time of the simulation in seconds.
+        tau: Internal (macro) time step in seconds.
+        t_end: End time of the simulation in seconds.
+        max_err: Maximum solver error tolerance.
+        max_it: Maximum number of solver iterations.
+        use_gravity: Whether to include gravity.
+        with_contact: Whether to enable contact modeling.
+        torque_traction_distribution: Distribution type for torque traction
+            (``"linear"`` or ``"bipolar"`` aka ``"dipole"``).
     """
-    Simulation parameters for the pendulum simulation.
-    Args:
-        t_start (float): Start time of the simulation in seconds.
-        tau (float): Internal time step in seconds.
-        t_end (float): End time of the simulation in seconds.
-        max_err (float): Maximum solver error tolerance.
-        max_it (int): Maximum number of solver iterations.
-        use_gravity (bool): Whether to include gravity in the simulation.
-        with_contact (bool): Whether to enable contact modeling.
-        torque_traction_distribution (str): Distribution type for torque traction
-            ('linear', 'bipolar' aka 'dipole').
-    """
 
-    def __init__(
-        self,
-        t_start=0.0,
-        tau=0.001,
-        t_end=2.0,
-        max_err=1e-6,
-        max_it=20,
-        use_gravity=True,
-        with_contact=True,
-        torque_traction_distribution="linear",
-    ):
-        self.t_start = t_start
-        self.tau = tau
-        self.t_end = t_end
-        self.max_err = max_err
-        self.max_it = max_it
-
-        self.use_gravity = use_gravity
-        self.with_contact = with_contact
-        self.torque_traction_distribution = torque_traction_distribution
-
-    def __str__(self):
-        return (
-            f"Simulation Parameters:\n"
-            f"  Simulation Start Time: {self.t_start} s\n"
-            f"  Internal Time Step:    {self.tau} s\n"
-            f"  Simulation End Time:   {self.t_end} s\n"
-            f"  Max Solver Error:      {self.max_err}\n"
-            f"  Max Solver Iterations: {self.max_it}\n"
-            f"  Use Gravity:           {self.use_gravity}\n"
-            f"  With Contact:          {self.with_contact}\n"
-            f"  Torque Traction Dist.: {self.torque_traction_distribution}"
-        )
+    t_start: float = 0.0
+    tau: float = 0.001
+    t_end: float = 2.0
+    max_err: float = 1e-6
+    max_it: int = 20
+    use_gravity: bool = True
+    with_contact: bool = True
+    torque_traction_distribution: str = "linear"
 
 
-# ----------------------------------------------------------------------------
+@dataclass
 class AnimationParameters:
-    """Animation parameters for the pendulum simulation.
-    Args:
-        animate (bool): Whether to enable animation.
-        interval (int): Interval between frames in milliseconds.
-        speed (float): Speed multiplier for the animation.
+    """Animation parameters for the pendulum visualization.
+
+    Attributes:
+        animate: Whether to record/render animation frames.
+        interval: Interval between frames in milliseconds.
+        speed: Speed multiplier for the animation.
     """
 
-    def __init__(self, animate=True, interval=10, speed=50):
-        self.animate = animate
-        self.interval = interval
-        self.speed = speed
-
-    def __str__(self):
-        return (
-            f"Animation Parameters:\n"
-            f"  Animate:        {self.animate}\n"
-            f"  Interval:       {self.interval}\n"
-            f"  Speed:          {self.speed}x"
-        )
+    animate: bool = True
+    interval: int = 10
+    speed: float = 50
 
 
-# ----------------------------------------------------------------------------
-def to_json_serializable(obj):
-    """Convert configuration object to a JSON-serializable dictionary."""
+def to_json_serializable(obj: Any) -> Any:
+    """Recursively convert a config object (or container) to plain JSON types."""
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return {f.name: to_json_serializable(getattr(obj, f.name)) for f in fields(obj)}
     if hasattr(obj, "__dict__"):
         return {key: to_json_serializable(value) for key, value in obj.__dict__.items()}
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [to_json_serializable(item) for item in obj]
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return {key: to_json_serializable(value) for key, value in obj.items()}
-    else:
-        return obj
+    return obj

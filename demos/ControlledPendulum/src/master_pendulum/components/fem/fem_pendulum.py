@@ -18,8 +18,16 @@ from ngsolve import *
 from ngsolve.solvers import NewtonMinimization
 from ngsolve.webgui import Draw
 
-from .material_laws import NeoHookeanMaterial
-from .pendulum_config import *
+from .material_laws import NeoHookeanMaterial, SVKMaterial
+from .pendulum_config import (
+    AnimationParameters,
+    ContactParameters,
+    GeometryParameters,
+    InitialConditionParameters,
+    MaterialParameters,
+    MeshParameters,
+    SimulationParameters,
+)
 from .pendulum_mesh import build_mesh
 from syssimx.components.fem import FEMComponent
 from syssimx.core.port import PortSpec, PortType
@@ -175,8 +183,6 @@ class FEMPendulum(FEMComponent):
     # Initialization helper methods
     # ----------------------------------------------------------------------------
     def _setup_material_law(self):
-        from .material_laws import NeoHookeanMaterial, SVKMaterial
-
         self.E_p, self.E_w = self.mat_params.E_pendulum, self.mat_params.E_wall
         self.nu_p, self.nu_w = self.mat_params.nu_pendulum, self.mat_params.nu_wall
         self.rho_p, self.rho_w = self.mat_params.rho_pendulum, self.mat_params.rho_wall
