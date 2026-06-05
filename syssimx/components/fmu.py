@@ -283,12 +283,13 @@ class FMUComponent(CoSimComponent):
         be restored by creating a fresh instance and applying reconstructed
         initial conditions through parameters.
         """
-        self._instance.instantiate()
-        self._instance.setupExperiment(startTime=t0)
-        self._instance.enterInitializationMode()
+        instance = self._require_instance()
+        instance.instantiate()
+        instance.setupExperiment(startTime=t0)
+        instance.enterInitializationMode()
         self._apply_parameters_starts()
         self._apply_input_starts()
-        self._instance.exitInitializationMode()
+        instance.exitInitializationMode()
 
     # ----------------------------------------------------------------------------
     # Initialization helpers
