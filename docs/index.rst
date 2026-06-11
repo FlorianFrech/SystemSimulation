@@ -143,6 +143,11 @@ Contents
    05_case_study/05_multi_model_switching
 
 .. toctree::
+   :caption: Project
+
+   contributing
+
+.. toctree::
    :caption: Other Links
    
    FMI Standard <https://fmi-standard.org/>

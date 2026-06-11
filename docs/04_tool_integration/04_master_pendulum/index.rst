@@ -10,7 +10,7 @@ modeled with *different* tools:
 
 - **Rigid-body dynamics** (fast, robust, good for control design and early
   integration)
-- **Musculoskeletal dynamics** (to capture human–device interaction and
+- **Musculoskeletal dynamics** (to capture human-device interaction and
   physiology-driven constraints)
 - **Deformable-body mechanics / FEM** (to resolve local stresses, contact, and
   compliance that cannot be captured by rigid models)
@@ -27,7 +27,7 @@ depending on your question:
 
 The key challenge is that these models live at different fidelity levels and
 often have different internal states. A *multi-model component* provides a
-pragmatic workflow: **use the simplest model that is “good enough” most of the
+pragmatic workflow: **use the simplest model that is "good enough" most of the
 time, and switch to a more detailed model only when needed** (e.g., around
 contact).
 
@@ -110,11 +110,11 @@ In practice, switching rules can be:
 - **Hybrid** (combine state thresholds with dwell-time hysteresis).
 
 
-State synchronization: the “hard part”
+State synchronization: the "hard part"
 --------------------------------------
 
 Switching is only meaningful if the target model starts from a *consistent*
-state. For a pendulum, a common “shared state” is:
+state. For a pendulum, a common "shared state" is:
 
 - angle ``theta``
 - angular velocity ``omega``
@@ -152,7 +152,7 @@ Practical guidelines (what to verify early)
 - **Switch variable robustness**: base switching on signals that are stable and
   physically meaningful (e.g., contact gap or angle thresholds), and add
   :class:`syssimx.core.multi_comp.Hysteresis` to prevent chattering.
-- **Internal state mismatch**: explicitly decide how you “collapse” deformable
+- **Internal state mismatch**: explicitly decide how you "collapse" deformable
   states (FEM) into rigid states (and how you re-introduce deformation when
   switching back).
 - **Numerical transients**: expect discontinuities at switches; validate
@@ -162,7 +162,7 @@ Practical guidelines (what to verify early)
   then validate the closed-loop system with and without switching.
 
 
-.. Controlled pendulum system (sensors–controller–actuator)
+.. Controlled pendulum system (sensors-controller-actuator)
 .. --------------------------------------------------------
 
 .. The Master Pendulum is typically used as the **plant** inside a closed-loop

@@ -52,13 +52,14 @@ docs/_build/
 
 # Project-specific generated artifacts
 demos/ControlledPendulum/artifacts/results/
-docs/tutorials/tool_integration/modelica/cvode_new/
-docs/tutorials/tool_integration/modelica/euler_new/
-docs/tutorials/tool_integration/modelica/cvode_old/
-docs/tutorials/tool_integration/modelica/euler_old/
-docs/tutorials/tool_integration/modelica/*.fmu
-docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.mp4
-docs/tutorials/tool_integration/fem/animations/fem_pendulum_swing.gif
+docs/04_tool_integration/01_modelica/cvode_new/
+docs/04_tool_integration/01_modelica/euler_new/
+docs/04_tool_integration/01_modelica/cvode_old/
+docs/04_tool_integration/01_modelica/euler_old/
+docs/04_tool_integration/01_modelica/*.fmu
+docs/04_tool_integration/01_modelica/fmus/*.fmu
+docs/04_tool_integration/03_fem/animations/*.mp4
+docs/04_tool_integration/03_fem/animations/*.gif
 system_graph
 system_graph.svg
 *.vtu
@@ -105,6 +106,3 @@ CLAUDE.md
 .mplconfig/
 thesis/guideline/Guide_for_Thesis_incl_Cover_Sheet_DEUTSCH_23-04-30.pdf
 thesis/presentation/~$pp_figures.pptx
-
-# OpenModelica FMUs generated at runtime by the docs Modelica tutorials
-docs/04_tool_integration/01_modelica/fmus/*.fmu

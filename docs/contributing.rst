@@ -17,8 +17,8 @@ Development Setup
 
 .. code-block:: bash
 
-   conda create -n env-311 python=3.11 -y
-   conda activate env-311
+   conda create -n syssimx-dev python=3.12 -y
+   conda activate syssimx-dev
 
 
 3. Install development dependencies:
@@ -114,9 +114,13 @@ Building Documentation
 
 .. code-block:: bash
 
-   cd docs
-   make html
-   open _build/html/index.html  # View locally
+   python -m sphinx -b html docs docs/_build/html
+
+Run a warning-strict build before submitting documentation changes:
+
+.. code-block:: bash
+
+   python -m sphinx -b html docs docs/_build/html-check -W --keep-going
 
 Pull Request Process
 --------------------
@@ -154,8 +158,13 @@ Please include:
 5. Expected vs actual behavior
 6. Full error traceback if applicable
 
+Maintainer Release Checklist
+----------------------------
+
+These steps are intended for maintainers publishing a package release.
 
 .. code-block:: bash
+
    # 0) From project root
    cd /home/flo/code/SystemSimulation
 
@@ -182,7 +191,7 @@ Please include:
    # 6) Verify import + installed version
    python -c "import syssimx; print(syssimx.__version__)"
 
-   # 8) Optional: show resolved package details
+   # 7) Optional: show resolved package details
    python -m pip show syssimx
    python -m pip freeze | rg syssimx
 
