@@ -105,3 +105,6 @@ CLAUDE.md
 .mplconfig/
 thesis/guideline/Guide_for_Thesis_incl_Cover_Sheet_DEUTSCH_23-04-30.pdf
 thesis/presentation/~$pp_figures.pptx
+
+# OpenModelica FMUs generated at runtime by the docs Modelica tutorials
+docs/04_tool_integration/01_modelica/fmus/*.fmu
