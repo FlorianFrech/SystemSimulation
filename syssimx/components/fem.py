@@ -167,7 +167,8 @@ class FEMComponent(CoSimComponent):
         self._restore_extra(snapshot)
 
         self._update_output_states(t)
-        self._record_outputs(t)
+        if self._record_history:
+            self._record_outputs(t)
 
     def _extra_snapshot(self) -> dict[str, Any]:
         """Subclass hook: extra fields to add to the snapshot (e.g. contact gap)."""
