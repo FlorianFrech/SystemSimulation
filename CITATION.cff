@@ -7,8 +7,8 @@ authors:
     family-names: Frech
     # orcid: "https://orcid.org/0000-0000-0000-0000"   # add your ORCID before the release
     # email:           # optional
-version: 0.1.7
-date-released: 2026-06-11   # set to the actual submission/release date
+version: 0.2.0
+date-released: 2026-07-18   # set to the actual submission/release date
 license: MIT
 repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
