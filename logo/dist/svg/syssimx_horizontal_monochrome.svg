@@ -22,8 +22,7 @@
     </g>
   </g>
   <text x="252" y="157"
-          font-family="Inter, Arial, sans-serif" font-size="94" letter-spacing="-3.2">
-          <tspan fill="#111827" font-weight="600">SysSim</tspan>
-          <tspan fill="#111827" font-weight="700">X</tspan>
-        </text>
+          font-family="Inter, Arial, sans-serif" font-size="94" letter-spacing="-3.2"><tspan
+          fill="#111827" font-weight="600">SysSim</tspan><tspan fill="#111827"
+          font-weight="700">X</tspan></text>
 </svg>

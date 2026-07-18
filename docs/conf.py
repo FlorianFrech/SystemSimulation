@@ -97,10 +97,16 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -- Options for HTML output -------------------------------------------------
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_favicon = "_static/logo/syssimx_favicon_16.svg"
 
 # Theme options
 html_theme_options = {
     "repository_url": "https://github.com/FlorianFrech/SystemSimulation",
     "use_repository_button": True,
     "use_issues_button": True,
+    "logo": {
+        "image_light": "_static/logo/syssimx_horizontal_light.svg",
+        "image_dark": "_static/logo/syssimx_horizontal_dark.svg",
+        "alt_text": "SysSimX",
+    },
 }

@@ -66,6 +66,16 @@ def test_dark_lockup_background_matches_viewbox() -> None:
     assert background.attrib["width"] == viewbox_width
 
 
+def test_horizontal_wordmark_has_no_gap_before_x() -> None:
+    root = parse(horizontal_svg("light"))
+    text = root.find("svg:text", NS)
+    assert text is not None
+    first, last = text.findall("svg:tspan", NS)
+    assert first.text == "SysSim"
+    assert first.tail in (None, "")
+    assert last.text == "X"
+
+
 def test_build_creates_expected_files(tmp_path: Path) -> None:
     output = build_assets(tmp_path / "logo", create_zip=False)
     expected = [

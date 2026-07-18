@@ -252,10 +252,9 @@ def horizontal_svg(
     else:
         viewbox_width = 720
         wordmark = f'''<text x="{wordmark_x}" y="{baseline}"
-          font-family="Inter, Arial, sans-serif" font-size="{font_size}" letter-spacing="-3.2">
-          <tspan fill="{main_fill}" font-weight="600">SysSim</tspan>
-          <tspan fill="{x_fill}" font-weight="700">X</tspan>
-        </text>'''
+          font-family="Inter, Arial, sans-serif" font-size="{font_size}" letter-spacing="-3.2"><tspan
+          fill="{main_fill}" font-weight="600">SysSim</tspan><tspan fill="{x_fill}"
+          font-weight="700">X</tspan></text>'''
 
     background = (
         f'<rect width="{viewbox_width}" height="240" fill="{COLORS.navy}"/>'

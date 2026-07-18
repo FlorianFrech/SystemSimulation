@@ -39,6 +39,7 @@
 
 ## Wordmark
 - Typeface: Inter.
+- Brand name: `SysSimX` as one continuous token; no whitespace is permitted between `SysSim` and `X`.
 - “SysSim”: Inter SemiBold (600).
 - Final “X”: Inter Bold (700).
 - Release horizontal SVGs should contain outlined glyphs, so rendering does not depend on a locally installed font. The builder produces those when both Inter font files are supplied; otherwise it emits live SVG text with an Inter fallback.
