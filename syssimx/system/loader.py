@@ -144,6 +144,11 @@ def build_system(config: dict[str, Any] | str | Path) -> System:
 
     algo_cfg = config.get("algorithm")
     if algo_cfg:
+        if not isinstance(algo_cfg, dict):
+            raise ConfigError(
+                f"'algorithm' must be a mapping with a 'type' key, "
+                f"got {type(algo_cfg).__name__}"
+            )
         algo_type = algo_cfg.get("type")
         if algo_type not in ALGORITHMS:
             raise ConfigError(
@@ -236,7 +241,17 @@ def _build_component(entry: dict[str, Any]) -> CoSimComponent:
 
     parameters = entry.get("parameters")
     if parameters:
-        component.set_parameters(**parameters)
+        if not isinstance(parameters, dict):
+            raise ConfigError(
+                f"Component '{entry['name']}': 'parameters' must be a mapping, "
+                f"got {type(parameters).__name__}"
+            )
+        try:
+            component.set_parameters(**parameters)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ConfigError(
+                f"Component '{entry['name']}': invalid parameters {parameters}: {exc}"
+            ) from exc
     return component
 
 

@@ -158,3 +158,30 @@ class TestDescribe:
         report = system.describe()
         assert isinstance(report, str)
         assert report.count("\n") >= 5
+
+
+class TestWideFormatMisalignedPorts:
+    def test_misaligned_port_skipped_in_wide_format(self):
+        """Ports whose sampling differs from the component time grid are
+        skipped instead of crashing the DataFrame constructor."""
+        result = SimulationResult(
+            system_name="Misaligned",
+            t0=0.0,
+            tf=1.0,
+            dt=0.1,
+            wall_time=0.0,
+            algorithm="GaussSeidelAlgorithm",
+            histories={
+                "Comp": (
+                    np.array([0.0, 0.1, 0.2]),
+                    {
+                        "aligned": np.array([1.0, 2.0, 3.0]),
+                        "misaligned": np.array([1.0, 2.0]),  # one sample short
+                    },
+                )
+            },
+        )
+        df = result.to_dataframe(component="Comp")
+        assert "aligned" in df.columns
+        assert "misaligned" not in df.columns
+        assert len(df) == 3

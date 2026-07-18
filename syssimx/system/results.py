@@ -133,9 +133,15 @@ class SimulationResult:
         """
         if component is not None:
             t_vals, ports = self.histories[component]
-            data: dict[str, Any] = {"time": np.asarray(t_vals)}
+            t_arr = np.asarray(t_vals)
+            data: dict[str, Any] = {"time": t_arr}
             for port, values in ports.items():
-                data[port] = _magnitudes(values)
+                vals = _magnitudes(values)
+                if len(vals) != len(t_arr):
+                    # Defensive: skip ports whose sampling does not align with
+                    # the component time grid (mirrors the long-format path).
+                    continue
+                data[port] = vals
             return pd.DataFrame(data)
 
         frames = []

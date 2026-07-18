@@ -232,3 +232,27 @@ class TestCLI:
         captured = capsys.readouterr()
         assert code == 2
         assert "error:" in captured.err
+
+
+class TestConfigErrorHardening:
+    """Regression tests for review findings: all failures raise ConfigError."""
+
+    def test_parameters_must_be_mapping(self):
+        config = _config()
+        config["components"][0]["parameters"] = ["not", "a", "mapping"]
+        with pytest.raises(ConfigError, match="'parameters' must be a mapping"):
+            build_system(config)
+
+    def test_invalid_parameter_name_raises_config_error(self):
+        config = _config()
+        # ConstantSource has no registered parameter "bogus" -> set_parameters
+        # raises KeyError, which must surface as ConfigError.
+        config["components"][0]["parameters"] = {"bogus": 1.0}
+        with pytest.raises(ConfigError, match="invalid parameters"):
+            build_system(config)
+
+    def test_algorithm_section_must_be_mapping(self):
+        config = _config()
+        config["algorithm"] = "gauss_seidel"
+        with pytest.raises(ConfigError, match="'algorithm' must be a mapping"):
+            build_system(config)
