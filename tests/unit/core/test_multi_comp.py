@@ -211,6 +211,41 @@ class TestTimestepping:
         multi_comp.do_step(t=0.10, dt=0.01)
         assert multi_comp.active_mode == "A"  # Allowed: dwell window closed
 
+    def test_record_history_propagates_to_active_component(
+        self, multi_comp: SimpleMultiComponent
+    ):
+        """A trial step disables ``_record_history`` on the MultiComponent.
+
+        The flag must propagate to the active sub-component so that the
+        inner ``do_step`` (which would otherwise record) does not pollute
+        the active model's history during hybrid event localization. This
+        is the regression guard for the previously dead ``_record_history``
+        suppression in the hybrid algorithm.
+        """
+        active = multi_comp.active_comp
+        before = len(active.history.get_port_history("y"))
+
+        # Simulate the hybrid trial-step contract: disable recording on the
+        # MultiComponent and advance via the internal step entry point.
+        multi_comp._record_history = False
+        multi_comp._do_step_internal(t=0.0, dt=0.01)
+
+        assert active._record_history is False
+        assert len(active.history.get_port_history("y")) == before  # not recorded
+
+    def test_record_history_enabled_records_on_active_component(
+        self, multi_comp: SimpleMultiComponent
+    ):
+        """Normal stepping (recording enabled) still records the active
+        sub-component's history."""
+        active = multi_comp.active_comp
+        before = len(active.history.get_port_history("y"))
+
+        multi_comp.do_step(t=0.0, dt=0.01)
+
+        assert active._record_history is True
+        assert len(active.history.get_port_history("y")) == before + 1
+
 
 # ============================================================================
 # Test Input/Output Delegation

@@ -9,6 +9,5 @@ __all__ = [
     "FEMPendulum",
     "FMUPendulum",
     "OpenSimPendulum",
-    "NativePendulum",
-    "MasterPendulum"
+    "MasterPendulum",
 ]
