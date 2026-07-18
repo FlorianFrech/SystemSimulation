@@ -38,6 +38,7 @@ Example:
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from ...core.events import DenseTime, Event, InternalEventInfo
@@ -323,26 +324,19 @@ class HybridAlgorithm(Algorithm):
         dt = max(0, dt)
 
         for comp in event_sources:
-            # a) Disable mode switching for trial step
-            if hasattr(comp, "_allow_mode_switching"):
-                original_flag = comp._allow_mode_switching
-                comp._allow_mode_switching = False
-            # Disable history recording for trial step
-            original_record = getattr(comp, "_record_history", None)
-            if original_record is not None:
-                comp._record_history = False
-            try:
-                # b) Save the state snapshot, input cache, and indicators at t_left
+            # Trial advance: suppress history recording and mode switching.
+            with self._trial_step(comp):
+                # a) Save the state snapshot, input cache, and indicators at t_left
                 snapshots[comp.name] = comp.snapshot_state()
                 input_cache[comp.name] = self._capture_inputs(comp)
                 indicators_left[comp.name] = comp.evaluate_event_indicators()
 
-                # c) Step to t_right and evaluate indicators at t_right
+                # b) Step to t_right and evaluate indicators at t_right
                 comp._do_step_internal(t_left, dt)
                 comp._update_output_states()
                 indicators_right = comp.evaluate_event_indicators()
 
-                # d) Collect internal event hints and filter to (t_left, t_right]
+                # c) Collect internal event hints and filter to (t_left, t_right]
                 raw_hints = comp.get_internal_event_hints()
                 filtered_hints = []
                 if raw_hints:
@@ -361,37 +355,54 @@ class HybridAlgorithm(Algorithm):
                 if filtered_hints:
                     internal_hints[comp.name] = filtered_hints
 
-                # e) Detect crossings between left and right
+                # d) Detect crossings between left and right
                 macro_events = comp.detect_event_crossings(
                     indicators_left[comp.name],
                     indicators_right,
                     sign_tolerance=self.sign_tolerance,
                 )
 
-                # f) Combine macro events and micro events (from hints)
+                # e) Combine macro events and micro events (from hints)
                 micro_event_names = (
                     [hint.event_name for hint in filtered_hints] if filtered_hints else []
                 )
                 all_event_names = set(macro_events) | set(micro_event_names)
 
-                # g) Record crossings - iterate over event names, not wrap in list
+                # f) Record crossings - iterate over event names, not wrap in list
                 for event_name in all_event_names:
                     crossings.append((comp.name, event_name))
 
-                # h) Restore to t_left
+                # g) Restore to t_left
                 self._restore_with_inputs(
                     comp, snapshots[comp.name], input_cache[comp.name], t_left
                 )
 
-            finally:
-                # i) Re-enable mode switching
-                if hasattr(comp, "_allow_mode_switching"):
-                    comp._allow_mode_switching = original_flag
-                # Re-enable history recording
-                if original_record is not None:
-                    comp._record_history = original_record
-
         return snapshots, input_cache, indicators_left, crossings, internal_hints
+
+    @staticmethod
+    @contextmanager
+    def _trial_step(comp: Any):
+        """Guard a trial (rolled-back) advance of ``comp``.
+
+        Inside the block the component must not record history and, for
+        multi-model components, must not switch its active model: the caller
+        restores a snapshot afterwards, and that snapshot is only valid for
+        the model that created it. Both flags are restored on exit even if
+        the trial advance raises.
+        """
+        original_switch = getattr(comp, "_allow_mode_switching", None)
+        if original_switch is not None:
+            comp._allow_mode_switching = False
+        original_record = getattr(comp, "_record_history", None)
+        if original_record is not None:
+            comp._record_history = False
+        try:
+            yield
+        finally:
+            if original_switch is not None:
+                comp._allow_mode_switching = original_switch
+            if original_record is not None:
+                comp._record_history = original_record
 
     def _capture_inputs(self, comp: CoSimComponent) -> dict[str, Any]:
         """Capture the current inputs of the component."""
@@ -475,21 +486,14 @@ class HybridAlgorithm(Algorithm):
                     # Return events from hints since indicator check may miss them
                     if events_from_hints:
                         return DenseTime(t=t_event, micro=0), events_from_hints
-                    # Fallback to indicator-based collection (trial step,
-                    # so suppress history recording on event sources that support it)
+                    # Fallback to indicator-based collection (trial step)
                     for comp in event_sources:
-                        original_record = getattr(comp, "_record_history", None)
-                        if original_record is not None:
-                            comp._record_history = False
-                        try:
+                        with self._trial_step(comp):
                             self._restore_with_inputs(
                                 comp, snapshots_left[comp.name], input_cache[comp.name], t_left
                             )
                             comp._do_step_internal(t_left, t_event - t_left)
                             comp._update_output_states()
-                        finally:
-                            if original_record is not None:
-                                comp._record_history = original_record
                     all_events = self._collect_events_at_time(event_sources)
                     self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
                     return DenseTime(
@@ -513,14 +517,10 @@ class HybridAlgorithm(Algorithm):
         logger.debug("Indicators at left  (t=%.8f): %s", left, indicators_left_vals)
         logger.debug("Indicators at right (t=%.8f): %s", right, indicators_right_vals)
 
-        # 6) Working snapshots - start from t_left_ref
-        # Stepping here is a trial advance, so suppress history recording.
+        # 6) Working snapshots - start from t_left_ref (trial advance)
         working_snapshots = {}
         for comp in event_sources:
-            original_record = getattr(comp, "_record_history", None)
-            if original_record is not None:
-                comp._record_history = False
-            try:
+            with self._trial_step(comp):
                 self._restore_with_inputs(
                     comp, snapshots_left[comp.name], input_cache[comp.name], t_left
                 )
@@ -528,9 +528,6 @@ class HybridAlgorithm(Algorithm):
                     comp._do_step_internal(t_left, t_left_ref - t_left)
                     comp._update_output_states()
                 working_snapshots[comp.name] = comp.snapshot_state()
-            finally:
-                if original_record is not None:
-                    comp._record_history = original_record
 
         # 7) Bisection loop
         for iteration in range(self.max_iter):
@@ -578,20 +575,14 @@ class HybridAlgorithm(Algorithm):
         # 8) Collect all events at located time
         #    Step all components to t_event and check indicators.
         #    The components are restored to t_left afterwards, so this is
-        #    a trial advance and must not record history.
+        #    a trial advance.
         for comp in event_sources:
-            original_record = getattr(comp, "_record_history", None)
-            if original_record is not None:
-                comp._record_history = False
-            try:
+            with self._trial_step(comp):
                 self._restore_with_inputs(
                     comp, snapshots_left[comp.name], input_cache[comp.name], t_left
                 )
                 comp._do_step_internal(t_left, t_event - t_left)
                 comp._update_output_states()
-            finally:
-                if original_record is not None:
-                    comp._record_history = original_record
 
         all_events_at_t = self._collect_events_at_time(event_sources)
 
@@ -703,25 +694,13 @@ class HybridAlgorithm(Algorithm):
         Returns:
             dict[str, float]: A dictionary of event indicator values at t_target.
         """
-        if hasattr(comp, "_allow_mode_switching"):
-            original_flag = comp._allow_mode_switching
-            comp._allow_mode_switching = False
-        # Disable history recording for trial step
-        original_record = getattr(comp, "_record_history", None)
-        if original_record is not None:
-            comp._record_history = False
-        try:
+        with self._trial_step(comp):
             self._restore_with_inputs(comp, snapshot, inputs, t_left)
             comp._do_step_internal(t_left, t_target - t_left)
             comp._update_output_states()
             if self.record_internal_steps:
                 comp._record_outputs(t_target)
             return comp.evaluate_event_indicators()
-        finally:
-            if hasattr(comp, "_allow_mode_switching"):
-                comp._allow_mode_switching = original_flag
-            if original_record is not None:
-                comp._record_history = original_record
 
     def _detect_crossing_between(
         self,

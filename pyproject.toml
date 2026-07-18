@@ -16,6 +16,7 @@ dependencies = [
     "traitlets",         # Used in PendulumMonitoringState
     "graphviz",         # For system graph visualization
     "pydot",            # Alternative graph rendering
+    "pyyaml",           # Declarative system descriptions (syssimx.system.loader)
 ]
 requires-python = ">=3.11"
 authors = [
@@ -38,6 +39,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
+
+[project.scripts]
+syssimx = "syssimx.cli:main"
 
 [project.optional-dependencies]
 # FMI/Modelica support
@@ -173,6 +177,7 @@ module = [
     "ngsolve.*",
     "opensim.*",
     "OMPython.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 

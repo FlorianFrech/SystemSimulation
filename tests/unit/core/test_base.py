@@ -646,3 +646,39 @@ class TestBaseRollbackNotImplemented:
 
         with pytest.raises(NotImplementedError):
             comp.restore_state({}, t=0.0)
+
+
+# ============================================================================
+# Test _apply_event_ports helper
+# ============================================================================
+class TestApplyEventPorts:
+    """Test the shared EVENT-port epilogue helper."""
+
+    def _make_component_with_event_port(self):
+        comp = HybridSource(name="src")
+        comp.initialize(t0=0.0)
+        comp.add_event_indicator("crossed", lambda c: 1.0, direction=0)
+        return comp
+
+    def test_fired_event_port_set_true(self):
+        comp = self._make_component_with_event_port()
+        comp._apply_event_ports(t=1.0, event_names=["crossed"])
+        assert comp.outputs["crossed"].get() is True
+
+    def test_unknown_event_name_ignored(self):
+        comp = self._make_component_with_event_port()
+        comp._apply_event_ports(t=1.0, event_names=["nonexistent"])
+        # Unknown names are skipped; existing EVENT port untouched (stays False)
+        assert comp.outputs["crossed"].get() is False
+
+    def test_no_events_resets_event_ports_false(self):
+        comp = self._make_component_with_event_port()
+        comp.outputs["crossed"].set(True, t=0.5)
+        comp._apply_event_ports(t=1.0, event_names=None)
+        assert comp.outputs["crossed"].get() is False
+
+    def test_real_ports_untouched(self):
+        comp = self._make_component_with_event_port()
+        x_before = comp.outputs["x"].get()
+        comp._apply_event_ports(t=1.0, event_names=None)
+        assert comp.outputs["x"].get() == x_before

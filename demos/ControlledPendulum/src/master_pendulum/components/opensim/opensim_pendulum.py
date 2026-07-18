@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import numpy as np
@@ -6,6 +7,8 @@ import opensim as osim
 from syssimx.components.opensim import OpenSimComponent
 from syssimx.core.port import PortSpec, PortType
 from syssimx.utilities.units import Quantity, ureg
+
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------
 # Port specifications
@@ -170,10 +173,10 @@ class OpenSimPendulum(OpenSimComponent):
         model.addBody(head)
 
         # Create pin joint to connect head to base
-        l = mp["length"]
+        length = mp["length"]
         base_translation = osim.Vec3(0, 0, 0)
         base_orientation = osim.Vec3(0, 0, 0)
-        head_translation = osim.Vec3(0, l, 0)
+        head_translation = osim.Vec3(0, length, 0)
         head_orientation = osim.Vec3(0, 0, 0)
         head_to_base = osim.PinJoint(
             "head_to_base",
@@ -243,8 +246,8 @@ class OpenSimPendulum(OpenSimComponent):
         head_of = osim.PhysicalOffsetFrame()
         head_of.setName("head_of")
         head_of.setParentFrame(head)
-        head_of.set_translation(osim.Vec3(0, l/2, 0))
-        head_of_geom = osim.Cylinder(0.01, l/2)
+        head_of.set_translation(osim.Vec3(0, length/2, 0))
+        head_of_geom = osim.Cylinder(0.01, length/2)
         head_of_geom.setColor(osim.Vec3(0.2, 0.8, 0.2))
         head_of.attachGeometry(head_of_geom)
         head.addComponent(head_of)
@@ -329,7 +332,7 @@ class OpenSimPendulum(OpenSimComponent):
         if "wall_hit" not in event_names:
             return
 
-        print(f"[{self.name}] Event 'wall_hit' at t={t:.4f}s: Inverting velocity")
+        logger.info("[%s] Event 'wall_hit' at t=%.4fs: Inverting velocity", self.name, t)
 
         # Invert angular velocity
         omega_new = -1 * self.get_coordinate_speed("theta")
@@ -379,30 +382,17 @@ class OpenSimPendulum(OpenSimComponent):
         return {name: out_port.get() for name, out_port in self.outputs.items()}
 
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ) -> None:
         for name, out_port in self.outputs.items():
             if name == "theta":
-                value = float(self.coord.getValue(self.state))
-                value = self.get_coordinate_value("theta")
-                out_port.set(value * ureg("rad"), t=t)
+                out_port.set(self.get_coordinate_value("theta") * ureg("rad"), t=t)
             elif name == "omega":
-                value = float(self.coord.getSpeedValue(self.state))
-                value = self.get_coordinate_speed("theta")
-                out_port.set(value * ureg("rad/s"), t=t)
+                out_port.set(self.get_coordinate_speed("theta") * ureg("rad/s"), t=t)
             elif name == "alpha":
-                value = float(self.coord.getAccelerationValue(self.state))
-                value = self.get_coordinate_acceleration("theta")
-                out_port.set(value * ureg("rad/s^2"), t=t)
+                out_port.set(self.get_coordinate_acceleration("theta") * ureg("rad/s^2"), t=t)
         # Hybrid event outputs
-        if event_names:
-            for event_name in event_names:
-                if event_name in self.output_specs.keys():
-                    self.outputs[event_name].set(True, t=t)
-        else:
-            for out_port in self.outputs.values():
-                if out_port.spec.type == PortType.EVENT:
-                    out_port.set(False, t=t)
+        self._apply_event_ports(t, event_names)
 
     # ----------------------------------------------------------------------------
     # Reset method

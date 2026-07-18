@@ -106,7 +106,7 @@ class HybridCombi(CoSimComponent):
         self.x = self.x0 + self.v_curr * (t + dt - self.t0)
 
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ) -> None:
         self.outputs["x"].set(self.x, t=t)
 
@@ -292,7 +292,7 @@ class NoRollbackComponent(CoSimComponent):
         pass
 
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ) -> None:
         pass
 

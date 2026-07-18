@@ -56,6 +56,7 @@ from __future__ import annotations
 
 import logging
 import timeit
+from collections.abc import Callable
 from typing import Any
 
 import networkx as nx
@@ -70,6 +71,7 @@ from .algorithms.gauss_seidel import GaussSeidelAlgorithm
 from .algorithms.hybrid import HybridAlgorithm
 from .algorithms.ijcsa import solve_algebraic_scc_ijcsa
 from .connection import Connection, EventConnection
+from .results import SimulationResult
 
 _ports_compatible = PortSpec.compatible
 
@@ -712,7 +714,13 @@ class System:
     # ----------------------------------------------------------------------------
     # Run System Simulation
     # ----------------------------------------------------------------------------
-    def run(self, t0: float, tf: float, dt: float):
+    def run(
+        self,
+        t0: float,
+        tf: float,
+        dt: float,
+        progress: Callable[[float, float], None] | None = None,
+    ) -> SimulationResult:
         """Run the simulation from start time to end time.
 
         Advances the simulation by repeatedly calling the algorithm's
@@ -723,12 +731,20 @@ class System:
             tf: End time in seconds.
             dt: Fixed time step size in seconds. The final step may be
                 smaller to land exactly on ``tf``.
+            progress: Optional callback invoked after every completed macro
+                step with ``(t, tf)``, where ``t`` is the simulation time
+                reached. Use it to drive progress bars or live plots, e.g.
+                ``progress=lambda t, tf: bar.update(...)``.
+
+        Returns:
+            A :class:`~syssimx.system.results.SimulationResult` with the
+            recorded component histories, the event log, and run metadata
+            (time span, macro step, wall time, algorithm).
 
         Example:
             >>> system.initialize(t0=0.0)
-            >>> system.run(t0=0.0, tf=10.0, dt=0.001)
-            >>> # Simulation complete, retrieve history
-            >>> history = system.get_history()
+            >>> result = system.run(t0=0.0, tf=10.0, dt=0.001)
+            >>> df = result.to_dataframe(component="Pendulum")
 
         Note:
             The algorithm may take sub-steps during event localization
@@ -737,6 +753,7 @@ class System:
         """
         timer = timeit.default_timer
         logger.info(f"Starting simulation run from t={t0} to t={tf} with dt={dt}")
+        dt_macro = dt  # requested macro step (dt is clamped on the final step)
         t = t0
         self.t_end = tf
         start_time = timer()
@@ -744,8 +761,14 @@ class System:
             dt = min(dt, tf - t)
             self.algorithm.step(self, t, dt)
             t += dt
+            if progress is not None:
+                progress(t, tf)
         end_time = timer()
-        logger.info(f"Simulation completed in {end_time - start_time:.2f} seconds")
+        wall_time = end_time - start_time
+        logger.info(f"Simulation completed in {wall_time:.2f} seconds")
+        return SimulationResult.from_system(
+            self, t0=t0, tf=tf, dt=dt_macro, wall_time=wall_time
+        )
 
     # ----------------------------------------------------------------------------
     # Get history of all components
@@ -778,6 +801,76 @@ class System:
             history[comp_name] = comp.get_history_arrays()
         history["Events"] = self.history.get_all_event_histories()
         return history
+
+    # ----------------------------------------------------------------------------
+    # Structural report
+    # ----------------------------------------------------------------------------
+    def describe(self) -> str:
+        """Return a human-readable report of the system's structure.
+
+        Summarizes the components, connections, execution order (generations),
+        detected algebraic loops, direct-feedthrough relations, and the
+        configured master algorithm. The structural metadata is computed
+        during :meth:`initialize`; calling ``describe()`` before
+        initialization reports on whatever has been assembled so far.
+
+        Returns:
+            A multi-line report string, ready for ``print()``.
+
+        Example:
+            >>> system.initialize(t0=0.0)
+            >>> print(system.describe())
+        """
+        lines: list[str] = []
+        lines.append(f"System '{self.name}'")
+        lines.append(f"  Algorithm: {type(self.algorithm).__name__}")
+        lines.append(f"  Initialized: {self.is_initialized}")
+
+        lines.append(f"  Components ({len(self.components)}):")
+        for name, comp in self.components.items():
+            n_in = len(comp.input_specs)
+            n_out = len(comp.output_specs)
+            extras = []
+            feedthrough = comp.direct_feedthrough
+            has_feedthrough = bool(feedthrough) and (
+                not isinstance(feedthrough, dict) or any(feedthrough.values())
+            )
+            if has_feedthrough:
+                extras.append("direct feedthrough")
+            if comp.has_state_events:
+                extras.append("state events")
+            suffix = f" [{', '.join(extras)}]" if extras else ""
+            lines.append(
+                f"    - {name} ({type(comp).__name__}): "
+                f"{n_in} in / {n_out} out{suffix}"
+            )
+
+        lines.append(f"  Connections ({len(self.connections)}):")
+        for c in self.connections:
+            lines.append(f"    - {c.src_comp}.{c.src_port} -> {c.dst_comp}.{c.dst_port}")
+
+        if self.event_connections:
+            lines.append(f"  Event connections ({len(self.event_connections)}):")
+            for ec in self.event_connections:
+                lines.append(
+                    f"    - {ec.src_comp}.{ec.src_port} -> {ec.dst_comp}.{ec.dst_port}"
+                )
+
+        if self.execution_order:
+            lines.append("  Execution order:")
+            for i, gen in enumerate(self.execution_order):
+                lines.append(f"    Generation {i}: {', '.join(gen)}")
+        else:
+            lines.append("  Execution order: not yet computed (call initialize())")
+
+        if self.algebraic_loops:
+            lines.append(f"  Algebraic loops ({len(self.algebraic_loops)}):")
+            for loop in self.algebraic_loops:
+                lines.append(f"    - {' <-> '.join(loop)}")
+        else:
+            lines.append("  Algebraic loops: none detected")
+
+        return "\n".join(lines)
 
     # ----------------------------------------------------------------------------
     # Reset System

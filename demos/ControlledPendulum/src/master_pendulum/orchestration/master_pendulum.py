@@ -8,7 +8,7 @@ from syssimx.core.multi_comp import Hysteresis, MultiComponent
 from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
 from ..monitoring import PendulumMonitor, PendulumMonitoringState
 
-MODES: Literal["FEM", "OpenSim", "FMU"] = ("FEM", "OpenSim", "FMU")
+MODES: tuple[str, ...] = ("FEM", "OpenSim", "FMU")
 
 def is_valid_mode(mode: str) -> bool:
     return mode in MODES
@@ -203,7 +203,7 @@ class MasterPendulum(MultiComponent):
     # Update Output States (override to include monitoring and visualization)
     # ----------------------------------------------------------------------------
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ):
         super()._update_output_states(t, event_names=event_names)
 

@@ -60,7 +60,7 @@ from typing import Any, Protocol
 
 from .base import CoSimComponent
 from .events import InternalEventInfo
-from .port import PortSpec, PortType
+from .port import PortSpec
 
 logger = logging.getLogger(__name__)
 
@@ -609,14 +609,7 @@ class MultiComponent(CoSimComponent):
             value = active_comp.outputs[name].get()
             if value is not None:
                 self.outputs[name].set(value, t=t)
-        if event_names:
-            for event_name in event_names:
-                if event_name in self.output_specs.keys():
-                    self.outputs[event_name].set(value=True, t=t)
-        else:
-            for out_port in self.outputs.values():
-                if out_port.spec.type == PortType.EVENT:
-                    out_port.set(value=False, t=t)
+        self._apply_event_ports(t, event_names)
 
     def evaluate_outputs(self, inputs: dict[str, Any], t: float | None = None) -> dict[str, Any]:
         saved = self._allow_mode_switching
