@@ -39,7 +39,7 @@ class _MiniFEM(FEMComponent):
         self._mesh = _unit_square_mesh()
         fes = VectorH1(self._mesh, order=1)
         self._init_newmark_state(fes)
-        self.tau = Parameter(0.1)
+        self.tau_step = Parameter(0.1)
         self._gf_hist = GridFunction(fes, multidim=0)
         self._register_history_field("_gf_hist", lambda: self._gf_u.vec)
 
@@ -93,7 +93,7 @@ def test_shift_newmark_state_copies_current_to_previous():
 def test_advance_newmark_matches_trapezoidal_update():
     comp = _MiniFEM()
     comp.initialize(t0=0.0)
-    comp.tau.Set(0.1)
+    comp.tau_step.Set(0.1)
     _fill(comp._gf_u, 2.0)
     _fill(comp._gf_uold, 1.0)
     _fill(comp._gf_vold, 0.5)
@@ -114,7 +114,7 @@ def test_advance_newmark_matches_trapezoidal_update():
 def test_snapshot_restore_roundtrip():
     comp = _MiniFEM()
     comp.initialize(t0=0.0)
-    comp.tau.Set(0.1)
+    comp.tau_step.Set(0.1)
     _fill(comp._gf_u, 1.0)
     _fill(comp._gf_v, 2.0)
     _fill(comp._gf_a, 3.0)
@@ -129,7 +129,7 @@ def test_snapshot_restore_roundtrip():
     # Corrupt the live state.
     for gf in (comp._gf_u, comp._gf_v, comp._gf_a, comp._gf_uold, comp._gf_vold, comp._gf_aold):
         _fill(gf, 0.0)
-    comp.tau.Set(0.9)
+    comp.tau_step.Set(0.9)
     comp.t = 99.0
 
     comp.restore_state(snap, t=0.3)
@@ -140,7 +140,7 @@ def test_snapshot_restore_roundtrip():
     assert np.allclose(_vec(comp._gf_uold), 4.0)
     assert np.allclose(_vec(comp._gf_vold), 5.0)
     assert np.allclose(_vec(comp._gf_aold), 6.0)
-    assert comp.tau.Get() == pytest.approx(0.1)
+    assert comp.tau_step.Get() == pytest.approx(0.1)
     assert comp.t == pytest.approx(0.3)
 
 

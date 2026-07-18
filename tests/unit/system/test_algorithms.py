@@ -462,3 +462,53 @@ class TestAlgorithmEdgeCases:
 
         assert np.isclose(y1, 0.1)  # 0 + 1.0 * 0.1
         assert np.isclose(y2, 0.2)  # 0 + 2.0 * 0.1
+
+
+# ============================================================================
+# Test HybridAlgorithm trial-step guard
+# ============================================================================
+class TestTrialStepGuard:
+    """Test the _trial_step context manager used around rolled-back advances."""
+
+    def test_suppresses_and_restores_record_history(self):
+        from syssimx.system.algorithms.hybrid import HybridAlgorithm
+
+        comp = IntegratorComponent(x0=0.0)
+        assert comp._record_history is True
+        with HybridAlgorithm._trial_step(comp):
+            assert comp._record_history is False
+        assert comp._record_history is True
+
+    def test_suppresses_mode_switching_on_multicomponent(self):
+        from syssimx.system.algorithms.hybrid import HybridAlgorithm
+        from tests.fixtures.components import SimpleMultiComponent
+
+        mc = SimpleMultiComponent(name="MC", initial_mode="A")
+        assert mc._allow_mode_switching is True
+        with HybridAlgorithm._trial_step(mc):
+            assert mc._allow_mode_switching is False
+            assert mc._record_history is False
+        assert mc._allow_mode_switching is True
+        assert mc._record_history is True
+
+    def test_restores_flags_when_body_raises(self):
+        from syssimx.system.algorithms.hybrid import HybridAlgorithm
+
+        comp = IntegratorComponent(x0=0.0)
+        with pytest.raises(RuntimeError):
+            with HybridAlgorithm._trial_step(comp):
+                raise RuntimeError("trial failed")
+        assert comp._record_history is True
+
+    def test_preserves_pre_disabled_flags(self):
+        """Flags already False before the trial step stay False afterwards."""
+        from syssimx.system.algorithms.hybrid import HybridAlgorithm
+        from tests.fixtures.components import SimpleMultiComponent
+
+        mc = SimpleMultiComponent(name="MC", initial_mode="A")
+        mc._allow_mode_switching = False
+        mc._record_history = False
+        with HybridAlgorithm._trial_step(mc):
+            pass
+        assert mc._allow_mode_switching is False
+        assert mc._record_history is False

@@ -35,7 +35,7 @@ import logging
 
 from .__version__ import __version__, __version_info__
 from .core.base import CoSimComponent, PortSpec, PortType
-from .system import Connection, EventConnection, System, algorithms
+from .system import Connection, EventConnection, SimulationResult, System, algorithms
 from .viz import SystemGraphVisualizer
 
 __all__ = [
@@ -43,6 +43,7 @@ __all__ = [
     "PortSpec",
     "PortType",
     "System",
+    "SimulationResult",
     "SystemGraphVisualizer",
     "Connection",
     "EventConnection",
