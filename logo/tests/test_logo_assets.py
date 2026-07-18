@@ -12,6 +12,7 @@ from tools.build_logo_assets import (
     favicon_16_svg,
     horizontal_svg,
     icon_svg,
+    social_preview_svg,
 )
 
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -76,6 +77,14 @@ def test_horizontal_wordmark_has_no_gap_before_x() -> None:
     assert last.text == "X"
 
 
+def test_social_preview_geometry() -> None:
+    root = parse(social_preview_svg())
+    assert root.attrib["viewBox"] == "0 0 1280 640"
+    background = root.find("svg:rect", NS)
+    assert background is not None
+    assert background.attrib["fill"] == COLORS.navy
+
+
 def test_build_creates_expected_files(tmp_path: Path) -> None:
     output = build_assets(tmp_path / "logo", create_zip=False)
     expected = [
@@ -86,6 +95,8 @@ def test_build_creates_expected_files(tmp_path: Path) -> None:
         output / "png" / "syssimx_icon_24px.png",
         output / "png" / "syssimx_icon_32px.png",
         output / "png" / "syssimx_app_icon_solid_navy_1024px.png",
+        output / "png" / "syssimx_social_preview_1280x640.png",
+        output / "svg" / "syssimx_social_preview.svg",
         output / "syssimx_favicon.ico",
         output / "build_info.json",
     ]

@@ -63,6 +63,14 @@
 - Outer background radius: 52 units on the 256-unit canvas.
 - Platform masks may crop the outer background; preserve the supplied internal margins.
 
+## GitHub social preview
+- Preferred upload: `dist/png/syssimx_social_preview_1280x640.png`.
+- Canvas ratio: 2:1 at 1280 × 640 px.
+- Use a solid SysSimX Navy background with the dark horizontal lockup centered
+  and sufficient clear space for social-platform cropping.
+- Keep the SVG source `dist/svg/syssimx_social_preview.svg` synchronized with
+  the PNG through the asset builder; do not edit either generated file manually.
+
 ## Validation evidence
 - The actual SVG masters were rasterized to 16, 24, 32, and 64 px.
 - The exact exported PNG files were enlarged with nearest-neighbor resampling for pixel-grid inspection.
