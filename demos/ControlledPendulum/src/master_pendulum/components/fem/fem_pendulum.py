@@ -6,15 +6,47 @@ including optional contact with a wall and distributed torque control.
 It provides methods for initializing the model, setting and getting the state, handling events, and snapshot/restore functionality for time integration. The component is designed to be used within a multi-model simulation framework, allowing it to be combined with other pendulum models (e.g., FMU, OpenSim) in a `MasterPendulum` component.
 """
 
-from typing import Any
 import logging
+from typing import Any
 
 import numpy as np
 from IPython.display import display
-from netgen.occ import *
-from ngsolve import *
+from ngsolve import (
+    BND,
+    CF,
+    H1,
+    BilinearForm,
+    CoefficientFunction,
+    Cof,
+    ContactBoundary,
+    Grad,
+    GridFunction,
+    Id,
+    IfPos,
+    InnerProduct,
+    Integrate,
+    IntegrationRule,
+    MatrixValued,
+    Norm,
+    NumberSpace,
+    Parameter,
+    Variation,
+    VectorH1,
+    ds,
+    dx,
+    exp,
+    specialcf,
+    sqrt,
+    x,
+    y,
+)
 from ngsolve.solvers import NewtonMinimization
 
+from syssimx.components.fem import FEMComponent
+from syssimx.core.port import PortSpec, PortType
+from syssimx.utilities.units import Quantity, ureg
+
+from ...monitoring import PendulumMonitor, PendulumMonitoringState
 from .material_laws import NeoHookeanMaterial, SVKMaterial
 from .pendulum_config import (
     AnimationParameters,
@@ -27,10 +59,6 @@ from .pendulum_config import (
 )
 from .pendulum_mesh import build_mesh
 from .visualization import FEMPendulumVisualizer
-from ...monitoring import PendulumMonitor, PendulumMonitoringState
-from syssimx.components.fem import FEMComponent
-from syssimx.core.port import PortSpec, PortType
-from syssimx.utilities.units import Quantity, ureg
 
 logger = logging.getLogger(__name__)
 
@@ -449,12 +477,12 @@ class FEMPendulum(FEMComponent):
         self._bfa += InnerProduct(self._applied_traction, self._v) * ds("rotation")
 
         # inertia
-        self.tau = Parameter(self.sim_params.tau)
+        self.tau_step = Parameter(self.sim_params.tau)
         vel_new = (
-            2 / self.tau * (self._u - self._gf_uold.components[0]) - self._gf_vold.components[0]
+            2 / self.tau_step * (self._u - self._gf_uold.components[0]) - self._gf_vold.components[0]
         )
         acc_new = (
-            2 / self.tau * (vel_new - self._gf_vold.components[0]) - self._gf_aold.components[0]
+            2 / self.tau_step * (vel_new - self._gf_vold.components[0]) - self._gf_aold.components[0]
         )
 
         #  gravity force
@@ -519,7 +547,7 @@ class FEMPendulum(FEMComponent):
             self._gf_aold.vec[:] = self._gf_a.vec
 
         if dt is not None:
-            self.tau.Set(dt)
+            self.tau_step.Set(dt)
 
     def set_state(self, state: dict[str, Any], t: float):
         """
@@ -605,7 +633,7 @@ class FEMPendulum(FEMComponent):
         if "wall_hit" not in event_names:
             return
 
-        print(f"[{self.name}] Event 'wall_hit' at t={t:.6f}s.")
+        logger.info("[%s] Event 'wall_hit' at t=%.6fs.", self.name, t)
 
         # Invert velocity field (keep displacement and old states unchanged)
         if not self._with_contact:
@@ -613,7 +641,7 @@ class FEMPendulum(FEMComponent):
             self._gf_vold.vec.data = -1.0 * self._gf_vold.vec
 
             # Recompute acceleration from inverted velocity (Newmark update)
-            tau = self.tau.Get()
+            tau = self.tau_step.Get()
             acc_new = 2 / tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
             self._gf_a.vec.data = acc_new
 
@@ -643,15 +671,15 @@ class FEMPendulum(FEMComponent):
 
         # Reduce time step if the pendulum is close to contact.
         if effective_dt <= 1e-4:
-            self.tau.Set(effective_dt)
+            self.tau_step.Set(effective_dt)
         elif self.gap_prev < 0.001:
-            self.tau.Set(1e-4)
+            self.tau_step.Set(1e-4)
         elif self.gap_prev < 0.005:
-            self.tau.Set(5e-4)
+            self.tau_step.Set(5e-4)
         elif self.gap_prev < 0.01:
-            self.tau.Set(1e-3)
+            self.tau_step.Set(1e-3)
         else:
-            self.tau.Set(self.sim_params.tau)
+            self.tau_step.Set(self.sim_params.tau)
 
     def _solve_step(self):
         """Solve the nonlinear elasticity system for the current sub-step."""
@@ -700,7 +728,7 @@ class FEMPendulum(FEMComponent):
     def _after_substep(self, t_current):
         """Update the live monitoring state and redraw the scene."""
         self.monitoring_state.time = t_current
-        self.monitoring_state.dt = self.tau.Get()
+        self.monitoring_state.dt = self.tau_step.Get()
         if self.anim_params.animate:
             self._viz.redraw()
         self.update_monitoring()
@@ -713,8 +741,8 @@ class FEMPendulum(FEMComponent):
                 self.inputs[name].set(value, t=t)
                 if name == "tau":
                     self.set_drive_torque(value)
-        
-        # Update acting torque 
+
+        # Update acting torque
         drive_torque = self._get_applied_drive_torque()
         gravity_torque = self._gravity_torque_fem()
         total_torque = drive_torque - gravity_torque
@@ -744,27 +772,16 @@ class FEMPendulum(FEMComponent):
         }
 
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ):
         """
         Convert rigid-body proxy to output ports (called by base-class).
         """
         q_state, omega_state, alpha_state = self._rigid_proxy()
-        q_state = q_state * ureg("rad")
-        omega_state = omega_state * ureg("rad/s")
-        alpha_state = alpha_state * ureg("rad/s^2")
-        self.outputs["theta"].set(q_state, t=t)
-        self.outputs["omega"].set(omega_state, t=t)
-        self.outputs["alpha"].set(alpha_state, t=t)
-
-        if event_names:
-            for event_name in event_names:
-                if event_name in self.output_specs.keys():
-                    self.outputs[event_name].set(True, t=t)
-        else:
-            for out_port in self.outputs.values():
-                if out_port.spec.type == PortType.EVENT:
-                    out_port.set(False, t=t)
+        self.outputs["theta"].set(q_state * ureg("rad"), t=t)
+        self.outputs["omega"].set(omega_state * ureg("rad/s"), t=t)
+        self.outputs["alpha"].set(alpha_state * ureg("rad/s^2"), t=t)
+        self._apply_event_ports(t, event_names)
 
     # ----------------------------------------------------------------------------
     # Reset method
@@ -803,7 +820,9 @@ class FEMPendulum(FEMComponent):
                     try:
                         gap_val = gap_n_master(mapped_ip)
                         gap_values.append(gap_val)
-                    except:
+                    except Exception:
+                        # Gap CF is undefined at points without a contact
+                        # counterpart; skip those integration points.
                         continue
         min_gap = min(gap_values) if gap_values else 0.0
         return min_gap

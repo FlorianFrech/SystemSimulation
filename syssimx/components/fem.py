@@ -60,7 +60,7 @@ class FEMComponent(CoSimComponent):
 
         # Communication / sub-step size parameter (an ngsolve Parameter created
         # by the subclass, typically while assembling the variational form).
-        self.tau: Any = None
+        self.tau_step: Any = None
 
         # Registered multidim history fields: (history_attr_name, source_vec_fn).
         self._history_fields: list[tuple[str, Callable[[], Any]]] = []
@@ -95,7 +95,7 @@ class FEMComponent(CoSimComponent):
             v = 2/τ (u - u_old) - v_old
             a = 2/τ (v - v_old) - a_old
         """
-        tau = self.tau.Get()
+        tau = self.tau_step.Get()
         self._gf_v.vec[:] = 2 / tau * (self._gf_u.vec - self._gf_uold.vec) - self._gf_vold.vec
         self._gf_a.vec[:] = 2 / tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
 
@@ -137,7 +137,7 @@ class FEMComponent(CoSimComponent):
             "u_old": self._gf_uold.vec.FV().NumPy().copy(),
             "v_old": self._gf_vold.vec.FV().NumPy().copy(),
             "a_old": self._gf_aold.vec.FV().NumPy().copy(),
-            "tau": self.tau.Get(),
+            "tau": self.tau_step.Get(),
             "t": self.t,
         }
         snapshot.update(self._extra_snapshot())
@@ -163,7 +163,7 @@ class FEMComponent(CoSimComponent):
         self._gf_vold.vec.FV().NumPy()[:] = snapshot["v_old"]
         self._gf_aold.vec.FV().NumPy()[:] = snapshot["a_old"]
 
-        self.tau.Set(snapshot["tau"])
+        self.tau_step.Set(snapshot["tau"])
         self._restore_extra(snapshot)
 
         self._update_output_states(t)
@@ -199,17 +199,17 @@ class FEMComponent(CoSimComponent):
         with TaskManager():
             while t_current < t_end - 1e-12:
                 tau = min(effective_dt, t_end - t_current)
-                self.tau.Set(tau)
+                self.tau_step.Set(tau)
 
                 # Advance the Newmark history: previous <- current
                 self._shift_newmark_state()
 
                 # Hook: contact update / adaptive sub-step selection. May call
-                # self.tau.Set(...) to reduce the sub-step.
+                # self.tau_step.Set(...) to reduce the sub-step.
                 self._pre_solve(t_current, effective_dt)
 
                 # Commit the (possibly reduced) sub-step.
-                t_current += self.tau.Get()
+                t_current += self.tau_step.Get()
 
                 # Hook: nonlinear solve of the variational form.
                 self._solve_step()

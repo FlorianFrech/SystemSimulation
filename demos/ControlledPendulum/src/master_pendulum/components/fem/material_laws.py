@@ -8,6 +8,8 @@ supply its strain-energy density ``psi`` and second Piola-Kirchhoff stress
 grid function ``u``.
 """
 
+# ruff: noqa: N802  -- method names follow continuum-mechanics notation (C, E_gl, PK1, PK2)
+
 from abc import ABC, abstractmethod
 
 from ngsolve import Det, Grad, Id, Inv, Trace, sqrt

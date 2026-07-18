@@ -668,7 +668,7 @@ class CoSimComponent(ABC):
 
     @abstractmethod
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ) -> None:
         """Subclass hook to update output port values from internal state.
 
@@ -700,6 +700,28 @@ class CoSimComponent(ABC):
             - Always use ``port.set(value, t=t)`` to include timestamp
         """
         ...
+
+    def _apply_event_ports(self, t: float | None, event_names: list[str] | None) -> None:
+        """Set EVENT output ports according to the events that just fired.
+
+        When ``event_names`` is non-empty, the matching EVENT ports are set to
+        ``True`` (other ports are left untouched). Otherwise every EVENT
+        output port is reset to ``False``. Intended to be called at the end of
+        a subclass's ``_update_output_states`` override.
+
+        Args:
+            t: Timestamp for the port updates.
+            event_names: Names of the events that fired, or ``None``/empty
+                during normal stepping.
+        """
+        if event_names:
+            for event_name in event_names:
+                if event_name in self.output_specs:
+                    self.outputs[event_name].set(True, t=t)
+        else:
+            for out_port in self.outputs.values():
+                if out_port.spec.type == PortType.EVENT:
+                    out_port.set(False, t=t)
 
     # -------------------------------------------------------------------
     # State Management

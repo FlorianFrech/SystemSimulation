@@ -1,13 +1,11 @@
 import sys
-PLATFORM = sys.platform
-
-from typing import Literal
-
 from pathlib import Path
+from typing import Literal
 
 from syssimx.components.fmu import FMUComponent
 from syssimx.core.port import PortSpec, PortType
 
+PLATFORM = sys.platform
 SOLVERS = Literal["euler", "cvode"]
 
 # ----------------------------------------------------------------------------
@@ -81,14 +79,7 @@ class FMUPendulum(FMUComponent):
         self.reinitialize_instance(t)
 
     def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = []
+        self, t: float | None = None, event_names: list[str] | None = None
     ):
         super()._update_output_states(t)
-        if event_names:
-            for event_name in event_names:
-                if event_name in self.output_specs.keys():
-                    self.outputs[event_name].set(value=True, t=t)
-        else:
-            for out_port in self.outputs.values():
-                if out_port.spec.type == PortType.EVENT:
-                    out_port.set(value=False, t=t)
+        self._apply_event_ports(t, event_names)
