@@ -1,0 +1,28 @@
+{
+  "source": {
+    "svg_directory": "../dist/svg",
+    "png_directory": "../dist/png",
+    "method": "nearest-neighbor enlargement of the exact exported PNG files",
+    "physical_print_proof_required": true
+  },
+  "favicon_16": {
+    "size_px": 16,
+    "diagonal_center_gap_px": 2,
+    "approx_port_span_px": 2
+  },
+  "transparent_micro_24": {
+    "size_px": 24,
+    "diagonal_center_gap_px": 2,
+    "approx_port_span_px": 2
+  },
+  "standard_32": {
+    "size_px": 32,
+    "diagonal_center_gap_px": 2,
+    "approx_port_span_px": 2
+  },
+  "standard_64": {
+    "size_px": 64,
+    "diagonal_center_gap_px": 4,
+    "approx_port_span_px": 4
+  }
+}

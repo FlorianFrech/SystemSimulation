@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"
+  role="img" aria-label="SysSimX favicon">
+  <rect width="16" height="16" rx="3" fill="#10243E"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="butt">
+    <path d="M4.5 4.5 L7.25 7.25"/>
+    <path d="M11.5 4.5 L8.75 7.25"/>
+    <path d="M4.5 11.5 L7.25 8.75"/>
+    <path d="M11.5 11.5 L8.75 8.75"/>
+  </g>
+  <g fill="#10243E" stroke="#FFFFFF" stroke-width="1">
+    <rect x="1.5" y="1.5" width="3" height="3" rx=".7"/>
+    <rect x="11.5" y="1.5" width="3" height="3" rx=".7"/>
+    <rect x="1.5" y="11.5" width="3" height="3" rx=".7"/>
+    <rect x="11.5" y="11.5" width="3" height="3" rx=".7"/>
+  </g>
+  <g fill="#00BFE8">
+    <circle cx="4.5" cy="4.5" r=".75"/>
+    <circle cx="11.5" cy="4.5" r=".75"/>
+    <circle cx="4.5" cy="11.5" r=".75"/>
+    <circle cx="11.5" cy="11.5" r=".75"/>
+  </g>
+</svg>

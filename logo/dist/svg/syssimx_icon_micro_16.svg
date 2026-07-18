@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
+  role="img" aria-label="SysSimX icon">
+  
+  <g shape-rendering="geometricPrecision" stroke-linejoin="round">
+    <g fill="none" stroke="#10243E" stroke-width="24" stroke-linecap="butt">
+      <path d="M 72 72 L 118 118"/>
+      <path d="M 184 72 L 138 118"/>
+      <path d="M 72 184 L 118 138"/>
+      <path d="M 184 184 L 138 138"/>
+    </g>
+    <g fill="#FFFFFF" stroke="#10243E" stroke-width="18">
+      <rect x="16" y="16" width="56" height="56" rx="13"/>
+      <rect x="184" y="16" width="56" height="56" rx="13"/>
+      <rect x="16" y="184" width="56" height="56" rx="13"/>
+      <rect x="184" y="184" width="56" height="56" rx="13"/>
+    </g>
+    <g fill="#00BFE8">
+      <circle cx="72" cy="72" r="14"/>
+      <circle cx="184" cy="72" r="14"/>
+      <circle cx="72" cy="184" r="14"/>
+      <circle cx="184" cy="184" r="14"/>
+    </g>
+  </g>
+</svg>

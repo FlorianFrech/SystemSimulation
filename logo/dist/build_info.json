@@ -1,0 +1,41 @@
+{
+  "colors": {
+    "navy": "#10243E",
+    "cyan": "#00BFE8",
+    "white": "#FFFFFF",
+    "mono": "#111827"
+  },
+  "standard_geometry": {
+    "node_position": 24,
+    "node_size": 48,
+    "far_node_position": 184,
+    "node_radius": 10,
+    "node_stroke": 8,
+    "connector_stroke": 14,
+    "port_radius": 7,
+    "center_half_diagonal": 14
+  },
+  "micro_16_geometry": {
+    "node_position": 16,
+    "node_size": 56,
+    "far_node_position": 184,
+    "node_radius": 13,
+    "node_stroke": 18,
+    "connector_stroke": 24,
+    "port_radius": 14,
+    "center_half_diagonal": 20
+  },
+  "micro_24_geometry": {
+    "node_position": 18,
+    "node_size": 54,
+    "far_node_position": 184,
+    "node_radius": 12,
+    "node_stroke": 14,
+    "connector_stroke": 20,
+    "port_radius": 12,
+    "center_half_diagonal": 17
+  },
+  "wordmark_outlined": false,
+  "inter_semibold": null,
+  "inter_bold": null
+}
