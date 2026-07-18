@@ -289,6 +289,27 @@ def horizontal_svg(
 </svg>'''
 
 
+def social_preview_svg(
+    *,
+    inter_semibold: Path | None = None,
+    inter_bold: Path | None = None,
+) -> str:
+    """Build a 2:1 GitHub/social preview using the dark wordmark lockup."""
+    lockup = horizontal_svg(
+        "dark",
+        inter_semibold=inter_semibold,
+        inter_bold=inter_bold,
+    )
+    body = lockup[lockup.index(">") + 1 : lockup.rfind("</svg>")]
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640"
+  role="img" aria-label="SysSimX social preview">
+  <rect width="1280" height="640" fill="{COLORS.navy}"/>
+  <svg x="160" y="160" width="960" height="320" viewBox="0 0 720 240">
+    {body}
+  </svg>
+</svg>'''
+
+
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -360,6 +381,10 @@ def build_assets(
         "syssimx_horizontal_light.svg": horizontal_svg("light", inter_semibold=inter_semibold, inter_bold=inter_bold),
         "syssimx_horizontal_dark.svg": horizontal_svg("dark", inter_semibold=inter_semibold, inter_bold=inter_bold),
         "syssimx_horizontal_monochrome.svg": horizontal_svg("mono", inter_semibold=inter_semibold, inter_bold=inter_bold),
+        "syssimx_social_preview.svg": social_preview_svg(
+            inter_semibold=inter_semibold,
+            inter_bold=inter_bold,
+        ),
     }
 
     for filename, svg in svg_assets.items():
@@ -382,6 +407,13 @@ def build_assets(
 
     for width in [256, 512, 1024]:
         _png(svg_assets["syssimx_horizontal_light.svg"], png_dir / f"syssimx_horizontal_light_{width}px.png", width)
+
+    _png(
+        svg_assets["syssimx_social_preview.svg"],
+        png_dir / "syssimx_social_preview_1280x640.png",
+        1280,
+        640,
+    )
 
     _write_ico(
         output_directory / "syssimx_favicon.ico",

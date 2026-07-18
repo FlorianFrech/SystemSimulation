@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640"
+  role="img" aria-label="SysSimX social preview">
+  <rect width="1280" height="640" fill="#10243E"/>
+  <svg x="160" y="160" width="960" height="320" viewBox="0 0 720 240">
+    
+  <rect width="720" height="240" fill="#10243E"/>
+  <g transform="translate(22 22) scale(0.765625)" shape-rendering="geometricPrecision" stroke-linejoin="round">
+    <g fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="butt">
+      <path d="M 72 72 L 121 121"/>
+      <path d="M 184 72 L 135 121"/>
+      <path d="M 72 184 L 121 135"/>
+      <path d="M 184 184 L 135 135"/>
+    </g>
+    <g fill="#10243E" stroke="#FFFFFF" stroke-width="8">
+      <rect x="24" y="24" width="48" height="48" rx="10"/>
+      <rect x="184" y="24" width="48" height="48" rx="10"/>
+      <rect x="24" y="184" width="48" height="48" rx="10"/>
+      <rect x="184" y="184" width="48" height="48" rx="10"/>
+    </g>
+    <g fill="#00BFE8">
+      <circle cx="72" cy="72" r="7"/>
+      <circle cx="184" cy="72" r="7"/>
+      <circle cx="72" cy="184" r="7"/>
+      <circle cx="184" cy="184" r="7"/>
+    </g>
+  </g>
+  <text x="252" y="157"
+          font-family="Inter, Arial, sans-serif" font-size="94" letter-spacing="-3.2"><tspan
+          fill="#FFFFFF" font-weight="600">SysSim</tspan><tspan fill="#00BFE8"
+          font-weight="700">X</tspan></text>
+
+  </svg>
+</svg>

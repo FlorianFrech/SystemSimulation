@@ -81,6 +81,8 @@ python -m pytest tests -q
   `dist/svg/syssimx_icon_primary.svg`
 - Dark background: `dist/svg/syssimx_horizontal_dark.svg` and
   `dist/svg/syssimx_icon_dark.svg`
+- GitHub/social preview: `dist/png/syssimx_social_preview_1280x640.png`
+  with its vector source in `dist/svg/syssimx_social_preview.svg`
 - Browser favicon: `dist/svg/syssimx_favicon_16.svg` or
   `dist/syssimx_favicon.ico`
 - Solid application icon: `dist/svg/syssimx_app_icon_solid_navy.svg`

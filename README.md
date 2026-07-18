@@ -1,5 +1,17 @@
 # SysSimX
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)"
+            srcset="./logo/dist/svg/syssimx_horizontal_dark.svg">
+    <source media="(prefers-color-scheme: light)"
+            srcset="./logo/dist/svg/syssimx_horizontal_light.svg">
+    <img src="./logo/dist/svg/syssimx_horizontal_light.svg"
+         alt="SysSimX"
+         width="480">
+  </picture>
+</p>
+
 **SysSimX** is a free and open-source Python library for system simulation.
 It allows you to build hybrid and heterogenous system models by connecting system component models from different environments, including:
 - **FMU Components** - [Functional Mock-up Units (FMI 2.0 Co-Simulation)](https://fmi-standard.org/)
@@ -8,6 +20,8 @@ It allows you to build hybrid and heterogenous system models by connecting syste
 - **Custom Python Components** - User-defined models implemented directly in Python
 
 The library comes with a [user documentation site](https://syssimx.readthedocs.io/en/latest/) that includes installation instructions, core concepts, API references, and tutorials covering fundamental techniques, tool integrations, and a case study.
+
+The public [brand assets](logo/dist/) include the light/dark wordmarks, application icons, favicons, and the GitHub social-preview image.
 
 ## Key Features
 
@@ -138,19 +152,19 @@ plt.show()
 ```
 
 For the complete walkthrough, see:
-- `docs/01_getting_started/02_quickstart.ipynb`
+- [Quickstart notebook](docs/01_getting_started/02_quickstart.ipynb)
 
 ## Documentation
 
-- Documentation entry: `docs/index.rst`
-- Installation guide: `docs/01_getting_started/01_installation.ipynb`
-- Core concepts: `docs/01_getting_started/03_concepts.ipynb`
-- Quickstart tutorial: `docs/01_getting_started/02_quickstart.ipynb`
-- API docs: `docs/02_api/`
+- [Documentation entry](docs/index.rst)
+- [Installation guide](docs/01_getting_started/01_installation.ipynb)
+- [Core concepts](docs/01_getting_started/03_concepts.ipynb)
+- [Quickstart tutorial](docs/01_getting_started/02_quickstart.ipynb)
+- [API docs](docs/02_api/)
 - Tutorials and case studies:
-  - `docs/03_core_tutorials/`
-  - `docs/04_tool_integration/`
-  - `docs/05_case_study/`
+  - [Core tutorials](docs/03_core_tutorials/)
+  - [Tool integration](docs/04_tool_integration/)
+  - [Case study](docs/05_case_study/)
 
 ## Project Status
 
