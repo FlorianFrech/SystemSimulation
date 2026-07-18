@@ -753,6 +753,7 @@ class System:
         """
         timer = timeit.default_timer
         logger.info(f"Starting simulation run from t={t0} to t={tf} with dt={dt}")
+        dt_macro = dt  # requested macro step (dt is clamped on the final step)
         t = t0
         self.t_end = tf
         start_time = timer()
@@ -765,7 +766,9 @@ class System:
         end_time = timer()
         wall_time = end_time - start_time
         logger.info(f"Simulation completed in {wall_time:.2f} seconds")
-        return SimulationResult.from_system(self, t0=t0, tf=tf, dt=dt, wall_time=wall_time)
+        return SimulationResult.from_system(
+            self, t0=t0, tf=tf, dt=dt_macro, wall_time=wall_time
+        )
 
     # ----------------------------------------------------------------------------
     # Get history of all components
