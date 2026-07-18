@@ -59,7 +59,7 @@ Example:
 
 See Also:
     - :class:`syssimx.components.FMUComponent`: FMI 2.0 wrapper
-    - :class:`syssimx.components.FEMComponent`: Finite element wrapper
+    - :class:`syssimx.components.FEMComponent`: NGSolve transient structural FEM wrapper
     - :class:`syssimx.components.OpenSimComponent`: Biomechanics wrapper
 """
 
@@ -193,6 +193,10 @@ class CoSimComponent(ABC):
 
         # History tracking
         self.history = ComponentHistory(component_name=name)
+        # When False, ``do_step`` skips writing outputs to history. The hybrid
+        # master algorithm disables this during trial/probe steps (event
+        # localization) so that rolled-back advances do not pollute history.
+        self._record_history: bool = True
 
         # Parameter container (populated by subclasses)
         self.parameters: dict[str, Any] = {}
@@ -602,7 +606,8 @@ class CoSimComponent(ABC):
         1. Calls ``_do_step_internal(t, dt)`` for actual computation
         2. Updates ``self.t`` to ``t + dt``
         3. Calls ``_update_output_states()`` to refresh outputs
-        4. Calls ``_record_outputs()`` to save to history
+        4. Calls ``_record_outputs()`` to save to history (unless
+           ``_record_history`` is ``False``, e.g. during trial steps)
 
         Args:
             t: Current simulation time at the start of the step (seconds).
@@ -627,7 +632,8 @@ class CoSimComponent(ABC):
         self.t = t + dt
 
         self._update_output_states(self.t)
-        self._record_outputs(self.t)
+        if self._record_history:
+            self._record_outputs(self.t)
 
     @abstractmethod
     def _do_step_internal(self, t: float, dt: float) -> None:

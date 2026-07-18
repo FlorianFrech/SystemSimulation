@@ -14,8 +14,11 @@ pytestmark = [pytest.mark.fem, pytest.mark.slow]
 ngsolve = pytest.importorskip("ngsolve")
 
 import numpy as np  # noqa: E402
+from ngsolve import Integrate  # noqa: E402
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem import pendulum_config as cfg  # noqa: E402
+from demos.ControlledPendulum.src.master_pendulum.components.fem import (  # noqa: E402
+    pendulum_config as cfg,
+)
 from demos.ControlledPendulum.src.master_pendulum.components.fem.fem_pendulum import (  # noqa: E402
     FEMPendulum,
 )
@@ -93,8 +96,8 @@ def test_impact_peak_omega_matches_rigid_body_theory():
     theta0 = np.deg2rad(theta0_deg)
     L = pend._equivalent_length
     m = pend.mass
-    I = pend.inertia
-    omega_max = np.sqrt(2 * m * 9.81 * L * (1 - np.cos(theta0)) / I)
+    inertia = pend.inertia
+    omega_max = np.sqrt(2 * m * 9.81 * L * (1 - np.cos(theta0)) / inertia)
 
     peak = np.max(np.abs(omega_vals))
     assert peak == pytest.approx(omega_max, rel=0.1), (
@@ -116,9 +119,14 @@ def test_rigid_rotation_initial_condition_has_small_stress():
         tau=0.002,
         t_end=0.0,
     )
+    # Mean von Mises stress over the pendulum material. A point evaluation is
+    # fragile here: the rod is only ±r_rod (0.015 m) wide, so off-axis sample
+    # points fall outside the meshed domain ("Meshpoint not in mesh"). An
+    # integral over the material region is mesh-independent and mirrors the
+    # rigid-rotation check in test_material_laws.test_rigid_rotation_zero_stress.
     u_cur = pend._gf_u.components[0]
-    vm_peak = max(
-        pend._von_mises_p(u_cur)(pend._mesh(px, py))
-        for px, py in [(0.05, -0.1), (0.0, -0.2), (-0.05, -0.1)]
-    )
-    assert vm_peak < 1e-3 * pend.mat_params.E_pendulum
+    mesh = pend._mesh
+    pendulum_region = mesh.Materials("pendulum")
+    area = Integrate(1, mesh, definedon=pendulum_region)
+    vm_mean = Integrate(pend._von_mises_p(u_cur), mesh, definedon=pendulum_region) / area
+    assert vm_mean < 1e-3 * pend.mat_params.E_pendulum

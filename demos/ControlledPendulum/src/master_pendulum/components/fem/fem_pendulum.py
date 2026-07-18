@@ -9,18 +9,25 @@ It provides methods for initializing the model, setting and getting the state, h
 from typing import Any
 import logging
 
-import ipywidgets as widgets
 import numpy as np
 from IPython.display import display
-from ipywidgets import HTML, HBox, Layout, VBox
 from netgen.occ import *
 from ngsolve import *
 from ngsolve.solvers import NewtonMinimization
-from ngsolve.webgui import Draw
 
-from .material_laws import NeoHookeanMaterial
-from .pendulum_config import *
+from .material_laws import NeoHookeanMaterial, SVKMaterial
+from .pendulum_config import (
+    AnimationParameters,
+    ContactParameters,
+    GeometryParameters,
+    InitialConditionParameters,
+    MaterialParameters,
+    MeshParameters,
+    SimulationParameters,
+)
 from .pendulum_mesh import build_mesh
+from .visualization import FEMPendulumVisualizer
+from ...monitoring import PendulumMonitor, PendulumMonitoringState
 from syssimx.components.fem import FEMComponent
 from syssimx.core.port import PortSpec, PortType
 from syssimx.utilities.units import Quantity, ureg
@@ -86,6 +93,25 @@ class FEMPendulum(FEMComponent):
         # history grid functions. The hybrid algorithm flips this off around
         # trial steps so the history reflects accepted simulation time only.
         self._record_history: bool = True
+
+        # Monitoring: the observable state exists from construction (the step
+        # loop writes to it); the widget panel is created in setup_monitoring().
+        self.monitoring_state = PendulumMonitoringState()
+        self.monitoring_state.mode = "FEM"
+        self._monitor: PendulumMonitor | None = None
+
+        # Visualization helper (NGSolve webgui scenes / animations).
+        self._viz = FEMPendulumVisualizer(self)
+
+        # Register the multidim history fields the base records each sub-step.
+        # Resolved by attribute name so they survive reallocation in reset().
+        self._register_history_field(
+            "_gf_u_history", lambda: self._gf_u.components[0].vec
+        )
+        self._register_history_field("_gf_von_mises_history", lambda: self._gf_von_mises.vec)
+        self._register_history_field(
+            "_gf_cauchy_stress_history", lambda: self._gf_cauchy_stress.vec
+        )
 
     # ----------------------------------------------------------------------------
     # Setup Configuration Parameters before initialization
@@ -175,8 +201,6 @@ class FEMPendulum(FEMComponent):
     # Initialization helper methods
     # ----------------------------------------------------------------------------
     def _setup_material_law(self):
-        from .material_laws import NeoHookeanMaterial, SVKMaterial
-
         self.E_p, self.E_w = self.mat_params.E_pendulum, self.mat_params.E_wall
         self.nu_p, self.nu_w = self.mat_params.nu_pendulum, self.mat_params.nu_wall
         self.rho_p, self.rho_w = self.mat_params.rho_pendulum, self.mat_params.rho_wall
@@ -278,13 +302,8 @@ class FEMPendulum(FEMComponent):
 
     def _initialize_grid_functions(self):
         """Initialize grid functions for state variables and stress."""
-        self._gf_u = GridFunction(self._fes)  # Current state
-        self._gf_v = GridFunction(self._fes)  # Velocity
-        self._gf_a = GridFunction(self._fes)  # Acceleration
-
-        self._gf_uold = GridFunction(self._fes)  # Previous displacement
-        self._gf_vold = GridFunction(self._fes)  # Previous velocity
-        self._gf_aold = GridFunction(self._fes)  # Previous acceleration
+        # Newmark state (u, v, a and previous-step buffers) is owned by the base.
+        self._init_newmark_state(self._fes)
 
         self._gf_cauchy_stress = GridFunction(self._S_cauchy)  # Stress
         self._gf_von_mises = GridFunction(self._V_vm)  # Stress norm (scalar)
@@ -569,68 +588,18 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     # Hybrid methods for snapshot/restore and event handling
     # ----------------------------------------------------------------------------
-    def snapshot_state(self):
-        """
-        Capture complete Newmark time integration state.
-        Must include current AND previous time step data.
-        """
+    def _extra_snapshot(self) -> dict[str, Any]:
+        """Add the contact-gap state to the base Newmark snapshot."""
         return {
-            # Mode Identifier
-            "mode": "FEM",
-            # Current state
-            "u": self._gf_u.vec.FV().NumPy().copy(),
-            "v": self._gf_v.vec.FV().NumPy().copy(),
-            "a": self._gf_a.vec.FV().NumPy().copy(),
-            # Previous time step  for Newmark
-            "u_old": self._gf_uold.vec.FV().NumPy().copy(),
-            "v_old": self._gf_vold.vec.FV().NumPy().copy(),
-            "a_old": self._gf_aold.vec.FV().NumPy().copy(),
-            # Time step size (may vary during contact)
-            "tau": self.tau.Get(),
-            # Contact gap info
             "gap": self.gap if self._with_contact else None,
             "gap_prev": self.gap_prev if self._with_contact else None,
-            # Time
-            "t": self.t,
         }
 
-    def restore_state(self, snapshot: dict[str, Any], t: float):
-        """
-        Restore complete Newmark state from snapshot.
-        Critical: Must restore BOTH current and old states.
-        """
-        # Check mode
-        if snapshot.get("mode", "") != "FEM":
-            raise ValueError(
-                f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'."
-            )
-
-        self.internal_event_hints.clear()
-
-        # Restore time
-        self.t = t
-
-        # Restore current state
-        self._gf_u.vec.FV().NumPy()[:] = snapshot["u"]
-        self._gf_v.vec.FV().NumPy()[:] = snapshot["v"]
-        self._gf_a.vec.FV().NumPy()[:] = snapshot["a"]
-
-        # Restore previous time step (THIS IS CRITICAL!)
-        self._gf_uold.vec.FV().NumPy()[:] = snapshot["u_old"]
-        self._gf_vold.vec.FV().NumPy()[:] = snapshot["v_old"]
-        self._gf_aold.vec.FV().NumPy()[:] = snapshot["a_old"]
-
-        # Update contact gap info
+    def _restore_extra(self, snapshot: dict[str, Any]) -> None:
+        """Restore the contact-gap state captured by ``_extra_snapshot``."""
         if self._with_contact:
             self.gap = snapshot.get("gap", float("inf"))
             self.gap_prev = snapshot.get("gap_prev", float("inf"))
-
-        # Restore time step size
-        self.tau.Set(snapshot["tau"])
-
-        # Update outputs and record
-        self._update_output_states(t)
-        self._record_outputs(t)
 
     def _handle_events_internal(self, event_names, t):
         if "wall_hit" not in event_names:
@@ -653,141 +622,88 @@ class FEMPendulum(FEMComponent):
             self._record_outputs(t)
 
     # ----------------------------------------------------------------------------
-    # Time stepping method
+    # Time stepping hooks (the micro-step loop lives in FEMComponent)
     # ----------------------------------------------------------------------------
-    def do_step(self, t, dt):
-        """Override base-class method to implement micro-stepping with internal event hints.
-
-        Outputs are updated and recorded within each micro-step to ensure accurate recording.
-        """
-        self._do_step_internal(t, dt)
-
-    def _do_step_internal(self, t, dt):
-        """
-        Advance FEM pendulum simulation from t to t+dt (called by base-class).
-
-        Reports internal event hints when wall contact is detected during
-        micro-stepping, enabling precise event localization by the master algorithm.
-        """
-        # Clear any stale internal event hints from previous steps
-        self.internal_event_hints.clear()
-
+    def _effective_substep(self, dt):
+        """Nominal internal sub-step: the macro step, capped at sim_params.tau."""
         if dt < 1e-4:
-            effective_dt = dt
+            return dt
         elif dt < self.sim_params.tau:
-            effective_dt = dt
+            return dt
+        return self.sim_params.tau
+
+    def _pre_solve(self, t_current, effective_dt):
+        """Update the contact set and reduce the sub-step near contact."""
+        if not self._with_contact:
+            return
+        self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
+        self.gap_prev = self._get_contact_gap_distance()
+        self._t_prev = t_current
+        self.monitoring_state.gap = self.gap_prev
+
+        # Reduce time step if the pendulum is close to contact.
+        if effective_dt <= 1e-4:
+            self.tau.Set(effective_dt)
+        elif self.gap_prev < 0.001:
+            self.tau.Set(1e-4)
+        elif self.gap_prev < 0.005:
+            self.tau.Set(5e-4)
+        elif self.gap_prev < 0.01:
+            self.tau.Set(1e-3)
         else:
-            effective_dt = self.sim_params.tau
+            self.tau.Set(self.sim_params.tau)
 
-        t_current = t
-        t_end = t + dt
+    def _solve_step(self):
+        """Solve the nonlinear elasticity system for the current sub-step."""
+        NewtonMinimization(
+            a=self._bfa,
+            u=self._gf_u,
+            printing=False,
+            inverse="sparsecholesky",
+            maxerr=self.sim_params.max_err,
+            maxit=self.sim_params.max_it,
+        )
 
-        with TaskManager():
-            while t_current < t_end - 1e-12:
-                tau = min(effective_dt, t_end - t_current)
-                self.tau.Set(tau)
-
-                # Time step update
-                self._gf_uold.vec[:] = self._gf_u.vec
-                self._gf_vold.vec[:] = self._gf_v.vec
-                self._gf_aold.vec[:] = self._gf_a.vec
-
-                # Update contact with the current displacement
-                if self._with_contact:
-                    # Update contact conditions
-                    self._contact.Update(
-                        self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5
-                    )
-                    self.gap_prev = self._get_contact_gap_distance()
-                    t_prev = t_current
-                    self.widgets["gap"].value = self.gap_prev
-
-                    # Reduce time step if pendulum is close to contact
-                    if effective_dt <= 1e-4:
-                        self.tau.Set(effective_dt)
-                    elif self.gap_prev < 0.001:
-                        self.tau.Set(1e-4)
-                    elif self.gap_prev < 0.005:
-                        self.tau.Set(5e-4)
-                    elif self.gap_prev < 0.01:
-                        self.tau.Set(1e-3)
-                    else:
-                        self.tau.Set(self.sim_params.tau)
-
-                # Update time settings
-                tau = self.tau.Get()
-                t_current += tau
-                self.widgets["time"].value = t_current
-                self.widgets["dt"].value = tau
-
-                # Solve nonlinear system with Newton
-                NewtonMinimization(
-                    a=self._bfa,
-                    u=self._gf_u,
-                    printing=False,
-                    inverse="sparsecholesky",
-                    maxerr=self.sim_params.max_err,
-                    maxit=self.sim_params.max_it,
+    def _post_solve(self, t_current):
+        """Detect the wall-contact event and recompute the stress fields."""
+        # Check for wall contact event (gap crossing zero).
+        if self._with_contact:
+            self.gap = self._get_contact_gap_distance()
+            if self.gap_prev > 0.0 and self.gap <= 0.0:
+                # Report internal event with precise timing from the micro-steps.
+                self.report_internal_event(
+                    event_name="wall_hit",
+                    t_before=self._t_prev,
+                    t_after=t_current,
+                    indicator_before=self.gap_prev,
+                    indicator_after=self.gap,
                 )
 
-                # Update kinematic variables (velocity, acceleration)
-                self._gf_v.vec[:] = (
-                    2 / tau * (self._gf_u.vec - self._gf_uold.vec) - self._gf_vold.vec
-                )
-                self._gf_a.vec[:] = (
-                    2 / tau * (self._gf_v.vec - self._gf_vold.vec) - self._gf_aold.vec
-                )
+        # Compute stress on both materials. The piecewise CoefficientFunction
+        # picks the pendulum or wall material law in the corresponding region.
+        u_cur = self._gf_u.components[0]
+        cauchy_per_mat = []
+        vm_per_mat = []
+        for mat in self._mesh.GetMaterials():
+            if mat == "pendulum":
+                cauchy_per_mat.append(self._cauchy_stress_p(u_cur))
+                vm_per_mat.append(self._von_mises_p(u_cur))
+            elif mat == "wall":
+                cauchy_per_mat.append(self._cauchy_stress_w(u_cur))
+                vm_per_mat.append(self._von_mises_w(u_cur))
+            else:
+                cauchy_per_mat.append(CF(((0, 0), (0, 0))))
+                vm_per_mat.append(CF(0.0))
+        self._gf_cauchy_stress.Interpolate(CF(cauchy_per_mat))
+        self._gf_von_mises.Set(CF(vm_per_mat))
 
-                # Check for wall contact event (gap crossing zero)
-                if self._with_contact:
-                    self.gap = self._get_contact_gap_distance()
-
-                    # Detect zero-crossing: gap went from positive to non-positive
-                    if self.gap_prev > 0.0 and self.gap <= 0.0:
-                        # Report internal event with precise timing from micro-steps
-                        self.report_internal_event(
-                            event_name="wall_hit",
-                            t_before=t_prev,
-                            t_after=t_current,
-                            indicator_before=self.gap_prev,
-                            indicator_after=self.gap,
-                        )
-
-                # Compute stress on both materials. The piecewise
-                # CoefficientFunction picks the pendulum or wall material
-                # law in the corresponding region.
-                u_cur = self._gf_u.components[0]
-                cauchy_per_mat = []
-                vm_per_mat = []
-                for mat in self._mesh.GetMaterials():
-                    if mat == "pendulum":
-                        cauchy_per_mat.append(self._cauchy_stress_p(u_cur))
-                        vm_per_mat.append(self._von_mises_p(u_cur))
-                    elif mat == "wall":
-                        cauchy_per_mat.append(self._cauchy_stress_w(u_cur))
-                        vm_per_mat.append(self._von_mises_w(u_cur))
-                    else:
-                        cauchy_per_mat.append(CF(((0, 0), (0, 0))))
-                        vm_per_mat.append(CF(0.0))
-                self._gf_cauchy_stress.Interpolate(CF(cauchy_per_mat))
-                self._gf_von_mises.Set(CF(vm_per_mat))
-
-                # Add current state to time series history for visualization.
-                # Skipped during hybrid trial steps so that history only contains
-                # frames from accepted simulation time.
-                if self._record_history:
-                    self._gf_u_history.AddMultiDimComponent(self._gf_u.components[0].vec)
-                    self._gf_von_mises_history.AddMultiDimComponent(self._gf_von_mises.vec)
-                    self._gf_cauchy_stress_history.AddMultiDimComponent(self._gf_cauchy_stress.vec)
-
-                if self.anim_params.animate:
-                    self.scene.Redraw()
-                self._update_output_states(t_current)
-
-                self._record_outputs(t_current)
-                self.update_monitoring()
-        self.t = t_current
-        
+    def _after_substep(self, t_current):
+        """Update the live monitoring state and redraw the scene."""
+        self.monitoring_state.time = t_current
+        self.monitoring_state.dt = self.tau.Get()
+        if self.anim_params.animate:
+            self._viz.redraw()
+        self.update_monitoring()
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
@@ -854,14 +770,9 @@ class FEMPendulum(FEMComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self):
-        # Reset all grid functions and time series
+        # The base zeros the Newmark state (u, v, a and previous-step buffers).
         super().reset()
-        self._gf_u.vec[:] = 0
-        self._gf_v.vec[:] = 0
-        self._gf_a.vec[:] = 0
-        self._gf_uold.vec[:] = 0
-        self._gf_vold.vec[:] = 0
-        self._gf_aold.vec[:] = 0
+        # Reset the stress fields and reallocate the time-series history.
         self._gf_cauchy_stress.vec[:] = 0
         self._gf_von_mises.vec[:] = 0
         self._gf_u_history = GridFunction(self._V, multidim=0)
@@ -1011,255 +922,51 @@ class FEMPendulum(FEMComponent):
         return KE, PE, SE
 
     # ----------------------------------------------------------------------------
-    # Visualization methods
+    # Visualization methods (delegated to FEMPendulumVisualizer)
     # ----------------------------------------------------------------------------
     def initialize_scene(self):
-        """
-        Initialize the stress visualization scene.
-        """
-        self.scene = Draw(
-            self._gf_von_mises,
-            self._mesh,
-            "von_mises_stress",
-            deformation=self._gf_u.components[0],
-            show=True,
-        )
+        """Initialize the live stress visualization scene."""
+        return self._viz.initialize_scene()
 
     def update_scene(self, q: float | Quantity, t: float):
-        """
-        Update the visualization scene with new state.
-
-        Args:
-            q (Union[float, Quantity]): The new state value.
-            t (float): The current time.
-        """
-        if self.scene:
-            self.set_state({"theta": {"value": q}}, t)
-            self.scene.Redraw()
+        """Update the live scene with a new pendulum angle ``q`` at time ``t``."""
+        self._viz.update_scene(q, t)
 
     def visualize_state(self, draw_u: bool = True, draw_v: bool = True, draw_a: bool = True):
-        """
-        Visualizes the current state of the FEM pendulum (displacement, velocity, and acceleration field.)
-
-        Args:
-            draw_u (bool, optional): Whether to draw the displacement field. Defaults to True.
-            draw_v (bool, optional): Whether to draw the velocity field. Defaults to True.
-            draw_a (bool, optional): Whether to draw the acceleration field. Defaults to True.
-        """
-        # Displacement
-        if draw_u:
-            Draw(self._gf_u.components[0], deformation=True)
-
-        # Velocity
-        if draw_v:
-            Draw(self._gf_v.components[0], deformation=self._gf_u.components[0], vectors=True)
-
-        # Acceleration
-        if draw_a:
-            Draw(self._gf_a.components[0], deformation=self._gf_u.components[0], vectors=True)
+        """Draw the current displacement, velocity, and/or acceleration fields."""
+        self._viz.visualize_state(draw_u=draw_u, draw_v=draw_v, draw_a=draw_a)
 
     def animate_displacement(self, settings: dict | None = None):
-        """
-        Animate displacement history.
+        """Animate the recorded displacement history."""
+        self._viz.animate_displacement(settings)
 
-        Requires that `anim_params.animate` was True during simulation so
-        histories were recorded.
-        """
-        if settings is None:
-            settings = {"Multidim": {"speed": 15}}
-        if not hasattr(self, "_gf_u_history") or len(self._gf_u_history.vecs) == 0:
-            raise RuntimeError(
-                f"{self.name}: No displacement history recorded. "
-                "Run with anim_params.animate=True to collect history."
-            )
-        Draw(
-            self._gf_u_history,
-            self._mesh,
-            deformation=self._gf_u_history,
-            animate=True,
-            settings=settings,
-        )
-    
-    
     def animate_stress(self, settings: dict | None = None):
-        """
-        Animate stress norm history with deformation.
-
-        Requires that `anim_params.animate` was True during simulation so
-        histories were recorded.
-        """
-        if settings is None:
-            settings = {"Multidim": {"speed": 15}}
-        if not hasattr(self, "_gf_von_mises_history") or len(self._gf_von_mises_history.vecs) == 0:
-            raise RuntimeError(
-                f"{self.name}: No stress history recorded. "
-                "Run with anim_params.animate=True to collect history."
-            )
-        Draw(
-            self._gf_von_mises_history,
-            self._mesh,
-            interpolation_multidim=True,
-            deformation=self._gf_u_history,
-            animate=True,
-            autoscale=False,
-            min=0,
-            max=np.max([v.FV().NumPy().max() for v in self._gf_von_mises_history.vecs]),
-            settings=settings,
-        )
+        """Animate the recorded von Mises stress history with deformation."""
+        self._viz.animate_stress(settings)
 
     # ----------------------------------------------------------------------------
-    # Monitoring interface methods
+    # Monitoring interface methods (delegated to the shared PendulumMonitor)
     # ----------------------------------------------------------------------------
-    def _initialize_widgets(self):
-        self.widgets = {}
-        # Input and output monitoring widgets
-        for name, spec in self.input_specs.items():
-            if spec.type == PortType.REAL:
-                self.widgets[name] = widgets.FloatText(
-                    value=0.0, description=f"{name} ({spec.unit}):", step=0.01, disabled=True
-                )
-        for name, spec in self.output_specs.items():
-            if spec.type == PortType.REAL:
-                self.widgets[name] = widgets.FloatText(
-                    value=0.0, description=f"{name} ({spec.unit}):", step=0.01, disabled=True
-                )
-        # Additional simulation monitoring widgets
-        self.widgets["time"] = widgets.FloatText(
-            value=0, description=f"Time: t / {self.sim_params.t_end} s", step=0.001, disabled=True
-        )
-
-        self.widgets["dt"] = widgets.FloatText(
-            value=self.sim_params.tau, description="Time Step: dt in s", step=0.0001, disabled=True
-        )
-
-        self.widgets["mode"] = widgets.Text(
-            value="FEM", description="Simulation Mode:", disabled=True
-        )
-        if self._with_contact:
-            self.widgets["gap"] = widgets.FloatText(
-                value=0.0, description="Min. Gap in m", step=0.0001, disabled=True
-            )
-        self._format_widgets()
-
-    def _format_widgets(self):
-        for w in self.widgets.values():
-            w.layout.width = "300px"
-            w.layout.margin = "5px"
-            w.style.description_width = "150px"
-
-            w.readout_format = ".5g"
-
-            # Professional color scheme
-            w.style.font_family = (
-                "Inter"  # , -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-            )
-            w.style.font_size = "13px"
-            w.style.font_weight = "500"
-
-            # Modern input field styling
-            w.style.background = "white"
-            w.style.border = "1px solid #e0e0e0"
-            w.style.border_radius = "4px"
-            w.style.padding = "8px 12px"
-
-            # Text styling
-            w.style.color = "#424242"
-            w.style.description_color = "#757575"
-
     def setup_monitoring(self) -> None:
-        """Setup monitoring interface with grouped widgets."""
-        self._initialize_widgets()
-
-        # Create styled headers
-        main_header = HTML(
-            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
-            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
-            "Pendulum Monitoring</h3>"
-        )
-
-        # Group headers with modern styling
-        header_style = (
-            "color:#424242; font-family:Inter, sans-serif; font-size:14px; "
-            "font-weight:600; margin:15px 0 8px 0; padding:8px 12px; "
-            "background:linear-gradient(to right, #f5f5f5, #ffffff); "
-            "border-left:4px solid #1565c0; border-radius:4px;"
-        )
-
-        input_header = HTML(f"<div style='{header_style} text-align:center;'>Input Signals</div>")
-        output_header = HTML(f"<div style='{header_style} text-align:center;'>Output Signals</div>")
-        simulation_header = HTML(
-            f"<div style='{header_style} text-align:center;'>Simulation Status</div>"
-        )
-
-        # Group widgets
-        input_widgets = [
-            self.widgets[name] for name in self.input_specs.keys() if name in self.widgets
-        ]
-        output_widgets = [
-            self.widgets[name] for name in self.output_specs.keys() if name in self.widgets
-        ]
-        simulation_widgets = [self.widgets["time"], self.widgets["dt"], self.widgets["mode"]]
-        if self._with_contact:
-            simulation_widgets.append(self.widgets["gap"])
-
-        # Create widget groups with padding
-        input_box = VBox([input_header] + input_widgets, layout=Layout(margin="0 0 20px 10px"))
-        output_box = VBox([output_header] + output_widgets, layout=Layout(margin="0 0 20px 10px"))
-        simulation_box = VBox(
-            [simulation_header] + simulation_widgets, layout=Layout(margin="0 0 20px 10px")
-        )
-
-        # Widget Box
-        widget_box = HBox(
-            [simulation_box, input_box, output_box], layout=Layout(justify_content="space-between")
-        )
-
-        # Create main container with sections
-        self.monitoring_display = VBox(
-            [
-                main_header,
-                widget_box,
-            ],
-            layout=Layout(
-                padding="20px",
-                border="1px solid #e0e0e0",
-                border_radius="8px",
-                background="#fafafa",
-                width="fit-content",
-                margin="0 auto",
-                height="auto",
-                box_shadow="0 4px 8px rgba(0, 0, 0, 0.1)",
-            ),
-        )
-
-        # Stress visualization header
-        self.scene_header = HTML(
-            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
-            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
-            "Stress Visualization (N/m²)</h3>"
+        """Create the shared monitoring panel bound to ``monitoring_state``."""
+        self._monitor = PendulumMonitor(
+            self.input_specs,
+            self.output_specs,
+            t_end=self.sim_params.t_end,
+            tau=self.sim_params.tau,
+            mode="FEM",
+            with_contact=self._with_contact,
+            state=self.monitoring_state,
         )
 
     def update_monitoring(self):
-        """Update monitoring widgets with current values."""
-        for name, spec in self.output_specs.items():
-            if name in self.widgets:
-                value = self.outputs[name].get()
-                if value is not None:
-                    if hasattr(value, "magnitude"):
-                        # Format to 5 significant figures
-                        self.widgets[name].value = float(f"{value.magnitude:.5g}")
-                    else:
-                        self.widgets[name].value = float(f"{value:.5g}")
-        for name, spec in self.input_specs.items():
-            if name in self.widgets:
-                value = self.inputs[name].get()
-                if value is not None:
-                    if hasattr(value, "magnitude"):
-                        self.widgets[name].value = float(f"{value.magnitude:.5g}")
-                    else:
-                        self.widgets[name].value = float(f"{value:.5g}")
+        """Mirror current port values into the observable monitoring state."""
+        if self._monitor is not None:
+            self._monitor.sync_from_ports(self.inputs, self.outputs)
 
     def display_monitoring(self):
-        """Display the monitoring interface."""
-        display(self.monitoring_display)
-        display(self.scene_header)
+        """Display the monitoring panel and the stress-visualization header."""
+        if self._monitor is None:
+            self.setup_monitoring()
+        self._monitor.display()
+        display(self._monitor.scene_header)

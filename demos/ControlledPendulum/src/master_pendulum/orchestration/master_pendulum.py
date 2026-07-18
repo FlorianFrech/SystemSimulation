@@ -1,45 +1,17 @@
 from typing import Any, Literal
 
-import ipywidgets as widgets
 import numpy as np
 from IPython.display import display
-from ipywidgets import HTML, HBox, Layout, VBox
-from traitlets import Float, HasTraits, Unicode
 
 from syssimx.core.multi_comp import Hysteresis, MultiComponent
-from syssimx.core.port import PortType
 
 from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
+from ..monitoring import PendulumMonitor, PendulumMonitoringState
 
 MODES: Literal["FEM", "OpenSim", "FMU"] = ("FEM", "OpenSim", "FMU")
 
 def is_valid_mode(mode: str) -> bool:
     return mode in MODES
-
-# ----------------------------------------------------------------------------
-# Pendulum Monitoring State
-# ----------------------------------------------------------------------------
-class PendulumMonitoringState(HasTraits):
-    """
-    Observable state of the pendulum for monitoring.
-    """
-
-    # Simulation status
-    time = Float(0.0)
-    dt = Float(0.01)
-    mode = Unicode("FEM")
-
-    # Input signals
-    tau = Float(0.0)
-
-    # Output signals
-    theta = Float(0.0)
-    omega = Float(0.0)
-    alpha = Float(0.0)
-
-    # Optional: Contact
-    gap = Float(0.0)
-
 
 # ----------------------------------------------------------------------------
 # Master Pendulum CoSimulation Component
@@ -91,9 +63,11 @@ class MasterPendulum(MultiComponent):
         self._with_contact = False
         self._animate = False
 
-        # Monitoring state and widget references
+        # Monitoring: the observable state exists from construction (the step
+        # loop writes to it); the widget panel is created lazily in
+        # setup_monitoring().
         self.monitoring_state = PendulumMonitoringState()
-        self._widget_links = []
+        self._monitor: PendulumMonitor | None = None
 
     # ----------------------------------------------------------------------------
     # Initialization Logic (now uses base class with hooks)
@@ -247,167 +221,16 @@ class MasterPendulum(MultiComponent):
     # ----------------------------------------------------------------------------
     # Monitoring interface methods
     # ----------------------------------------------------------------------------
-    def _initialize_widgets(self):
-        self.widgets = {}
-        # Input and output monitoring widgets
-        for name, spec in self.input_specs.items():
-            if spec.type == PortType.REAL:
-                self.widgets[name] = widgets.FloatText(
-                    value=0.0, description=f"{name} ({spec.unit}):", step=0.01, disabled=True
-                )
-        for name, spec in self.output_specs.items():
-            if spec.type == PortType.REAL:
-                self.widgets[name] = widgets.FloatText(
-                    value=0.0, description=f"{name} ({spec.unit}):", step=0.01, disabled=True
-                )
-        # Additional simulation monitoring widgets
-        self.widgets["time"] = widgets.FloatText(
-            value=0,
-            description=f"Time: t / {self.fem.sim_params.t_end} s",
-            step=0.001,
-            disabled=True,
-        )
-
-        self.widgets["dt"] = widgets.FloatText(
-            value=self.fem.sim_params.tau,
-            description="Time Step: dt in s",
-            step=0.0001,
-            disabled=True,
-        )
-
-        self.widgets["mode"] = widgets.Text(
-            value=self.active_mode, description="Simulation Mode:", disabled=True
-        )
-        if self._with_contact:
-            self.widgets["gap"] = widgets.FloatText(
-                value=0.0, description="Min. Gap in m", step=0.0001, disabled=True
-            )
-        self._format_widgets()
-        self._link_widgets_to_state()
-
-    def _format_widgets(self):
-        for w in self.widgets.values():
-            w.layout.width = "300px"
-            w.layout.margin = "5px"
-            w.style.description_width = "150px"
-
-            w.readout_format = ".5g"
-
-            # Professional color scheme
-            w.style.font_family = (
-                "Inter"  # , -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-            )
-            w.style.font_size = "13px"
-            w.style.font_weight = "500"
-
-            # Modern input field styling
-            w.style.background = "white"
-            w.style.border = "1px solid #e0e0e0"
-            w.style.border_radius = "4px"
-            w.style.padding = "8px 12px"
-
-            # Text styling
-            w.style.color = "#424242"
-            w.style.description_color = "#757575"
-
-    def _link_widgets_to_state(self):
-        """
-        Link widgets to monitoring state for automatic updates.
-        """
-        for link in self._widget_links:
-            link.unlink()
-        self._widget_links.clear()
-
-        link_mappings = {
-            "time": "time",
-            "dt": "dt",
-            "mode": "mode",
-            "tau": "tau",
-            "theta": "theta",
-            "omega": "omega",
-            "alpha": "alpha",
-        }
-        if self._with_contact:
-            link_mappings["gap"] = "gap"
-
-        for widget_name, state_attr in link_mappings.items():
-            if widget_name in self.widgets:
-                link = widgets.dlink(
-                    (self.monitoring_state, state_attr), (self.widgets[widget_name], "value")
-                )
-                self._widget_links.append(link)
-
     def setup_monitoring(self) -> None:
-        """Setup monitoring interface with grouped widgets."""
-        self._initialize_widgets()
-
-        # Create styled headers
-        main_header = HTML(
-            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
-            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
-            "Pendulum Monitoring</h3>"
-        )
-
-        # Group headers with modern styling
-        header_style = (
-            "color:#424242; font-family:Inter, sans-serif; font-size:14px; "
-            "font-weight:600; margin:15px 0 8px 0; padding:8px 12px; "
-            "background:linear-gradient(to right, #f5f5f5, #ffffff); "
-            "border-left:4px solid #1565c0; border-radius:4px;"
-        )
-
-        input_header = HTML(f"<div style='{header_style} text-align:center;'>Input Signals</div>")
-        output_header = HTML(f"<div style='{header_style} text-align:center;'>Output Signals</div>")
-        simulation_header = HTML(
-            f"<div style='{header_style} text-align:center;'>Simulation Status</div>"
-        )
-
-        # Group widgets
-        input_widgets = [
-            self.widgets[name] for name in self.input_specs.keys() if name in self.widgets
-        ]
-        output_widgets = [
-            self.widgets[name] for name in self.output_specs.keys() if name in self.widgets
-        ]
-        simulation_widgets = [self.widgets["time"], self.widgets["dt"], self.widgets["mode"]]
-        if self._with_contact:
-            simulation_widgets.append(self.widgets["gap"])
-
-        # Create widget groups with padding
-        input_box = VBox([input_header] + input_widgets, layout=Layout(margin="0 0 20px 10px"))
-        output_box = VBox([output_header] + output_widgets, layout=Layout(margin="0 0 20px 10px"))
-        simulation_box = VBox(
-            [simulation_header] + simulation_widgets, layout=Layout(margin="0 0 20px 10px")
-        )
-
-        # Widget Box
-        widget_box = HBox(
-            [simulation_box, input_box, output_box], layout=Layout(justify_content="space-between")
-        )
-
-        # Create main container with sections
-        self.monitoring_display = VBox(
-            [
-                main_header,
-                widget_box,
-            ],
-            layout=Layout(
-                padding="20px",
-                border="1px solid #e0e0e0",
-                border_radius="8px",
-                background="#fafafa",
-                width="fit-content",
-                margin="0 auto",
-                height="auto",
-                box_shadow="0 4px 8px rgba(0, 0, 0, 0.1)",
-            ),
-        )
-
-        # Stress visualization header
-        self.scene_header = HTML(
-            "<h3 style='color:#1565c0; font-family:Inter, sans-serif; margin:15px 0 20px 0; "
-            "text-align:center; font-weight:600; border-bottom:2px solid #1565c0; padding-bottom:10px;'>"
-            "Stress Visualization (N/m²)</h3>"
+        """Create the shared monitoring panel bound to ``monitoring_state``."""
+        self._monitor = PendulumMonitor(
+            self.input_specs,
+            self.output_specs,
+            t_end=self.fem.sim_params.t_end,
+            tau=self.fem.sim_params.tau,
+            mode=self.active_mode,
+            with_contact=self._with_contact,
+            state=self.monitoring_state,
         )
 
     def _update_monitoring(self, t: float, dt: float) -> None:
@@ -425,12 +248,14 @@ class MasterPendulum(MultiComponent):
             self.monitoring_state.gap = self.fem._get_contact_gap_distance()
 
     def display_monitoring(self):
-        """Display the monitoring interface."""
-        display(self.monitoring_display)
+        """Display the monitoring interface and initialize the FEM scene."""
+        if self._monitor is None:
+            self.setup_monitoring()
+        self._monitor.display()
         if self.fem is not None:
-            display(self.scene_header)
+            display(self._monitor.scene_header)
             self.fem.initialize_scene()
 
     def __del__(self):
-        for link in self._widget_links:
-            link.unlink()
+        if self._monitor is not None:
+            self._monitor.close()
