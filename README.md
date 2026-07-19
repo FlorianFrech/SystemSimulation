@@ -56,6 +56,7 @@ pip install syssimx
 ```bash
 pip install "syssimx[fmu]"
 pip install "syssimx[fem]"
+pip install "syssimx[opensim]"
 pip install "syssimx[dev]"
 pip install "syssimx[all]"
 pip install "syssimx[full]"
@@ -63,13 +64,38 @@ pip install "syssimx[full]"
 
 ### OpenSim note (important)
 
-OpenSim is conda-only and ABI-coupled to specific NumPy/SciPy builds. Recommended order:
+OpenSim 4.6 provides PyPI wheels for current CPython versions, including Python 3.13. For the non-conda path, install the OpenSim extra in a virtual environment:
 
-1. Install `syssimx` with `pip`.
-2. Install OpenSim with `conda` using ABI-compatible NumPy/SciPy pins.
+```bash
+pip install "syssimx[opensim]"
+```
 
 See the full installation guide:
 - `docs/01_getting_started/01_installation.ipynb`
+
+### Development with uv
+
+For repository development, `uv` is the recommended package manager. It reads `pyproject.toml`, creates the project environment, installs SysSimX editable, and uses `uv.lock` for reproducible dependency resolution.
+
+```powershell
+uv sync --python 3.13 --extra all
+uv run pytest tests
+```
+
+On Windows, use a short environment path if JupyterLab hits long path limits:
+
+```powershell
+$env:UV_PROJECT_ENVIRONMENT = "$env:USERPROFILE\.venvs\syssimx-313"
+uv sync --python 3.13 --extra all
+```
+
+Build and publish releases with uv:
+
+```powershell
+uv build --no-sources
+uv publish --index testpypi
+uv publish
+```
 
 ## Quickstart Example
 
