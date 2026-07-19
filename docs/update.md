@@ -96,7 +96,7 @@ Each batch: edit → execute top-to-bottom (`nbconvert --execute`) → docs buil
 
 1. **Batch 1 — Fundamentals** (3 notebooks): results-API migration pattern established here. ✅ Done (2026-07-19). Note: 01 and 02 are deliberately component-level; instead of a mechanical migration they each gained a "Running in a System" bridge section with `SimulationResult`. Unconnected inputs default to zero inside a `System` — no pre-seeding needed.
 2. **Batch 2 — Intermediate** (01–03): includes `describe()`/SCC and `result.events` patterns. ✅ Done (2026-07-19). The algebraic-loop notebook keeps its (well-documented) logging section as the canonical logging reference; the hybrid notebook's logging was trimmed to `INFO` and cross-links to it. 01 gained an RMSE comparison table.
-3. **Batch 3 — Advanced hybrid** (3): event-log-driven plotting.
+3. **Batch 3 — Advanced hybrid** (3): event-log-driven plotting. ✅ Done (2026-07-19). Logging pattern for hybrid tutorials: `syssimx` → INFO, `syssimx.system.algorithms.hybrid` → DEBUG only where DEBUG lines are discussed (02: commutativity checks, 03: internal hints). 02 now instantiates the listener with `use_event_annotations=True` so the declared-commutativity path runs (log: "verified (annotations)"), with prose explaining the dynamic fallback.
 4. **Batch 4 — Modelica + Master Pendulum** (4 + 2): FMU-based, same migration. Requires Windows FMUs present.
 5. **Batch 5 — OpenSim + FEM** (3 + 3): light passes; needs `opensim`/`ngsolve` installed to re-execute.
 6. **Batch 6 — Case study** (6): heaviest runtime; do last with the patterns settled.
