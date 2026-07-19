@@ -114,3 +114,11 @@ logo/dist.zip
 thesis/guideline/Guide_for_Thesis_incl_Cover_Sheet_DEUTSCH_23-04-30.pdf
 thesis/presentation/~$pp_figures.pptx
 AGENTS.md
+
+# Notebook-generated tutorial artifacts
+docs/01_getting_started/first_system_graph.svg
+docs/01_getting_started/quickstart.svg
+docs/01_getting_started/Digraph.gv.svg
+docs/03_core_tutorials/02_intermediate/quickstart_components.py
+docs/03_core_tutorials/02_intermediate/declarative_quickstart.yaml
+docs/03_core_tutorials/02_intermediate/declarative_results.csv
