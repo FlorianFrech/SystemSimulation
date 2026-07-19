@@ -17,3 +17,27 @@ System Class
    :members:
    :undoc-members:
    :show-inheritance:
+
+Simulation Results
+------------------
+
+.. automodule:: syssimx.system.results
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Declarative System Descriptions
+-------------------------------
+
+.. automodule:: syssimx.system.loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Graph Analysis
+--------------
+
+.. automodule:: syssimx.system.graph
+   :members:
+   :undoc-members:
+   :show-inheritance:
