@@ -21,14 +21,12 @@ from ngsolve import (  # noqa: E402
     CF,
     BilinearForm,
     GridFunction,
-    H1,
     Integrate,
     Mesh,
-    VectorH1,
     Variation,
+    VectorH1,
     dx,
     x,
-    y,
 )
 from ngsolve.solvers import NewtonMinimization  # noqa: E402
 
@@ -44,13 +42,16 @@ MATERIALS = [NeoHookeanMaterial, SVKMaterial]
 
 def _make_patch_mesh(maxh: float = 0.3) -> Mesh:
     rect = Rectangle(1, 1).Face()
-    # Tag left edge as "left", right edge as "right" for Dirichlet BCs
+    # Tag left/right edges for the u_x Dirichlet data and the bottom edge for
+    # the u_y constraint that removes the vertical rigid-translation mode.
     for edge in rect.edges:
         p = edge.center
         if abs(p.x) < 1e-6:
             edge.name = "left"
         elif abs(p.x - 1.0) < 1e-6:
             edge.name = "right"
+        elif abs(p.y) < 1e-6:
+            edge.name = "bottom"
     geo = OCCGeometry(rect, dim=2)
     return Mesh(geo.GenerateMesh(maxh=maxh))
 
@@ -59,7 +60,11 @@ def _make_patch_mesh(maxh: float = 0.3) -> Mesh:
 def test_uniaxial_tension_patch(Material):
     """Stretch a 1×1 square along x and recover σ_xx ≈ E·ε.
 
-    Left edge: u_x = 0 (free in y). Right edge: u_x = ε, free in y.
+    Left edge: u_x = 0. Right edge: u_x = ε. Bottom edge: u_y = 0 — the exact
+    uniaxial field u = (εx, -νεy) satisfies this, so the constraint only pins
+    the vertical rigid-translation null space (without it the strain energy is
+    translation-invariant in y, the tangent is singular, and Newton may
+    diverge depending on round-off).
     The resulting field is uniaxial tension with lateral contraction determined
     by minimization of the strain energy — for plane stress this gives
     σ_yy ≈ 0 and σ_xx ≈ E·ε at small strain.
@@ -69,9 +74,9 @@ def test_uniaxial_tension_patch(Material):
 
     eps = 1e-5
 
-    fes = VectorH1(mesh, order=2, dirichletx="left|right")
+    fes = VectorH1(mesh, order=2, dirichletx="left|right", dirichlety="bottom")
     u = GridFunction(fes)
-    # Prescribe x-displacement on Dirichlet boundaries; y is free.
+    # Prescribe x-displacement on Dirichlet boundaries; u_y = 0 on the bottom.
     u.components[0].Set(CF(0.0), definedon=mesh.Boundaries("left"))
     u.components[0].Set(CF(eps), definedon=mesh.Boundaries("right"))
     # Quick-and-dirty: use linear interpolation as initial guess in x.
