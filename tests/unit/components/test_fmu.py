@@ -27,6 +27,24 @@ from syssimx.utilities.units import Quantity, ureg  # noqa: E402
 # Fixtures
 # ============================================================================
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "fmus"
+_FMU_FIXTURE_PATHS = [
+    FIXTURES_DIR / "Pendulum.fmu",
+    FIXTURES_DIR / "Reference.fmu",
+    FIXTURES_DIR / "AngleEncoder.fmu",
+]
+
+_unsupported_fixture_platforms = [
+    path
+    for path in _FMU_FIXTURE_PATHS
+    if fmpy.platform not in fmpy.supported_platforms(str(path))
+]
+if _unsupported_fixture_platforms:
+    pytest.skip(
+        "FMU fixture binaries are not available for "
+        f"{fmpy.platform}; available platforms are "
+        f"{sorted({platform for path in _FMU_FIXTURE_PATHS for platform in fmpy.supported_platforms(str(path))})}",
+        allow_module_level=True,
+    )
 
 
 @pytest.fixture
