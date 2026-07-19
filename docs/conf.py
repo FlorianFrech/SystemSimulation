@@ -32,10 +32,12 @@ extensions = [
     "myst_nb",
 ]
 
-# Ensure Sphinx knows which source types you use
+# Ensure Sphinx knows which source types you use.
+# ".md" must map to the "myst-nb" parser: plain "markdown" is not a
+# registered parser name when myst-nb manages the MyST integration.
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md": "markdown",
+    ".md": "myst-nb",
     ".ipynb": "myst-nb",
 }
 
@@ -92,7 +94,8 @@ intersphinx_mapping = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+# update.md is an internal working document, not part of the published docs
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "update.md"]
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "sphinx_book_theme"
