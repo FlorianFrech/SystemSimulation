@@ -168,31 +168,33 @@ These steps are intended for maintainers publishing a package release.
    # 0) From project root
    cd /home/flo/code/SystemSimulation
 
-   # 1) Ensure build/upload tools are available
-   python -m pip install --upgrade build twine
+   # 1) Sync the locked development environment
+   uv sync --python 3.13 --extra all
 
-   # 2) Build source + wheel
+   # 2) Run the verification suite
+   uv run pytest tests
+   uv run ruff check .
+
+   # 3) Build source + wheel
    rm -rf dist/ build/ *.egg-info
-   python -m build
+   uv build --no-sources
 
-   # 3) Validate package metadata/artifacts
-   python -m twine check dist/*
+   # 4) Upload to TestPyPI
+   uv publish --index testpypi
 
-   # 4) Upload to TestPyPI (will prompt for credentials/token)
-   python -m twine upload --repository testpypi dist/*
-   # If using token auth:
-   # python -m twine upload --repository testpypi -u __token__ -p "pypi-<TEST_PYPI_TOKEN>" dist/*
+   # 5) Verify the TestPyPI package in an isolated environment
+   uv run --no-project --refresh-package syssimx \
+      --with syssimx \
+      --default-index https://test.pypi.org/simple/ \
+      --index https://pypi.org/simple/ \
+      --index-strategy unsafe-best-match \
+      -- python -c "import syssimx; print(syssimx.__version__)"
 
-   # 5) Install from TestPyPI (plus PyPI for dependencies)
-   python -m pip install --index-url https://test.pypi.org/simple/ \
-   --extra-index-url https://pypi.org/simple \
-   syssimx
+   # 6) Publish to PyPI
+   uv publish
 
-   # 6) Verify import + installed version
-   python -c "import syssimx; print(syssimx.__version__)"
-
-   # 7) Optional: show resolved package details
-   python -m pip show syssimx
-   python -m pip freeze | rg syssimx
+Set the PyPI token with ``UV_PUBLISH_TOKEN`` or pass ``--token``. For
+TestPyPI, use a TestPyPI token. For PyPI releases from GitHub Actions, prefer
+PyPI Trusted Publishing over storing a token.
 
 
