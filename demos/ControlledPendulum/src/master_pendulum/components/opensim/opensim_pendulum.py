@@ -221,8 +221,8 @@ class OpenSimPendulum(OpenSimComponent):
             wall = osim.ContactHalfSpace()
             wall.setName("wall_contact")
             wall.connectSocket_frame(base)
-            wall.setOrientation(osim.Vec3(0, np.pi, 0))
-            wall.setLocation(osim.Vec3(-mp["r_head"], 0, 0))  # impact for q=0 and omega < 0
+            wall.set_orientation(osim.Vec3(0, np.pi, 0))
+            wall.set_location(osim.Vec3(-mp["r_head"], 0, 0))  # impact for q=0 and omega < 0
             model.addContactGeometry(wall)
 
             # Set up contact geometry names
