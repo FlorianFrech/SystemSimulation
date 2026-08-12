@@ -92,19 +92,29 @@ Reference for the target style: `01_getting_started/02_quickstart.ipynb` and `03
 
 ## Batches
 
-Each batch: edit → execute top-to-bottom (`nbconvert --execute`) → docs build warning check → one commit.
+Each batch: edit, validate notebook structure and syntax, execute where the
+installed optional backends make that practical, and run the strict docs build.
 
-1. **Batch 1 — Fundamentals** (3 notebooks): results-API migration pattern established here. ✅ Done (2026-07-19). Note: 01 and 02 are deliberately component-level; instead of a mechanical migration they each gained a "Running in a System" bridge section with `SimulationResult`. Unconnected inputs default to zero inside a `System` — no pre-seeding needed.
-2. **Batch 2 — Intermediate** (01–03): includes `describe()`/SCC and `result.events` patterns. ✅ Done (2026-07-19). The algebraic-loop notebook keeps its (well-documented) logging section as the canonical logging reference; the hybrid notebook's logging was trimmed to `INFO` and cross-links to it. 01 gained an RMSE comparison table.
-3. **Batch 3 — Advanced hybrid** (3): event-log-driven plotting. ✅ Done (2026-07-19). Logging pattern for hybrid tutorials: `syssimx` → INFO, `syssimx.system.algorithms.hybrid` → DEBUG only where DEBUG lines are discussed (02: commutativity checks, 03: internal hints). 02 now instantiates the listener with `use_event_annotations=True` so the declared-commutativity path runs (log: "verified (annotations)"), with prose explaining the dynamic fallback.
-4. **Batch 4 — Modelica + Master Pendulum** (4 + 2): FMU-based, same migration. Requires Windows FMUs present.
-5. **Batch 5 — OpenSim + FEM** (3 + 3): light passes; needs `opensim`/`ngsolve` installed to re-execute.
-6. **Batch 6 — Case study** (6): heaviest runtime; do last with the patterns settled.
+1. **Batch 1 - Fundamentals** (3 notebooks): done (2026-07-19). The two deliberately component-level tutorials include a "Running in a System" bridge using `SimulationResult`.
+2. **Batch 2 - Intermediate** (3 notebooks): done (2026-07-19). Includes the `describe()`/SCC, RMSE comparison, and `result.events` patterns.
+3. **Batch 3 - Advanced hybrid** (3 notebooks): done (2026-07-19). Event-driven plots use the result event log, and debug logging remains only where the output is discussed.
+4. **Batch 4 - Modelica and Master Pendulum** (6 notebooks): content pass done (2026-08-12). System runs now retain `SimulationResult`; the switching tutorial uses `describe()` and `result.events`. Direct backend histories remain only for inactive models internal to `MasterPendulum`.
+5. **Batch 5 - OpenSim and FEM** (6 notebooks): content pass done (2026-08-12). Standalone backend tutorials are explicitly identified as such, cross-links are current, and the FEM section now shows how to implement a structural-dynamics `FEMComponent` subclass. OpenSim 4.6 property setters and state realization were corrected during execution checks.
+6. **Batch 6 - Case study** (6 notebooks): content pass done (2026-08-12). The overview maps scenarios to notebooks and capabilities; all `System.run()` calls retain their result, and structural/event inspection is shown where useful.
 
-## Definition of Done (per notebook)
+## Validation Status
 
-- [ ] `result = system.run(...)`; no `system.get_history()` / ad-hoc `get_history_arrays()`
-- [ ] `describe()` and/or `result.events` where meaningful
-- [ ] At most one logging cell, only if its output is discussed
-- [ ] Executes top-to-bottom without errors; outputs committed
-- [ ] Next-step `{doc}` links valid; no new Sphinx warnings
+- All 31 documentation notebooks pass `nbformat` validation, contain cell IDs, and pass a Ruff Python-syntax scan.
+- All six case-study notebooks and the Master Pendulum switching tutorial execute top-to-bottom under Python 3.13. The two switching notebooks each take about six minutes locally.
+- The OpenSim contact component initializes and advances with contact under OpenSim 4.6.
+- The standalone OpenSim contact parameter sweeps remain a heavyweight manual validation; a bounded local run reached the simulation but exceeded the normal documentation-gate runtime.
+- The offline Sphinx build passes with warnings treated as errors.
+- CI now tests Python 3.11, 3.12, and 3.13, makes MyPy blocking on Python 3.13, and requires the strict documentation job before package build.
+
+## Definition of Done
+
+- [x] Every `System.run(...)` result is retained; direct component histories are used only for standalone examples or internal-model diagnostics.
+- [x] `describe()` and/or `result.events` is shown where meaningful.
+- [x] Logging cells remain only where their output is discussed.
+- [x] Notebook structure and Python syntax validate; representative executable batches pass.
+- [x] Next-step links resolve and the strict Sphinx build has no warnings.

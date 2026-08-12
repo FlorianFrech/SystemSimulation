@@ -26,9 +26,7 @@ extensions = [
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
     "sphinx.ext.viewcode",  # Add links to source code
     "sphinx.ext.intersphinx",  # Link to other projects' documentation
-    'sphinx.ext.mathjax',  # Render math in docs
-    
-    # Add these explicitly:
+    "sphinx.ext.mathjax",  # Render math in docs
     "myst_nb",
 ]
 
@@ -79,6 +77,9 @@ napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 napoleon_include_private_with_doc = True
+# Render ``Attributes:`` sections as fields on the class instead of creating
+# a second set of indexed ``py:attribute`` directives beside autodoc members.
+napoleon_use_ivar = True
 
 # Autosummary
 autosummary_generate = True
@@ -87,11 +88,14 @@ autosummary_generate = True
 nb_execution_mode = "off"  # Do not execute notebooks during build else use "auto" or "force"
 
 # Intersphinx mapping
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
-}
+if os.environ.get("SYSSIMX_DOCS_OFFLINE") == "1":
+    intersphinx_mapping = {}
+else:
+    intersphinx_mapping = {
+        "python": ("https://docs.python.org/3", None),
+        "numpy": ("https://numpy.org/doc/stable/", None),
+        "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    }
 
 templates_path = ["_templates"]
 # update.md is an internal working document, not part of the published docs
