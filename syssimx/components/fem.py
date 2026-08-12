@@ -1,10 +1,10 @@
 """NGSolve transient structural-mechanics co-simulation wrapper.
 
-``FEMComponent`` is the concrete FEM backend for SysSimX. It wraps an NGSolve
-finite-element model that is advanced in time with a constant-average-acceleration
-(trapezoidal) Newmark scheme and exposes it through the ``CoSimComponent``
-interface. The class owns the parts that are common to any transient structural
-NGSolve model:
+``FEMComponent`` is the abstract NGSolve structural-dynamics backend for
+SysSimX. It wraps a finite-element model that is advanced in time with a
+constant-average-acceleration (trapezoidal) Newmark scheme and exposes it
+through the ``CoSimComponent`` interface. The class owns the parts that are
+common to transient structural NGSolve models:
 
 * the Newmark state grid functions ``(u, v, a)`` and their previous-step
   buffers ``(u_old, v_old, a_old)`` and the velocity/acceleration update,
@@ -35,7 +35,7 @@ from ..core.base import CoSimComponent
 
 
 class FEMComponent(CoSimComponent):
-    """Concrete NGSolve transient structural-mechanics component.
+    """Abstract NGSolve transient structural-mechanics component.
 
     Subclasses implement :meth:`_initialize_component` (build mesh, spaces,
     forms, initial state) and :meth:`_solve_step` (the nonlinear solve of one

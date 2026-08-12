@@ -11,6 +11,72 @@ Netgen/NGSolve
 
 This sequence builds a nonlinear, deformable pendulum model step by step using Netgen/NGSolve, starting from core dynamics and extending to actuation and contact.
 
+The notebooks first derive and exercise the NGSolve model directly. The
+reusable SysSimX integration point is
+:class:`~syssimx.components.fem.FEMComponent`, an abstract base specifically
+for transient structural dynamics with Newmark integration. The case-study
+``FEMPendulum`` subclass supplies the pendulum mesh, spaces, variational form,
+nonlinear solver, ports, state mapping, and contact behavior. This adapter is
+not a generic wrapper for static, thermal, or arbitrary NGSolve analyses.
+
+From NGSolve Model to ``FEMComponent``
+--------------------------------------
+
+A structural adapter defines its port contract during construction and
+implements three required hooks:
+
+1. ``_initialize_component(t0)`` builds the mesh, spaces, Newmark state,
+   variational form, and solver.
+2. ``_solve_step()`` solves one internal structural sub-step using the value
+   already stored in ``tau_step``.
+3. ``_update_output_states(...)`` maps the finite-element state to output
+   ports.
+
+The base class then owns the macro-step loop, Newmark state shift and update,
+accepted-step history, and complete rollback snapshots. A minimal subclass has
+the following shape:
+
+.. code-block:: python
+
+   from ngsolve import Parameter
+
+   from syssimx.components import FEMComponent
+   from syssimx.core import PortSpec, PortType
+
+
+   class StructuralModel(FEMComponent):
+       def __init__(self, name: str):
+           super().__init__(name)
+           self.input_specs = {
+               "load": PortSpec("load", PortType.REAL, "in", unit="N")
+           }
+           self.output_specs = {
+               "displacement": PortSpec(
+                   "displacement", PortType.REAL, "out", unit="m"
+               )
+           }
+
+       def _initialize_component(self, t0: float) -> None:
+           self._mesh = build_mesh()
+           self._fes = build_structural_space(self._mesh)
+           self._init_newmark_state(self._fes)
+           self.tau_step = Parameter(0.0)
+           self._solver = build_variational_solver(self)
+
+       def _solve_step(self) -> None:
+           self._solver.solve()
+
+       def _update_output_states(self, t=None, event_names=None) -> None:
+           value = extract_displacement(self._gf_u)
+           self.outputs["displacement"].set(value, t=t)
+
+For contact or adaptive integration, override ``_pre_solve`` and
+``_post_solve``. Implement ``get_state`` and ``set_state`` when the component
+participates in runtime model switching. Register event indicators and report
+internal event intervals when the hybrid master must localize structural
+events. The full pendulum implementation is the reference for those optional
+capabilities.
+
 Main takeaways across the three notebooks:
 
 - The pendulum is modeled as a thin 2D hyperelastic body (Neo-Hookean, plane stress) with nonlinear elastodynamics. The 2D reduction is used for reduced computational cost.

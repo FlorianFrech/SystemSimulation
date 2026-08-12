@@ -1,0 +1,53 @@
+@startuml
+skinparam backgroundColor white
+skinparam participantPadding 80
+skinparam wrapWidth 0
+skinparam maxMessageSize 500
+
+participant "Master/\nOrchestrator" as Master
+participant "SU1" as SU1
+participant "SU2" as SU2
+participant "SU3" as SU3
+
+== Jacobi Co-Simulation: One Macro Step t_n -> t_(n+1) ==
+
+Master -> Master: **Phase 1: Freeze All Inputs**
+note right: Inputs use outputs available at t_n,\nproduced by the previous macro step.
+
+Master -> SU1: set u1(t_n) from y(t_n)
+SU1 --> Master: input set
+Master -> SU2: set u2(t_n) from y(t_n)
+SU2 --> Master: input set
+Master -> SU3: set u3(t_n) from y(t_n)
+SU3 --> Master: input set
+
+Master -> Master: **Phase 2: Advance Independent Components**
+note right: The current SysSimX implementation\ninvokes component steps serially.
+
+group Serial component loop
+    Master -> SU1: do_step(t_n, H)
+    activate SU1
+    SU1 -> SU1: advance x1 and update y1
+    SU1 --> Master: y1(t_(n+1))
+    deactivate SU1
+
+    Master -> SU2: do_step(t_n, H)
+    activate SU2
+    SU2 -> SU2: advance x2 and update y2
+    SU2 --> Master: y2(t_(n+1))
+    deactivate SU2
+
+    Master -> SU3: do_step(t_n, H)
+    activate SU3
+    SU3 -> SU3: advance x3 and update y3
+    SU3 --> Master: y3(t_(n+1))
+    deactivate SU3
+end
+
+note over Master, SU3
+The frozen-input semantics make these advances mathematically independent
+and candidates for future parallel execution; no concurrency is used today.
+end note
+
+Master -> Master: Exchange outputs for the next macro step
+@enduml
