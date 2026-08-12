@@ -22,7 +22,7 @@ requires-python = ">=3.11"
 authors = [
     { name = "Florian Frech", email = "florianfrech@outlook.de" }
 ]
-description = "A Python framework for heterogeneous system co-simulation (Modelica FMUs, OpenSim, FEM)."
+description = "A Python framework for heterogeneous hybrid co-simulation with FMI 2.0, OpenSim, and NGSolve structural dynamics."
 readme = "README.md"
 license = "MIT"
 license-files = [
@@ -31,7 +31,7 @@ license-files = [
     "THIRD_PARTY_LICENSES.MD",
     "LICENSES/*.txt",
 ]
-keywords = ["simulation", "co-simulation", "FMU", "FEM", "OpenSim", "Modelica"]
+keywords = ["simulation", "co-simulation", "FMU", "FEM", "structural dynamics", "OpenSim", "Modelica"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -51,7 +51,7 @@ fmu = [
     "OMPython>=4.0.0",          # For OMPython examples
 ]
 
-# FEM support (NGSolve)
+# Transient structural-dynamics FEM support (NGSolve)
 fem = [
     "ngsolve",
     "webgui_jupyter_widgets",

@@ -4,7 +4,8 @@ syssimx provides a unified interface for coupling heterogeneous simulation
 models including:
 
 - **FMU Components**: Functional Mock-up Units (FMI 2.0 Co-Simulation)
-- **FEM Components**: Finite Element Method solvers (NGSolve)
+- **Structural-Dynamics FEM Components**: NGSolve transient structural-mechanics
+  models with Newmark time integration
 - **OpenSim Components**: Musculoskeletal biomechanics models
 
 Key Features:

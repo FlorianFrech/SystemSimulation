@@ -22,8 +22,9 @@ Re-exported names
   :class:`~syssimx.system.connection.EventConnection`,
   :class:`~syssimx.system.results.SimulationResult` — see :doc:`system`
 - :class:`~syssimx.viz.system_graph_visualizer.SystemGraphVisualizer` — see :doc:`viz`
-- ``FMUComponent``, ``FEMComponent``, ``OpenSimComponent`` — available when the
-  corresponding optional backend is installed; see :doc:`components`
+- ``FMUComponent`` and ``OpenSimComponent``; ``FEMComponent`` is specifically
+  the NGSolve transient structural-dynamics base. These names are available
+  when their optional backends are installed; see :doc:`components`.
 
 The declarative loader (:func:`~syssimx.system.loader.build_system`,
 :func:`~syssimx.system.loader.run_from_config`,

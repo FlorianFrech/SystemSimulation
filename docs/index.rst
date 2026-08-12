@@ -8,11 +8,11 @@ Documentation
    :alt: MIT License
 
 **SysSimX** is a free and open-source Python library for system simulation.
-It allows you to build hybrid and heterogenous system models by connecting system component models from different environments, including:
+It allows you to build hybrid and heterogeneous system models by connecting system component models from different environments, including:
 
 - **FMU Components** - `Functional Mock-up Units (FMI 2.0 Co-Simulation) <https://fmi-standard.org/>`_
 - **OpenSim Components** - Musculoskeletal biomechanics models using `OpenSim <https://opensim.stanford.edu/>`_
-- **FEM Components** - Finite Element Models using `NGSolve <https://ngsolve.org/>`_
+- **Structural-Dynamics FEM Components** - Transient structural-mechanics models using `NGSolve <https://ngsolve.org/>`_ and Newmark time integration
 - **Custom Python Components** - User-defined models implemented directly in Python
 
 .. note::
@@ -56,7 +56,7 @@ Quick Example
 
    # Run simulation
    system.initialize(t0=0.0)
-   system.run(t0=0.0, tf=10.0, dt=0.001)
+   result = system.run(t0=0.0, tf=10.0, dt=0.001)
 
 Key Features
 ------------
@@ -74,11 +74,13 @@ Key Features
    time localization and superdense time semantics.
 
 **Multiple Master Algorithms**
-   Choose from Jacobi (parallel), Gauss-Seidel (sequential), or
-   Hybrid (event-driven) algorithms.
+   Choose from Jacobi (lagged inputs), Gauss-Seidel (sequential current-step
+   propagation), or Hybrid (event-driven) algorithms. Component stepping is
+   currently serial.
 
 **Multi-Tool Integration**
-   Seamlessly connect FMUs, OpenSim models, and NGSolve FEM models in a single system.
+   Connect FMUs, OpenSim models, and NGSolve transient structural-dynamics
+   models in a single system.
 
 **Multi-Model Switching**
    Dynamically switch between multiple models of the same component during simulation.

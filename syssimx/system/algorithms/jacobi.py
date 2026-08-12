@@ -1,12 +1,18 @@
 """Jacobi-based execution algorithm for system simulation.
 
-This module provides an implementation of the Jacobi algorithm, which is used to advance a system simulation by processing components in a parallelized order. The algorithm sets all inputs for a generation before advancing any component in that generation, solving algebraic loops within the generation, and then advancing the component states.
+The algorithm freezes every component input before advancing component state,
+so all components use outputs available at the start of the macro step rather
+than outputs produced during that same step. The component advances are
+mathematically independent after that exchange, but the current implementation
+invokes them serially.
 
 Classes:
     JacobiAlgorithm: Implements the Jacobi algorithm for advancing a system simulation.
 
 Usage:
-    The `JacobiAlgorithm` class is designed to be used as part of the system simulation framework. It processes components in a parallelized manner, which does not handle direct-feedthrough components whose outputs could become available within the same macro step to downstream components.
+    ``JacobiAlgorithm`` provides lagged-input coupling. It does not propagate
+    direct-feedthrough outputs to downstream components within the same macro
+    step.
 
 Dependencies:
     - `Algorithm`: Base class for all algorithms.
@@ -40,6 +46,10 @@ class JacobiAlgorithm(Algorithm):
     The algorithm sets all inputs for a generation before any component in that
     generation advances, then solves any algebraic loops contained in that
     generation, and finally advances component state.
+
+    All component advances are currently invoked serially. Jacobi semantics
+    make those advances candidates for future parallel execution; they do not
+    imply that this implementation executes concurrently.
 
     This approach does not handle direct-feedthrough components whose outputs
     could become available within the same macro step to downstream components.

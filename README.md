@@ -13,10 +13,10 @@
 </p>
 
 **SysSimX** is a free and open-source Python library for system simulation.
-It allows you to build hybrid and heterogenous system models by connecting system component models from different environments, including:
+It allows you to build hybrid and heterogeneous system models by connecting system component models from different environments, including:
 - **FMU Components** - [Functional Mock-up Units (FMI 2.0 Co-Simulation)](https://fmi-standard.org/)
 - **OpenSim Components** - Musculoskeletal biomechanics models using [OpenSim](https://opensim.stanford.edu/)
-- **FEM Components** - Finite Element Models using [NGSolve](https://ngsolve.org/)
+- **Structural-Dynamics FEM Components** - Transient structural-mechanics models using [NGSolve](https://ngsolve.org/) and Newmark time integration
 - **Custom Python Components** - User-defined models implemented directly in Python
 
 The library comes with a [user documentation site](https://syssimx.readthedocs.io/en/latest/) that includes installation instructions, core concepts, API references, and tutorials covering fundamental techniques, tool integrations, and a case study.
@@ -31,9 +31,9 @@ The public [brand assets](logo/dist/) include the light/dark wordmarks, applicat
 
 - **Hybrid Co-Simulation:** Event detection via zero-crossing indicators with bisection-based time localization and superdense time semantics.
 
-- **Multiple Master Algorithms:** Choose from Jacobi (parallel), Gauss-Seidel (sequential), or Hybrid (event-driven) algorithms.
+- **Multiple Master Algorithms:** Choose from Jacobi (lagged inputs), Gauss-Seidel (sequential current-step propagation), or Hybrid (event-driven) algorithms. The current engine steps components serially.
 
-- **Multi-Tool Integration:** Seamlessly connect FMUs, OpenSim models, and NGSolve FEM models in a single system.
+- **Multi-Tool Integration:** Connect FMUs, OpenSim models, and NGSolve transient structural-dynamics models in a single system.
 
 - **Multi-Model Switching:** Dynamically switch between multiple models of the same component during simulation.
 
@@ -43,7 +43,7 @@ The public [brand assets](logo/dist/) include the light/dark wordmarks, applicat
 
 ## Installation
 
-The `syssimx` package is available on [PyPI](https://pypi.org/project/syssimx/). You can install it using `pip`. Optional extras are available for FMU, OpenSim, and FEM support.
+The `syssimx` package is available on [PyPI](https://pypi.org/project/syssimx/). You can install it using `pip`. Optional extras are available for FMI, OpenSim, and NGSolve structural-dynamics support.
 
 ### Basic install
 
@@ -163,10 +163,9 @@ system.add_connection(Connection(
 ))
 
 system.initialize(t0=0.0)
-system.run(t0=0.0, tf=5.0, dt=0.1)
+result = system.run(t0=0.0, tf=5.0, dt=0.1)
 
-history = system.get_history()
-t_vals, data = history["Integrator"]
+t_vals, data = result["Integrator"]
 y_vals = data["y"]
 
 plt.plot(t_vals, y_vals)

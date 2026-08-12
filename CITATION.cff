@@ -16,8 +16,8 @@ url: "https://syssimx.readthedocs.io/"
 abstract: >-
   SysSimX is a Python framework for heterogeneous hybrid co-simulation
   with runtime model switching. It couples Functional Mock-up Units
-  (FMUs), OpenSim models, and finite-element method (FEM) models through
-  a shared component abstraction, derives structural execution metadata
+  (FMUs), OpenSim models, and NGSolve-based transient structural-dynamics
+  models through a shared component abstraction, derives structural execution metadata
   for initialization, master algorithm execution, and algebraic-loop
   handling, and supports hybrid event localization and runtime switching
   between alternative models of the same subsystem.
@@ -29,4 +29,5 @@ keywords:
   - FMI
   - OpenSim
   - finite-element method
+  - structural dynamics
   - Python

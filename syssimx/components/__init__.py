@@ -10,7 +10,7 @@ try:
 except ImportError:
     pass
 
-# FEM Component (requires ngsolve)
+# NGSolve transient structural-dynamics component (requires ngsolve)
 try:
     from .fem import FEMComponent
 

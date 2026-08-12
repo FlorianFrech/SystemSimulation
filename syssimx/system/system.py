@@ -8,7 +8,7 @@ Key Responsibilities:
     - **Component Management**: Register and organize ``CoSimComponent`` instances
     - **Connection Validation**: Type and unit compatibility checking between ports
     - **Graph Analysis**: Build dependency graphs and detect algebraic loops
-    - **Execution Ordering**: Compute parallelizable generations using topological sort
+    - **Execution Ordering**: Compute dependency generations using topological sort
     - **Algorithm Delegation**: Step simulation using Jacobi, Gauss-Seidel, or Hybrid algorithms
     - **Event Routing**: Dispatch events between components via event connections
     - **History Aggregation**: Collect time-series data from all components
@@ -40,10 +40,10 @@ Typical Usage:
 
         # Initialize and run
         system.initialize(t0=0.0)
-        system.run(t0=0.0, tf=10.0, dt=0.001)
+        result = system.run(t0=0.0, tf=10.0, dt=0.001)
 
-        # Retrieve results
-        history = system.get_history()
+        # Retrieve a component time series
+        times, pendulum_data = result["Pendulum"]
 
 See Also:
     :class:`Connection`: Signal connections between component ports
@@ -97,7 +97,8 @@ class System:
         graph (nx.MultiDiGraph): Complete connection graph (including delayed).
         groups (dict[str, list[CoSimComponent]]): Components organized by group.
         execution_order (list[list[str]]): Topologically sorted generations.
-            Each generation contains components that can execute in parallel.
+            Components in one generation are dependency-independent. The
+            current stepping algorithms still invoke them serially.
         algebraic_loops (list[list[str]]): Detected algebraic loops (SCCs > 1).
         algorithm (Algorithm): Stepping algorithm (Gauss-Seidel, Jacobi, Hybrid).
         history (SystemHistory): Aggregated time-series data from all components.
@@ -172,7 +173,7 @@ class System:
         simulation. Available algorithms include:
 
         - ``GaussSeidelAlgorithm``: Sequential stepping (default)
-        - ``JacobiAlgorithm``: Parallel stepping with delayed inputs
+        - ``JacobiAlgorithm``: Lagged-input stepping (currently serial)
         - ``HybridAlgorithm``: Event-driven with bisection localization
 
         Args:
@@ -501,12 +502,12 @@ class System:
         graph.build_graphs(self)
 
     def compute_execution_order(self) -> None:
-        """Compute parallelizable execution order from the dependency graph.
+        """Compute dependency generations from the dependency graph.
 
         Performs a topological sort on the zero-delay dependency DAG to
         produce generations of components. Components within the same
-        generation have no dependencies on each other and can execute
-        in parallel.
+        generation have no dependencies on each other and are candidates for
+        parallel execution. Current algorithms invoke components serially.
 
         The result is stored in ``self.execution_order`` as a list of
         lists, where each inner list contains component names in one
