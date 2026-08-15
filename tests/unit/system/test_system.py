@@ -181,6 +181,21 @@ class TestSystemConnections:
 
         assert len(sys.connections) == 1
 
+    def test_add_connection_after_initialization_raises(self):
+        """Signal topology is immutable once the system is initialized."""
+        sys = System(name="InitializedSystem")
+        comp_a = SimpleGain(name="GainA", gain=2.0)
+        comp_b = SimpleGain(name="GainB", gain=3.0)
+        sys.add_component(comp_a)
+        sys.add_component(comp_b)
+        sys.initialize(t0=0.0)
+
+        connection = Connection("GainA", "y", "GainB", "u")
+        with pytest.raises(RuntimeError, match="after system initialization"):
+            sys.add_connection(connection)
+
+        assert sys.connections == []
+
     def test_multiple_connections_chain(self):
         """Test creating a chain of connections."""
         sys = System(name="ChainSystem")
@@ -338,6 +353,89 @@ class TestSystemInitialization:
         assert len(sys.execution_order) > 0
         assert "A" in sys.graph.nodes
         assert "B" in sys.graph.nodes
+
+    @pytest.mark.parametrize("t0", [float("inf"), float("-inf"), float("nan")])
+    def test_initialize_rejects_nonfinite_time(self, t0):
+        """Initialization requires a finite start time."""
+        sys = System(name="InvalidTime")
+
+        with pytest.raises(ValueError, match="t0 must be finite"):
+            sys.initialize(t0=t0)
+
+        assert sys.is_initialized is False
+
+
+# ============================================================================
+# Test System Run Lifecycle
+# ============================================================================
+class TestSystemRun:
+    """Test simulation lifecycle and time-contract validation."""
+
+    @staticmethod
+    def _initialized_system(t0: float = 0.0) -> System:
+        sys = System(name="RunTest")
+        sys.add_component(SimpleGain(name="Gain", gain=2.0))
+        sys.initialize(t0=t0)
+        return sys
+
+    def test_run_before_initialization_raises(self):
+        sys = System(name="Uninitialized")
+
+        with pytest.raises(RuntimeError, match="initialized before run"):
+            sys.run(t0=0.0, tf=1.0, dt=0.1)
+
+    @pytest.mark.parametrize("dt", [0.0, -0.1, float("inf"), float("nan")])
+    def test_run_rejects_invalid_macro_step(self, dt):
+        sys = self._initialized_system()
+
+        with pytest.raises(ValueError, match="dt must be finite and positive"):
+            sys.run(t0=0.0, tf=1.0, dt=dt)
+
+    @pytest.mark.parametrize(
+        ("t0", "tf"),
+        [
+            (float("inf"), 1.0),
+            (float("-inf"), 1.0),
+            (float("nan"), 1.0),
+            (0.0, float("inf")),
+            (0.0, float("-inf")),
+            (0.0, float("nan")),
+        ],
+    )
+    def test_run_rejects_nonfinite_times(self, t0, tf):
+        sys = self._initialized_system()
+
+        with pytest.raises(ValueError, match="t0 and tf must be finite"):
+            sys.run(t0=t0, tf=tf, dt=0.1)
+
+    def test_run_rejects_reversed_interval(self):
+        sys = self._initialized_system(t0=1.0)
+
+        with pytest.raises(ValueError, match="tf must be greater than or equal"):
+            sys.run(t0=1.0, tf=0.0, dt=0.1)
+
+    def test_run_rejects_start_time_different_from_system_time(self):
+        sys = self._initialized_system()
+
+        with pytest.raises(ValueError, match="does not match current system time"):
+            sys.run(t0=0.1, tf=1.0, dt=0.1)
+
+    def test_run_synchronizes_system_time_and_supports_continuation(self):
+        sys = self._initialized_system()
+        accepted_times = []
+
+        sys.run(
+            t0=0.0,
+            tf=0.25,
+            dt=0.1,
+            progress=lambda t, tf: accepted_times.append((t, sys.t)),
+        )
+
+        assert accepted_times == pytest.approx([(0.1, 0.1), (0.2, 0.2), (0.25, 0.25)])
+        assert sys.t == pytest.approx(0.25)
+
+        sys.run(t0=0.25, tf=0.4, dt=0.1)
+        assert sys.t == pytest.approx(0.4)
 
 
 # ============================================================================
@@ -769,6 +867,28 @@ class TestEventConnections:
 
         assert len(sys.event_connections) == 1
         assert sys.event_connections[0] == conn
+
+    def test_add_event_connection_after_initialization_raises(self):
+        """Event topology is immutable once the system is initialized."""
+        sys = System(name="InitializedEventSystem")
+        source = HybridSource(name="Source", x0=0.0, v=1.0, t0=0.0)
+        source.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)
+        listener = HybridListener(name="Listener", x0=0.0, v=1.0, t0=0.0)
+        sys.add_component(source)
+        sys.add_component(listener)
+        sys.initialize(t0=0.0)
+
+        connection = EventConnection(
+            src_comp="Source",
+            src_port="trigger",
+            dst_comp="Listener",
+            dst_port="v_invert",
+        )
+        with pytest.raises(RuntimeError, match="after system initialization"):
+            sys.add_event_connection(connection)
+
+        assert sys.event_connections == []
+        assert listener.event_subscriptions == []
 
     def test_add_event_connection_auto_subscribes_target(self):
         """Test that add_event_connection automatically subscribes the target."""

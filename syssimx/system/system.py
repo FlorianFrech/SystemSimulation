@@ -55,6 +55,7 @@ See Also:
 from __future__ import annotations
 
 import logging
+import math
 import timeit
 from collections.abc import Callable
 from typing import Any
@@ -305,6 +306,7 @@ class System:
                 component/port pairs.
 
         Raises:
+            RuntimeError: If called after ``initialize()``.
             ValueError: If source or destination component not in system,
                 or if connection is a duplicate.
             KeyError: If specified ports don't exist on the components.
@@ -320,6 +322,9 @@ class System:
             :class:`Connection`: Connection specification class
             :meth:`add_event_connection`: For event-based connections
         """
+        if self.is_initialized:
+            raise RuntimeError("Cannot add connections after system initialization.")
+
         self._validate_connection(connection)
         self.connections.append(connection)
         self._incoming_by_dst.clear()
@@ -385,6 +390,7 @@ class System:
                 event indicator and the target component to notify.
 
         Raises:
+            RuntimeError: If called after ``initialize()``.
             ValueError: If source/target not in system or duplicate connection.
             KeyError: If event indicator not registered on source component.
 
@@ -403,6 +409,9 @@ class System:
             :class:`EventConnection`: Event connection specification
             :meth:`dispatch_event`: Manual event dispatching
         """
+        if self.is_initialized:
+            raise RuntimeError("Cannot add event connections after system initialization.")
+
         self._validate_event_connection(connection)
 
         # Auto-subscribe the target component to this event
@@ -605,6 +614,9 @@ class System:
         Args:
             t0: Initial simulation time in seconds.
 
+        Raises:
+            ValueError: If ``t0`` is not finite.
+
         Example:
             >>> system.add_component(plant)
             >>> system.add_component(controller)
@@ -618,6 +630,9 @@ class System:
             but before ``run()``. Calling ``initialize()`` locks the system
             against further component additions.
         """
+        if not math.isfinite(t0):
+            raise ValueError("Initial time t0 must be finite.")
+
         self.t = t0
 
         # 1) Classify components and auto-select hybrid algorithm
@@ -742,6 +757,12 @@ class System:
             recorded component histories, the event log, and run metadata
             (time span, macro step, wall time, algorithm).
 
+        Raises:
+            RuntimeError: If the system has not been initialized.
+            ValueError: If a time is not finite, ``dt`` is not positive,
+                ``tf`` precedes ``t0``, or ``t0`` does not match the current
+                system time.
+
         Example:
             >>> system.initialize(t0=0.0)
             >>> result = system.run(t0=0.0, tf=10.0, dt=0.001)
@@ -752,18 +773,31 @@ class System:
             (Hybrid algorithm) or iteration (IJCSA for algebraic loops).
             The ``dt`` parameter controls the macro step size.
         """
+        if not self.is_initialized:
+            raise RuntimeError("System must be initialized before run().")
+        if not math.isfinite(t0) or not math.isfinite(tf):
+            raise ValueError("Simulation times t0 and tf must be finite.")
+        if not math.isfinite(dt) or dt <= 0.0:
+            raise ValueError("Macro step dt must be finite and positive.")
+        if tf < t0:
+            raise ValueError("Final time tf must be greater than or equal to t0.")
+        if not math.isclose(t0, self.t, rel_tol=0.0, abs_tol=1e-12):
+            raise ValueError(f"Run start time t0={t0} does not match current system time {self.t}.")
+
         timer = timeit.default_timer
         logger.info(f"Starting simulation run from t={t0} to t={tf} with dt={dt}")
-        dt_macro = dt  # requested macro step (dt is clamped on the final step)
+        dt_macro = dt
         t = t0
         self.t_end = tf
         start_time = timer()
         while t < tf - 1e-12:
-            dt = min(dt, tf - t)
-            self.algorithm.step(self, t, dt)
-            t += dt
+            step_dt = min(dt_macro, tf - t)
+            self.algorithm.step(self, t, step_dt)
+            t += step_dt
+            self.t = t
             if progress is not None:
                 progress(t, tf)
+        self.t = tf
         end_time = timer()
         wall_time = end_time - start_time
         logger.info(f"Simulation completed in {wall_time:.2f} seconds")
