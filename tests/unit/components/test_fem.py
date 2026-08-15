@@ -56,6 +56,31 @@ class _MiniFEM(FEMComponent):
         pass
 
 
+class _SteppingFEM(_MiniFEM):
+    """Minimal FEM with controllable nominal and adaptive sub-steps."""
+
+    def __init__(
+        self,
+        nominal_dt: float | None = None,
+        adaptive_dt: float | None = None,
+    ):
+        super().__init__()
+        self.nominal_dt = nominal_dt
+        self.adaptive_dt = adaptive_dt
+        self.accepted_steps: list[float] = []
+
+    def _effective_substep(self, dt: float) -> float:
+        return dt if self.nominal_dt is None else self.nominal_dt
+
+    def _pre_solve(self, t_current: float, effective_dt: float) -> None:
+        if self.adaptive_dt is not None:
+            self.tau_step.Set(self.adaptive_dt)
+
+    def _solve_step(self) -> None:
+        self.accepted_steps.append(self.tau_step.Get())
+        super()._solve_step()
+
+
 def _fill(gf, value: float) -> None:
     gf.vec.FV().NumPy()[:] = value
 
@@ -106,6 +131,87 @@ def test_advance_newmark_matches_trapezoidal_update():
     a_expected = 2 / tau * (v_expected - 0.5) - 0.25
     assert np.allclose(_vec(comp._gf_v), v_expected)
     assert np.allclose(_vec(comp._gf_a), a_expected)
+
+
+# ---------------------------------------------------------------------------
+# Time-step validation
+# ---------------------------------------------------------------------------
+def test_do_step_requires_initialization():
+    comp = _MiniFEM()
+
+    with pytest.raises(RuntimeError, match="must be initialized before stepping"):
+        comp.do_step(t=0.0, dt=0.1)
+
+
+@pytest.mark.parametrize("t", [float("inf"), float("-inf"), float("nan")])
+def test_do_step_rejects_nonfinite_start_time(t):
+    comp = _MiniFEM()
+    comp.initialize(t0=0.0)
+
+    with pytest.raises(ValueError, match="start time t must be finite"):
+        comp.do_step(t=t, dt=0.1)
+
+
+@pytest.mark.parametrize("dt", [-0.1, float("inf"), float("-inf"), float("nan")])
+def test_do_step_rejects_invalid_macro_step(dt):
+    comp = _MiniFEM()
+    comp.initialize(t0=0.0)
+
+    with pytest.raises(ValueError, match="dt must be finite and non-negative"):
+        comp.do_step(t=0.0, dt=dt)
+
+
+def test_zero_step_is_initialization_noop():
+    comp = _MiniFEM()
+    comp.initialize(t0=0.0)
+
+    comp.do_step(t=0.0, dt=0.0)
+
+    assert comp.solved == 0
+    assert comp.t == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("nominal_dt", [0.0, -0.1, float("inf"), float("nan")])
+def test_do_step_rejects_invalid_effective_substep(nominal_dt):
+    comp = _SteppingFEM(nominal_dt=nominal_dt)
+    comp.initialize(t0=0.0)
+
+    with pytest.raises(ValueError, match="Effective FEM sub-step"):
+        comp.do_step(t=0.0, dt=0.1)
+
+    assert comp.solved == 0
+
+
+@pytest.mark.parametrize("adaptive_dt", [0.0, -0.1, float("inf"), float("nan")])
+def test_do_step_rejects_invalid_adaptive_substep(adaptive_dt):
+    comp = _SteppingFEM(nominal_dt=0.1, adaptive_dt=adaptive_dt)
+    comp.initialize(t0=0.0)
+
+    with pytest.raises(ValueError, match="Adaptive FEM sub-step"):
+        comp.do_step(t=0.0, dt=0.1)
+
+    assert comp.solved == 0
+
+
+def test_adaptive_substep_is_bounded_by_nominal_and_remaining_time():
+    comp = _SteppingFEM(nominal_dt=0.1, adaptive_dt=0.2)
+    comp.initialize(t0=0.0)
+
+    comp.do_step(t=0.0, dt=0.25)
+
+    assert comp.accepted_steps == pytest.approx([0.1, 0.1, 0.05])
+    assert comp.solved == 3
+    assert comp.t == pytest.approx(0.25)
+
+
+def test_do_step_rejects_unrepresentable_time_advance():
+    comp = _MiniFEM()
+    comp.initialize(t0=1.0)
+
+    with pytest.raises(ValueError, match="does not produce a finite time advance"):
+        comp.do_step(t=1.0, dt=1e-20)
+
+    assert comp.solved == 0
 
 
 # ---------------------------------------------------------------------------

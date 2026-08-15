@@ -24,6 +24,7 @@ Requires the ``ngsolve`` optional dependency (``pip install syssimx[fem]``).
 
 from __future__ import annotations
 
+import math
 from abc import abstractmethod
 from collections.abc import Callable
 from pathlib import Path
@@ -186,30 +187,67 @@ class FEMComponent(CoSimComponent):
         Overrides the single-shot ``CoSimComponent.do_step``: outputs and
         history are updated within each accepted sub-step so that recorded
         results and internal event hints are sub-step accurate.
+
+        A zero step is accepted as the no-op output evaluation used during
+        system initialization. All advancing macro and internal steps must be
+        finite and positive.
         """
         self._do_step_internal(t, dt)
 
     def _do_step_internal(self, t: float, dt: float) -> None:
+        if not self._is_initialized:
+            raise RuntimeError(f"[{self.name}] FEM component must be initialized before stepping.")
+        if not math.isfinite(t):
+            raise ValueError(f"[{self.name}] Step start time t must be finite.")
+        if not math.isfinite(dt) or dt < 0.0:
+            raise ValueError(f"[{self.name}] Macro step dt must be finite and non-negative.")
+
         self.internal_event_hints.clear()
+        if dt == 0.0:
+            self.t = t
+            return
+        if self.tau_step is None:
+            raise RuntimeError(f"[{self.name}] tau_step must be initialized before stepping.")
 
         effective_dt = self._effective_substep(dt)
+        if not math.isfinite(effective_dt) or effective_dt <= 0.0:
+            raise ValueError(
+                f"[{self.name}] Effective FEM sub-step must be finite and positive."
+            )
+
         t_current = t
         t_end = t + dt
+        if not math.isfinite(t_end) or t_end <= t:
+            raise ValueError(f"[{self.name}] Macro step dt does not produce a finite time advance.")
 
         with TaskManager():
-            while t_current < t_end - 1e-12:
-                tau = min(effective_dt, t_end - t_current)
-                self.tau_step.Set(tau)
+            while t_current < t_end:
+                remaining_dt = t_end - t_current
+                nominal_dt = min(effective_dt, remaining_dt)
+                self.tau_step.Set(nominal_dt)
+
+                # Hook: contact update / adaptive sub-step selection. May call
+                # self.tau_step.Set(...) to reduce the sub-step.
+                self._pre_solve(t_current, nominal_dt)
+
+                adaptive_dt = self.tau_step.Get()
+                if not math.isfinite(adaptive_dt) or adaptive_dt <= 0.0:
+                    raise ValueError(
+                        f"[{self.name}] Adaptive FEM sub-step must be finite and positive."
+                    )
+                accepted_dt = min(adaptive_dt, nominal_dt)
+                self.tau_step.Set(accepted_dt)
 
                 # Advance the Newmark history: previous <- current
                 self._shift_newmark_state()
 
-                # Hook: contact update / adaptive sub-step selection. May call
-                # self.tau_step.Set(...) to reduce the sub-step.
-                self._pre_solve(t_current, effective_dt)
-
                 # Commit the (possibly reduced) sub-step.
-                t_current += self.tau_step.Get()
+                next_t = t_end if accepted_dt == remaining_dt else t_current + accepted_dt
+                if next_t <= t_current:
+                    raise ValueError(
+                        f"[{self.name}] FEM sub-step is too small to advance simulation time."
+                    )
+                t_current = next_t
 
                 # Hook: nonlinear solve of the variational form.
                 self._solve_step()
