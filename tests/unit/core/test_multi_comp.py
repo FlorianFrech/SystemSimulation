@@ -14,6 +14,7 @@ from tests.fixtures.components import (
     EmptyMultiComponent,
     MockSubComponent,
     SimpleMultiComponent,
+    SwitchableMultiComponent,
     UnitMismatchMultiComponent,
 )
 
@@ -345,3 +346,214 @@ class TestReset:
         # All components should be reset
         for comp in mc.models.values():
             assert "reset()" in comp.call_log
+
+
+# ============================================================================
+# Test Switch Indicators (event-localized mode switching)
+# ============================================================================
+class TestSwitchIndicatorRegistration:
+    """Test registration and validation of switch indicators."""
+
+    def test_registers_indicator_and_event_port(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.add_switch_indicator(
+            name="to_fast",
+            func=lambda c: c.outputs["y"].get() - 1.0,
+            target_mode="FAST",
+            direction=1,
+        )
+        mc.initialize(t0=0.0)
+
+        assert "to_fast" in mc.event_indicators
+        assert mc._switch_targets["to_fast"] == "FAST"
+        # The wrapper exposes the switch as an ordinary EVENT output port.
+        assert "to_fast" in mc.output_specs
+        assert mc.has_state_events
+
+    def test_rejects_unknown_target_mode(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        with pytest.raises(ValueError, match="Unknown target mode"):
+            mc.add_switch_indicator("bad", lambda c: 0.0, target_mode="NOPE")
+
+    def test_rejects_name_colliding_with_submodel_indicator(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.models["SLOW"].add_event_indicator("shared", lambda c: 1.0)
+        with pytest.raises(KeyError, match="collides"):
+            mc.add_switch_indicator("shared", lambda c: 0.0, target_mode="FAST")
+
+    def test_rejects_registration_after_initialization(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.initialize(t0=0.0)
+
+        with pytest.raises(RuntimeError, match="before initialization"):
+            mc.add_switch_indicator("to_fast", lambda c: 0.0, target_mode="FAST")
+
+    def test_unify_ports_preserves_switch_event_port(self):
+        """``_unify_ports`` copies sub-model specs; own event ports must survive."""
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.add_switch_indicator("to_fast", lambda c: 0.0, target_mode="FAST")
+        mc.initialize(t0=0.0)
+
+        mc._unify_ports()
+
+        assert "to_fast" in mc.output_specs
+
+
+class TestSwitchIndicatorEvaluation:
+    """Test that switch indicators join the normal event pipeline."""
+
+    def test_indicators_merge_wrapper_and_active_model(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.models["SLOW"].add_event_indicator("physics", lambda c: 5.0)
+        mc.add_switch_indicator("to_fast", lambda c: -2.0, target_mode="FAST")
+        mc.initialize(t0=0.0)
+
+        values = mc.evaluate_event_indicators()
+
+        assert np.isclose(values["physics"], 5.0)
+        assert np.isclose(values["to_fast"], -2.0)
+
+    def test_indicator_receives_the_wrapper(self):
+        """The switch function is evaluated against the wrapper, not the sub-model."""
+        seen: list = []
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.add_switch_indicator("to_fast", lambda c: seen.append(c) or 1.0, target_mode="FAST")
+        mc.initialize(t0=0.0)
+
+        mc.evaluate_event_indicators()
+
+        assert seen and seen[0] is mc
+
+    def test_detect_crossings_covers_both_sources(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.models["SLOW"].add_event_indicator("physics", lambda c: 1.0)
+        mc.add_switch_indicator("to_fast", lambda c: 1.0, target_mode="FAST")
+        mc.initialize(t0=0.0)
+
+        crossed = mc.detect_event_crossings(
+            previous={"physics": -1.0, "to_fast": -1.0},
+            current={"physics": 1.0, "to_fast": 1.0},
+        )
+
+        assert set(crossed) == {"physics", "to_fast"}
+
+
+class TestSwitchOnEvent:
+    """Test that the switch is applied when the localized event is handled."""
+
+    def _plant(self, initial_mode: ModeKey = "SLOW"):
+        mc = SwitchableMultiComponent(name="Plant", initial_mode=initial_mode)
+        mc.add_switch_indicator(
+            name="to_fast",
+            func=lambda c: c.outputs["y"].get() - 1.0,
+            target_mode="FAST",
+            direction=1,
+        )
+        mc.initialize(t0=0.0)
+        return mc
+
+    def test_handling_switch_event_changes_mode(self):
+        mc = self._plant()
+        assert mc.active_mode == "SLOW"
+
+        mc.handle_event(["to_fast"], t=1.0)
+
+        assert mc.active_mode == "FAST"
+        assert mc.active_comp is mc.models["FAST"]
+
+    def test_switch_transfers_state_to_incoming_model(self):
+        mc = self._plant()
+        mc.do_step(0.0, 1.0)  # SLOW ramps y to 1.0
+
+        mc.handle_event(["to_fast"], t=1.0)
+
+        assert np.isclose(mc.models["FAST"].get_state()["y"], 1.0)
+
+    def test_no_switch_when_target_already_active(self):
+        mc = self._plant(initial_mode="FAST")
+        mc.handle_event(["to_fast"], t=1.0)
+        assert mc.active_mode == "FAST"
+        assert mc.sync_events == []
+
+    def test_model_events_still_reach_the_active_component(self):
+        handled: list = []
+        mc = self._plant()
+        mc.models["SLOW"]._handle_events_internal = lambda names, t: handled.append((names, t))
+
+        mc.handle_event(["physics", "to_fast"], t=1.0)
+
+        # The physics event goes to the outgoing model, and only that event.
+        assert handled == [(["physics"], 1.0)]
+        assert mc.active_mode == "FAST"
+
+    def test_dwell_window_suppresses_switch(self):
+        mc = self._plant()
+        mc.hysteresis = Hysteresis(dwell_time=0.5)
+        mc.hysteresis.record_switch(t=1.0)
+
+        mc.handle_event(["to_fast"], t=1.2)  # 0.2 s < 0.5 s dwell
+
+        assert mc.active_mode == "SLOW"
+
+    def test_disabled_switching_suppresses_switch(self):
+        """The hybrid algorithm disables switching during rolled-back trial steps."""
+        mc = self._plant()
+        mc._allow_mode_switching = False
+
+        mc.handle_event(["to_fast"], t=1.0)
+
+        assert mc.active_mode == "SLOW"
+
+    def test_unrelated_event_does_not_switch(self):
+        mc = self._plant()
+        mc.handle_event(["something_else"], t=1.0)
+        assert mc.active_mode == "SLOW"
+
+
+class TestLegacySwitchingUnaffected:
+    """Guard the pre-existing ``mode_selector`` path against regressions.
+
+    ``add_event_indicator`` broadcasts to the sub-models and keeps a copy on
+    the wrapper for port management only. The switch-indicator work must not
+    start treating those copies as wrapper-owned indicators.
+    """
+
+    def test_broadcast_indicator_is_evaluated_on_the_active_model_only(self):
+        seen: list[str] = []
+
+        def indicator(comp):
+            seen.append(comp.name)
+            return 1.0
+
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.add_event_indicator("threshold", indicator, direction=1)
+        mc.initialize(t0=0.0)
+
+        mc.evaluate_event_indicators()
+
+        # The wrapper's own copy must not be evaluated: the sub-model is the
+        # authoritative source, and evaluating both would overwrite its value.
+        assert seen == ["Plant_SLOW"]
+
+    def test_broadcast_indicator_is_not_a_switch_target(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.add_event_indicator("threshold", lambda c: 1.0, direction=1)
+        mc.initialize(t0=0.0)
+
+        assert mc._switch_targets == {}
+        assert mc.self_handled_events == []
+        # Handling it must reach the model, and must not switch mode.
+        mc.handle_event(["threshold"], t=1.0)
+        assert mc.active_mode == "SLOW"
+
+    def test_mode_selector_still_switches_on_the_macro_grid(self):
+        mc = SwitchableMultiComponent(name="Plant")
+        mc.mode_selector = lambda t: "FAST" if t >= 0.5 else "SLOW"
+        mc.initialize(t0=0.0)
+
+        mc.do_step(0.0, 0.4)
+        assert mc.active_mode == "SLOW"
+        mc.do_step(0.4, 0.4)  # selector polled at t = 0.4 -> still SLOW
+        assert mc.active_mode == "SLOW"
+        mc.do_step(0.8, 0.4)  # selector polled at t = 0.8 -> FAST
+        assert mc.active_mode == "FAST"

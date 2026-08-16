@@ -577,6 +577,41 @@ class System:
             "continuous_only": self.continuous_only,
         }
 
+    def _register_self_handled_events(self) -> None:
+        """Subscribe each component to the own events it declares it handles.
+
+        Mirrors what ``add_event_connection`` does for a connection whose
+        source and target are the same component. Components declare these
+        events through ``CoSimComponent.self_handled_events``.
+
+        Raises:
+            KeyError: If a component names an event it has not registered.
+        """
+        for comp in self.components.values():
+            for event_name in comp.self_handled_events:
+                if event_name not in comp.event_indicators:
+                    raise KeyError(
+                        f"Component '{comp.name}' declares self-handled event "
+                        f"'{event_name}', which is not a registered event indicator."
+                    )
+
+                already_subscribed = any(
+                    e.name == event_name and e.source == comp.name
+                    for e in comp.event_subscriptions
+                )
+                if not already_subscribed:
+                    comp.event_subscriptions.append(
+                        Event(
+                            name=event_name,
+                            source=comp.name,
+                            direction=comp.event_indicators[event_name].direction,
+                        )
+                    )
+
+                targets = self._event_targets_by_source.setdefault((comp.name, event_name), [])
+                if comp.name not in targets:
+                    targets.append(comp.name)
+
     # ----------------------------------------------------------------------------
     # Simulation Lifecycle
     # ----------------------------------------------------------------------------
@@ -634,6 +669,11 @@ class System:
             raise ValueError("Initial time t0 must be finite.")
 
         self.t = t0
+
+        # 0) Subscribe components to their own internally handled events, so
+        #    that self-contained events (such as a MultiComponent mode switch)
+        #    do not require the user to wire a component to itself.
+        self._register_self_handled_events()
 
         # 1) Classify components and auto-select hybrid algorithm
         self.classify_components()

@@ -277,6 +277,13 @@ class MultiComponent(CoSimComponent):
         # Flag to prevent mode switching during event detection
         self._allow_mode_switching: bool = True
 
+        # Switch indicators: maps the name of an event indicator registered on
+        # this wrapper to the mode that firing it requests. Populated by
+        # ``add_switch_indicator``. The indicators themselves live in the
+        # inherited ``event_indicators`` registry so that the hybrid algorithm
+        # localizes them exactly like any other state event.
+        self._switch_targets: dict[str, ModeKey] = {}
+
         # Latest input dict and timestamp seen by set_inputs. Used to
         # bring a newly activated model up to date during a mode switch
         # without forwarding inputs to inactive models on every step.
@@ -383,6 +390,129 @@ class MultiComponent(CoSimComponent):
                 f"{ref_spec} vs {spec}."
             )
 
+    # -------------------------------------------------------------------
+    # Event-Localized Mode Switching
+    # -------------------------------------------------------------------
+    def add_switch_indicator(
+        self,
+        name: str,
+        func: Callable[[CoSimComponent], float],
+        target_mode: ModeKey,
+        direction: int = 0,
+    ) -> None:
+        """Register a zero-crossing condition that requests a mode switch.
+
+        This is the event-localized alternative to :attr:`mode_selector`.
+        A ``mode_selector`` is polled at the top of each macro step, so the
+        switch lands on the communication grid and carries a placement error
+        of up to one macro step. A switch indicator is instead registered as
+        an ordinary event indicator, which means the hybrid algorithm detects
+        its crossing, narrows it by bisection, and only then applies the
+        switch, at the located instant.
+
+        The indicator function receives this wrapper (not the active
+        sub-model), so it should read the wrapper's cached output ports
+        rather than calling ``get_state()``.
+
+        Args:
+            name: Unique name for the switch condition. Must not collide
+                with an event indicator of this wrapper or of any sub-model.
+                An EVENT output port of this name is created, so the switch
+                can be observed and connected like any other event.
+            func: Callable taking this component and returning a float.
+                The switch is requested when the value crosses zero.
+            target_mode: Mode to activate when the crossing fires. Must be
+                a key in ``models``.
+            direction: Crossing direction, ``-1`` (falling), ``0`` (both,
+                default) or ``+1`` (rising).
+
+        Raises:
+            RuntimeError: If called after this component is initialized.
+            ValueError: If ``target_mode`` is not a registered mode, or if
+                ``direction`` is invalid.
+            KeyError: If ``name`` is already registered on this wrapper or
+                on any sub-model.
+
+        Example:
+            Switch to the FEM model when the pendulum approaches the wall::
+
+                plant.add_switch_indicator(
+                    name="to_fem",
+                    func=lambda c: abs(c.outputs["theta"].get()) - 0.075,
+                    target_mode="FEM",
+                    direction=-1,
+                )
+
+        Note:
+            ``mode_selector`` and switch indicators may be used together, but
+            they are alternative strategies for the same decision. Running the
+            same condition through each is how the placement error of the
+            grid-based switch is measured.
+
+        See Also:
+            :attr:`mode_selector`: Grid-based switching strategy
+            :class:`Hysteresis`: Dwell-time guard, applied to both strategies
+        """
+        if self._is_initialized:
+            raise RuntimeError(
+                f"{self.name}: Switch indicators must be registered before initialization."
+            )
+        if target_mode not in self.models:
+            raise ValueError(
+                f"{self.name}: Unknown target mode '{target_mode}'. "
+                f"Available modes: {list(self.models.keys())}"
+            )
+        for mode_key, comp in self.models.items():
+            if comp is not None and name in comp.event_indicators:
+                raise KeyError(
+                    f"{self.name}: Switch indicator '{name}' collides with an "
+                    f"event indicator of model '{mode_key}'."
+                )
+
+        # Deliberately bypass this class's ``add_event_indicator`` override,
+        # which broadcasts an indicator to every sub-model. A switch condition
+        # belongs to the wrapper and is evaluated against it, so it is
+        # registered here through the base implementation instead.
+        super().add_event_indicator(name, func, direction)
+        self._switch_targets[name] = target_mode
+
+    def _resolve_switch_target(self, event_names: list[str], t: float) -> ModeKey | None:
+        """Return the mode requested by ``event_names``, or ``None``.
+
+        Applies the same guards as the grid-based path. Returns ``None`` when
+        no switch event fired, when switching is disabled, when the requested
+        mode is already active, or when the hysteresis dwell window is open.
+
+        Args:
+            event_names: Names of the events that fired at ``t``.
+            t: Localized time at which the events fired.
+
+        Returns:
+            The requested mode key, or ``None`` if no switch should happen.
+
+        Note:
+            If several switch indicators fire at the same instant, the first
+            one in registration order that requests a different mode wins.
+        """
+        if not self._allow_mode_switching:
+            return None
+        for name in self._switch_targets:
+            if name not in event_names:
+                continue
+            target = self._switch_targets[name]
+            if target == self.active_mode:
+                continue
+            if self.hysteresis is not None and self.hysteresis.in_dwell_window(t):
+                logger.debug(
+                    "[%s] Switch to '%s' at t=%.6fs suppressed by dwell window.",
+                    self.name,
+                    target,
+                    t,
+                )
+                return None
+            return target
+        return None
+
     def _unify_ports(self) -> None:
         """Adopt port specifications from active component and validate compatibility.
 
@@ -399,10 +529,16 @@ class MultiComponent(CoSimComponent):
             regardless of which sub-model is active. All models must have at
             least the same ports as the active component (they may have more).
         """
-        # Adopt active component's port specs
+        # Adopt active component's port specs. Event ports belonging to this
+        # wrapper's own switch indicators are preserved: no sub-model declares
+        # them, so a plain copy would drop them.
         active_comp = self.active_comp
+        own_event_specs = {
+            name: spec for name, spec in self.output_specs.items() if name in self._switch_targets
+        }
         self.input_specs = active_comp.input_specs.copy()
         self.output_specs = active_comp.output_specs.copy()
+        self.output_specs.update(own_event_specs)
 
         # Validate: all models must have compatible ports
         for mode_key, comp in self.models.items():
@@ -415,8 +551,11 @@ class MultiComponent(CoSimComponent):
                     raise ValueError(f"{self.name}: Model '{mode_key}' missing input port '{name}'")
                 self._validate_port_compatibility(spec, comp.input_specs[name], mode_key, name)
 
-            # Check outputs
+            # Check outputs. Switch-indicator event ports are owned by this
+            # wrapper and are not expected on any sub-model.
             for name, spec in self.output_specs.items():
+                if name in self._switch_targets:
+                    continue
                 if name not in comp.output_specs:
                     raise ValueError(
                         f"{self.name}: Model '{mode_key}' missing output port '{name}'"
@@ -451,7 +590,6 @@ class MultiComponent(CoSimComponent):
         # also suppress recording on the active model's own history buffer.
         self.active_comp._record_history = self._record_history
         self.active_comp.do_step(t, dt)
-
 
     def _select_target_mode(self, t: float) -> ModeKey:
         """Return the desired mode at ``t``, honoring switching guards.
@@ -606,6 +744,10 @@ class MultiComponent(CoSimComponent):
         """
         active_comp = self.active_comp
         for name in self.output_specs.keys():
+            # Switch-indicator event ports exist only on this wrapper; they are
+            # driven by ``_apply_event_ports`` below, not by the active model.
+            if name not in active_comp.outputs:
+                continue
             value = active_comp.outputs[name].get()
             if value is not None:
                 self.outputs[name].set(value, t=t)
@@ -687,26 +829,37 @@ class MultiComponent(CoSimComponent):
         super().add_event_indicator(name, func, direction)
 
     def evaluate_event_indicators(self) -> dict[str, float]:
-        """Evaluate event indicators on the active component.
+        """Evaluate the active component's indicators and this wrapper's own.
 
-        Delegates to the active sub-component's event indicator
-        evaluation if it has state events configured.
+        The returned mapping merges two sources. The active sub-model's
+        indicators describe its physics, and this wrapper's switch indicators
+        describe when the active model should be exchanged. Both are handed to
+        the hybrid algorithm together, so a switch is localized by the same
+        bisection that localizes a physical state event.
 
         Returns:
-            Dictionary mapping indicator names to their current values.
-            Empty dict if active component has no event indicators.
+            Dictionary mapping indicator names to their current values. Empty
+            if neither the active component nor this wrapper has indicators.
         """
+        values: dict[str, float] = {}
         if self.active_comp.has_state_events:
-            return self.active_comp.evaluate_event_indicators()
-        return {}
+            values.update(self.active_comp.evaluate_event_indicators())
+        # Only switch indicators are evaluated here. Indicators added through
+        # ``add_event_indicator`` are broadcast to the sub-models and kept on
+        # this wrapper for port management only, so the active model above is
+        # already their authoritative source.
+        for name in self._switch_targets:
+            values[name] = self.event_indicators[name].evaluate(self)
+        return values
 
     def detect_event_crossings(
         self, previous: dict[str, float], current: dict[str, float], sign_tolerance: float = 1e-10
     ) -> list[str]:
-        """Detect zero-crossings on the active component.
+        """Detect zero-crossings on the active component and on this wrapper.
 
-        Delegates to the active sub-component's crossing detection
-        if it has state events configured.
+        Mirrors :meth:`evaluate_event_indicators`. The active sub-component
+        reports crossings of its own physics indicators, and this wrapper
+        reports crossings of its switch indicators.
 
         Args:
             previous: Indicator values before the step.
@@ -714,12 +867,18 @@ class MultiComponent(CoSimComponent):
             sign_tolerance: Threshold for zero detection.
 
         Returns:
-            List of indicator names that experienced crossings.
-            Empty list if active component has no event indicators.
+            List of indicator names that experienced crossings, without
+            duplicates. Empty if neither source has indicators.
         """
+        events: list[str] = []
         if self.active_comp.has_state_events:
-            return self.active_comp.detect_event_crossings(previous, current, sign_tolerance)
-        return []
+            events.extend(self.active_comp.detect_event_crossings(previous, current, sign_tolerance))
+        # Restricted to switch indicators for the same reason as
+        # ``evaluate_event_indicators``: the others are the active model's.
+        for name in super().detect_event_crossings(previous, current, sign_tolerance):
+            if name in self._switch_targets and name not in events:
+                events.append(name)
+        return events
 
     def snapshot_state(self):
         """Capture state snapshot from the active component.
@@ -754,8 +913,13 @@ class MultiComponent(CoSimComponent):
 
     @property
     def has_state_events(self) -> bool:
-        """``True`` if the currently active sub-component has event indicators."""
-        return self.active_comp.has_state_events
+        """``True`` if this wrapper has switch indicators or the active model has events."""
+        return bool(self._switch_targets) or self.active_comp.has_state_events
+
+    @property
+    def self_handled_events(self) -> list[str]:
+        """Switch events are handled by this wrapper, so it subscribes itself."""
+        return list(self._switch_targets)
 
     @property
     def supports_rollback(self) -> bool:
@@ -763,13 +927,28 @@ class MultiComponent(CoSimComponent):
         return self.active_comp.supports_rollback
 
     def _handle_events_internal(self, event_names: list[str], t: float) -> None:
-        """Delegate event handling to the active component.
+        """Handle model events on the active component, then apply any switch.
+
+        Called by the hybrid algorithm once the event time has been localized
+        by bisection and the state has been advanced to it. Switching here,
+        rather than at the top of the next macro step, is what places the
+        transition at the crossing instant instead of on the macro grid.
+
+        The ordering matters. Model events are handled first, on the model
+        that produced them, so that the state handed to the incoming model is
+        the post-event state.
 
         Args:
             event_names: List of events that occurred at time ``t``.
-            t: Precise time at which the events occurred.
+            t: Localized time at which the events occurred.
         """
-        self.active_comp.handle_event(event_names, t)
+        model_events = [name for name in event_names if name not in self._switch_targets]
+        if model_events:
+            self.active_comp.handle_event(model_events, t)
+
+        target_mode = self._resolve_switch_target(event_names, t)
+        if target_mode is not None:
+            self._switch_mode(target_mode, t)
 
     def get_internal_event_hints(self) -> list[InternalEventInfo]:
         """Retrieve internal event hints from the active component.
