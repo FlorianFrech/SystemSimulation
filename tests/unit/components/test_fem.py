@@ -204,6 +204,37 @@ def test_adaptive_substep_is_bounded_by_nominal_and_remaining_time():
     assert comp.t == pytest.approx(0.25)
 
 
+def test_substep_loop_does_not_take_a_vanishing_residual_step():
+    """Regression: a macro step split into many equal sub-steps must not end
+    with a floating-point residue sub-step.
+
+    ``_advance_newmark`` computes ``v = 2/tau (u - u_old)``. A residue of order
+    1e-18 gives an amplifier of order 1e17, which turns round-off into
+    unbounded velocities and diverges the nonlinear solve. Reproduces the
+    controlled-pendulum contact ratio: a 1e-4 s adaptive sub-step inside a
+    1e-2 s macro step.
+    """
+    comp = _SteppingFEM(nominal_dt=2e-3, adaptive_dt=1e-4)
+    comp.initialize(t0=0.0)
+
+    comp.do_step(t=0.0, dt=1e-2)
+
+    assert len(comp.accepted_steps) == 100
+    assert min(comp.accepted_steps) == pytest.approx(1e-4)
+    assert comp.t == 1e-2
+
+
+def test_substep_loop_still_covers_the_full_macro_step():
+    """The residue tolerance must not drop real work: sub-steps still sum to dt."""
+    comp = _SteppingFEM(nominal_dt=3e-4, adaptive_dt=3e-4)
+    comp.initialize(t0=0.0)
+
+    comp.do_step(t=0.0, dt=1e-3)
+
+    assert sum(comp.accepted_steps) == pytest.approx(1e-3, rel=1e-9)
+    assert comp.t == pytest.approx(1e-3)
+
+
 def test_do_step_rejects_unrepresentable_time_advance():
     comp = _MiniFEM()
     comp.initialize(t0=1.0)

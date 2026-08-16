@@ -34,6 +34,13 @@ from ngsolve import GridFunction, TaskManager
 
 from ..core.base import CoSimComponent
 
+#: Fraction of a macro step below which a remaining sub-step interval counts as
+#: exhausted. Sub-steps are accumulated in floating point, so the final residue
+#: of a macro step is generally tiny but non-zero. Such a residue must not be
+#: stepped: :meth:`FEMComponent._advance_newmark` divides by the sub-step, so a
+#: vanishing tau turns round-off into unbounded velocities.
+_SUBSTEP_TIME_REL_TOL = 1e-9
+
 
 class FEMComponent(CoSimComponent):
     """Abstract NGSolve transient structural-mechanics component.
@@ -220,8 +227,15 @@ class FEMComponent(CoSimComponent):
         if not math.isfinite(t_end) or t_end <= t:
             raise ValueError(f"[{self.name}] Macro step dt does not produce a finite time advance.")
 
+        # Floating-point accumulation over many sub-steps leaves a residual
+        # interval that is not exactly zero. Treat such a residue as exhausted:
+        # stepping it would hand a vanishing tau to _advance_newmark, whose
+        # v = 2/tau (u - u_old) update then amplifies round-off into unbounded
+        # velocities instead of advancing the solution.
+        time_tol = _SUBSTEP_TIME_REL_TOL * dt
+
         with TaskManager():
-            while t_current < t_end:
+            while t_current < t_end - time_tol:
                 remaining_dt = t_end - t_current
                 nominal_dt = min(effective_dt, remaining_dt)
                 self.tau_step.Set(nominal_dt)
@@ -269,7 +283,11 @@ class FEMComponent(CoSimComponent):
                 # Hook: live visualization / monitoring update.
                 self._after_substep(t_current)
 
-        self.t = t_current
+        # Any unstepped remainder is below ``time_tol`` and represents only
+        # accumulation round-off. Expose the exact accepted macro endpoint to
+        # the orchestration layer rather than leaking that residue into the
+        # next step's component time.
+        self.t = t_end
 
     # ---- Step hooks (overridable; sensible defaults) ----
     def _effective_substep(self, dt: float) -> float:
