@@ -122,6 +122,73 @@ class SimpleMultiComponent(MultiComponent):
         return state.copy()
 
 
+class RampSubComponent(CoSimComponent):
+    """Rollback-capable ramp model, for event-localized switching tests.
+
+    Integrates ``y`` at a constant ``rate`` so that the time at which ``y``
+    reaches a threshold is known analytically. This makes the placement of a
+    localized switch checkable against a closed-form expectation.
+    """
+
+    def __init__(self, name: str, rate: float = 1.0):
+        super().__init__(name, label=name)
+        self.rate = rate
+        self._y = 0.0
+        self.input_specs = {
+            "u": PortSpec(name="u", type=PortType.REAL, unit="N", direction="in"),
+        }
+        self.output_specs = {
+            "y": PortSpec(name="y", type=PortType.REAL, unit="m", direction="out"),
+        }
+
+    def _initialize_component(self, t0: float) -> None:
+        self._y = 0.0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        self._y += self.rate * dt
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["y"].set(self._y, t=t)
+        self._apply_event_ports(t, event_names)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._y = float(state["y"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._y = float(snapshot["y"])
+
+    def reset(self) -> None:
+        self._y = 0.0
+
+
+class SwitchableMultiComponent(MultiComponent):
+    """Rollback-capable MultiComponent used for switch-indicator tests.
+
+    Both modes are :class:`RampSubComponent` instances with different rates,
+    so the active mode is identifiable from the output slope, and state
+    transfer carries ``y`` across a switch unchanged.
+    """
+
+    def __init__(self, name: str, initial_mode: ModeKey = "SLOW"):
+        models = {
+            "SLOW": RampSubComponent(f"{name}_SLOW", rate=1.0),
+            "FAST": RampSubComponent(f"{name}_FAST", rate=4.0),
+        }
+        super().__init__(name, models=models, initial_mode=initial_mode)
+        self._unify_ports()
+
+    def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
+        return state.copy()
+
+
 class IncompatibleMultiComponent(MultiComponent):
     """
     MultiComponent with incompatible sub-components for testing validation.

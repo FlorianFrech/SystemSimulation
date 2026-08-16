@@ -1300,6 +1300,26 @@ class CoSimComponent(ABC):
         self.event_subscriptions.append(event)
 
     @property
+    def self_handled_events(self) -> list[str]:
+        """Names of own events this component reacts to without external wiring.
+
+        Events normally reach a component through an :class:`EventConnection`.
+        Some components own events whose effect is purely internal, so
+        requiring the user to wire the component to itself would be ceremony
+        that is easy to forget. ``System.initialize()`` subscribes the
+        component to every event named here.
+
+        Returns:
+            Event indicator names, all of which must be registered on this
+            component. Empty by default.
+
+        See Also:
+            :meth:`MultiComponent.add_switch_indicator`: Registers a mode
+            switch, which is handled by the wrapper that owns it.
+        """
+        return []
+
+    @property
     def has_event_subscriptions(self) -> bool:
         """Check if this component subscribes to external events.
 
