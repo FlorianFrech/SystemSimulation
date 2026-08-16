@@ -78,6 +78,7 @@ dev = [
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-book-theme>=1.1.0",
     "myst-nb>=1.1.0",
+    "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
 ]
 
 # Complete installation with all features
@@ -104,6 +105,7 @@ dev = [
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-book-theme>=1.1.0",
     "myst-nb>=1.1.0",
+    "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
 ]
 
 [project.urls]
