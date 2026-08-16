@@ -821,36 +821,53 @@ class HybridAlgorithm(Algorithm):
         Executes all permutations of event handling and checks if the final state is the same.
         This requires the component to support state snapshotting and restoration.
 
+        The probe runs inside :meth:`_trial_step`, which suppresses history
+        recording and, for multi-model components, mode switching. Suppressing
+        the switch is required for correctness of the probe itself: a snapshot
+        is only valid for the sub-model that produced it, so a handler that
+        changed the active model would leave the next ``restore_state`` pushing
+        a snapshot into a different model, which components are entitled to
+        reject.
+
         Args:
             comp (CoSimComponent): The component to verify commutativity for.
             event_names (list[str]): The list of event names to test in permutations.
 
         Returns:
             bool: True if all permutations result in the same final state, False otherwise.
+
+        Note:
+            Because switching is suppressed, switch events act as no-ops inside
+            the probe and therefore always compare as commutative. Two switch
+            requests that resolve to different modes at the same instant are a
+            modelling error the probe cannot detect; separate their thresholds
+            so they cannot fire simultaneously.
         """
         from itertools import permutations
 
-        # 1) Save initial state
-        initial_snapshot = comp.snapshot_state()
-        t = comp.t
+        with self._trial_step(comp):
+            # 1) Save initial state
+            initial_snapshot = comp.snapshot_state()
+            t = comp.t
 
-        # 2) Iterate over all orderings
-        results = []
-        for ordering in permutations(event_names):
-            # a) Restore initial state
+            # 2) Iterate over all orderings
+            results = []
+            for ordering in permutations(event_names):
+                # a) Restore initial state
+                comp.restore_state(initial_snapshot, t=t)
+
+                # b) Handle events in the specified order
+                for event_name in ordering:
+                    comp._handle_events_internal([event_name], t=t)
+                    comp._update_output_states()
+
+                # c) Record final state
+                final_state = comp.get_state()
+                results.append(final_state)
+
+            # 3) Restore to initial state before leaving the probe
             comp.restore_state(initial_snapshot, t=t)
 
-            # b) Handle events in the specified order
-            for event_name in ordering:
-                comp._handle_events_internal([event_name], t=t)
-                comp._update_output_states()
-
-            # c) Record final state
-            final_state = comp.get_state()
-            results.append(final_state)
-
-        # 3) Check if all results are identical
-        comp.restore_state(initial_snapshot, t=t)  # Restore to initial state
         first_result = results[0]
         if all(self._states_equal(first_result, other) for other in results[1:]):
             logger.debug(

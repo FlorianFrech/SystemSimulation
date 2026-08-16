@@ -19,6 +19,13 @@ from tests.fixtures.components import (
 )
 
 
+def _magnitude(value, default: float = 0.0) -> float:
+    """Unwrap a port value, which may be a Pint ``Quantity``."""
+    if value is None:
+        return default
+    return float(getattr(value, "magnitude", value))
+
+
 # ============================================================================
 # Test Hysteresis Class
 # ============================================================================
@@ -468,6 +475,24 @@ class TestSwitchOnEvent:
         mc.handle_event(["to_fast"], t=1.0)
 
         assert np.isclose(mc.models["FAST"].get_state()["y"], 1.0)
+
+    def test_switch_refreshes_the_incoming_model_outputs(self):
+        """Regression: the incoming model must publish the transferred state.
+
+        A model that has been inactive still holds the outputs it wrote when it
+        was last active. If the switch does not refresh them, the wrapper copies
+        those stale values and the recorded trajectory shows a jump at the
+        handover even though the physical state is continuous.
+        """
+        mc = self._plant()
+        # Leave a stale value on the incoming model, as an earlier activation would.
+        mc.models["FAST"].outputs["y"].set(-99.0, t=0.0)
+        mc.do_step(0.0, 1.0)  # SLOW ramps y to 1.0
+
+        mc.handle_event(["to_fast"], t=1.0)
+
+        assert np.isclose(_magnitude(mc.models["FAST"].outputs["y"].get()), 1.0)
+        assert np.isclose(_magnitude(mc.outputs["y"].get()), 1.0)
 
     def test_no_switch_when_target_already_active(self):
         mc = self._plant(initial_mode="FAST")
