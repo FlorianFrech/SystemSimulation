@@ -670,6 +670,15 @@ class MultiComponent(CoSimComponent):
             signals, t_inputs = self._latest_inputs
             new_comp.set_inputs(signals, t_inputs)
         new_comp.set_state(adapted, t)
+
+        # Publish the transferred state on the incoming model's output ports.
+        # ``set_state`` updates internal state but is not required to publish it,
+        # and a model that has been inactive still holds the outputs it wrote
+        # when it was last active. Without this refresh the wrapper would copy
+        # and record those stale values, so the handover would appear as a jump
+        # in the recorded trajectory even though the physical state is continuous.
+        new_comp._update_output_states(t)
+
         self.active_mode = new_mode
         self.active_comp = new_comp
         return retrieved

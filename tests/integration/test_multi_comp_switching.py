@@ -142,6 +142,37 @@ class TestSwitchSemantics:
 
         assert slope_after > slope_before
 
+    def test_commutativity_probe_does_not_change_the_active_mode(self):
+        """Regression: the probe must not switch models underneath its snapshots.
+
+        ``_verify_event_commutativity_dynamically`` snapshots the component,
+        replays each ordering, and restores between them. A snapshot is only
+        valid for the sub-model that produced it, so a handler that switched the
+        active model would leave the next restore pushing a snapshot into a
+        different model. The probe therefore runs with switching suppressed.
+        """
+        plant = _build_plant(localized=True)
+        plant.add_switch_indicator(
+            name="to_slow",
+            func=lambda c: THRESHOLD - _magnitude(c.outputs["y"].get()),
+            target_mode="SLOW",
+            direction=1,
+        )
+        system = System(name="ProbeSystem")
+        system.add_component(plant)
+        algorithm = HybridAlgorithm()
+        algorithm.verbose = False
+        system.algorithm = algorithm
+        system.initialize(t0=0.0)
+
+        mode_before = plant.active_mode
+        commutes = algorithm._verify_event_commutativity_dynamically(
+            plant, ["to_fast", "to_slow"]
+        )
+
+        assert plant.active_mode == mode_before
+        assert isinstance(commutes, bool)
+
     def test_dwell_window_blocks_the_switch(self):
         plant = _build_plant(localized=True)
         plant.hysteresis = Hysteresis(dwell_time=T_END)
