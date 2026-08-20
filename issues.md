@@ -336,6 +336,74 @@ does not claim preservation of FEM deformation/stress/elastic energy, contact st
 or backend solver history; those fidelity questions remain open in MC-10. Broader backend contract
 coverage and a second structural FEM example also remain in HARD-01.
 
+## Milestone 5 implementation record
+
+Milestone 5 was implemented on 2026-08-20 on the stacked branch
+`validation/real-backend-lifecycle`. It closes the real-backend lifecycle and transactional
+side-effect gaps without adding wall contact or another switching mechanism.
+
+- `ca7f339` makes FMU ownership, backend reset, and nonzero initialization time deterministic;
+- `e1c4211` adds lightweight real FEM/FMU/OpenSim lifecycle and rollback tests;
+- `b090a62` releases all demo-owned OpenSim runtime references on reset and verifies replacement.
+
+Implemented behavior and evidence:
+
+- A reset and reinitialize of the same `System` at a nonzero `t0` is compared with a newly
+  constructed system. Active region, active model, wrapper and child clocks, ports, histories,
+  monitoring state, switch log, and canonical state agree for every backend.
+- `System.initialize(t0)` now performs its output-refresh zero step at `t0`, rather than resetting
+  component clocks to literal zero.
+- A real FEM-to-FMU transaction is rejected after target import. Rollback restores source and target
+  canonical state, FEM vectors, ports, histories, monitoring state, time, active identity, and switch
+  log. The abandoned FMU instance is terminated and freed exactly once; rollback uses a newly
+  initialized native instance instead of illegally instantiating the old wrapper twice.
+- Trial advances are executed once with each of FEM, OpenSim, and FMU active. Wrapper and child
+  histories, FEM multidimensional histories, monitoring, visualization, callbacks, logs, ports,
+  time, region, and switch records remain observationally unchanged.
+- FMU reset now terminates and frees the native instance, removes its extracted directory, and still
+  clears framework state if native cleanup reports an error. Reinitialization creates one fresh
+  instance from the existing extraction during rollback and re-extracts after a full reset.
+- The checked-in Euler and CVODE FMUs declare neither `canGetAndSetFMUstate` nor
+  `canSerializeFMUstate`. Checkpoints therefore reconstruct their documented physical state and
+  deliberately discard solver-internal history; unsupported FMI state functions are not called.
+- The OpenSim pendulum releases its model, state, manager, coordinate, and actuator references on
+  reset; reinitialization constructs a different native object graph. FEM and OpenSim reset are also
+  safe before backend initialization.
+
+The real tests reuse a coarse first-order FEM mesh and disable contact, gravity, and animation. No
+wall-contact solve was added to the fast gate.
+
+Measured verification on Windows, Python 3.13.5, Pytest 9.1.1:
+
+- repository/source Ruff checks: passed;
+- MyPy: passed for all 27 source files;
+- final lifecycle slice: **89 passed in 6.39 s**;
+- final exact-tip real-backend cleanup slice: **15 passed in 6.14 s**;
+- full backend-enabled suite with coverage: **640 passed, 1 skipped**, 89% coverage, in 168.76 s;
+- strict offline Sphinx documentation: passed without warnings;
+- locked `uv build --no-sources`: passed.
+
+The final commands were:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx tests demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py demos/ControlledPendulum/src/master_pendulum/components/fmu/fmu_pendulum.py
+.\.venv\Scripts\python.exe -m ruff check --no-cache demos/ControlledPendulum/src/master_pendulum/components/opensim/opensim_pendulum.py tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py
+.\.venv\Scripts\python.exe -m mypy syssimx --ignore-missing-imports --python-version 3.13 --cache-dir "$env:TEMP\syssimx-m5-final-mypy"
+.\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m5-final2-pytest" tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py tests/unit/system/test_system.py -q
+.\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m5-opensim-cleanup-pytest" tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py -q
+$env:COVERAGE_FILE = "$env:TEMP\syssimx-m5-tip.coverage"
+.\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m5-tip-full-pytest" tests --cov=syssimx --cov-report=term-missing -q
+$env:SYSSIMX_DOCS_OFFLINE = "1"
+.\.venv\Scripts\python.exe -m sphinx -q -b html -W --keep-going -d "$env:TEMP\syssimx-m5-final2-doctrees" docs "$env:TEMP\syssimx-m5-final2-docs"
+uv build --no-sources --out-dir "$env:TEMP\syssimx-m5-final-dist"
+```
+
+The unchanged skip is the generic FMU fixture whose archive contains `linux64` and C sources but no
+`win64` binary. The native OpenSim library also prints a non-fatal warning when it cannot create
+`opensim.log` in the managed runner; application and framework logging remains silent during trial
+advances. Acceleration, energy, flexible/contact state, and backend solver-history fidelity remain
+open in MC-10. Real angle-policy macro-step evidence remains open in MC-14.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -672,7 +740,7 @@ decision source.
 
 **Priority:** Medium
 
-**Status:** Partially resolved by Milestone 4. Transfers are atomic and now have a canonical,
+**Status:** Partially resolved by Milestones 4 and 5. Transfers are atomic and now have a canonical,
 unit-normalized acceptance contract for angle, angular velocity, and torque. Higher-fidelity and
 conservation guarantees remain open.
 
@@ -683,7 +751,9 @@ to each component. In the master pendulum:
 - Re-entering FEM reconstructs rigid displacement/velocity/acceleration fields and loses flexible
   deformation, stress, and elastic energy.
 - OpenSim recreates its integration manager.
-- The CVODE FMU is reconstructed from physical variables rather than a complete solver state.
+- Both checked-in FMUs are reconstructed from physical variables rather than complete solver state;
+  their FMI capability metadata explicitly declares native state get/set and serialization
+  unavailable.
 
 The real six-direction test proves continuity of the canonical state within configurable absolute
 tolerances. Acceleration, energy, contact state, flexible deformation/stress, and solver history may
@@ -767,15 +837,15 @@ Centralizing all mode strings in a stronger type remains optional cleanup.
 
 **Priority:** Medium
 
-**Status:** Partially resolved by Milestone 4. Generic localization, hysteresis, chronological
+**Status:** Partially resolved by Milestones 4 and 5. Generic localization, hysteresis, chronological
 multi-boundary processing, rollback, and reset scenarios use generated region boundaries. A fast
 automated test now switches one real `MasterPendulum` through all six directed FEM/FMU/OpenSim
-pairs. Backend-specific reset/reinitialize, trial-side-effect, and real-policy macro-step studies
-remain open.
+pairs and validates real reset/reinitialize, resource ownership, failed-transfer rollback, and
+trial purity. The real angle-policy macro-step study remains open.
 
 The real trajectory now detects initialization-order and canonical projection regressions.
-Backend-specific speculative UI/history side effects and resource lifecycle failures still need
-dedicated assertions.
+Backend-specific speculative UI/history effects and resource lifecycle replacement now have
+dedicated assertions without contact, gravity, or animation work.
 
 **Suggested solution**
 
@@ -784,9 +854,9 @@ Add layered tests:
 1. [ ] Backend-independent contract tests for every component implementation.
 2. [x] Pairwise transfer tests for FEM ↔ OpenSim, FEM ↔ FMU, and OpenSim ↔ FMU.
 3. [x] A short three-mode trajectory test with switch-time and continuity assertions.
-4. [ ] Real-backend trial-step purity tests for history, monitoring, visualization, and logs;
+4. [x] Real-backend trial-step purity tests for history, monitoring, visualization, and logs;
    generic transactional coverage already exists.
-5. [ ] Real-backend reset/reinitialize tests covering active region, active mode, switch history,
+5. [x] Real-backend reset/reinitialize tests covering active region, active mode, switch history,
    and resource cleanup; generic lifecycle coverage already exists.
 6. [ ] Macro-step-independence tests for the real angle-region configuration; deterministic region
    localization coverage already exists.
@@ -1025,12 +1095,12 @@ There is no independent master-algorithm comparison for the FMU-only baseline.
 
 **Priority:** High
 
-**Status:** Partially resolved by Milestone 4. The real composition now exercises OpenSim and every
+**Status:** Partially resolved by Milestones 4 and 5. The real composition now exercises OpenSim and every
 directed backend transfer in CI. Standalone OpenSim contracts, platform-complete generic FMU
 fixtures, and a second structural FEM example remain open.
 
 `tests/unit/components/test_opensim.py` is empty. The real composition raises recorded coverage of
-`syssimx/components/opensim.py` to 89%, but does not isolate its contracts. OpenSim represents one
+`syssimx/components/opensim.py` to 90%, but does not isolate its contracts. OpenSim represents one
 third of the heterogeneity claim. FMU coverage is also incomplete on platforms without fixtures,
 and FEM has only one structural case study.
 
@@ -1252,13 +1322,14 @@ together. Test-only forced cycling already lives in an external signal harness.
 
 ## Prioritized next steps
 
-Milestones 1 through 4 established the release-candidate switching mechanism and its canonical
-real-backend transfer gate. The remaining order focuses on higher-fidelity characterization and
-paper/release evidence without reopening the public API.
+Milestones 1 through 5 established the release-candidate switching mechanism, its canonical
+real-backend transfer gate, and its lifecycle/rollback guarantees. The remaining order focuses on
+higher-fidelity characterization and paper/release evidence without reopening the public API.
 
-1. **Characterize residual transfer losses:** MC-10 and the remaining MC-14 lifecycle cases. Measure
-   acceleration and energy discontinuities, specify flexible/contact-state loss semantics, and add
-   real-backend reset and trial-purity checks without putting contact into the fast switching test.
+1. **Characterize residual transfer losses:** MC-10 and the remaining MC-14 macro-step case. Measure
+   acceleration and energy discontinuities, specify flexible/contact-state and solver-history loss
+   semantics, and test the real angle-region policy across macro-step sizes. Keep contact out of the
+   fast switching test; use a separate scheduled physics gate for it.
 2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
 3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
