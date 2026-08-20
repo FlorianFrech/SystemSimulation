@@ -96,6 +96,50 @@ The package build produced:
 - `syssimx-0.2.0-py3-none-any.whl` — SHA-256
   `332D084DEF2945E74E900DCA5B9ADD3DE59EBB259B109640C136928F8A7FCC91`.
 
+## Milestone 1 implementation record
+
+Milestone 1 was implemented on 2026-08-20 in the protected
+`SystemSimulation-region-switching` worktree. The implementation establishes the canonical region
+mechanism without yet deleting the legacy selector and fixed-target APIs; those remain temporarily
+for the explicit example migration and removal work in Stage 2.
+
+Implemented behavior:
+
+- `SwitchRegions` and `RegionBoundary` are immutable validated domain objects. A configuration with
+  `N` region assignments requires exactly `N - 1` strictly ordered boundaries, a finite nonzero band
+  per boundary, non-overlapping bands, known model keys, and rollback support in every reachable
+  model.
+- `active_region_index` is the authoritative runtime identity. `active_mode` and `active_comp` are
+  derived from it after initialization, so disconnected regions may reuse a model key, such as
+  `A -> B -> A -> C`. Missing or out-of-range runtime identity raises instead of falling back to
+  region zero.
+- Each physical boundary is registered once as a private bidirectional event. Its active threshold
+  is the upper band edge while the active region is below the boundary and the lower band edge while
+  the active region is above it.
+- `EventBracket` carries the final sign-change interval through bisection and dispatch. The target is
+  resolved from the crossed boundary plus the bracket's direction; event acceptance no longer
+  depends on the localized endpoint also satisfying `tol_value`.
+- Minimum dwell timing and every notebook/test reference to it were removed. A full-band recrossing
+  is never suppressed based on elapsed time, including an opposite-direction crossing of the same
+  boundary inside one macro step.
+- Region reconciliation runs once during initialization. Accepted steps do not poll the region map,
+  and there is no pending/deferred repair state.
+- The hybrid loop localizes the earliest boundary, commits one adjacent transition, and continues the
+  unused part of the macro step so additional boundaries are processed chronologically.
+
+Regression coverage now pins one transition per crossing, no return switch inside a band, rapid
+full-band recrossing, repeated model assignments, chronological multi-boundary processing,
+macro-step-independent placement, one-time initialization reconciliation, and hard failure for an
+invalid runtime region.
+
+Current verification on Python 3.13.5:
+
+- Ruff: passed for `syssimx/` and `tests/`;
+- MyPy: passed for all 27 source files;
+- full pytest suite: 621 passed, 1 skipped (the unchanged win64 FMU-fixture skip);
+- strict offline Sphinx build: passed without warnings;
+- locked `uv build --no-sources`: passed.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
