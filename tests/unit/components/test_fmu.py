@@ -34,9 +34,7 @@ _FMU_FIXTURE_PATHS = [
 ]
 
 _unsupported_fixture_platforms = [
-    path
-    for path in _FMU_FIXTURE_PATHS
-    if fmpy.platform not in fmpy.supported_platforms(str(path))
+    path for path in _FMU_FIXTURE_PATHS if fmpy.platform not in fmpy.supported_platforms(str(path))
 ]
 if _unsupported_fixture_platforms:
     pytest.skip(
@@ -568,10 +566,14 @@ class TestFMUComponentReset:
     def test_reset_clears_instance(self, pendulum):
         """Test that reset clears the FMU instance."""
         assert pendulum._instance is not None
+        unzipdir = Path(pendulum._unzipdir)
+        assert unzipdir.is_dir()
 
         pendulum.reset()
 
         assert pendulum._instance is None
+        assert pendulum._unzipdir is None
+        assert not unzipdir.exists()
 
     def test_reset_clears_history(self, pendulum):
         """Test that reset clears history."""

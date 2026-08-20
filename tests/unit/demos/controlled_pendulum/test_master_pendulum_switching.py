@@ -31,6 +31,17 @@ def test_none_switch_config_keeps_one_fixed_model():
     assert not plant.event_indicators
 
 
+def test_reset_before_backend_initialization_is_safe():
+    plant = MasterPendulum(switch_config=None)
+
+    plant.reset()
+
+    assert plant.active_mode == "FMU"
+    assert plant.active_region_index is None
+    assert plant.sync_events == []
+    assert all(not model._is_initialized for model in plant.models.values())
+
+
 def test_master_pendulum_declares_feedthrough_before_backend_initialization():
     plant = MasterPendulum(switch_config=None)
 

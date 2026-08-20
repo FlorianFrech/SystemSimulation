@@ -338,6 +338,7 @@ class TestSystemInitialization:
         sys.initialize(t0=1.5)
 
         assert sys.t == 1.5
+        assert comp.t == 1.5
 
     def test_initialize_builds_graphs(self):
         """Test that initialize automatically builds graphs."""
