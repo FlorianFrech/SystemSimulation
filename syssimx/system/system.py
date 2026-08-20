@@ -482,7 +482,7 @@ class System:
         targets = self.get_event_targets(event.source, event.name)
         if notify:
             for comp_name in targets:
-                self.components[comp_name].handle_event([event.name], t)
+                self.components[comp_name].handle_event([event.name], t, events=[event])
         return targets
 
     # ----------------------------------------------------------------------------

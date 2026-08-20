@@ -215,6 +215,7 @@ class CoSimComponent(ABC):
         self.event_subscriptions: list[Event] = []
         self.event_annotations: dict[str, dict[str, Any]] = {}
         self.event_commutativity: dict[tuple[str, str], bool] = {}
+        self._events_being_handled: dict[str, Event] = {}
 
         # Initialization tracking
         self._is_initialized: bool = False
@@ -1336,7 +1337,9 @@ class CoSimComponent(ABC):
         """
         return bool(self.event_subscriptions)
 
-    def handle_event(self, event_names: list[str], t: float) -> None:
+    def handle_event(
+        self, event_names: list[str], t: float, events: list[Event] | None = None
+    ) -> None:
         """Process detected events and update component state.
 
         Called by the master algorithm when events are detected and
@@ -1366,9 +1369,16 @@ class CoSimComponent(ABC):
         See Also:
             :meth:`_handle_events_internal`: Subclass hook for event logic
         """
-        self._handle_events_internal(event_names, t)
-        self._update_output_states(t, event_names)
-        self._record_outputs(t)
+        if events is not None and {event.name for event in events} != set(event_names):
+            raise ValueError("Event metadata must match the handled event names.")
+        previous_events = self._events_being_handled
+        self._events_being_handled = {event.name: event for event in events or []}
+        try:
+            self._handle_events_internal(event_names, t)
+            self._update_output_states(t, event_names)
+            self._record_outputs(t)
+        finally:
+            self._events_being_handled = previous_events
 
     def _handle_events_internal(self, event_names: list[str], t: float) -> None:
         """Subclass hook for custom event handling logic.

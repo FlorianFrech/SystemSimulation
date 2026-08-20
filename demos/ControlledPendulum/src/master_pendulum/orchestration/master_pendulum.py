@@ -3,7 +3,7 @@ from typing import Any, Literal
 import numpy as np
 from IPython.display import display
 
-from syssimx.core.multi_comp import Hysteresis, MultiComponent
+from syssimx.core.multi_comp import MultiComponent
 
 from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
 from ..monitoring import PendulumMonitor, PendulumMonitoringState
@@ -54,9 +54,6 @@ class MasterPendulum(MultiComponent):
             "OpenSim": self.opensim.get_parameters(),
             "FMU": self.fmu.get_parameters(),
         })
-
-        # Configure mode switching hysteresis
-        self.hysteresis = Hysteresis(dwell_time=0.05)
 
         # Simulation parameters (set during initialization)
         self._t_end = 1.0
@@ -189,7 +186,7 @@ class MasterPendulum(MultiComponent):
         theta_abs_deg = abs(np.rad2deg(theta))
 
         if theta_abs_deg < np.rad2deg(0.075) and t <= 0.025:
-            return self.active_mode  # Hysteresis: stay in current mode during initial transient
+            return self.active_mode  # Stay in the initial model during the transient
 
         # Mode selection based on angular position thresholds
         if theta_abs_deg > 15:

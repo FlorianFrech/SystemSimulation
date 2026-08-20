@@ -17,6 +17,8 @@ Dataclasses:
   micro-stepping.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -58,7 +60,7 @@ class DenseTime:
     def __str__(self) -> str:
         return f"({self.t:.8f}, {self.micro})"
 
-    def advance_micro(self) -> "DenseTime":
+    def advance_micro(self) -> DenseTime:
         """Returns a new DenseTime advanced by one micro step."""
         return DenseTime(self.t, self.micro + 1)
 
@@ -89,6 +91,39 @@ class Event:
     source: str
     time: DenseTime | None = None
     direction: int | None = None  # -1: falling, 0: any, 1: rising
+    bracket: EventBracket | None = None
+
+
+@dataclass(frozen=True)
+class EventBracket:
+    """A detected sign-change interval carried through event localization."""
+
+    source: str
+    name: str
+    t_left: float
+    t_right: float
+    value_left: float | None
+    value_right: float | None
+
+    def __post_init__(self) -> None:
+        if self.t_right < self.t_left:
+            raise ValueError("An event bracket must be ordered in time.")
+
+    @property
+    def pair(self) -> tuple[str, str]:
+        """Return the component/event key used by the dispatch graph."""
+        return self.source, self.name
+
+    @property
+    def direction(self) -> int | None:
+        """Return ``+1`` for rising and ``-1`` for falling brackets."""
+        if self.value_left is None or self.value_right is None:
+            return None
+        if self.value_right > self.value_left:
+            return 1
+        if self.value_right < self.value_left:
+            return -1
+        return None
 
 
 # -------------------------------------------------------------------
@@ -119,7 +154,7 @@ class EventIndicator:
     """
 
     def __init__(
-        self, name: str, function: Callable[["CoSimComponent"], float], direction: int = 0
+        self, name: str, function: Callable[[CoSimComponent], float], direction: int = 0
     ):
         self.name = name
         self.function = function
@@ -127,7 +162,7 @@ class EventIndicator:
         if direction not in (-1, 0, 1):
             raise ValueError("Direction must be -1 (falling), 0 (both), or +1 (rising).")
 
-    def evaluate(self, component: "CoSimComponent") -> float:
+    def evaluate(self, component: CoSimComponent) -> float:
         """Evaluate the event indicator function."""
         return float(self.function(component))
 

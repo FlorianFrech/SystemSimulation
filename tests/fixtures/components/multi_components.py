@@ -1,5 +1,6 @@
 """Test components for MultiComponent unit tests."""
 
+from collections.abc import Callable
 from typing import Any
 
 from syssimx.core.base import CoSimComponent
@@ -181,6 +182,67 @@ class SwitchableMultiComponent(MultiComponent):
         models = {
             "SLOW": RampSubComponent(f"{name}_SLOW", rate=1.0),
             "FAST": RampSubComponent(f"{name}_FAST", rate=4.0),
+        }
+        super().__init__(name, models=models, initial_mode=initial_mode)
+        self._unify_ports()
+
+    def _adapt_state(self, state: dict[str, Any], target_mode: ModeKey) -> dict[str, Any]:
+        return state.copy()
+
+
+class SignalSubComponent(CoSimComponent):
+    """Rollback-capable model that follows a prescribed continuous signal."""
+
+    def __init__(self, name: str, signal: Callable[[float], float]):
+        super().__init__(name, label=name)
+        self.signal = signal
+        self._time = 0.0
+        self._y = 0.0
+        self.input_specs = {}
+        self.output_specs = {
+            "y": PortSpec(name="y", type=PortType.REAL, unit="m", direction="out")
+        }
+
+    def _initialize_component(self, t0: float) -> None:
+        self._time = t0
+        self._y = float(self.signal(t0))
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        self._time = t + dt
+        self._y = float(self.signal(self._time))
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["y"].set(self._y, t=t)
+        self._apply_event_ports(t, event_names)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"time": self._time, "y": self._y}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._time = float(state["time"])
+        self._y = float(state["y"])
+
+    def snapshot_state(self) -> dict[str, float]:
+        return {"time": self._time, "y": self._y}
+
+    def restore_state(self, snapshot: dict[str, float], t: float) -> None:
+        self._time = float(snapshot["time"])
+        self._y = float(snapshot["y"])
+
+
+class RegionMultiComponent(MultiComponent):
+    """Three reusable models for region-identity and localization tests."""
+
+    def __init__(
+        self,
+        name: str = "RegionPlant",
+        signal: Callable[[float], float] = lambda t: t,
+        initial_mode: ModeKey = "A",
+    ):
+        models = {
+            mode: SignalSubComponent(f"{name}_{mode}", signal) for mode in ("A", "B", "C")
         }
         super().__init__(name, models=models, initial_mode=initial_mode)
         self._unify_ports()

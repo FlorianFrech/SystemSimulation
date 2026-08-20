@@ -1,18 +1,21 @@
 """
 Unit tests for syssimx.core.multi_comp
 
-Tests the MultiComponent base class and Hysteresis helper class.
+Tests the MultiComponent base class and region-switching domain model.
 Uses mock sub-components to isolate unit behavior.
 """
+
+from dataclasses import FrozenInstanceError
 
 import numpy as np
 import pytest
 
-from syssimx.core.multi_comp import Hysteresis, ModeKey
+from syssimx.core.multi_comp import ModeKey, SwitchRegions
 from syssimx.utilities import Quantity
 from tests.fixtures.components import (
     EmptyMultiComponent,
     MockSubComponent,
+    RegionMultiComponent,
     SimpleMultiComponent,
     SwitchableMultiComponent,
     UnitMismatchMultiComponent,
@@ -24,33 +27,6 @@ def _magnitude(value, default: float = 0.0) -> float:
     if value is None:
         return default
     return float(getattr(value, "magnitude", value))
-
-
-# ============================================================================
-# Test Hysteresis Class
-# ============================================================================
-class TestHysteresis:
-    """Test Hysteresis class for mode switching debouncing."""
-
-    def test_construction(self):
-        """Test Hysteresis object construction and initial state."""
-        h = Hysteresis(dwell_time=0.1)
-        assert np.isclose(h.dwell_time, 0.1)
-        assert h.last_switch_time == -float("inf")
-
-    def test_record_switch(self):
-        """Test recording a mode switch."""
-        h = Hysteresis(dwell_time=0.2)
-        h.record_switch(t=0.3)
-        assert np.isclose(h.last_switch_time, 0.3)
-
-    def test_in_dwell_window(self):
-        """Dwell window starts open after a switch and closes once the dwell time has elapsed."""
-        h = Hysteresis(dwell_time=0.2)
-        assert not h.in_dwell_window(t=0.0)  # No prior switch: window already closed
-        h.record_switch(t=0.0)
-        assert h.in_dwell_window(t=0.1)      # 0.1 s < 0.2 s dwell
-        assert not h.in_dwell_window(t=0.3)  # 0.3 s >= 0.2 s dwell
 
 
 # ============================================================================
@@ -199,25 +175,6 @@ class TestTimestepping:
         multi_comp._allow_mode_switching = False
         multi_comp.do_step(t=0.0, dt=0.1)
         assert multi_comp.active_mode == "A"
-
-    def test_do_step_hysteresis_blocks_rapid_switch_back(self, multi_comp: SimpleMultiComponent):
-        """Hysteresis prevents a second switch within the dwell window after the first switch."""
-        targets = iter(["B", "A", "A"])
-
-        def selector(t: float) -> ModeKey:
-            return next(targets)
-
-        multi_comp.mode_selector = selector
-        multi_comp.hysteresis = Hysteresis(dwell_time=0.05)
-
-        multi_comp.do_step(t=0.0, dt=0.01)
-        assert multi_comp.active_mode == "B"  # First switch: dwell window was empty
-
-        multi_comp.do_step(t=0.02, dt=0.01)
-        assert multi_comp.active_mode == "B"  # Blocked: still inside dwell window
-
-        multi_comp.do_step(t=0.10, dt=0.01)
-        assert multi_comp.active_mode == "A"  # Allowed: dwell window closed
 
     def test_record_history_propagates_to_active_component(
         self, multi_comp: SimpleMultiComponent
@@ -511,15 +468,6 @@ class TestSwitchOnEvent:
         assert handled == [(["physics"], 1.0)]
         assert mc.active_mode == "FAST"
 
-    def test_dwell_window_suppresses_switch(self):
-        mc = self._plant()
-        mc.hysteresis = Hysteresis(dwell_time=0.5)
-        mc.hysteresis.record_switch(t=1.0)
-
-        mc.handle_event(["to_fast"], t=1.2)  # 0.2 s < 0.5 s dwell
-
-        assert mc.active_mode == "SLOW"
-
     def test_disabled_switching_suppresses_switch(self):
         """The hybrid algorithm disables switching during rolled-back trial steps."""
         mc = self._plant()
@@ -582,3 +530,99 @@ class TestLegacySwitchingUnaffected:
         assert mc.active_mode == "SLOW"
         mc.do_step(0.8, 0.4)  # selector polled at t = 0.8 -> FAST
         assert mc.active_mode == "FAST"
+
+
+class TestSwitchRegions:
+    """Validate the immutable region domain and authoritative runtime identity."""
+
+    @staticmethod
+    def regions() -> SwitchRegions:
+        return SwitchRegions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0, 15.0, 25.0),
+            modes=("A", "B", "A", "C"),
+            band=(0.5, 1.0, 1.5),
+        )
+
+    def test_n_models_require_exactly_n_minus_one_boundaries(self):
+        regions = self.regions()
+
+        assert len(regions.modes) == 4
+        assert len(regions.boundaries) == 3
+        with pytest.raises(ValueError, match="exactly 3 boundaries"):
+            SwitchRegions(lambda comp: 0.0, (5.0, 15.0), regions.modes, band=0.5)
+
+    def test_configuration_and_boundaries_are_immutable(self):
+        regions = self.regions()
+
+        with pytest.raises(FrozenInstanceError):
+            regions.modes = ("A", "B")
+        with pytest.raises(FrozenInstanceError):
+            regions.boundaries[0].band = 2.0
+
+        plant = RegionMultiComponent()
+        with pytest.raises(AttributeError):
+            plant.switch_regions = regions
+
+    def test_each_boundary_is_represented_by_one_bidirectional_indicator(self):
+        plant = RegionMultiComponent()
+        plant.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0, 15.0, 25.0),
+            modes=("A", "B", "A", "C"),
+            band=0.5,
+        )
+
+        assert len(plant.switch_regions.boundaries) == 3
+        assert list(plant.event_indicators) == [
+            "region_boundary_0",
+            "region_boundary_1",
+            "region_boundary_2",
+        ]
+        assert {indicator.direction for indicator in plant.event_indicators.values()} == {0}
+
+    def test_initialization_reconciles_the_region_once(self):
+        plant = RegionMultiComponent(signal=lambda t: 20.0, initial_mode="A")
+        plant.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0, 15.0),
+            modes=("A", "B", "C"),
+            band=0.5,
+        )
+
+        plant.initialize(0.0)
+
+        assert plant.active_region_index == 2
+        assert plant.active_mode == "C"
+        assert plant.sync_events == []
+
+    def test_region_map_is_not_polled_during_accepted_steps(self):
+        evaluations = 0
+
+        def key(comp):
+            nonlocal evaluations
+            evaluations += 1
+            return _magnitude(comp.outputs["y"].get())
+
+        plant = RegionMultiComponent(signal=lambda t: t)
+        plant.set_switch_regions(key, breakpoints=(5.0,), modes=("A", "B"), band=0.5)
+        plant.initialize(0.0)
+        assert evaluations == 1
+
+        plant.do_step(0.0, 0.1)
+
+        assert evaluations == 1
+
+    def test_inconsistent_runtime_region_raises(self):
+        plant = RegionMultiComponent()
+        plant.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0, 15.0),
+            modes=("A", "B", "C"),
+            band=0.5,
+        )
+        plant.initialize(0.0)
+        plant.active_region_index = 99
+
+        with pytest.raises(RuntimeError, match="Invalid active_region_index"):
+            _ = plant.active_mode
