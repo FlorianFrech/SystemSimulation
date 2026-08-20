@@ -400,6 +400,11 @@ class OpenSimPendulum(OpenSimComponent):
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
         super().reset()
+        # This component rebuilds its OpenSim topology on initialize(). Drop
+        # every native wrapper reference so reset has fresh-instance ownership
+        # semantics and the previous model graph can be reclaimed.
+        self.model = None
+        self.state = None
         self.coord = None
         self.actuator = None
         self.manager = None

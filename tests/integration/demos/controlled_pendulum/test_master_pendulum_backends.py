@@ -236,6 +236,9 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         free_instance = Mock(wraps=old_instance.freeInstance)
         monkeypatch.setattr(old_instance, "terminate", terminate)
         monkeypatch.setattr(old_instance, "freeInstance", free_instance)
+        old_opensim_model = reused.opensim.model
+        old_opensim_state = reused.opensim.state
+        old_opensim_manager = reused.opensim.manager
 
         system.reset()
 
@@ -245,6 +248,9 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         assert reused.fmu._instance is None
         assert reused.fmu._unzipdir is None
         assert not old_unzipdir.exists()
+        assert reused.opensim.model is None
+        assert reused.opensim.state is None
+        assert reused.opensim.manager is None
 
         system.initialize(restart_time)
         reused.set_inputs({"tau": 0.0}, t=restart_time)
@@ -255,6 +261,9 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         assert reused.active_mode == fresh.active_mode == "FMU"
         assert reused.sync_events == fresh.sync_events == []
         assert reused.t == fresh.t == restart_time
+        assert reused.opensim.model is not old_opensim_model
+        assert reused.opensim.state is not old_opensim_state
+        assert reused.opensim.manager is not old_opensim_manager
         assert _port_snapshot(reused) == _port_snapshot(fresh)
         assert _history_snapshot(reused) == _history_snapshot(fresh)
         assert _monitor_snapshot(reused.monitoring_state) == _monitor_snapshot(
