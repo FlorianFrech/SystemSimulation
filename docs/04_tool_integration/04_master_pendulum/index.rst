@@ -44,14 +44,14 @@ Conceptually:
 - The *system* connects to one component (here: ``MasterPendulum``).
 - Internally, ``MasterPendulum`` contains several interchangeable models
   (modes), e.g. ``"FMU"``, ``"OpenSim"``, ``"FEM"``.
-- A **mode selector** decides which internal model is active.
+- A **region map** decides which internal model is active from a scalar signal.
 - On every switch, the wrapper **translates and synchronizes state** so the new
   model continues from a consistent configuration.
-- Optional **hysteresis** prevents rapid chattering near switching thresholds.
+- Nonzero **boundary bands** prevent rapid chattering near switching thresholds.
 
 See the API docs for details:
 :class:`syssimx.core.multi_comp.MultiComponent` and
-:class:`syssimx.core.multi_comp.Hysteresis`.
+:class:`syssimx.core.multi_comp.SwitchRegions`.
 
 
 MasterPendulum: one interface, three implementations
@@ -83,8 +83,8 @@ Workflow: building your own multi-model component
    and pick an ``initial_mode``.
 4. **Unify ports** so the wrapper exposes one consistent interface.
 5. **Implement** ``_adapt_state(...)`` to translate between state conventions.
-6. **Define a switching rule** via ``mode_selector`` and stabilize it with
-   :class:`syssimx.core.multi_comp.Hysteresis`.
+6. **Define switching regions** with ``set_switch_regions()`` and a nonzero
+   band around every boundary.
 7. **Use the wrapper as a single plant component** inside a
    :class:`syssimx.system.system.System`, connected to sensors, a controller,
    and an actuator/drive.
@@ -140,8 +140,8 @@ units or sign conventions).
 Important modeling note: switching between FEM and rigid-body dynamics is a
 *projection*. FEM contains internal deformation/strain energy states that are
 not representable in a rigid model. Decide deliberately what is conserved or
-discarded at the switch (energy, momentum, contact impulses), and use
-hysteresis to avoid excessive switching artifacts.
+discarded at the switch (energy, momentum, contact impulses), and size the
+region bands to avoid excessive switching artifacts.
 
 Practical guidelines (what to verify early)
 -------------------------------------------
@@ -150,8 +150,8 @@ Practical guidelines (what to verify early)
   reference frames across FMU/OpenSim/FEM (especially torque direction and
   angle definition).
 - **Switch variable robustness**: base switching on signals that are stable and
-  physically meaningful (e.g., contact gap or angle thresholds), and add
-  :class:`syssimx.core.multi_comp.Hysteresis` to prevent chattering.
+  physically meaningful (e.g., contact gap or angle thresholds), and use
+  nonzero region bands to prevent threshold chattering.
 - **Internal state mismatch**: explicitly decide how you "collapse" deformable
   states (FEM) into rigid states (and how you re-introduce deformation when
   switching back).
