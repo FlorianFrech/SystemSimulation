@@ -10,7 +10,8 @@ from dataclasses import FrozenInstanceError
 import numpy as np
 import pytest
 
-from syssimx.core.multi_comp import ModeKey, SwitchRegions
+from syssimx.core.events import Event
+from syssimx.core.multi_comp import SwitchRegions
 from syssimx.utilities import Quantity
 from tests.fixtures.components import (
     EmptyMultiComponent,
@@ -158,28 +159,7 @@ class TestTimestepping:
         multi_comp.do_step(t=0.0, dt=0.01)
         assert "do_step(0.0, 0.01)" in multi_comp.active_comp.call_log
 
-    def test_do_step_with_mode_selector(self, multi_comp):
-        def selector(t: float) -> ModeKey:
-            return "B" if t >= 0.5 else "A"
-
-        multi_comp.mode_selector = selector
-        multi_comp.do_step(t=0.0, dt=0.1)
-        assert multi_comp.active_mode == "A"
-        multi_comp.do_step(t=0.5, dt=0.1)
-        assert multi_comp.active_mode == "B"
-
-    def test_do_step_mode_switching_disabled(self, multi_comp: SimpleMultiComponent):
-        def selector(t: float) -> ModeKey:
-            return "B"
-
-        multi_comp.mode_selector = selector
-        multi_comp._allow_mode_switching = False
-        multi_comp.do_step(t=0.0, dt=0.1)
-        assert multi_comp.active_mode == "A"
-
-    def test_record_history_propagates_to_active_component(
-        self, multi_comp: SimpleMultiComponent
-    ):
+    def test_record_history_propagates_to_active_component(self, multi_comp: SimpleMultiComponent):
         """A trial step disables ``_record_history`` on the MultiComponent.
 
         The flag must propagate to the active sub-component so that the
@@ -314,75 +294,90 @@ class TestReset:
 
 
 # ============================================================================
-# Test Switch Indicators (event-localized mode switching)
+# Test Generated Region Events
 # ============================================================================
-class TestSwitchIndicatorRegistration:
-    """Test registration and validation of switch indicators."""
+class TestGeneratedRegionEventRegistration:
+    """Test registration and validation of generated region boundaries."""
+
+    @staticmethod
+    def configure(mc: RegionMultiComponent) -> None:
+        mc.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(1.0,),
+            modes=("A", "B"),
+            band=0.1,
+        )
 
     def test_registers_indicator_and_event_port(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.add_switch_indicator(
-            name="to_fast",
-            func=lambda c: c.outputs["y"].get() - 1.0,
-            target_mode="FAST",
-            direction=1,
-        )
+        mc = RegionMultiComponent(name="Plant")
+        self.configure(mc)
         mc.initialize(t0=0.0)
 
-        assert "to_fast" in mc.event_indicators
-        assert mc._switch_targets["to_fast"] == "FAST"
-        # The wrapper exposes the switch as an ordinary EVENT output port.
-        assert "to_fast" in mc.output_specs
+        assert "region_boundary_0" in mc.event_indicators
+        assert "region_boundary_0" in mc.output_specs
         assert mc.has_state_events
 
     def test_rejects_unknown_target_mode(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        with pytest.raises(ValueError, match="Unknown target mode"):
-            mc.add_switch_indicator("bad", lambda c: 0.0, target_mode="NOPE")
+        mc = RegionMultiComponent(name="Plant")
+        with pytest.raises(ValueError, match="Unknown region models.*NOPE"):
+            mc.set_switch_regions(
+                key=lambda comp: 0.0,
+                breakpoints=(1.0,),
+                modes=("A", "NOPE"),
+                band=0.1,
+            )
 
     def test_rejects_name_colliding_with_submodel_indicator(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.models["SLOW"].add_event_indicator("shared", lambda c: 1.0)
+        mc = RegionMultiComponent(name="Plant")
+        mc.models["A"].add_event_indicator("region_boundary_0", lambda c: 1.0)
         with pytest.raises(KeyError, match="collides"):
-            mc.add_switch_indicator("shared", lambda c: 0.0, target_mode="FAST")
+            self.configure(mc)
 
     def test_rejects_registration_after_initialization(self):
-        mc = SwitchableMultiComponent(name="Plant")
+        mc = RegionMultiComponent(name="Plant")
         mc.initialize(t0=0.0)
 
         with pytest.raises(RuntimeError, match="before initialization"):
-            mc.add_switch_indicator("to_fast", lambda c: 0.0, target_mode="FAST")
+            self.configure(mc)
 
-    def test_unify_ports_preserves_switch_event_port(self):
+    def test_unify_ports_preserves_generated_event_port(self):
         """``_unify_ports`` copies sub-model specs; own event ports must survive."""
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.add_switch_indicator("to_fast", lambda c: 0.0, target_mode="FAST")
+        mc = RegionMultiComponent(name="Plant")
+        self.configure(mc)
         mc.initialize(t0=0.0)
 
         mc._unify_ports()
 
-        assert "to_fast" in mc.output_specs
+        assert "region_boundary_0" in mc.output_specs
 
 
-class TestSwitchIndicatorEvaluation:
-    """Test that switch indicators join the normal event pipeline."""
+class TestGeneratedRegionEventEvaluation:
+    """Test that generated boundaries join the normal event pipeline."""
+
+    @staticmethod
+    def configure(mc: RegionMultiComponent, key=None) -> None:
+        mc.set_switch_regions(
+            key=key or (lambda comp: _magnitude(comp.outputs["y"].get())),
+            breakpoints=(1.0,),
+            modes=("A", "B"),
+            band=0.1,
+        )
 
     def test_indicators_merge_wrapper_and_active_model(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.models["SLOW"].add_event_indicator("physics", lambda c: 5.0)
-        mc.add_switch_indicator("to_fast", lambda c: -2.0, target_mode="FAST")
+        mc = RegionMultiComponent(name="Plant")
+        mc.models["A"].add_event_indicator("physics", lambda c: 5.0)
+        self.configure(mc)
         mc.initialize(t0=0.0)
 
         values = mc.evaluate_event_indicators()
 
         assert np.isclose(values["physics"], 5.0)
-        assert np.isclose(values["to_fast"], -2.0)
+        assert np.isclose(values["region_boundary_0"], -1.1)
 
-    def test_indicator_receives_the_wrapper(self):
-        """The switch function is evaluated against the wrapper, not the sub-model."""
+    def test_region_key_receives_the_wrapper(self):
         seen: list = []
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.add_switch_indicator("to_fast", lambda c: seen.append(c) or 1.0, target_mode="FAST")
+        mc = RegionMultiComponent(name="Plant")
+        self.configure(mc, key=lambda comp: seen.append(comp) or 0.0)
         mc.initialize(t0=0.0)
 
         mc.evaluate_event_indicators()
@@ -390,49 +385,55 @@ class TestSwitchIndicatorEvaluation:
         assert seen and seen[0] is mc
 
     def test_detect_crossings_covers_both_sources(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.models["SLOW"].add_event_indicator("physics", lambda c: 1.0)
-        mc.add_switch_indicator("to_fast", lambda c: 1.0, target_mode="FAST")
+        mc = RegionMultiComponent(name="Plant")
+        mc.models["A"].add_event_indicator("physics", lambda c: 1.0)
+        self.configure(mc)
         mc.initialize(t0=0.0)
 
         crossed = mc.detect_event_crossings(
-            previous={"physics": -1.0, "to_fast": -1.0},
-            current={"physics": 1.0, "to_fast": 1.0},
+            previous={"physics": -1.0, "region_boundary_0": -1.0},
+            current={"physics": 1.0, "region_boundary_0": 1.0},
         )
 
-        assert set(crossed) == {"physics", "to_fast"}
+        assert set(crossed) == {"physics", "region_boundary_0"}
 
 
-class TestSwitchOnEvent:
-    """Test that the switch is applied when the localized event is handled."""
+class TestRegionSwitchOnEvent:
+    """Test that a generated boundary switches at its localized event."""
 
-    def _plant(self, initial_mode: ModeKey = "SLOW"):
-        mc = SwitchableMultiComponent(name="Plant", initial_mode=initial_mode)
-        mc.add_switch_indicator(
-            name="to_fast",
-            func=lambda c: c.outputs["y"].get() - 1.0,
-            target_mode="FAST",
-            direction=1,
+    @staticmethod
+    def _plant():
+        mc = RegionMultiComponent(name="Plant", signal=lambda t: t)
+        mc.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(1.0,),
+            modes=("A", "B"),
+            band=0.1,
         )
         mc.initialize(t0=0.0)
         return mc
 
+    @staticmethod
+    def _rising_event(mc: RegionMultiComponent) -> Event:
+        return Event(name="region_boundary_0", source=mc.name, direction=1)
+
     def test_handling_switch_event_changes_mode(self):
         mc = self._plant()
-        assert mc.active_mode == "SLOW"
+        assert mc.active_mode == "A"
 
-        mc.handle_event(["to_fast"], t=1.0)
+        mc.handle_event(["region_boundary_0"], t=1.1, events=[self._rising_event(mc)])
 
-        assert mc.active_mode == "FAST"
-        assert mc.active_comp is mc.models["FAST"]
+        assert mc.active_mode == "B"
+        assert mc.active_comp is mc.models["B"]
+        assert mc.active_region_index == 1
 
     def test_switch_transfers_state_to_incoming_model(self):
         mc = self._plant()
-        mc.do_step(0.0, 1.0)  # SLOW ramps y to 1.0
+        mc.do_step(0.0, 1.1)
 
-        mc.handle_event(["to_fast"], t=1.0)
+        mc.handle_event(["region_boundary_0"], t=1.1, events=[self._rising_event(mc)])
 
-        assert np.isclose(mc.models["FAST"].get_state()["y"], 1.0)
+        assert np.isclose(mc.models["B"].get_state()["y"], 1.1)
 
     def test_switch_refreshes_the_incoming_model_outputs(self):
         """Regression: the incoming model must publish the transferred state.
@@ -443,54 +444,45 @@ class TestSwitchOnEvent:
         handover even though the physical state is continuous.
         """
         mc = self._plant()
-        # Leave a stale value on the incoming model, as an earlier activation would.
-        mc.models["FAST"].outputs["y"].set(-99.0, t=0.0)
-        mc.do_step(0.0, 1.0)  # SLOW ramps y to 1.0
+        mc.models["B"].outputs["y"].set(-99.0, t=0.0)
+        mc.do_step(0.0, 1.1)
 
-        mc.handle_event(["to_fast"], t=1.0)
+        mc.handle_event(["region_boundary_0"], t=1.1, events=[self._rising_event(mc)])
 
-        assert np.isclose(_magnitude(mc.models["FAST"].outputs["y"].get()), 1.0)
-        assert np.isclose(_magnitude(mc.outputs["y"].get()), 1.0)
-
-    def test_no_switch_when_target_already_active(self):
-        mc = self._plant(initial_mode="FAST")
-        mc.handle_event(["to_fast"], t=1.0)
-        assert mc.active_mode == "FAST"
-        assert mc.sync_events == []
+        assert np.isclose(_magnitude(mc.models["B"].outputs["y"].get()), 1.1)
+        assert np.isclose(_magnitude(mc.outputs["y"].get()), 1.1)
 
     def test_model_events_still_reach_the_active_component(self):
         handled: list = []
         mc = self._plant()
-        mc.models["SLOW"]._handle_events_internal = lambda names, t: handled.append((names, t))
+        mc.models["A"]._handle_events_internal = lambda names, t: handled.append((names, t))
 
-        mc.handle_event(["physics", "to_fast"], t=1.0)
+        events = [
+            Event(name="physics", source=mc.name, direction=1),
+            self._rising_event(mc),
+        ]
+        mc.handle_event(["physics", "region_boundary_0"], t=1.1, events=events)
 
-        # The physics event goes to the outgoing model, and only that event.
-        assert handled == [(["physics"], 1.0)]
-        assert mc.active_mode == "FAST"
+        assert handled == [(["physics"], 1.1)]
+        assert mc.active_mode == "B"
 
     def test_disabled_switching_suppresses_switch(self):
-        """The hybrid algorithm disables switching during rolled-back trial steps."""
         mc = self._plant()
         mc._allow_mode_switching = False
 
-        mc.handle_event(["to_fast"], t=1.0)
+        mc.handle_event(["region_boundary_0"], t=1.1, events=[self._rising_event(mc)])
 
-        assert mc.active_mode == "SLOW"
+        assert mc.active_mode == "A"
+        assert mc.active_region_index == 0
 
     def test_unrelated_event_does_not_switch(self):
         mc = self._plant()
         mc.handle_event(["something_else"], t=1.0)
-        assert mc.active_mode == "SLOW"
+        assert mc.active_mode == "A"
 
 
-class TestLegacySwitchingUnaffected:
-    """Guard the pre-existing ``mode_selector`` path against regressions.
-
-    ``add_event_indicator`` broadcasts to the sub-models and keeps a copy on
-    the wrapper for port management only. The switch-indicator work must not
-    start treating those copies as wrapper-owned indicators.
-    """
+class TestOrdinaryModelEvents:
+    """Ordinary model events remain delegated independently of switching."""
 
     def test_broadcast_indicator_is_evaluated_on_the_active_model_only(self):
         seen: list[str] = []
@@ -514,23 +506,9 @@ class TestLegacySwitchingUnaffected:
         mc.add_event_indicator("threshold", lambda c: 1.0, direction=1)
         mc.initialize(t0=0.0)
 
-        assert mc._switch_targets == {}
         assert mc.self_handled_events == []
-        # Handling it must reach the model, and must not switch mode.
         mc.handle_event(["threshold"], t=1.0)
         assert mc.active_mode == "SLOW"
-
-    def test_mode_selector_still_switches_on_the_macro_grid(self):
-        mc = SwitchableMultiComponent(name="Plant")
-        mc.mode_selector = lambda t: "FAST" if t >= 0.5 else "SLOW"
-        mc.initialize(t0=0.0)
-
-        mc.do_step(0.0, 0.4)
-        assert mc.active_mode == "SLOW"
-        mc.do_step(0.4, 0.4)  # selector polled at t = 0.4 -> still SLOW
-        assert mc.active_mode == "SLOW"
-        mc.do_step(0.8, 0.4)  # selector polled at t = 0.8 -> FAST
-        assert mc.active_mode == "FAST"
 
 
 class TestSwitchRegions:
@@ -648,12 +626,8 @@ class TestTransactionalRegionSwitching:
     def _observable_state(comp):
         return {
             "time": comp.t,
-            "inputs": {
-                name: (port.get(), port.t_last) for name, port in comp.inputs.items()
-            },
-            "outputs": {
-                name: (port.get(), port.t_last) for name, port in comp.outputs.items()
-            },
+            "inputs": {name: (port.get(), port.t_last) for name, port in comp.inputs.items()},
+            "outputs": {name: (port.get(), port.t_last) for name, port in comp.outputs.items()},
             "history": {
                 name: (tuple(data["time"]), tuple(data["values"]))
                 for name, data in comp.get_history().items()

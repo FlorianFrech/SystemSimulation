@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
@@ -10,24 +11,41 @@ from ..monitoring import PendulumMonitor, PendulumMonitoringState
 
 MODES: tuple[str, ...] = ("FEM", "OpenSim", "FMU")
 
+
+@dataclass(frozen=True)
+class MasterPendulumSwitchConfig:
+    """Angle-region policy for the three master-pendulum models.
+
+    Breakpoints and hysteresis bands are expressed in radians. Passing
+    ``None`` instead of this configuration keeps one model active.
+    """
+
+    breakpoints: tuple[float, ...] = (0.075, np.deg2rad(15.0))
+    modes: tuple[str, ...] = MODES
+    bands: tuple[float, ...] = (0.005, np.deg2rad(1.0))
+
+
 def is_valid_mode(mode: str) -> bool:
     return mode in MODES
+
 
 # ----------------------------------------------------------------------------
 # Master Pendulum CoSimulation Component
 # ----------------------------------------------------------------------------
 class MasterPendulum(MultiComponent):
-
     def __init__(
         self,
         name: str = "MasterPendulum",
         initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU",
-        fmu_solver: Literal["cvode", "euler"] = "cvode",):
+        fmu_solver: Literal["cvode", "euler"] = "cvode",
+        switch_config: MasterPendulumSwitchConfig | None = MasterPendulumSwitchConfig(),
+    ):
 
         # Check initial mode validity
         if not is_valid_mode(initial_mode):
-            raise ValueError(f"{name}: Invalid initial mode '{initial_mode}'."
-                             f" Must be one of {MODES}.")
+            raise ValueError(
+                f"{name}: Invalid initial mode '{initial_mode}'. Must be one of {MODES}."
+            )
 
         # Instantiate sub-components before delegating to the base class
         self.fmu = FMUPendulum(name="FMU_Pendulum", solver=fmu_solver)
@@ -48,12 +66,23 @@ class MasterPendulum(MultiComponent):
         self._unify_ports()
         self._initialize_ports_from_specs()
 
+        self.switch_config = switch_config
+        if switch_config is not None:
+            self.set_switch_regions(
+                key=self._absolute_theta,
+                breakpoints=switch_config.breakpoints,
+                modes=switch_config.modes,
+                band=switch_config.bands,
+            )
+
         # Aggregate parameters from all sub-components
-        self.parameters.update({
-            "FEM": self.fem.get_parameters(),
-            "OpenSim": self.opensim.get_parameters(),
-            "FMU": self.fmu.get_parameters(),
-        })
+        self.parameters.update(
+            {
+                "FEM": self.fem.get_parameters(),
+                "OpenSim": self.opensim.get_parameters(),
+                "FMU": self.fmu.get_parameters(),
+            }
+        )
 
         # Simulation parameters (set during initialization)
         self._t_end = 1.0
@@ -96,13 +125,6 @@ class MasterPendulum(MultiComponent):
         # active_comp is already set by MultiComponent.__init__; only direct
         # feedthrough needs to be reflected on the wrapper.
         self.direct_feedthrough = self.active_comp.direct_feedthrough
-
-        # Configure mode selector based on simulation type
-        if self.mode_selector is None:
-            if self._with_contact:
-                self.mode_selector = self._gap_based_mode_selector
-            else:
-                self.mode_selector = self._time_based_mode_selector
 
     def _sync_parameters_from_fem(self) -> None:
         """Synchronize parameters from initialized FEM to other models."""
@@ -153,12 +175,27 @@ class MasterPendulum(MultiComponent):
             {'theta_start': {'value': ..., 'unit': 'rad'}, 'omega_start': {...}, "tau": {...}}
         """
         if target_mode == "FMU":
-            return {"theta_start": state["theta"], "omega_start": state["omega"], "tau": state["tau"]}
+            return {
+                "theta_start": state["theta"],
+                "omega_start": state["omega"],
+                "tau": state["tau"],
+            }
         return state
 
     # ----------------------------------------------------------------------------
     # Mode Selection Logic
     # ----------------------------------------------------------------------------
+    @staticmethod
+    def _absolute_theta(component: MultiComponent) -> float:
+        """Return the absolute cached angular position in radians."""
+        if "theta" not in component.outputs:
+            raise RuntimeError(f"{component.name}: Switching signal 'theta' is unavailable.")
+        theta_value = component.outputs["theta"].get()
+        if theta_value is None:
+            raise RuntimeError(f"{component.name}: Switching signal 'theta' is not initialized.")
+        theta = getattr(theta_value, "magnitude", theta_value)
+        return abs(float(theta))
+
     def _time_based_mode_selector(self, t: float) -> str:
         """
         Cycle through modes 4 times within simulation time.
@@ -199,9 +236,7 @@ class MasterPendulum(MultiComponent):
     # ----------------------------------------------------------------------------
     # Update Output States (override to include monitoring and visualization)
     # ----------------------------------------------------------------------------
-    def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = None
-    ):
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
         super()._update_output_states(t, event_names=event_names)
 
         if self.in_trial:
