@@ -722,7 +722,7 @@ class System:
 
             # 5d) Zero-step to update outputs for downstream generations
             for comp_name in gen:
-                self.components[comp_name].do_step(0, 0)
+                self.components[comp_name].do_step(t0, 0)
 
         self.is_initialized = True
 

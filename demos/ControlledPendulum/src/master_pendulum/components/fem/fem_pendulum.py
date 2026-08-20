@@ -792,14 +792,27 @@ class FEMPendulum(FEMComponent):
         # The base zeros the Newmark state (u, v, a and previous-step buffers).
         if self._monitor is not None:
             self._monitor.close()
+        has_runtime_fields = all(
+            getattr(self, field_name, None) is not None
+            for field_name in (
+                "_gf_u",
+                "_gf_cauchy_stress",
+                "_gf_von_mises",
+                "_V",
+                "_S_cauchy",
+                "_V_vm",
+            )
+        )
         super().reset()
-        # Reset the stress fields and reallocate the time-series history.
-        self._gf_cauchy_stress.vec[:] = 0
-        self._gf_von_mises.vec[:] = 0
-        self._gf_u_history = GridFunction(self._V, multidim=0)
-        self._gf_v_history = GridFunction(self._V, multidim=0)
-        self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
-        self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
+        if has_runtime_fields:
+            # Reset stress fields and reallocate the time-series history only
+            # after the corresponding finite-element spaces have existed.
+            self._gf_cauchy_stress.vec[:] = 0
+            self._gf_von_mises.vec[:] = 0
+            self._gf_u_history = GridFunction(self._V, multidim=0)
+            self._gf_v_history = GridFunction(self._V, multidim=0)
+            self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
+            self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
         self.monitoring_state = PendulumMonitoringState()
         self.monitoring_state.mode = "FEM"
         self._monitor = None

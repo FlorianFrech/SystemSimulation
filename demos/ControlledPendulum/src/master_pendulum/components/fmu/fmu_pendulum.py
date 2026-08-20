@@ -41,29 +41,30 @@ class FMUPendulum(FMUComponent):
 
     # Snapshot and restore state methods for rollback
     def snapshot_state(self):
-        state = {"mode": "FMU"}
-        if self.solver == "euler":
-            state["fmu_state"] = self._instance.getFMUState()
-        elif self.solver == "cvode":
-            current_state = super().get_state()
-            state.update(current_state)
+        """Capture the reconstructible physical state of the pendulum FMU.
+
+        The checked-in FMUs do not advertise native FMI state support. Their
+        checkpoints therefore preserve physical variables and inputs while
+        deliberately discarding solver-internal history.
+        """
+        state = super().get_state()
+        state["mode"] = "FMU"
         return state
 
     def restore_state(self, snapshot, t):
+        """Rebuild an instance from a physical checkpoint at ``t``."""
         if snapshot.get("mode", "") != "FMU":
             raise ValueError(
                 f"[{self.name}] Incompatible snapshot mode, got '{snapshot.get('mode', '')}'."
             )
+        theta_start = snapshot["theta"]["value"]
+        omega_start = snapshot["omega"]["value"]
+        for name, value in snapshot.items():
+            if name in self.inputs and isinstance(value, dict) and "value" in value:
+                self.inputs[name].set(value["value"], t=t)
+        self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
+        self.reinitialize_instance(t)
         self.t = t
-        if self.solver == "euler":
-            self._instance.setFMUState(snapshot["fmu_state"])
-            self._apply_parameters_starts()
-
-        elif self.solver == "cvode":
-            theta_start = snapshot["theta"]["value"]
-            omega_start = snapshot["omega"]["value"]
-            self.set_parameters(**{"theta_start": theta_start, "omega_start": omega_start})
-            self.reinitialize_instance(t)
         self._update_output_states(t)
         self._record_outputs(t)
 
