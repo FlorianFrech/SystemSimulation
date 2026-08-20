@@ -57,6 +57,20 @@ def _visited_modes(plant: RegionMultiComponent) -> list[ModeKey]:
 
 
 class TestRegionSwitchingInvariants:
+    def test_time_driven_cycle_lives_in_the_external_signal_harness(self):
+        """Scheduled demonstrations use time as a region key outside production code."""
+        plant = _run_regions(
+            lambda t: t,
+            breakpoints=(0.1, 0.2, 0.3),
+            modes=("A", "B", "C", "A"),
+            band=0.005,
+            dt=0.4,
+            tf=0.4,
+        )
+
+        assert _visited_modes(plant) == ["B", "C", "A"]
+        assert _switch_times(plant) == pytest.approx([0.105, 0.205, 0.305], abs=2e-6)
+
     def test_one_crossing_dispatches_exactly_one_transition(self):
         plant = _run_regions(
             lambda t: 100.0 * t,

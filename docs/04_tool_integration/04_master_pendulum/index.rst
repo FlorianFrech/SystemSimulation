@@ -107,7 +107,7 @@ In practice, switching rules can be:
   threshold angle is approached),
 - **Event-based** (e.g., use FEM during a wall-hit window),
 - **Time-based** (useful for debugging and verification),
-- **Hybrid** (combine state thresholds with dwell-time hysteresis).
+- **Hybrid** (localize state thresholds with nonzero region-band hysteresis).
 
 
 State synchronization: the "hard part"
