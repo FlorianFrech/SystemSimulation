@@ -183,7 +183,7 @@ class MasterPendulum(MultiComponent):
         return state
 
     # ----------------------------------------------------------------------------
-    # Mode Selection Logic
+    # Region Signal
     # ----------------------------------------------------------------------------
     @staticmethod
     def _absolute_theta(component: MultiComponent) -> float:
@@ -195,43 +195,6 @@ class MasterPendulum(MultiComponent):
             raise RuntimeError(f"{component.name}: Switching signal 'theta' is not initialized.")
         theta = getattr(theta_value, "magnitude", theta_value)
         return abs(float(theta))
-
-    def _time_based_mode_selector(self, t: float) -> str:
-        """
-        Cycle through modes 4 times within simulation time.
-        Each complete cycle goes: FEM → FMU → OpenSim
-        Total: 12 intervals (3 modes × 4 cycles)
-        """
-        interval = self._t_end / 12
-        cycle_position = int(t / interval) % 3
-        if cycle_position == 0:
-            return "FEM"
-        elif cycle_position == 1:
-            return "OpenSim"
-        else:
-            return "FMU"
-
-    def _gap_based_mode_selector(self, t: float) -> str:
-        """
-        Select mode based on the cached angular-position output.
-        """
-        theta_value = self.outputs["theta"].get()
-        if theta_value is None:
-            return self.active_mode  # not yet initialized; keep current mode
-        theta = theta_value.magnitude if hasattr(theta_value, "magnitude") else float(theta_value)
-
-        theta_abs_deg = abs(np.rad2deg(theta))
-
-        if theta_abs_deg < np.rad2deg(0.075) and t <= 0.025:
-            return self.active_mode  # Stay in the initial model during the transient
-
-        # Mode selection based on angular position thresholds
-        if theta_abs_deg > 15:
-            return "FMU"
-        elif theta_abs_deg > np.rad2deg(0.075):
-            return "OpenSim"
-        else:
-            return "FEM"
 
     # ----------------------------------------------------------------------------
     # Update Output States (override to include monitoring and visualization)
@@ -296,7 +259,6 @@ class MasterPendulum(MultiComponent):
         if self._monitor is not None:
             self._monitor.close()
         super().reset()
-        self.mode_selector = None
         self._t_end = 1.0
         self._with_contact = False
         self._animate = False
