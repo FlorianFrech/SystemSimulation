@@ -140,6 +140,80 @@ Current verification on Python 3.13.5:
 - strict offline Sphinx build: passed without warnings;
 - locked `uv build --no-sources`: passed.
 
+## Milestone 2 implementation record
+
+Milestone 2 was implemented on 2026-08-20 in the same protected
+`SystemSimulation-region-switching` worktree. Runtime switching is now a transaction over an
+explicit framework checkpoint rather than a solver-only state copy plus private flag manipulation.
+
+Implemented behavior:
+
+- `ComponentCheckpoint` is the public opaque rollback contract. It captures backend solver state,
+  time, input/output values and timestamps, component history, parameters, internal event hints,
+  event-dispatch metadata, initialization state, composite metadata, and the active recursive child
+  path. A checkpoint is bound to the component instance that created it.
+- `trial_context()` recursively marks a composite and its children as speculative, disables history
+  recording and model switching, and exposes `in_trial` to backend observer hooks. The hybrid
+  algorithm now uses `checkpoint()` / `restore_checkpoint()` and this context exclusively; it no
+  longer manipulates component-private flags or passes raw backend snapshots.
+- Direct history writes through `_record_outputs()` are suppressed during trials. FEM substep
+  observer callbacks are not invoked speculatively, and the master-pendulum monitoring, scene
+  updates, FEM monitor state, and known FEM/OpenSim event logs honor `in_trial`. FMU restores that
+  call `_record_outputs()` are therefore also non-recording inside rollback.
+- Every model reachable from `SwitchRegions` is validated for rollback before the region map is
+  accepted. A `MultiComponent` checkpoint recursively captures the active backend, while trial
+  suppression reaches every registered backend; an inactive switch target receives its own
+  checkpoint during transfer preparation.
+- State transfer is prepare--validate--commit. The wrapper and source are checkpointed, the target
+  is checkpointed, current inputs are replayed, adapted state is imported, the target is read back
+  for validation, and target outputs are refreshed under trial suppression. Only then is the mode
+  shadow updated and `active_region_index` committed. Any preparation exception restores target,
+  source, wrapper ports, histories, time, region identity, and switch records before propagating the
+  original exception.
+- `reset()` now resets port values and timestamps, trial/event runtime state, the original model,
+  region identity, cached inputs, synchronization records, and all children. `MasterPendulum` and
+  its FEM backend also recreate monitoring state and close stale observer panels. A subsequent
+  `initialize(t0)` is covered against a freshly constructed equivalent region component.
+
+Regression coverage pins full checkpoint restoration, direct trial-history suppression, recursive
+trial state, FEM observer suppression, reachable-model rollback validation, target-import failure
+atomicity, and reset/reinitialize equivalence. The failed-import test intentionally corrupts target
+time, physical state, output ports, and history before raising and verifies that all source, target,
+and wrapper observables are unchanged.
+
+Current verification on Python 3.13.5:
+
+- Ruff: passed for `syssimx/` and `tests/` with `--no-cache` because the isolated worktree's cache
+  directory is read-only in the managed runner;
+- MyPy: passed for all 27 source files using a dedicated temporary cache;
+- focused core/hybrid integration gate: 151 passed;
+- full backend-enabled suite with coverage: **627 passed, 1 skipped**, 81% coverage; the unchanged
+  skip is the FMU fixture without a win64 binary;
+- the first full run reached 614 passes but 12 file-I/O tests could not create Pytest's default temp
+  directory; all 91 affected history/loader/result tests passed with a dedicated `--basetemp`, and
+  the complete corrected run then passed; the final post-review run completed in 192.55 seconds;
+- strict offline Sphinx documentation: passed without warnings from dedicated temporary doctree and
+  output directories;
+- locked `uv build --no-sources`: passed offline from the populated cache, with artifacts written
+  to a dedicated temporary directory.
+
+The final commands were:
+
+```powershell
+.\.venv\Scripts\ruff.exe check --no-cache syssimx tests
+.\.venv\Scripts\mypy.exe syssimx --ignore-missing-imports --python-version 3.13 --cache-dir "$env:TEMP\syssimx-milestone2-mypy"
+$env:COVERAGE_FILE = "$env:TEMP\syssimx-milestone2-final.coverage"
+.\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-milestone2-final-pytest" tests --cov=syssimx --cov-report=term-missing -q
+$env:SYSSIMX_DOCS_OFFLINE = "1"
+.\.venv\Scripts\sphinx-build.exe -b html -W --keep-going -d "$env:TEMP\syssimx-milestone2-doctrees" docs "$env:TEMP\syssimx-milestone2-docs"
+uv build --no-sources --out-dir "$env:TEMP\syssimx-milestone2-dist"
+```
+
+This closes the transactional portions of MC-03, MC-04, and MC-08. MC-10 remains open for the
+separate physical-fidelity work: canonical/pairwise adapters, conservation tolerances, and transfer
+diagnostics are not part of Milestone 2. HARD-01 also remains open because the Windows FMU binary
+and a meaningful OpenSim backend assertion are still absent.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -316,6 +390,9 @@ validation, active-reference validation, initial region reconciliation, and gene
 
 **Priority:** High
 
+**Status:** Resolved by Milestone 2 for framework history, recursive trial state, and the existing
+FEM/master-pendulum observer hooks. Real FMU/OpenSim backend execution remains part of HARD-01.
+
 [`HybridAlgorithm._trial_step()`](syssimx/system/algorithms/hybrid.py#L398) toggles the private
 `_record_history` and `_allow_mode_switching` flags. It does not suppress other externally visible
 effects such as monitoring updates, visualization redraws, callbacks, or backend-specific history
@@ -347,6 +424,8 @@ rollback during localization can pollute its component history.
 ### MC-04 — Reset does not restore the switching lifecycle
 
 **Priority:** High
+
+**Status:** Resolved by Milestone 2.
 
 [`MultiComponent.reset()`](syssimx/core/multi_comp.py#L1391) resets the wrapper and submodels but
 does not restore the original mode or reset all switching metadata. In particular:
@@ -451,6 +530,8 @@ should not be suppressed merely because it happened soon after the previous tran
 
 **Priority:** Medium
 
+**Status:** Resolved for `SwitchRegions` by Milestones 1 and 2.
+
 `MultiComponent.supports_rollback` delegates to the active component. A wrapper-level switch
 indicator can therefore be registered while the initial model supports rollback even if another
 reachable mode does not. After switching, the system's event classification remains active but a
@@ -497,6 +578,9 @@ from the active region.
 ### MC-10 — State transfer has no explicit fidelity or conservation contract
 
 **Priority:** Medium
+
+**Status:** Partially resolved. Milestone 2 makes transfer atomic and adds a validation hook; the
+physical fidelity and conservation contract remains open.
 
 The transfer interface preserves a small human-readable state, but the meaning and losses are left
 to each component. In the master pendulum:
@@ -1041,9 +1125,9 @@ should be removed from `MultiComponent`; test-only forced cycling belongs in an 
 ### Stage 3 — Formalize state transfer and checkpoints
 
 - Add canonical or pairwise state adapters and `TransferReport`.
-- Make switches transactional.
-- Add the recursive checkpoint/trial protocol.
-- Remove direct manipulation of private component flags from `HybridAlgorithm`.
+- [x] Make switches transactional.
+- [x] Add the recursive checkpoint/trial protocol.
+- [x] Remove direct manipulation of private component flags from `HybridAlgorithm`.
 
 ### Stage 4 — Migrate MasterPendulum
 
