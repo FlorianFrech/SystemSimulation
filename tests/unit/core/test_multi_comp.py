@@ -15,6 +15,7 @@ from syssimx.utilities import Quantity
 from tests.fixtures.components import (
     EmptyMultiComponent,
     MockSubComponent,
+    NoRollbackComponent,
     RegionMultiComponent,
     SimpleMultiComponent,
     SwitchableMultiComponent,
@@ -581,6 +582,18 @@ class TestSwitchRegions:
         ]
         assert {indicator.direction for indicator in plant.event_indicators.values()} == {0}
 
+    def test_every_reachable_region_model_must_support_rollback(self):
+        plant = RegionMultiComponent()
+        plant.models["B"] = NoRollbackComponent("no_rollback")
+
+        with pytest.raises(RuntimeError, match="Every region model must support rollback.*B"):
+            plant.set_switch_regions(
+                key=lambda comp: _magnitude(comp.outputs["y"].get()),
+                breakpoints=(5.0,),
+                modes=("A", "B"),
+                band=0.5,
+            )
+
     def test_initialization_reconciles_the_region_once(self):
         plant = RegionMultiComponent(signal=lambda t: 20.0, initial_mode="A")
         plant.set_switch_regions(
@@ -626,3 +639,95 @@ class TestSwitchRegions:
 
         with pytest.raises(RuntimeError, match="Invalid active_region_index"):
             _ = plant.active_mode
+
+
+class TestTransactionalRegionSwitching:
+    """A rejected target preparation must be invisible to the accepted run."""
+
+    @staticmethod
+    def _observable_state(comp):
+        return {
+            "time": comp.t,
+            "inputs": {
+                name: (port.get(), port.t_last) for name, port in comp.inputs.items()
+            },
+            "outputs": {
+                name: (port.get(), port.t_last) for name, port in comp.outputs.items()
+            },
+            "history": {
+                name: (tuple(data["time"]), tuple(data["values"]))
+                for name, data in comp.get_history().items()
+            },
+        }
+
+    def test_failed_target_import_restores_entire_transaction(self, monkeypatch):
+        plant = RegionMultiComponent(signal=lambda t: t)
+        plant.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0,),
+            modes=("A", "B"),
+            band=0.5,
+        )
+        plant.initialize(0.0)
+        plant.do_step(0.0, 1.0)
+
+        source = plant.models["A"]
+        target = plant.models["B"]
+        wrapper_before = self._observable_state(plant)
+        source_before = self._observable_state(source)
+        source_physical_before = source.get_state()
+        target_before = self._observable_state(target)
+        target_physical_before = target.get_state()
+
+        def reject_import(state, t):
+            target._time = 99.0
+            target._y = 99.0
+            target.t = 99.0
+            target.outputs["y"].set(99.0, t=99.0)
+            target._record_outputs(99.0)
+            raise ValueError("target rejected state")
+
+        monkeypatch.setattr(target, "set_state", reject_import)
+
+        with pytest.raises(ValueError, match="target rejected state"):
+            plant._switch_region(1, t=1.0)
+
+        assert plant.active_region_index == 0
+        assert plant.active_mode == "A"
+        assert plant.active_comp is source
+        assert plant.sync_events == []
+        assert self._observable_state(plant) == wrapper_before
+        assert self._observable_state(source) == source_before
+        assert source.get_state() == source_physical_before
+        assert self._observable_state(target) == target_before
+        assert target.get_state() == target_physical_before
+
+    def test_reset_reinitialize_matches_fresh_equivalent_instance(self):
+        def build():
+            plant = RegionMultiComponent(signal=lambda t: 20.0, initial_mode="A")
+            plant.set_switch_regions(
+                key=lambda comp: _magnitude(comp.outputs["y"].get()),
+                breakpoints=(5.0, 15.0),
+                modes=("A", "B", "C"),
+                band=0.5,
+            )
+            return plant
+
+        reused = build()
+        reused.initialize(0.0)
+        reused.do_step(0.0, 1.0)
+        reused.sync_events.append({"time": 1.0, "from_mode": "C", "to_mode": "B"})
+        reused.reset()
+        reused.initialize(3.0)
+
+        fresh = build()
+        fresh.initialize(3.0)
+
+        assert reused.active_region_index == fresh.active_region_index == 2
+        assert reused.active_mode == fresh.active_mode == "C"
+        assert reused.sync_events == fresh.sync_events == []
+        assert self._observable_state(reused) == self._observable_state(fresh)
+        for mode in reused.models:
+            assert self._observable_state(reused.models[mode]) == self._observable_state(
+                fresh.models[mode]
+            )

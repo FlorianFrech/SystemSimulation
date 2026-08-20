@@ -332,7 +332,8 @@ class OpenSimPendulum(OpenSimComponent):
         if "wall_hit" not in event_names:
             return
 
-        logger.info("[%s] Event 'wall_hit' at t=%.4fs: Inverting velocity", self.name, t)
+        if not self.in_trial:
+            logger.info("[%s] Event 'wall_hit' at t=%.4fs: Inverting velocity", self.name, t)
 
         # Invert angular velocity
         omega_new = -1 * self.get_coordinate_speed("theta")

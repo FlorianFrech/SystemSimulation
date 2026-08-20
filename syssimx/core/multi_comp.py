@@ -115,6 +115,14 @@ class StateAdapter(Protocol):
 
 
 @dataclass(frozen=True)
+class _PreparedStateTransfer:
+    """Validated target state waiting for one identity commit."""
+
+    source_state: dict[str, Any]
+    target_state: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class RegionBoundary:
     """One physical boundary and its Schmitt-trigger band."""
 
@@ -325,6 +333,7 @@ class MultiComponent(CoSimComponent):
 
         # Model registry and the pre-region/legacy active references.
         self.models: dict[ModeKey, CoSimComponent] = models
+        self._initial_mode: ModeKey = initial_mode
         self._active_mode: ModeKey = initial_mode
 
         # A configured region map owns runtime identity. ``None`` is valid
@@ -843,10 +852,10 @@ class MultiComponent(CoSimComponent):
             raise RuntimeError(f"{self.name}: Model '{new_mode}' is not initialized")
 
         from_mode = self.active_mode
+        prepared = self._perform_state_transfer(new_comp, new_mode, t)
+        self._active_mode = new_mode
+        self._capture_switch_event(t, from_mode, new_mode, prepared)
         logger.info("[%s] Switching: %s to %s @ t=%.4fs", self.name, from_mode, new_mode, t)
-
-        retrieved_state = self._perform_state_transfer(new_comp, new_mode, t)
-        self._capture_switch_event(t, from_mode, new_mode, retrieved_state)
 
     def _switch_region(self, target_index: int, t: float, *, record: bool = True) -> None:
         """Commit one transition to an adjacent region."""
@@ -863,20 +872,23 @@ class MultiComponent(CoSimComponent):
         from_mode = regions.modes[source_index]
         to_mode = regions.modes[target_index]
         new_comp = self.models[to_mode]
-        retrieved = self._perform_state_transfer(new_comp, to_mode, t)
+        prepared = self._perform_state_transfer(new_comp, to_mode, t)
+        self._active_mode = to_mode
         self.active_region_index = target_index
         if record:
-            self._capture_switch_event(t, from_mode, to_mode, retrieved)
+            self._capture_switch_event(t, from_mode, to_mode, prepared)
+        logger.info("[%s] Switching: %s to %s @ t=%.4fs", self.name, from_mode, to_mode, t)
 
     def _perform_state_transfer(
         self, new_comp: CoSimComponent, new_mode: ModeKey, t: float
-    ) -> dict[str, Any]:
-        """Move physical state from the current active model to ``new_comp``.
+    ) -> _PreparedStateTransfer:
+        """Prepare and validate ``new_comp`` without committing identity.
 
-        Retrieves the state of the active component, replays the most
-        recent inputs onto ``new_comp`` so it is current with the outgoing
-        model, adapts the state for the target model, writes it to
-        ``new_comp``, and promotes ``new_comp`` to be the active component.
+        Both the accepted wrapper/source and the inactive target are
+        checkpointed before preparation. Any exception restores both exact
+        checkpoints, including time, ports, history, and runtime metadata.
+        The caller alone commits the active mode or region after this method
+        returns successfully.
 
         Args:
             new_comp: The component instance that will become active.
@@ -884,47 +896,81 @@ class MultiComponent(CoSimComponent):
             t: Current simulation time.
 
         Returns:
-            The retrieved (pre-adaptation) state of the previously active
-            component, for inclusion in the switch event log.
+            The source and validated target physical states for an eventual
+            switch record.
         """
-        retrieved = self.active_comp.get_state()
-        adapted = self._adapt_state(retrieved, new_mode)
-        if self._latest_inputs is not None:
-            signals, t_inputs = self._latest_inputs
-            new_comp.set_inputs(signals, t_inputs)
-        new_comp.set_state(adapted, t)
+        source_checkpoint = self.checkpoint()
+        target_checkpoint = new_comp.checkpoint()
+        try:
+            with self.trial_context():
+                retrieved = self.active_comp.get_state()
+                adapted = self._adapt_state(retrieved, new_mode)
+                if self._latest_inputs is not None:
+                    signals, t_inputs = self._latest_inputs
+                    new_comp.set_inputs(signals, t_inputs)
 
-        # Publish the transferred state on the incoming model's output ports.
-        # ``set_state`` updates internal state but is not required to publish it,
-        # and a model that has been inactive still holds the outputs it wrote
-        # when it was last active. Without this refresh the wrapper would copy
-        # and record those stale values, so the handover would appear as a jump
-        # in the recorded trajectory even though the physical state is continuous.
-        new_comp._update_output_states(t)
+                # Target preparation is deliberately ordered: import, validate,
+                # publish target outputs, then return to the caller for commit.
+                new_comp.set_state(adapted, t)
+                new_comp.t = t
+                synchronized = self._validate_imported_state(
+                    retrieved, adapted, new_mode, new_comp, t
+                )
+                new_comp._update_output_states(t)
+            return _PreparedStateTransfer(retrieved, synchronized)
+        except Exception as transfer_error:
+            rollback_errors: list[Exception] = []
+            for component, checkpoint in (
+                (new_comp, target_checkpoint),
+                (self, source_checkpoint),
+            ):
+                try:
+                    component.restore_checkpoint(checkpoint)
+                except Exception as rollback_error:  # pragma: no cover - catastrophic backend fault
+                    rollback_errors.append(rollback_error)
+            if rollback_errors:
+                raise RuntimeError(
+                    f"{self.name}: State transfer to '{new_mode}' failed and rollback "
+                    f"reported {len(rollback_errors)} additional error(s)."
+                ) from transfer_error
+            raise
 
-        self._active_mode = new_mode
-        return retrieved
+    def _validate_imported_state(
+        self,
+        source_state: dict[str, Any],
+        adapted_state: dict[str, Any],
+        target_mode: ModeKey,
+        target: CoSimComponent,
+        t: float,
+    ) -> dict[str, Any]:
+        """Validate a prepared target and return its readable physical state.
+
+        The default contract requires the imported state to be readable again.
+        Domain-specific composites can override this hook to check conserved
+        quantities, projection residuals, units, or tolerances before commit.
+        """
+        return target.get_state()
 
     def _capture_switch_event(
-        self, t: float, from_mode: ModeKey, to_mode: ModeKey, retrieved: dict[str, Any]
+        self,
+        t: float,
+        from_mode: ModeKey,
+        to_mode: ModeKey,
+        prepared: _PreparedStateTransfer,
     ) -> None:
         """Append one record of the completed switch to ``sync_events``.
 
         Always logs the time, source mode, and target mode. When
         ``self.record_switch_state`` is ``True``, the record also
-        includes the pre-adaptation source state (``retrieved``) and
-        a fresh snapshot of the new active component's state (``now``).
-        The ``now`` snapshot calls ``active_comp.get_state()``, which
-        can be expensive for high-fidelity models. ``record_switch_state``
-        defaults to ``False`` and should be enabled only for debugging
-        synchronization issues.
+        includes the already prepared source and validated target states.
+        ``record_switch_state`` defaults to ``False`` and should be enabled
+        only for debugging synchronization issues.
 
         Args:
             t: Time at which the switch occurred.
             from_mode: Mode key that was active before the switch.
             to_mode: Mode key that is active after the switch.
-            retrieved: State exported from the source component before
-                adaptation.
+            prepared: Validated source and target states from the transaction.
         """
         record: dict[str, Any] = {
             "time": t,
@@ -932,8 +978,8 @@ class MultiComponent(CoSimComponent):
             "to_mode": to_mode,
         }
         if self.record_switch_state:
-            record["retrieved"] = retrieved
-            record["now"] = self.active_comp.get_state()
+            record["retrieved"] = prepared.source_state
+            record["now"] = prepared.target_state
         self.sync_events.append(record)
 
     # -------------------------------------------------------------------
@@ -1001,6 +1047,7 @@ class MultiComponent(CoSimComponent):
         target_mode = regions.modes[target_index]
         if target_mode != self._active_mode:
             self._perform_state_transfer(self.models[target_mode], target_mode, float(t or 0.0))
+        self._active_mode = target_mode
         self.active_region_index = target_index
 
     def evaluate_outputs(self, inputs: dict[str, Any], t: float | None = None) -> dict[str, Any]:
@@ -1147,6 +1194,45 @@ class MultiComponent(CoSimComponent):
         """
         return self.active_comp.snapshot_state()
 
+    def _checkpoint_solver_state(self) -> None:
+        """The active child's recursive checkpoint owns backend solver state."""
+
+    def _restore_checkpoint_solver_state(self, snapshot: Any, t: float) -> None:
+        """No local solver exists; child checkpoints restore backend state."""
+
+    def _checkpoint_children(self) -> tuple[CoSimComponent, ...]:
+        """Checkpoint only the child that can change during an active advance."""
+        return (self.active_comp,)
+
+    def _trial_children(self) -> tuple[CoSimComponent, ...]:
+        """Propagate trial suppression to every registered model exactly once."""
+        unique: dict[int, CoSimComponent] = {}
+        for model in self.models.values():
+            unique.setdefault(id(model), model)
+        return tuple(unique.values())
+
+    def _checkpoint_metadata(self) -> dict[str, Any]:
+        """Capture switching identity and transaction-visible wrapper state."""
+        return {
+            "active_mode": self._active_mode,
+            "active_region_index": self.active_region_index,
+            "latest_inputs": self._latest_inputs,
+            "sync_events": self.sync_events,
+            "prev_state": self._prev_state,
+            "curr_state": self._curr_state,
+            "initializing_regions": self._initializing_regions,
+        }
+
+    def _restore_checkpoint_metadata(self, metadata: Any) -> None:
+        """Restore metadata captured by :meth:`_checkpoint_metadata`."""
+        self._active_mode = metadata["active_mode"]
+        self.active_region_index = metadata["active_region_index"]
+        self._latest_inputs = metadata["latest_inputs"]
+        self.sync_events[:] = metadata["sync_events"]
+        self._prev_state = metadata["prev_state"]
+        self._curr_state = metadata["curr_state"]
+        self._initializing_regions = metadata["initializing_regions"]
+
     def restore_state(self, snapshot, t) -> None:
         """Restore state snapshot on the active component.
 
@@ -1270,5 +1356,11 @@ class MultiComponent(CoSimComponent):
         for comp in self.models.values():
             if comp is not None:
                 comp.reset()
+        self._active_mode = self._initial_mode
         self._latest_inputs = None
         self.active_region_index = None
+        self.sync_events.clear()
+        self._prev_state = None
+        self._curr_state = None
+        self._initializing_regions = False
+        self._allow_mode_switching = True

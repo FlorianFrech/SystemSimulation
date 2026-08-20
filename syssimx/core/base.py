@@ -66,15 +66,50 @@ See Also:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
 from ..utilities.units import Quantity
 from .events import Event, EventIndicator, InternalEventInfo, _sign
-from .history import ComponentHistory
+from .history import ComponentHistory, ComponentHistoryCheckpoint
 from .port import PortSpec, PortState, PortType
+
+
+@dataclass(frozen=True)
+class PortCheckpoint:
+    """Value and timestamp of one mutable port at a checkpoint."""
+
+    spec: PortSpec
+    value: Any
+    t_last: float | None
+
+
+@dataclass(frozen=True)
+class ComponentCheckpoint:
+    """Opaque recursive snapshot of solver and framework runtime state.
+
+    Checkpoints belong to one component instance. They include mutable
+    framework observables that backend ``snapshot_state()`` implementations
+    traditionally omit, and recursively include any active child components.
+    """
+
+    owner: CoSimComponent
+    time: float
+    solver_state: Any
+    inputs: tuple[tuple[str, PortCheckpoint], ...]
+    outputs: tuple[tuple[str, PortCheckpoint], ...]
+    history: ComponentHistoryCheckpoint
+    parameters: dict[str, Any]
+    internal_event_hints: tuple[InternalEventInfo, ...]
+    events_being_handled: dict[str, Event]
+    initialized: bool
+    metadata: Any
+    children: tuple[ComponentCheckpoint, ...]
 
 
 # -------------------------------------------------------------------
@@ -197,6 +232,7 @@ class CoSimComponent(ABC):
         # master algorithm disables this during trial/probe steps (event
         # localization) so that rolled-back advances do not pollute history.
         self._record_history: bool = True
+        self._trial_depth: int = 0
 
         # Parameter container (populated by subclasses)
         self.parameters: dict[str, Any] = {}
@@ -837,6 +873,148 @@ class CoSimComponent(ABC):
         """
         raise NotImplementedError(f"Component '{self.name}' does not support rollback. ")
 
+    def _checkpoint_solver_state(self) -> Any:
+        """Capture this component's local solver state.
+
+        Composite components may override this hook and capture solver state
+        exclusively through :meth:`_checkpoint_children` to avoid duplicate
+        backend snapshots.
+        """
+        return self.snapshot_state()
+
+    def _restore_checkpoint_solver_state(self, snapshot: Any, t: float) -> None:
+        """Restore the local solver portion of a framework checkpoint."""
+        self.restore_state(snapshot, t)
+
+    def _checkpoint_children(self) -> tuple[CoSimComponent, ...]:
+        """Return child components whose runtime state changes with this one."""
+        return ()
+
+    def _trial_children(self) -> tuple[CoSimComponent, ...]:
+        """Return children that must inherit observational suppression."""
+        return self._checkpoint_children()
+
+    def _checkpoint_metadata(self) -> Any:
+        """Capture subclass framework metadata not held by solver state."""
+        return None
+
+    def _restore_checkpoint_metadata(self, metadata: Any) -> None:
+        """Restore metadata returned by :meth:`_checkpoint_metadata`."""
+
+    @staticmethod
+    def _checkpoint_ports(ports: dict[str, PortState]) -> tuple[tuple[str, PortCheckpoint], ...]:
+        return tuple(
+            (
+                name,
+                PortCheckpoint(
+                    spec=port.spec,
+                    value=deepcopy(port.value),
+                    t_last=port.t_last,
+                ),
+            )
+            for name, port in ports.items()
+        )
+
+    @staticmethod
+    def _restore_ports(
+        ports: dict[str, PortState], checkpoint: tuple[tuple[str, PortCheckpoint], ...]
+    ) -> None:
+        saved = dict(checkpoint)
+        for name in tuple(ports):
+            if name not in saved:
+                del ports[name]
+        for name, port_checkpoint in saved.items():
+            port = ports.get(name)
+            if port is None:
+                port = PortState(port_checkpoint.spec)
+                ports[name] = port
+            port.spec = port_checkpoint.spec
+            port.value = deepcopy(port_checkpoint.value)
+            port.t_last = port_checkpoint.t_last
+
+    def checkpoint(self) -> ComponentCheckpoint:
+        """Capture recursive solver state and every framework observable.
+
+        The returned checkpoint is valid only for this component instance.
+        All components on the active child path must support rollback.
+        """
+        if not self.supports_rollback:
+            raise RuntimeError(f"Component '{self.name}' does not support checkpoint rollback.")
+        return ComponentCheckpoint(
+            owner=self,
+            time=self.t,
+            solver_state=self._checkpoint_solver_state(),
+            inputs=self._checkpoint_ports(self.inputs),
+            outputs=self._checkpoint_ports(self.outputs),
+            history=self.history.checkpoint(),
+            parameters=deepcopy(self.parameters),
+            internal_event_hints=tuple(deepcopy(self.internal_event_hints)),
+            events_being_handled=deepcopy(self._events_being_handled),
+            initialized=self._is_initialized,
+            metadata=deepcopy(self._checkpoint_metadata()),
+            children=tuple(child.checkpoint() for child in self._checkpoint_children()),
+        )
+
+    def restore_checkpoint(self, checkpoint: ComponentCheckpoint) -> None:
+        """Restore an exact recursive checkpoint on its originating object."""
+        if checkpoint.owner is not self:
+            raise ValueError(
+                f"Checkpoint for '{checkpoint.owner.name}' cannot restore '{self.name}'."
+            )
+
+        with self.trial_context():
+            self.parameters.clear()
+            self.parameters.update(deepcopy(checkpoint.parameters))
+            self._restore_ports(self.inputs, checkpoint.inputs)
+            self._restore_checkpoint_metadata(deepcopy(checkpoint.metadata))
+            self._restore_checkpoint_solver_state(checkpoint.solver_state, checkpoint.time)
+            for child_checkpoint in checkpoint.children:
+                child_checkpoint.owner.restore_checkpoint(child_checkpoint)
+
+        # A backend restore may publish outputs or touch history. Framework
+        # observables are therefore restored last and exactly.
+        self.parameters.clear()
+        self.parameters.update(deepcopy(checkpoint.parameters))
+        self._restore_checkpoint_metadata(deepcopy(checkpoint.metadata))
+        self._restore_ports(self.inputs, checkpoint.inputs)
+        self._restore_ports(self.outputs, checkpoint.outputs)
+        self.history.restore_checkpoint(checkpoint.history)
+        self.internal_event_hints[:] = deepcopy(checkpoint.internal_event_hints)
+        self._events_being_handled = deepcopy(checkpoint.events_being_handled)
+        self._is_initialized = checkpoint.initialized
+        self.t = checkpoint.time
+
+    @property
+    def in_trial(self) -> bool:
+        """Whether this component is executing speculative work."""
+        return self._trial_depth > 0
+
+    @contextmanager
+    def trial_context(self) -> Iterator[None]:
+        """Recursively suppress observational effects during trial work.
+
+        This context does not itself roll state back; callers pair it with a
+        :meth:`checkpoint` and :meth:`restore_checkpoint`. Nested contexts
+        preserve the suppression state established by their caller.
+        """
+        original_depth = self._trial_depth
+        original_record = self._record_history
+        original_switch = getattr(self, "_allow_mode_switching", None)
+        self._trial_depth += 1
+        self._record_history = False
+        if original_switch is not None:
+            self._allow_mode_switching = False
+        try:
+            with ExitStack() as stack:
+                for child in self._trial_children():
+                    stack.enter_context(child.trial_context())
+                yield
+        finally:
+            if original_switch is not None:
+                self._allow_mode_switching = original_switch
+            self._record_history = original_record
+            self._trial_depth = original_depth
+
     def restore_state(self, snapshot: Any, t: float) -> None:
         """Restore component to exact state from a snapshot.
 
@@ -931,6 +1109,8 @@ class CoSimComponent(ABC):
             Only ports with non-None values are recorded. This method is
             called internally and typically should not be overridden.
         """
+        if not self._record_history or self.in_trial:
+            return
         for name, port in self.outputs.items():
             if port.value is not None:
                 self.history.append(name, t, port.value)
@@ -1436,6 +1616,12 @@ class CoSimComponent(ABC):
         """
         self.t = 0.0
         self.history.clear()
+        for port in (*self.inputs.values(), *self.outputs.values()):
+            port.reset()
+        self.internal_event_hints.clear()
+        self._events_being_handled.clear()
+        self._record_history = True
+        self._trial_depth = 0
         self._is_initialized = False
 
     def free(self) -> None:
