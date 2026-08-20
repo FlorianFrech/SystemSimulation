@@ -214,6 +214,66 @@ separate physical-fidelity work: canonical/pairwise adapters, conservation toler
 diagnostics are not part of Milestone 2. HARD-01 also remains open because the Windows FMU binary
 and a meaningful OpenSim backend assertion are still absent.
 
+## Milestone 3 implementation record
+
+Milestone 3 was implemented on 2026-08-20 on branch `breaking/region-switching-only`, after all
+consumer changes were separated from the API removal:
+
+- `61c53c8` migrates the default `MasterPendulum`, notebooks 5 and 6, the performance and
+  verification notebooks, tutorials, documentation, and unit/integration tests;
+- `16ea316` makes demonstrations that intentionally use one fixed model explicit with
+  `switch_config=None`;
+- `c306370` is the dedicated breaking-change commit that removes the legacy APIs.
+
+`MasterPendulumSwitchConfig` is now the immutable reusable angle-region policy. Its default maps
+FEM, OpenSim, and FMU to three ordered `abs(theta)` regions with two nonzero hysteresis bands.
+Passing `None` opts out of runtime switching. The old production time cycle was moved to an
+external signal-driven integration harness, which covers `A -> B -> C -> A` without putting a
+schedule-driven policy back into `MultiComponent`.
+
+After consumer migration, the breaking commit removed `mode_selector`, `_select_target_mode()`,
+public `add_switch_indicator()`, `_switch_targets`, `_resolve_switch_target()`, fixed-target
+registration-order behavior, and the obsolete MasterPendulum time/gap selector methods. Event
+evaluation, port preservation, self-subscription, and dispatch now recognize generated region
+boundaries only. `_switch_mode()` remains private solely as a direct transactional transfer
+primitive; it is not an automatic switching mechanism.
+
+Repository-wide searches over `syssimx`, `demos`, `tests`, `docs`, and `notebooks` return no matches
+for the deleted symbols. Historical references remain in this roadmap only so the rationale and
+completed findings are auditable.
+
+Current verification on Python 3.13.5:
+
+- Ruff: passed for `syssimx/` and `tests/`;
+- MyPy: passed for all 27 source files;
+- focused core/hybrid/MasterPendulum gate: 86 passed;
+- full backend-enabled suite with coverage: **626 passed, 1 skipped**, 84% coverage, in 175.86 s;
+- strict offline Sphinx documentation: passed without warnings;
+- locked `uv build --no-sources`: passed using the populated local cache;
+- the generic switching tutorial and `notebooks/03_multi_comp_verification.ipynb` executed
+  successfully; expensive case-study notebook outputs were cleared rather than retaining stale
+  results.
+
+The final commands were:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check syssimx tests
+.\.venv\Scripts\python.exe -m mypy syssimx --ignore-missing-imports --python-version 3.13
+.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m3-final2-pytest" tests --cov=syssimx --cov-report=term-missing -q
+$env:SYSSIMX_DOCS_OFFLINE = "1"
+.\.venv\Scripts\python.exe -m sphinx -b html -W --keep-going -d "$env:TEMP\syssimx-m3-doctrees-final" docs "$env:TEMP\syssimx-m3-docs-final"
+uv build --no-sources --out-dir "$env:TEMP\syssimx-m3-dist"
+rg -n "mode_selector|_select_target_mode|add_switch_indicator|_switch_targets|_resolve_switch_target|_time_based_mode_selector|_gap_based_mode_selector|_pending_region_repair" syssimx demos tests docs notebooks
+```
+
+The first build attempt deliberately used a new empty temporary uv cache and failed because the
+managed runner cannot reach PyPI. Repeating the same locked build against the populated local cache
+passed; no dependency or lockfile was changed.
+
+The unchanged skip is the FMU fixture without a win64 binary. Real three-backend switching and
+fresh performance/convergence evidence remain tracked by HARD-01 and EVID-01 through EVID-03; they
+are not blockers to the mechanism migration itself.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -234,69 +294,52 @@ The central abstraction is useful: `MultiComponent` exposes a stable port interf
 one active model, and transfers physical state when the active model changes. The implementation
 also contains a capable event-localized switching path.
 
-The main problem is that switching decisions, event registration, hysteresis, rollback protection,
-state transfer, logging, and lifecycle management have accumulated inside the same class. There
-are now three partially overlapping decision mechanisms with different semantics. The performance
-case-study notebook now configures `MasterPendulum` with localized regions, but the component's
-fallback behavior and other case-study notebooks still use grid-polled selectors.
+The switching mechanism has now been consolidated. `MultiComponent` exposes one public automatic
+switching API, `set_switch_regions()`, and resolves transitions only from localized generated
+boundaries. Transactional transfer and checkpoint/trial behavior remain explicit internal
+contracts. Remaining work concerns physical transfer fidelity, backend coverage, performance
+evidence, and cleanup outside the decision mechanism.
 
 The design decision is to expose exactly one public runtime-switching mechanism:
 generalized, event-localized region switching through `set_switch_regions()`. It is the only
-existing mechanism that combines declarative configuration, support for three or more models,
+mechanism that combines declarative configuration, support for three or more models,
 direction-aware transitions, event-time localization, and signal hysteresis. Grid-polled selectors
-and user-managed fixed-target indicators should be removed after all examples and tests migrate.
+and user-managed fixed-target indicators were removed after all examples and tests migrated.
 
 The recommended direction is an incremental consolidation rather than a rewrite:
 
 1. Fix the concrete correctness and lifecycle defects.
-2. Generalize `set_switch_regions()` as the sole public switching API.
-3. Remove `mode_selector`, public `add_switch_indicator()`, dwell timing, pending repair, and the
-   arbitration concepts needed only when multiple mechanisms coexist.
+2. [x] Generalize `set_switch_regions()` as the sole public switching API.
+3. [x] Remove `mode_selector`, public `add_switch_indicator()`, dwell timing, pending repair, and
+   the arbitration concepts needed only when multiple mechanisms coexist.
 4. Keep state transfer and checkpoint/trial behavior as explicit internal contracts.
-5. Complete the case-study migration and add cross-backend integration tests before deleting the
-   legacy paths.
+5. [x] Complete the consumer migration before deleting the legacy paths; retain real cross-backend
+   integration coverage as HARD-01.
 
-## Existing runtime-switching mechanisms
+## Current runtime-switching mechanisms
 
-| Mechanism | Trigger | Placement | Current MasterPendulum use | Design decision |
+| Mechanism | Trigger | Placement | Current MasterPendulum use | Status |
 |---|---|---|---|---|
-| `mode_selector` | Function polled before a positive macro step | Communication grid | Default fallback; still used in notebooks 5 and 6 | Remove after migration |
-| `add_switch_indicator()` | User-defined zero crossing with a fixed target | Bisection-localized event time | Supported but not configured by default | Remove from the public switching API |
-| `set_switch_regions()` | Generated boundary events for an ordered scalar region map | Bisection-localized event time | Configured by `notebooks/performance.ipynb` | Generalize and retain as the sole public mechanism |
-| `_switch_mode()` | Direct internal invocation | Caller-provided time | Private execution primitive | Keep private as a transactional commit operation, not a switching mechanism |
+| `set_switch_regions()` | Generated boundary events for an ordered scalar region map | Bisection-localized event time | Default typed three-model angle policy | Sole public automatic switching mechanism |
+| `_switch_mode()` | Direct internal invocation | Caller-provided time | None | Private transactional transfer primitive, not a switching policy |
 
-### Grid-polled selector
+### Removed legacy mechanisms
 
-[`MultiComponent._do_step_internal()`](syssimx/core/multi_comp.py#L947) asks
-[`_select_target_mode()`](syssimx/core/multi_comp.py#L982) for a target before advancing the
-active model. If the target differs, the switch happens at the current communication point.
-
-`MasterPendulum` installs either a time-based selector or an angle-based selector during
-initialization. See
-[`MasterPendulum._initialize_component()`](demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py#L75).
-
-### Fixed-target localized indicators
-
-[`add_switch_indicator()`](syssimx/core/multi_comp.py#L529) adds a wrapper-owned event indicator
-whose event requests one target model. The `System` registers the wrapper as its own listener and
-selects `HybridAlgorithm` when event sources exist.
-
-The hybrid algorithm speculatively advances the event source, detects a sign change, rolls back,
-localizes the event by bisection, advances the real system to the event time, and dispatches the
-event. Switching is disabled during speculative execution so a snapshot is not restored into a
-different active model.
+The grid-polled selector and public fixed-target indicator APIs were removed in Milestone 3. Their
+placement, arbitration, and registration-order semantics are retained only in the completed issue
+records below. Consumers that need scheduled test motion supply time as the scalar region signal in
+an external harness; production components do not install time-driven selectors.
 
 ### Declarative switch regions
 
-[`set_switch_regions()`](syssimx/core/multi_comp.py#L623) maps one scalar key onto ordered model
-regions. It generates directional boundary events around every breakpoint. A nonzero `band`
-provides Schmitt-trigger behavior and is the sole chatter-prevention mechanism in the target
-design. Minimum dwell timing and its pending-repair state should be removed.
+[`set_switch_regions()`](syssimx/core/multi_comp.py) maps one scalar key onto ordered model regions.
+It generates one bidirectional event per breakpoint. A nonzero `band` provides Schmitt-trigger
+behavior and is the sole chatter-prevention mechanism.
 
 ### State transfer
 
-All decision paths eventually call
-[`_perform_state_transfer()`](syssimx/core/multi_comp.py#L1036):
+Every accepted region transition calls
+[`_perform_state_transfer()`](syssimx/core/multi_comp.py):
 
 1. Export physical state from the outgoing model with `get_state()`.
 2. Adapt it for the target model.
@@ -312,52 +355,38 @@ All decision paths eventually call
 
 **Priority:** High
 
-`notebooks/performance.ipynb` now declares a three-model region map on `|theta|`, with breakpoints at
-6° and 13° and a 1° band. `MasterPendulum._initialize_component()` also avoids installing its
-fallback selector when switch indicators or a region map are already configured. This closes the
-mechanism-level conflict in that path.
+**Status:** Resolved by Milestone 3 for mechanism and consumer migration. Fresh performance and
+convergence measurements remain EVID-01 through EVID-03.
 
-The migration is not complete: case-study notebooks 5 and 6 still use `mode_selector`, and the
-component's default contact behavior still implements its angle regions through
-[`_gap_based_mode_selector()`](demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py#L184).
-Those switches remain macro-grid placed. A physical threshold crossing can therefore precede the
-actual switch by as much as one macro step, during which the system advances the wrong model and
-supplies its dynamics to coupled components.
-
-The method name is also misleading: it reads `theta`, not an actual contact gap.
-
-The configured `dwell_time = 0.05 s` is longer than the roughly `0.039 s` contact-bounce interval
-seen in the tutorial. It suppresses physically valid full-band recrossings and requires pending
-repair logic. It should be removed; the region band should be sized to reject threshold chatter.
+The default `MasterPendulum`, notebooks 5 and 6, the performance and verification notebooks,
+tutorials, documentation, and tests now use generated regions. `MasterPendulumSwitchConfig`
+defines the canonical radians-based `abs(theta)` breakpoints and bands once. Fixed-model examples
+opt out explicitly with `switch_config=None`; no selector fallback or time hold remains.
 
 **Suggested solution**
 
-- Migrate notebooks 5 and 6 to `set_switch_regions()`. A temporary comparison with
-  `mode_selector` may be used to document the migration, but the selector path should not remain as
-  a supported alternative.
-- Re-run `performance.ipynb`; its new three-model occupancy and speculative-work results are not
-  yet measured.
-- Configure the default contact region map through `set_switch_regions()`.
-- Use a canonical key in radians, for example `abs(theta)`.
-- Reconcile the performance notebook's 6°/13° breakpoints with the intended 0.075 rad/15° contact
-  thresholds, then define the selected values once in typed configuration.
-- Configure explicit, nonzero entry/exit bands.
-- Remove the time-based initial hold from runtime switching. If FEM requires preparation, perform
-  it as an explicit initialization phase before region switching is armed.
-- If actual contact distance is the intended signal, expose a shared `contact_distance` or
-  `contact_proxy` output across all three models and use that instead of angle.
+- [x] Migrate every selector/fixed-indicator consumer to `set_switch_regions()`.
+- [x] Configure one canonical radians-based `abs(theta)` policy for the default MasterPendulum.
+- [x] Use explicit, nonzero bands and remove time holds from runtime switching.
+- [ ] Re-run the expensive performance study and record occupancy and speculative-work results
+  under EVID-01.
+- [ ] If actual contact distance becomes the intended signal, first expose a shared
+  `contact_distance` or `contact_proxy` output across all three models.
 
 **Acceptance criteria**
 
-- State-dependent switches are localized independently of the macro-step size.
-- Switch times converge according to `tol_time`/`tol_value`, not `dt`.
-- The configuration name and documentation describe the signal actually used.
-- The performance notebook contains fresh executed results for occupancy, switch count, and
-  speculative work.
+- [x] State-dependent switches are localized independently of macro-step size.
+- [x] Switch times converge according to `tol_time`/`tol_value`, not `dt`.
+- [x] Configuration and documentation describe the `abs(theta)` signal actually used.
+- [ ] The performance notebook contains fresh executed results for occupancy, switch count, and
+  speculative work; tracked separately as evidence rather than migration work.
 
 ### MC-02 — MasterPendulum bypasses base-class region initialization
 
 **Priority:** High
+
+**Status:** Resolved by Milestone 1. `MultiComponent.initialize()` owns the shared reconciliation
+invariant even when a subclass customizes model initialization order.
 
 The base `MultiComponent._initialize_component()` initializes all models and arms initial region
 reconciliation. `MasterPendulum` overrides the entire method to initialize FEM first, synchronize
@@ -456,6 +485,9 @@ and mix switch records from multiple runs.
 
 **Priority:** High
 
+**Status:** Resolved by Milestone 1. Bands are positive, each boundary is represented once, and the
+localized bracket carries its crossing direction through dispatch.
+
 `set_switch_regions()` defaults `band` to zero. In that case the rising and falling indicators for
 one breakpoint use the same threshold. Event localization lands at that threshold, and
 [`HybridAlgorithm._collect_events_at_time()`](syssimx/system/algorithms/hybrid.py#L696) collects all
@@ -483,6 +515,8 @@ commutativity path.
 
 **Priority:** Medium
 
+**Status:** Resolved by Milestone 1 with authoritative `active_region_index`.
+
 Validation rejects equal neighboring modes but permits a map such as `A, B, A`.
 `SwitchRegions.index_of()` returns only the first occurrence, so the active mode cannot identify
 whether the component occupies the lower or upper `A` region. Hysteretic settlement may therefore
@@ -501,6 +535,8 @@ The fallback from an unknown mode to region zero also hides invariant violations
 ### MC-07 — Minimum dwell time duplicates and weakens region hysteresis
 
 **Priority:** Medium
+
+**Status:** Resolved by Milestone 1. Dwell and pending-repair state were removed.
 
 Minimum dwell time suppresses a transition based on elapsed time rather than the switching signal.
 The implementation must then remember `_pending_region_repair` and later poll the current region to
@@ -551,29 +587,24 @@ the currently active child, while system classification occurs during initializa
 
 **Priority:** Medium
 
-`mode_selector`, fixed switch indicators, and region indicators can coexist. Selector decisions are
-handled before a step, event decisions are handled during event dispatch, and region repair is only
-consulted if the selector did not already request another mode. The resulting precedence is implicit
-and can cause a localized event to be reversed by the selector at the next grid point.
+**Status:** Resolved by Milestone 3.
 
-Fixed-target simultaneous events also use registration order, while region proposals use distance
-from the active region.
+The former selector, fixed-target indicator dictionary, target resolver, polling, and
+registration-order behavior have been deleted. Generated region boundaries are the only automatic
+decision source.
 
 **Suggested solution**
 
-- Make `set_switch_regions()` the only public runtime-switching configuration method.
-- Remove `mode_selector` and its polling from `_do_step_internal()` after migrating consumers.
-- Remove public `add_switch_indicator()`; boundary indicators become private implementation details
-  generated exclusively from the region map.
-- Remove `SwitchRequest`, policy precedence, priorities, deferred requests, and `SwitchArbiter` from
-  the proposed design. They solve conflicts that no longer exist with one decision mechanism.
-- Keep one private transactional operation that commits the region transition and state transfer.
+- [x] Make `set_switch_regions()` the only public runtime-switching configuration method.
+- [x] Remove selector polling and public fixed-target indicator registration after migration.
+- [x] Keep generated boundary indicators private and direction-aware.
+- [x] Keep one private transactional operation for region transition and state transfer.
 
 **Acceptance criteria**
 
-- It is impossible to configure two competing model-selection paths on one `MultiComponent`.
-- Every runtime transition originates from a localized crossing of the configured region map.
-- The implementation contains no registration-order or policy-precedence behavior.
+- [x] It is impossible to configure two competing automatic model-selection paths.
+- [x] Every automatic runtime transition originates from a localized region crossing.
+- [x] The implementation contains no registration-order or policy-precedence behavior.
 
 ### MC-10 — State transfer has no explicit fidelity or conservation contract
 
@@ -608,33 +639,31 @@ history jump. Frequent switching can therefore introduce artificial transients.
 
 **Priority:** Medium
 
-The following structures are unused or redundant:
+**Status:** Partially resolved by Milestones 1 and 3.
+
+The region-specific duplication is gone: one immutable configuration owns typed one-per-boundary
+records, and `active_region_index` is authoritative. The following cleanup remains:
 
 - `StateAdapter` and `state_adapters` are documented but not used by state transfer.
 - `_prev_state` and `_curr_state` are unused.
-- `_switch_targets` uses `None` as a dynamic-target sentinel while `_boundary_events` stores related
-  metadata in a parallel dictionary.
-- `active_mode` and `active_comp` duplicate the same identity.
 - Wrapper `sync_events` duplicates part of the system event history.
-- Region switching generates two indicators per boundary even though they represent one boundary.
 
 **Suggested solution**
 
 - Remove dead fields or implement the advertised adapter mechanism.
-- Replace parallel dictionaries with one immutable `SwitchRegions` configuration and typed
-  `RegionBoundary` records generated from it.
-- Store one authoritative active-region index and derive the active mode and component through
-  properties.
+- [x] Replace parallel switching dictionaries with immutable `SwitchRegions` and typed boundaries.
+- [x] Store one authoritative active-region index and derive mode/component through properties.
 - Record a structured `ModeSwitchEvent` in the common system history.
-- Represent one region boundary once, retaining crossing direction as event metadata.
+- [x] Represent one region boundary once, retaining crossing direction as event metadata.
 
 ### MC-12 — MultiComponent and MasterPendulum rely heavily on private internals
 
 **Priority:** Medium
 
-Subclasses and the hybrid algorithm reach into private details such as `_switch_targets`,
-`_allow_mode_switching`, `_record_history`, `_unify_ports()`, and
-`_initialize_ports_from_specs()`. `MasterPendulum` also reads backend-private fields including
+**Status:** Partially resolved. The checkpoint/trial contract removed algorithm-side flag
+manipulation, and the fixed-target dictionary no longer exists. Subclasses still reach into private
+details such as `_unify_ports()` and `_initialize_ports_from_specs()`. `MasterPendulum` also reads
+backend-private fields including
 `_with_contact`, `_use_gravity`, `_equivalent_length`, and `_get_contact_gap_distance()`.
 
 This makes lifecycle and algorithm behavior dependent on implementation details rather than stable
@@ -646,40 +675,33 @@ contracts.
 - Make port unification/creation an automatic base lifecycle operation.
 - Define public backend metadata/proxy interfaces for mass, inertia, length, gravity, contact, and
   monitoring values.
-- Replace algorithm flag manipulation with the checkpoint/trial protocol proposed in MC-03.
+- [x] Replace algorithm flag manipulation with the checkpoint/trial protocol from MC-03.
 
 ### MC-13 — MasterPendulum region configuration and naming need cleanup
 
 **Priority:** Low
 
-The current master implementation contains several avoidable inconsistencies:
-
-- `_gap_based_mode_selector` is angle-based.
-- Thresholds mix degrees and radians inside the decision function.
-- The initial transient condition is labeled as hysteresis although it is a time hold.
-- The documented time-based order differs from the implemented order.
-- Default `initial_mode="FMU"` is immediately replaced with FEM at the first nonzero no-contact
-  step.
-- Mode strings are repeated in several branches.
+**Status:** Mostly resolved by Milestone 3. Typed radians-based configuration, initialization-time
+region reconciliation, and the external scheduled-test harness replace the former selector code.
+Centralizing all mode strings in a stronger type remains optional cleanup.
 
 **Suggested solution**
 
-- Move region parameters into a typed `MasterPendulumSwitchConfig`.
-- Store all angular thresholds internally in radians or as Pint quantities.
-- Remove `initial_hold_time` and dwell timing from runtime switching; retain only signal bands.
+- [x] Move region parameters into a typed `MasterPendulumSwitchConfig`.
+- [x] Store all angular thresholds internally in radians.
+- [x] Retain only signal bands for chatter prevention.
 - Use a `Mode` enum or centralized constants.
-- Derive the initial region and model from the switching signal at `t0`; do not let an unrelated
-  `initial_mode` override conflict with the region map.
-- Remove the time-driven demonstration cycle from the production switching API. If it remains
-  useful, implement it as a test/demo harness outside `MultiComponent`.
+- [x] Derive the initial region and model from the switching signal at `t0`.
+- [x] Move the time-driven demonstration cycle into an external test harness.
 
 ### MC-14 — Tests validate generic mechanics but not the real three-backend composition
 
 **Priority:** Medium
 
-The unit and integration tests cover `MultiComponent`, fixed indicators, region maps, dwell repair,
-event placement, and rollback using lightweight mock/ramp/triangle components. There is no automated
-test that switches a real `MasterPendulum` among FEM, OpenSim, and FMU.
+**Status:** Partially resolved. Generic localization, hysteresis, chronological multi-boundary
+processing, rollback, and reset scenarios now use generated region boundaries, and the production
+MasterPendulum region configuration has unit coverage. There is still no automated test that
+actually switches a real `MasterPendulum` among FEM, OpenSim, and FMU.
 
 Consequently, generic tests cannot detect backend-specific projection losses, speculative UI/history
 side effects, initialization-order regressions, or resource lifecycle failures.
@@ -695,8 +717,8 @@ Add layered tests:
 5. Reset/reinitialize tests covering active region, active mode, and switch history.
 6. Macro-step-independence tests for the real region configuration.
 
-Tests dedicated to fixed indicators and dwell repair should be removed with those features. Their
-useful localization and rollback assertions should be retained against generated region boundaries.
+Tests dedicated only to the deleted mechanisms were removed. Their useful localization and rollback
+assertions were retained against generated region boundaries.
 
 Heavy backend tests can be marked and run in environments where NGSolve, OpenSim, and the FMU
 artifacts are available. Contract tests should remain runnable with lightweight fakes.
@@ -711,10 +733,10 @@ artifacts are available. Contract tests should remain runnable with lightweight 
 - one declaration generates and validates all boundary indicators and their bands.
 - a nonzero band separates entry and exit thresholds to prevent threshold chatter.
 
-This behavior is covered by `TestMultiModeSwitching`, `TestSwitchRegionsMap`, and
-`TestSetSwitchRegions`. Preserve the region mapping, directional target resolution, and true event
-localization while consolidating the APIs. Rewrite useful fixed-indicator tests against generated
-region boundaries and delete tests whose only purpose is dwell suppression or pending repair.
+This behavior is covered by `TestGeneratedRegionEventRegistration`,
+`TestGeneratedRegionEventEvaluation`, `TestSwitchRegions`, and
+`TestRegionSwitchingInvariants`. Preserve the region mapping, directional target resolution, and
+true event localization.
 
 Removing dwell makes pending repair unnecessary. Do not replace it with unconditional polling of
 the region map: during development, polling read a speculative output and placed every switch on a
@@ -726,13 +748,12 @@ distinguish localization from grid placement.
 ### Trial rollback now restores wrapper output ports
 
 Hybrid trial steps previously restored solver state but left cached output ports at `t + dt`.
-Downstream Gauss-Seidel consumers and `MultiComponent` selectors could therefore read a future
-value while the component state had returned to `t`.
+Downstream Gauss-Seidel consumers could therefore read a future value while the component state had
+returned to `t`.
 
 `HybridAlgorithm` now captures state, inputs, output values, and output timestamps in one rollback
-record and restores them together. The commutativity probe restores ports as well. This completed
-fix must be preserved, but it does not close MC-03: monitoring, visualization, callbacks, nested
-backend histories, and other external side effects still need a formal trial context.
+record and restores them together. The recursive trial context now suppresses framework history and
+the known MasterPendulum/FEM observer effects as recorded under Milestone 2.
 
 ## Event tolerances and time representation
 
@@ -1086,41 +1107,41 @@ methods.
 The intended contact switching should be expressed declaratively through the sole public API:
 
 ```python
-plant.set_switch_regions(
-    key=lambda view: abs(view.theta),
-    breakpoints=config.breakpoints,
-    modes=(Mode.FEM, Mode.OPENSIM, Mode.FMU),
-    bands=config.bands,
+config = MasterPendulumSwitchConfig(
+    breakpoints=(0.075, np.deg2rad(15.0)),
+    modes=("FEM", "OpenSim", "FMU"),
+    bands=(0.005, np.deg2rad(1.0)),
 )
+plant = MasterPendulum(switch_config=config)
 ```
 
-The exact thresholds must be reconciled with the physical contact requirements and then defined in
-one typed `MasterPendulumSwitchConfig`. The time-driven demonstration cycle and selector fallback
-should be removed from `MultiComponent`; test-only forced cycling belongs in an external harness.
+The canonical thresholds are now defined once in `MasterPendulumSwitchConfig`. If later physical
+evidence favors an actual contact-distance signal, revise the typed policy and all measurements
+together. Test-only forced cycling already lives in an external signal harness.
 
 ## Staged implementation plan
 
 ### Stage 1 — Correctness fixes
 
-- Preserve the final sign-change bracket during event collection instead of making event existence
+- [x] Preserve the final sign-change bracket during event collection instead of making event existence
   depend on `tol_value`.
-- Represent each boundary once with crossing direction, and require a nonzero band.
-- Track the active region index so repeated model assignments are unambiguous.
-- Remove minimum dwell timing and pending region repair.
-- Complete reset semantics.
-- Ensure `MasterPendulum` runs shared post-initialization logic.
-- Stop speculative history/monitoring/visualization changes.
-- Validate rollback capability for all reachable modes.
-- Add regression tests for each fix.
+- [x] Represent each boundary once with crossing direction, and require a nonzero band.
+- [x] Track the active region index so repeated model assignments are unambiguous.
+- [x] Remove minimum dwell timing and pending region repair.
+- [x] Complete reset semantics.
+- [x] Ensure `MasterPendulum` runs shared post-initialization logic.
+- [x] Stop known speculative history/monitoring/visualization changes.
+- [x] Validate rollback capability for all reachable modes.
+- [x] Add regression tests for each fix.
 
 ### Stage 2 — Consolidate on region switching
 
-- Generalize and document `set_switch_regions()` as the sole public switching API.
-- Replace `_switch_targets`/`_boundary_events` with the immutable region configuration and generated
+- [x] Generalize and document `set_switch_regions()` as the sole public switching API.
+- [x] Replace fixed-target/boundary dictionaries with the immutable region configuration and generated
   typed boundary records.
-- Migrate generic localization, rollback, and reset tests to generated region boundaries.
-- Deprecate the selector and public fixed-indicator paths while downstream examples are migrated.
-- Remove request arbitration, precedence, dwell, and deferred-request code that is no longer needed.
+- [x] Migrate generic localization, rollback, and reset tests to generated region boundaries.
+- [x] Migrate downstream examples before deleting selector and public fixed-indicator paths.
+- [x] Remove arbitration, precedence, dwell, and deferred-request code that is no longer needed.
 
 ### Stage 3 — Formalize state transfer and checkpoints
 
@@ -1131,14 +1152,14 @@ should be removed from `MultiComponent`; test-only forced cycling belongs in an 
 
 ### Stage 4 — Migrate MasterPendulum
 
-- Move the localized angle policy into explicit, reusable `MasterPendulum` configuration and
+- [x] Move the localized angle policy into explicit, reusable `MasterPendulum` configuration and
   migrate notebooks 5 and 6 away from selector-only switching.
-- Remove the time-driven demo cycle from production switching; keep any forced-cycle experiment in
+- [x] Remove the time-driven demo cycle from production switching; keep the forced-cycle experiment in
   an external test harness.
-- Move thresholds and signal bands into typed configuration.
+- [x] Move thresholds and signal bands into typed configuration.
 - Add real-backend pairwise and end-to-end switching tests.
 - Document which physical quantities are preserved or lost for each transition.
-- After all examples and tests use regions, remove `mode_selector`, public
+- [x] After all examples and tests use regions, remove `mode_selector`, public
   `add_switch_indicator()`, and their fixed-target/registration-order infrastructure.
 
 ### Stage 5 — Cleanup
@@ -1147,33 +1168,29 @@ should be removed from `MultiComponent`; test-only forced cycling belongs in an 
 - Consolidate switch logging with system history.
 - Automate port unification and initialization.
 - Replace backend-private accesses with public capability/metadata interfaces.
-- Update tutorials and notebooks to demonstrate the unified API only.
+- [x] Update tutorials and notebooks to demonstrate the unified API only.
 
 ## Prioritized next steps
 
-The order below resolves correctness risks before treating the current API as a release baseline.
-Items on the same line can be developed together, but their evidence should land in the repository
-before the dependent release step.
+Milestones 1 through 3 established the release-candidate switching mechanism. The remaining order
+focuses on validating physical fidelity and producing evidence without reopening the public API.
 
-1. **Fix event acceptance and lifecycle correctness:** TIME-02/MC-05, MC-02, MC-04, and MC-03.
-   Preserve the sign-change bracket, make reset equivalent to a fresh instance, and make trial
-   advances externally pure.
-2. **Consolidate on the sole switching mechanism:** MC-01, MC-07, MC-09, and MC-14. Remove dwell and
-   pending repair, migrate notebooks 5 and 6, rerun the performance notebook, add three-backend
-   transition tests, and then delete the selector and public fixed-indicator paths.
-3. **Remove avoidable speculative work:** EVID-01, after the checkpoint/trial contract prevents
-   optimization from changing observable behavior.
-4. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
+1. **Validate real backend transitions:** HARD-01, MC-10, and MC-14. Add pairwise and three-model
+   FEM/OpenSim/FMU tests with explicit continuity, conservation, rollback, and resource-lifecycle
+   assertions.
+2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
+   measure accepted versus trial work now that speculative effects are isolated.
+3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
    EVID-04 and EVID-05 for a representative benchmark and independent-master comparison.
-5. **Strengthen the validation gate:** HARD-01 and HARD-02, including a real OpenSim assertion and
+4. **Strengthen the validation gate:** HARD-02, including a real OpenSim assertion and
    a scheduled FEM physics run.
-6. **Simplify the remaining internals:** MC-06 through MC-12 using an authoritative region index,
-   typed boundary records, transactional state transfer, and a recursive checkpoint contract. Do
-   not add a request arbiter or general switching-policy hierarchy.
-7. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
+5. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
+   consolidate switch history, automate port lifecycle, and replace backend-private metadata
+   access. Do not add another switching policy hierarchy.
+6. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before propagating ticks through
    every component API.
-8. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
+7. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
    v0.3.0 only after the chosen gate and paper evidence are archived; the tag triggers the existing
    `publish-pypi.yml` workflow.
 
