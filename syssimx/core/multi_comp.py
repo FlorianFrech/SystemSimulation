@@ -120,6 +120,7 @@ class _PreparedStateTransfer:
 
     source_state: dict[str, Any]
     target_state: dict[str, Any]
+    transfer_report: Any | None = None
 
 
 @dataclass(frozen=True)
@@ -761,7 +762,14 @@ class MultiComponent(CoSimComponent):
                     retrieved, adapted, new_mode, new_comp, t
                 )
                 new_comp._update_output_states(t)
-            return _PreparedStateTransfer(retrieved, synchronized)
+                transfer_report = self._build_transfer_report(
+                    retrieved,
+                    synchronized,
+                    self.active_mode,
+                    new_mode,
+                    t,
+                )
+            return _PreparedStateTransfer(retrieved, synchronized, transfer_report)
         except Exception as transfer_error:
             rollback_errors: list[Exception] = []
             for component, checkpoint in (
@@ -795,6 +803,22 @@ class MultiComponent(CoSimComponent):
         """
         return target.get_state()
 
+    def _build_transfer_report(
+        self,
+        source_state: dict[str, Any],
+        target_state: dict[str, Any],
+        source_mode: ModeKey,
+        target_mode: ModeKey,
+        t: float,
+    ) -> Any | None:
+        """Build a side-effect-free domain report before committing a transfer.
+
+        Subclasses may return an immutable report and raise when physical
+        invariants are violated. The hook runs after target output refresh but
+        before active identity changes, so a failure rolls the transaction back.
+        """
+        return None
+
     def _capture_switch_event(
         self,
         t: float,
@@ -806,7 +830,9 @@ class MultiComponent(CoSimComponent):
 
         Always logs the time, source mode, and target mode. When
         ``self.record_switch_state`` is ``True``, the record also
-        includes the already prepared source and validated target states.
+        includes the already prepared source and validated target states. A
+        domain report returned by ``_build_transfer_report()`` is always added
+        as ``transfer_report`` because it is compact acceptance evidence.
         ``record_switch_state`` defaults to ``False`` and should be enabled
         only for debugging synchronization issues.
 
@@ -824,6 +850,8 @@ class MultiComponent(CoSimComponent):
         if self.record_switch_state:
             record["retrieved"] = prepared.source_state
             record["now"] = prepared.target_state
+        if prepared.transfer_report is not None:
+            record["transfer_report"] = prepared.transfer_report
         self.sync_events.append(record)
 
     # -------------------------------------------------------------------

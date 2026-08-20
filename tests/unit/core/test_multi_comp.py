@@ -676,6 +676,43 @@ class TestTransactionalRegionSwitching:
         assert self._observable_state(target) == target_before
         assert target.get_state() == target_physical_before
 
+    def test_failed_domain_validation_restores_entire_transaction(self, monkeypatch):
+        plant = RegionMultiComponent(signal=lambda t: t)
+        plant.set_switch_regions(
+            key=lambda comp: _magnitude(comp.outputs["y"].get()),
+            breakpoints=(5.0,),
+            modes=("A", "B"),
+            band=0.5,
+        )
+        plant.initialize(0.0)
+        plant.do_step(0.0, 1.0)
+
+        source = plant.models["A"]
+        target = plant.models["B"]
+        wrapper_before = self._observable_state(plant)
+        source_before = self._observable_state(source)
+        source_physical_before = source.get_state()
+        target_before = self._observable_state(target)
+        target_physical_before = target.get_state()
+
+        def reject_transfer(*_args):
+            raise RuntimeError("physical continuity rejected")
+
+        monkeypatch.setattr(plant, "_build_transfer_report", reject_transfer)
+
+        with pytest.raises(RuntimeError, match="physical continuity rejected"):
+            plant._switch_region(1, t=1.0)
+
+        assert plant.active_region_index == 0
+        assert plant.active_mode == "A"
+        assert plant.active_comp is source
+        assert plant.sync_events == []
+        assert self._observable_state(plant) == wrapper_before
+        assert self._observable_state(source) == source_before
+        assert source.get_state() == source_physical_before
+        assert self._observable_state(target) == target_before
+        assert target.get_state() == target_physical_before
+
     def test_reset_reinitialize_matches_fresh_equivalent_instance(self):
         def build():
             plant = RegionMultiComponent(signal=lambda t: 20.0, initial_mode="A")

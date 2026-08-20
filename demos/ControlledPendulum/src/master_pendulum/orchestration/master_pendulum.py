@@ -1,3 +1,5 @@
+import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -5,11 +7,99 @@ import numpy as np
 from IPython.display import display
 
 from syssimx.core.multi_comp import MultiComponent
+from syssimx.utilities.units import ureg
 
 from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
 from ..monitoring import PendulumMonitor, PendulumMonitoringState
 
 MODES: tuple[str, ...] = ("FEM", "OpenSim", "FMU")
+PENDULUM_DIRECT_FEEDTHROUGH = {
+    "theta": frozenset(),
+    "omega": frozenset(),
+    "alpha": frozenset({"tau"}),
+}
+
+
+def _state_scalar(state: Mapping[str, Any], name: str, expected_unit: str) -> float:
+    """Read one finite physical scalar and normalize it to ``expected_unit``."""
+    try:
+        entry = state[name]
+        raw_value = entry["value"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(f"Pendulum state requires '{name}.value'.") from exc
+
+    if hasattr(raw_value, "to"):
+        value = float(raw_value.to(expected_unit).magnitude)
+    else:
+        source_unit = entry.get("unit", expected_unit)
+        value = float(ureg.Quantity(raw_value, source_unit).to(expected_unit).magnitude)
+    if not math.isfinite(value):
+        raise ValueError(f"Pendulum state '{name}' must be finite.")
+    return value
+
+
+@dataclass(frozen=True)
+class PendulumState:
+    """Canonical physical state shared by every pendulum backend."""
+
+    theta: float
+    omega: float
+    tau: float
+
+    @classmethod
+    def from_mapping(cls, state: Mapping[str, Any]) -> "PendulumState":
+        """Normalize a backend state mapping to radians, seconds, and N·m."""
+        return cls(
+            theta=_state_scalar(state, "theta", "rad"),
+            omega=_state_scalar(state, "omega", "rad/s"),
+            tau=_state_scalar(state, "tau", "N*m"),
+        )
+
+
+@dataclass(frozen=True)
+class PendulumTransferTolerances:
+    """Absolute continuity limits for a backend state transfer."""
+
+    theta: float = 1e-8
+    omega: float = 1e-8
+    tau: float = 1e-10
+
+    def __post_init__(self) -> None:
+        for name, value in vars(self).items():
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"Transfer tolerance '{name}' must be finite and nonnegative.")
+
+
+@dataclass(frozen=True)
+class PendulumTransferReport:
+    """Immutable continuity evidence for one prepared backend transfer."""
+
+    source_mode: str
+    target_mode: str
+    time: float
+    source: PendulumState
+    target: PendulumState
+
+    @property
+    def theta_error(self) -> float:
+        return abs(self.target.theta - self.source.theta)
+
+    @property
+    def omega_error(self) -> float:
+        return abs(self.target.omega - self.source.omega)
+
+    @property
+    def tau_error(self) -> float:
+        return abs(self.target.tau - self.source.tau)
+
+    def violations(self, tolerances: PendulumTransferTolerances) -> tuple[str, ...]:
+        """Return names of canonical quantities outside their continuity limits."""
+        errors = {
+            "theta": self.theta_error,
+            "omega": self.omega_error,
+            "tau": self.tau_error,
+        }
+        return tuple(name for name, error in errors.items() if error > getattr(tolerances, name))
 
 
 @dataclass(frozen=True)
@@ -39,6 +129,7 @@ class MasterPendulum(MultiComponent):
         initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU",
         fmu_solver: Literal["cvode", "euler"] = "cvode",
         switch_config: MasterPendulumSwitchConfig | None = MasterPendulumSwitchConfig(),
+        transfer_tolerances: PendulumTransferTolerances = PendulumTransferTolerances(),
     ):
 
         # Check initial mode validity
@@ -65,8 +156,12 @@ class MasterPendulum(MultiComponent):
 
         self._unify_ports()
         self._initialize_ports_from_specs()
+        self.direct_feedthrough = {
+            output: set(inputs) for output, inputs in PENDULUM_DIRECT_FEEDTHROUGH.items()
+        }
 
         self.switch_config = switch_config
+        self.transfer_tolerances = transfer_tolerances
         if switch_config is not None:
             self.set_switch_regions(
                 key=self._absolute_theta,
@@ -181,6 +276,30 @@ class MasterPendulum(MultiComponent):
                 "tau": state["tau"],
             }
         return state
+
+    def _build_transfer_report(
+        self,
+        source_state: dict[str, Any],
+        target_state: dict[str, Any],
+        source_mode: str,
+        target_mode: str,
+        t: float,
+    ) -> PendulumTransferReport:
+        """Validate canonical continuity before committing backend identity."""
+        report = PendulumTransferReport(
+            source_mode=source_mode,
+            target_mode=target_mode,
+            time=t,
+            source=PendulumState.from_mapping(source_state),
+            target=PendulumState.from_mapping(target_state),
+        )
+        violations = report.violations(self.transfer_tolerances)
+        if violations:
+            raise RuntimeError(
+                f"{self.name}: State transfer {source_mode} -> {target_mode} at t={t:.9g} "
+                f"violates continuity tolerances for {list(violations)}."
+            )
+        return report
 
     # ----------------------------------------------------------------------------
     # Region Signal
