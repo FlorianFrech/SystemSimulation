@@ -1495,8 +1495,8 @@ class CoSimComponent(ABC):
             component. Empty by default.
 
         See Also:
-            :meth:`MultiComponent.add_switch_indicator`: Registers a mode
-            switch, which is handled by the wrapper that owns it.
+            :meth:`MultiComponent.set_switch_regions`: Registers generated
+            region events handled by the wrapper that owns them.
         """
         return []
 
