@@ -41,7 +41,7 @@ import logging
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
-from ...core.events import DenseTime, Event, InternalEventInfo
+from ...core.events import DenseTime, Event, EventBracket, InternalEventInfo
 from .base import Algorithm
 from .gauss_seidel import GaussSeidelAlgorithm
 from .ijcsa import solve_algebraic_scc_ijcsa
@@ -71,9 +71,6 @@ class HybridAlgorithm(Algorithm):
         max_iter (int): Maximum number of iterations for convergence.
         sign_tolerance (float): Tolerance for detecting sign changes in event indicators.
         tol_time (float): Tolerance for time comparisons.
-        event_dedup_tol (float): Tolerance for deduplicating events. Events of
-            the same type handled within this time window are treated as
-            duplicates and skipped.
         max_microsteps (int): Maximum number of microsteps for event handling.
         gauss_seidel_algorithm (GaussSeidelAlgorithm): Fallback algorithm for
             continuous integration in the absence of events.
@@ -87,7 +84,6 @@ class HybridAlgorithm(Algorithm):
         self.max_iter: int = 50
         self.sign_tolerance: float = 1e-10
         self.tol_time: float = 1e-8
-        self.event_dedup_tol: float = 1e-4
         self.max_microsteps: int = 100
         self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
         self.record_internal_steps: bool = False
@@ -118,9 +114,9 @@ class HybridAlgorithm(Algorithm):
         t_right = t + dt
         eps = 1e-12
 
-        # Track all events handled in this macro-step (to avoid duplicates at boundaries)
-        # Maps (comp_name, event_name) -> time at which it was last handled
-        handled_events_this_step: dict[tuple[str, str], float] = {}
+        # Suppress only a repeated detection of the same root and direction.
+        # Opposite-direction recrossings remain distinct physical events.
+        handled_events_this_step: dict[tuple[str, str, int | None], float] = {}
 
         while t_left < t_right - eps:
             # 1) Prpare inputs: set inputs and resolve algebraic loops
@@ -141,7 +137,7 @@ class HybridAlgorithm(Algorithm):
                 "Event crossing in [%.6f, %.6f]: %s",
                 t_left,
                 t_right,
-                ", ".join(f"{c}.{e}" for c, e in crossings),
+                ", ".join(f"{event.source}.{event.name}" for event in crossings),
             )
             if internal_hints:
                 for comp_name, hints_list in internal_hints.items():
@@ -157,6 +153,7 @@ class HybridAlgorithm(Algorithm):
                 snapshots,
                 input_cache,
                 indicators_left,
+                crossings,
                 t_left,
                 t_right,
                 internal_hints,
@@ -165,26 +162,24 @@ class HybridAlgorithm(Algorithm):
             logger.info("Event located at t=%.8f", dense_time.t)
             logger.debug(
                 "  Events at located time: %s",
-                ", ".join(f"{c}.{e}" for c, e in initial_events),
+                ", ".join(f"{event.source}.{event.name}" for event in initial_events),
             )
 
             # 5) Filter out events that were already handled nearby
             new_events = []
-            for comp_name, event_name in initial_events:
-                event_key = (comp_name, event_name)
+            for event in initial_events:
+                event_key = (event.source, event.name, event.direction)
                 prev_t = handled_events_this_step.get(event_key)
-                if prev_t is not None and abs(dense_time.t - prev_t) < self.event_dedup_tol:
+                if prev_t is not None and event.t_left <= prev_t + self.tol_time:
                     logger.debug(
-                        "  Skipping duplicate: %s.%s (already handled at t=%.8f, "
-                        "\u0394t=%.2e < tol=%.2e)",
-                        comp_name,
-                        event_name,
+                        "  Skipping duplicate root: %s.%s direction=%s at t=%.8f",
+                        event.source,
+                        event.name,
+                        event.direction,
                         prev_t,
-                        abs(dense_time.t - prev_t),
-                        self.event_dedup_tol,
                     )
                 else:
-                    new_events.append((comp_name, event_name))
+                    new_events.append(event)
 
             initial_events = new_events
             # 6) Step all components to event time
@@ -200,14 +195,16 @@ class HybridAlgorithm(Algorithm):
                     len(event_pairs),
                     current_time.t,
                     current_time.micro,
-                    ", ".join(f"{c}.{e}" for c, e in event_pairs),
+                    ", ".join(f"{event.source}.{event.name}" for event in event_pairs),
                 )
 
                 # a) Record events with microstep and mark as handled
-                for comp_name, event_name in event_pairs:
-                    system.history.record_event(comp_name, event_name, current_time)
-                    all_handled_events.add((comp_name, event_name))
-                    handled_events_this_step[(comp_name, event_name)] = current_time.t
+                for event in event_pairs:
+                    system.history.record_event(event.source, event.name, current_time)
+                    all_handled_events.add(event.pair)
+                    handled_events_this_step[
+                        (event.source, event.name, event.direction)
+                    ] = current_time.t
 
                 # b) Indicators before handling
                 indicators_before_handling = {
@@ -226,21 +223,21 @@ class HybridAlgorithm(Algorithm):
                 }
 
                 # f) Detect new events triggered by handlers
-                new_events = []
-                for comp in event_sources:
-                    events = comp.detect_event_crossings(
-                        indicators_before_handling[comp.name],
-                        indicators_after_handling[comp.name],
-                        sign_tolerance=self.sign_tolerance,
+                new_events = [
+                    event
+                    for event in self._crossing_brackets_between(
+                        event_sources,
+                        indicators_before_handling,
+                        indicators_after_handling,
+                        current_time.t,
+                        current_time.t,
                     )
-                    for event_name in events:
-                        event_pair = (comp.name, event_name)
-                        if event_pair not in all_handled_events and event_pair not in new_events:
-                            new_events.append(event_pair)
+                    if event.pair not in all_handled_events
+                ]
                 if new_events:
                     logger.info(
                         "Cascaded events: %s",
-                        ", ".join(f"{c}.{e}" for c, e in new_events),
+                        ", ".join(f"{event.source}.{event.name}" for event in new_events),
                     )
 
                 # g) Advance microstep if new events detected
@@ -289,7 +286,7 @@ class HybridAlgorithm(Algorithm):
         dict[str, Any],
         dict[str, dict[str, Any]],
         dict[str, dict[str, float]],
-        list[tuple[str, str]],
+        list[EventBracket],
         dict[str, list[InternalEventInfo]],
     ]:
         """Detect event crossings in a given time interval.
@@ -317,7 +314,7 @@ class HybridAlgorithm(Algorithm):
         snapshots: dict[str, Any] = {}
         input_cache: dict[str, dict[str, Any]] = {}
         indicators_left: dict[str, dict[str, float]] = {}
-        crossings: list[tuple[str, str]] = []
+        crossings: list[EventBracket] = []
         internal_hints: dict[str, list[InternalEventInfo]] = {}
 
         dt = t_right - t_left
@@ -362,15 +359,33 @@ class HybridAlgorithm(Algorithm):
                     sign_tolerance=self.sign_tolerance,
                 )
 
-                # e) Combine macro events and micro events (from hints)
-                micro_event_names = (
-                    [hint.event_name for hint in filtered_hints] if filtered_hints else []
-                )
-                all_event_names = set(macro_events) | set(micro_event_names)
-
-                # f) Record crossings - iterate over event names, not wrap in list
-                for event_name in all_event_names:
-                    crossings.append((comp.name, event_name))
+                # e) Preserve the detected sign-change bracket. Internal-only
+                # hints retain their own bracket even when endpoint signs do
+                # not expose the micro-step crossing.
+                for event_name in macro_events:
+                    crossings.append(
+                        EventBracket(
+                            source=comp.name,
+                            name=event_name,
+                            t_left=t_left,
+                            t_right=t_right,
+                            value_left=indicators_left[comp.name][event_name],
+                            value_right=indicators_right[event_name],
+                        )
+                    )
+                macro_names = set(macro_events)
+                for hint in filtered_hints:
+                    if hint.event_name not in macro_names:
+                        crossings.append(
+                            EventBracket(
+                                source=comp.name,
+                                name=hint.event_name,
+                                t_left=hint.t_before,
+                                t_right=hint.t_after,
+                                value_left=hint.indicator_before,
+                                value_right=hint.indicator_after,
+                            )
+                        )
 
                 # g) Restore to t_left
                 self._restore_with_inputs(
@@ -430,17 +445,18 @@ class HybridAlgorithm(Algorithm):
         snapshots_left: dict[str, Any],
         input_cache: dict[str, dict[str, Any]],
         indicators_left: dict[str, dict[str, float]],
+        initial_crossings: list[EventBracket],
         t_left: float,
         t_right: float,
         internal_hints: dict[str, list[InternalEventInfo]] | None = None,
-    ) -> tuple[DenseTime, list[tuple[str, str]]]:
+    ) -> tuple[DenseTime, list[EventBracket]]:
         """Locate the event time within [t_left, t_right] using bisection.
 
         If internal_hints are provided (from components with internal micro-stepping),
         the algorithm uses these to narrow the search interval before bisection,
         significantly reducing the number of iterations needed.
 
-        Returns the located event time and the list of (component name, event name) tuples.
+        Returns the located event time and the final sign-change brackets.
         """
         logger.debug("Starting bisection for event localization ...")
         # 1) Initialize bisection boundaries
@@ -449,14 +465,13 @@ class HybridAlgorithm(Algorithm):
         t_left_ref = t_left  # Reference time for current snapshots
         t_event = t_right  # Default event time if not found
 
-        # 2) Collect events from internal hints that fall within the interval
-        events_from_hints: list[tuple[str, str]] = []
-        if internal_hints:
-            for comp_name, hints in internal_hints.items():
-                for hint in hints:
-                    # Only consider hints within [t_left, t_right]
-                    if hint.t_before >= t_left - 1e-12 and hint.t_after <= t_right + 1e-12:
-                        events_from_hints.append((comp_name, hint.event_name))
+        # 2) Keep internal micro-step brackets as fallbacks for events whose
+        # macro endpoints do not expose a sign change.
+        hint_events = [
+            event
+            for event in initial_crossings
+            if event.t_left > t_left or event.t_right < t_right
+        ]
 
         # 3) Use internal hints to narrow the initial interval
         if internal_hints:
@@ -481,24 +496,13 @@ class HybridAlgorithm(Algorithm):
                 # If the hint interval is already precise enough, use it directly
                 if right - left <= self.tol_time:
                     t_event = right
-                    # Ensure components are at t_left
                     self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
-                    # Return events from hints since indicator check may miss them
-                    if events_from_hints:
-                        return DenseTime(t=t_event, micro=0), events_from_hints
-                    # Fallback to indicator-based collection (trial step)
-                    for comp in event_sources:
-                        with self._trial_step(comp):
-                            self._restore_with_inputs(
-                                comp, snapshots_left[comp.name], input_cache[comp.name], t_left
-                            )
-                            comp._do_step_internal(t_left, t_event - t_left)
-                            comp._update_output_states()
-                    all_events = self._collect_events_at_time(event_sources)
-                    self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
-                    return DenseTime(
-                        t=t_event, micro=0
-                    ), all_events if all_events else events_from_hints
+                    located_hints = [
+                        event
+                        for event in hint_events
+                        if event.t_left <= t_event <= event.t_right + self.tol_time
+                    ]
+                    return DenseTime(t=t_event, micro=0), located_hints
 
         # 4) Indicator values at boundaries
         indicators_left_vals: dict[str, dict[str, float]] = indicators_left
@@ -546,16 +550,17 @@ class HybridAlgorithm(Algorithm):
             )
 
             # d) Detect crossings in [left, mid]
-            events_left_interval = self._detect_crossing_between(
-                event_sources, indicators_left_vals, indicators_mid
+            events_left_interval = self._crossing_brackets_between(
+                event_sources, indicators_left_vals, indicators_mid, left, mid
             )
 
             # e) Check if we found exact crossing at midpoint
             if len(events_left_interval) == 1:
-                comp_name, event_name = events_left_interval[0]
-                indicator_value = indicators_mid[comp_name][event_name]
+                event = events_left_interval[0]
+                indicator_value = indicators_mid[event.source][event.name]
                 if abs(indicator_value) <= self.tol_value:
-                    # Found exact event time
+                    right = mid
+                    indicators_right_vals = indicators_mid
                     t_event = mid
                     break
 
@@ -563,6 +568,7 @@ class HybridAlgorithm(Algorithm):
             if events_left_interval:
                 # Events in [left, mid], narrow to find the earliest
                 right = mid
+                indicators_right_vals = indicators_mid
             else:
                 # No events in [left, mid], the event must be in [mid, right]
                 left = mid
@@ -572,38 +578,27 @@ class HybridAlgorithm(Algorithm):
                 t_left_ref = mid
                 t_event = right
 
-        # 8) Collect all events at located time
-        #    Step all components to t_event and check indicators.
-        #    The components are restored to t_left afterwards, so this is
-        #    a trial advance.
-        for comp in event_sources:
-            with self._trial_step(comp):
-                self._restore_with_inputs(
-                    comp, snapshots_left[comp.name], input_cache[comp.name], t_left
-                )
-                comp._do_step_internal(t_left, t_event - t_left)
-                comp._update_output_states()
-
-        all_events_at_t = self._collect_events_at_time(event_sources)
-
-        # If indicator-based collection missed events, use hint-based events
-        if not all_events_at_t and events_from_hints:
-            # Filter hints to those near t_event
-            all_events_at_t = []
-            for comp_name, event_name in events_from_hints:
-                if internal_hints and comp_name in internal_hints:
-                    for hint in internal_hints[comp_name]:
-                        if (
-                            hint.event_name == event_name
-                            and hint.t_before <= t_event <= hint.t_after + self.tol_time
-                        ):
-                            all_events_at_t.append((comp_name, event_name))
-                            break
-
+        # 8) Accept the events from the final sign-change bracket. Event
+        # existence no longer depends on the indicator landing within a
+        # separate value tolerance at ``t_event``.
+        t_event = right
+        located_events = self._crossing_brackets_between(
+            event_sources,
+            indicators_left_vals,
+            indicators_right_vals,
+            left,
+            right,
+        )
+        if not located_events:
+            located_events = [
+                event
+                for event in hint_events
+                if event.t_left <= t_event <= event.t_right + self.tol_time
+            ]
         # 9) Restore all components to state at t_left
         self._restore_all_to_left(event_sources, snapshots_left, input_cache, t_left)
 
-        return DenseTime(t=t_event, micro=0), all_events_at_t
+        return DenseTime(t=t_event, micro=0), located_events
 
     def _get_earliest_event_hint(
         self,
@@ -628,17 +623,6 @@ class HybridAlgorithm(Algorithm):
                 if earliest is None or hint.t_before < earliest.t_before:
                     earliest = hint
         return earliest
-
-    def _collect_events_at_time(self, event_sources: list[CoSimComponent]) -> list[tuple[str, str]]:
-        """Collect all events at the current time based on indicator values."""
-        all_events = []
-        for comp in event_sources:
-            indicators = comp.evaluate_event_indicators()
-            for event_name, value in indicators.items():
-                logger.debug("Indicator %s.%s = %.4e", comp.name, event_name, value)
-                if abs(value) <= self.tol_value:
-                    all_events.append((comp.name, event_name))
-        return all_events
 
     # --------------------------------------------------------------------------
     # Event Trigger Time Localization - Helpers
@@ -702,17 +686,16 @@ class HybridAlgorithm(Algorithm):
                 comp._record_outputs(t_target)
             return comp.evaluate_event_indicators()
 
-    def _detect_crossing_between(
+    def _crossing_brackets_between(
         self,
         event_sources: list[CoSimComponent],
         indicators_prev: dict[str, dict[str, float]],
         indicators_curr: dict[str, dict[str, float]],
-    ) -> list[tuple[str, str]]:
-        """Detect crossings between two sets of indicator values for all event source components.
-
-        Returns a list of (component name, event name) tuples where crossings were detected.
-        """
-        crossings: list[tuple[str, str]] = []
+        t_left: float,
+        t_right: float,
+    ) -> list[EventBracket]:
+        """Return every crossing together with the sign-change interval."""
+        crossings: list[EventBracket] = []
         for comp in event_sources:
             events = comp.detect_event_crossings(
                 indicators_prev[comp.name],
@@ -720,7 +703,16 @@ class HybridAlgorithm(Algorithm):
                 sign_tolerance=self.sign_tolerance,
             )
             for event_name in events:
-                crossings.append((comp.name, event_name))
+                crossings.append(
+                    EventBracket(
+                        source=comp.name,
+                        name=event_name,
+                        t_left=t_left,
+                        t_right=t_right,
+                        value_left=indicators_prev[comp.name][event_name],
+                        value_right=indicators_curr[comp.name][event_name],
+                    )
+                )
         return crossings
 
     def _restore_all_to_left(
@@ -740,7 +732,7 @@ class HybridAlgorithm(Algorithm):
     # Event Handling
     # --------------------------------------------------------------------------
     def handle_events(
-        self, system: System, event_pairs: list[tuple[str, str]], current_time: DenseTime
+        self, system: System, event_pairs: list[EventBracket], current_time: DenseTime
     ) -> None:
         """
         Handles the event_pairs that occur at current_time in the given system.
@@ -762,9 +754,9 @@ class HybridAlgorithm(Algorithm):
             listener.name: [] for listener in system.event_listeners
         }
         for listener_name in events_by_component.keys():
-            for event_pair in event_pairs:
-                if listener_name in system._event_targets_by_source.get(event_pair, []):
-                    events_by_component.setdefault(listener_name, []).append(event_pair[1])
+            for event in event_pairs:
+                if listener_name in system._event_targets_by_source.get(event.pair, []):
+                    events_by_component.setdefault(listener_name, []).append(event.name)
         logger.debug("Events grouped by listener: %s", events_by_component)
 
         # 2) Check for conflicts in each component
@@ -778,8 +770,17 @@ class HybridAlgorithm(Algorithm):
                     )
 
         # 3) Dispatch events
-        for comp_name, event_name in event_pairs:
-            system.dispatch_event(Event(name=event_name, source=comp_name), current_time.t)
+        for bracket in event_pairs:
+            system.dispatch_event(
+                Event(
+                    name=bracket.name,
+                    source=bracket.source,
+                    time=current_time,
+                    direction=bracket.direction,
+                    bracket=bracket,
+                ),
+                current_time.t,
+            )
 
     def _check_event_commutativity(self, comp: CoSimComponent, event_names: list[str]) -> bool:
         """
