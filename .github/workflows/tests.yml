@@ -60,8 +60,8 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-fem:
-    # Runs the ngsolve-gated FEM suite (marker "fem"), which the main test
-    # job skips because ngsolve is not installed there.
+    # Runs the ngsolve-gated FEM suite and the lightweight real-backend
+    # FEM/FMU/OpenSim switching test. The main job skips marker "fem".
     runs-on: ubuntu-latest
 
     steps:
@@ -76,16 +76,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-fem-${{ hashFiles('pyproject.toml') }}
+          key: ${{ runner.os }}-pip-backends-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-pip-fem-
+            ${{ runner.os }}-pip-backends-
 
-      - name: Install dependencies (with ngsolve)
+      - name: Install real backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,fem]"
+          pip install -e ".[dev,fmu,fem,opensim]"
 
-      - name: Run FEM-marked tests
+      - name: Run FEM and real-backend switching tests
         run: |
           pytest -m fem -v
 
