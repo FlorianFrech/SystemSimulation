@@ -4,10 +4,97 @@
 
 ## Recorded baseline
 
-The last recorded full gate, at `f4895a7` / v0.2.0, was **645 passed, 1 skipped**, with Ruff,
-MyPy, and the strict Sphinx build clean. The skipped case was the win64 FMU fixture. Treat this as
-a historical baseline until the current working tree is rerun; it is not a claim that the present
-uncommitted changes have passed the same gate.
+Milestone 0 was completed on 2026-08-20 in an isolated worktree on branch
+`refactor/region-switching-baseline`. The underlying source baseline is `origin/main` at
+`f4895a7`; commit `b33c40f` adds only this roadmap. None of the pre-existing tracked changes in the
+original `main` worktree were modified, staged, cleaned, or committed during isolation. Its
+untracked `issues.md` was synchronized with this baseline record so the two working copies agree.
+
+The earlier **645 passed, 1 skipped** result belongs to the uncommitted switching prototype and is
+not the clean `origin/main` baseline. The reproducible clean-baseline result is **621 passed,
+1 skipped** when every marker is enabled on Python 3.13.
+
+### Worktree inventory and isolation
+
+At isolation time, `main` equaled `origin/main`, the index was empty, and the original worktree had
+ten modified files plus untracked `issues.md`:
+
+- framework: `syssimx/core/multi_comp.py` and `syssimx/system/algorithms/hybrid.py`;
+- case study: `demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py`;
+- tests: five fixture, unit, and integration files;
+- notebooks/documentation: the advanced switching tutorial and `notebooks/performance.ipynb`;
+- roadmap: untracked `issues.md`.
+
+Those changes remain together only in the original dirty worktree. New switching work must use the
+isolated branch/worktree or a descendant of its committed baseline; it must not be added to the
+original `main` worktree.
+
+### Baseline environment
+
+| Item | Recorded value |
+|---|---|
+| Operating system | Windows 11, build 26200, x86-64 |
+| Git | 2.55.0.windows.3 |
+| uv | 0.11.29 |
+| Python matrix | 3.11.15, 3.12.13, 3.13.5 |
+| Primary full environment | Python 3.13.5, pytest 9.1.1, coverage 7.15.2 |
+| Installed backends in full environment | FMPy 0.3.30, NGSolve 6.2.2606, OpenSim 4.6 |
+
+The primary environment was created with:
+
+```powershell
+uv sync --frozen --python 3.13 --extra all
+```
+
+The Python 3.11 and 3.12 fast-CI environments were created in temporary directories with:
+
+```powershell
+uv venv "$env:TEMP\syssimx-baseline-py311" --python 3.11.15 --managed-python
+uv pip install --python "$env:TEMP\syssimx-baseline-py311\Scripts\python.exe" -e ".[dev,fmu,fem]"
+uv venv "$env:TEMP\syssimx-baseline-py312" --python 3.12.13 --managed-python
+uv pip install --python "$env:TEMP\syssimx-baseline-py312\Scripts\python.exe" -e ".[dev,fmu]"
+```
+
+These temporary environments intentionally reproduce the CI extras, which resolve current package
+versions rather than consuming `uv.lock`.
+
+### Commands and results
+
+| Gate | Command | Result |
+|---|---|---|
+| Lock validation | `uv lock --check` | **Failed:** `uv.lock` needs updating |
+| Ruff | `.\.venv\Scripts\ruff.exe check syssimx\ tests\` | Passed |
+| MyPy | `.\.venv\Scripts\mypy.exe syssimx\ --ignore-missing-imports --python-version 3.13` | Passed, 27 files |
+| Full suite | `.\.venv\Scripts\pytest.exe tests\ --cov=syssimx --cov-report=term-missing -v` | 621 passed, 1 skipped; 79% coverage |
+| Fast CI, Python 3.11 | `pytest tests\unit\ tests\integration\ -m "not fem and not slow" --cov=syssimx -v` | 568 passed, 1 skipped, 53 deselected; 75% coverage |
+| Fast CI, Python 3.12 | same command in the Python 3.12 environment | 568 passed, 6 skipped; 75% coverage |
+| Fast CI, Python 3.13 | same command in the Python 3.13 environment | 568 passed, 1 skipped, 53 deselected; 76% coverage |
+| FEM CI, Python 3.11 | `pytest -m fem -v` | 53 passed, 1 skipped, 568 deselected |
+| Strict documentation | `$env:SYSSIMX_DOCS_OFFLINE = '1'`; `sphinx-build -b html -W --keep-going docs docs\_build\html` | Passed without warnings |
+| Locked package build | `uv build --no-sources` | Passed |
+| CI-equivalent package build | `python -m build` under Python 3.11 | Passed |
+
+MyPy emitted informational notes that untyped bodies in `HybridAlgorithm` are not checked and that
+the `OMPython.*` override is unused. These are not type errors, but the baseline must not be
+described as full type coverage.
+
+### Skips, gaps, and artifacts
+
+- The FMU fixture test is skipped on Windows because the checked-in artifact has `c-code` and
+  `linux64`, but no `win64` binary.
+- The Python 3.12 fast environment intentionally omits the FEM extra, producing five additional
+  NGSolve-dependent module skips. The dedicated Python 3.11 FEM job passed all 53 selected tests.
+- OpenSim 4.6 is installed in the full environment, but the current suite still lacks a meaningful
+  OpenSim backend assertion; a green gate does not close HARD-01.
+- The stale lockfile means the dependency state is not yet reproducible. `uv sync --frozen`
+  succeeds by accepting the existing lock without validating it against `pyproject.toml`.
+
+The package build produced:
+
+- `syssimx-0.2.0.tar.gz` — SHA-256
+  `3AC1E6B68501A062FBFD99D06CC9B95010660219F50FE200E7E183BA4A22D13C`;
+- `syssimx-0.2.0-py3-none-any.whl` — SHA-256
+  `332D084DEF2945E74E900DCA5B9ADD3DE59EBB259B109640C136928F8A7FCC91`.
 
 ## Scope
 
