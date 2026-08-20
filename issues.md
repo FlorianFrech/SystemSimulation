@@ -274,6 +274,68 @@ The unchanged skip is the FMU fixture without a win64 binary. Real three-backend
 fresh performance/convergence evidence remain tracked by HARD-01 and EVID-01 through EVID-03; they
 are not blockers to the mechanism migration itself.
 
+## Milestone 4 implementation record
+
+Milestone 4 was implemented on 2026-08-20 on the stacked branch
+`validation/real-backend-switching`. It adds physical acceptance evidence and a lightweight real
+FEM/FMU/OpenSim gate without changing the public region-switching API.
+
+- `9b43a2f` adds canonical transfer validation and transactional diagnostics;
+- `5671999` adds the real-backend trajectory and its CI integration.
+
+Implemented behavior:
+
+- `MultiComponent` now invokes a side-effect-free `_build_transfer_report()` hook after target
+  import, read-back validation, and output refresh, but before committing active identity. A hook
+  failure uses the existing transaction rollback and leaves the source, target, wrapper, ports,
+  histories, time, region, and switch log unchanged. A successful immutable report is attached to
+  the accepted switch event.
+- `MasterPendulum` defines immutable `PendulumState`, `PendulumTransferTolerances`, and
+  `PendulumTransferReport` domain types. Backend values are normalized to radians, radians per
+  second, and N*m; every switch rejects non-finite state or angle, angular-velocity, or torque
+  discontinuity beyond configurable absolute tolerances.
+- The master declares its common direct-feedthrough contract before backend initialization. This
+  removes the former need for consumers to patch wrapper feedthrough metadata before placing a
+  real `MasterPendulum` in a `System`.
+- One module-scoped integration fixture initializes a coarse first-order FEM mesh once and executes
+  a 0.7 ms torque-free trajectory through
+  `FEM -> OpenSim -> FEM -> FMU -> OpenSim -> FMU -> FEM`. This covers all six directed backend
+  pairs with one macro step and asserts chronological switch placement, canonical continuity, and
+  the final free-motion state.
+- The fixture deliberately disables wall contact, gravity, and animation and uses the checked-in
+  Euler pendulum FMU. The scheduled time signal exists only in the external test harness; it is not
+  another production switching mechanism. The existing deterministic tests remain authoritative
+  for sub-microsecond localization semantics.
+- The existing `test-fem` CI job now installs the FEM, FMU, and OpenSim extras and runs the real
+  switching test as part of `pytest -m fem`; the job identifier is unchanged.
+
+Measured verification on Python 3.13.5:
+
+- changed-file Ruff formatting and repository-wide Ruff checks: passed;
+- MyPy: passed for all 27 source files;
+- focused core/MasterPendulum/real-backend gate: **57 passed in 3.25 s**;
+- full backend-enabled suite with coverage: **636 passed, 1 skipped**, 89% coverage, in 168.83 s;
+- strict offline Sphinx documentation: passed without warnings;
+- locked `uv build --no-sources`: passed.
+
+The final commands were:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx tests
+.\.venv\Scripts\python.exe -m mypy syssimx --ignore-missing-imports --python-version 3.13 --cache-dir "$env:TEMP\syssimx-real-backend-mypy"
+$env:COVERAGE_FILE = "$env:TEMP\syssimx-real-backend.coverage"
+.\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-real-backend-full-pytest" tests --cov=syssimx --cov-report=term-missing -q
+$env:SYSSIMX_DOCS_OFFLINE = "1"
+.\.venv\Scripts\python.exe -m sphinx -b html -W --keep-going -d "$env:TEMP\syssimx-real-backend-doctrees" docs "$env:TEMP\syssimx-real-backend-docs"
+uv build --no-sources --out-dir "$env:TEMP\syssimx-real-backend-dist"
+```
+
+The unchanged skip is the separate generic FMU fixture without a win64 binary. This milestone
+proves canonical angle, angular-velocity, and torque continuity for every real backend pair. It
+does not claim preservation of FEM deformation/stress/elastic energy, contact state, acceleration,
+or backend solver history; those fidelity questions remain open in MC-10. Broader backend contract
+coverage and a second structural FEM example also remain in HARD-01.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -610,8 +672,9 @@ decision source.
 
 **Priority:** Medium
 
-**Status:** Partially resolved. Milestone 2 makes transfer atomic and adds a validation hook; the
-physical fidelity and conservation contract remains open.
+**Status:** Partially resolved by Milestone 4. Transfers are atomic and now have a canonical,
+unit-normalized acceptance contract for angle, angular velocity, and torque. Higher-fidelity and
+conservation guarantees remain open.
 
 The transfer interface preserves a small human-readable state, but the meaning and losses are left
 to each component. In the master pendulum:
@@ -622,18 +685,24 @@ to each component. In the master pendulum:
 - OpenSim recreates its integration manager.
 - The CVODE FMU is reconstructed from physical variables rather than a complete solver state.
 
-Position and velocity may remain continuous while acceleration, energy, contact state, or solver
-history jump. Frequent switching can therefore introduce artificial transients.
+The real six-direction test proves continuity of the canonical state within configurable absolute
+tolerances. Acceleration, energy, contact state, flexible deformation/stress, and solver history may
+still jump. Frequent switching can therefore still introduce artificial transients outside the
+validated contract.
 
 **Suggested solution**
 
-- Define a canonical `PendulumState` with explicit units and optional fidelity-specific fields.
-- Support adapters keyed by `(source_mode, target_mode)`, not only the target.
-- Define preserved invariants for every transition: angle, angular velocity, torque, and optionally
-  energy/contact state.
-- Return transfer diagnostics such as projection residuals or lost-state warnings.
-- Validate output continuity after transfer within configurable tolerances.
-- Make switching transactional so a failed target import leaves the previous mode fully intact.
+- [x] Define a canonical `PendulumState` with explicit units.
+- [ ] Add optional fidelity-specific fields only when a backend can supply them consistently.
+- [ ] Support adapters keyed by `(source_mode, target_mode)` if pair-specific projection becomes
+  necessary; the current canonical mapping needs target-specific renaming only.
+- [x] Define and test preserved angle, angular-velocity, and torque invariants for every transition.
+- [ ] Define energy, acceleration, contact-state, and flexible-field loss semantics.
+- [x] Return immutable accepted-transfer diagnostics in the switch record.
+- [x] Validate canonical continuity after target import and output refresh within configurable
+  tolerances.
+- [x] Make switching transactional so a failed import or domain validation leaves the previous mode
+  fully intact.
 
 ### MC-11 — Dead and duplicated abstractions obscure the real design
 
@@ -698,30 +767,36 @@ Centralizing all mode strings in a stronger type remains optional cleanup.
 
 **Priority:** Medium
 
-**Status:** Partially resolved. Generic localization, hysteresis, chronological multi-boundary
-processing, rollback, and reset scenarios now use generated region boundaries, and the production
-MasterPendulum region configuration has unit coverage. There is still no automated test that
-actually switches a real `MasterPendulum` among FEM, OpenSim, and FMU.
+**Status:** Partially resolved by Milestone 4. Generic localization, hysteresis, chronological
+multi-boundary processing, rollback, and reset scenarios use generated region boundaries. A fast
+automated test now switches one real `MasterPendulum` through all six directed FEM/FMU/OpenSim
+pairs. Backend-specific reset/reinitialize, trial-side-effect, and real-policy macro-step studies
+remain open.
 
-Consequently, generic tests cannot detect backend-specific projection losses, speculative UI/history
-side effects, initialization-order regressions, or resource lifecycle failures.
+The real trajectory now detects initialization-order and canonical projection regressions.
+Backend-specific speculative UI/history side effects and resource lifecycle failures still need
+dedicated assertions.
 
 **Suggested solution**
 
 Add layered tests:
 
-1. Backend-independent contract tests for every component implementation.
-2. Pairwise transfer tests for FEM ↔ OpenSim, FEM ↔ FMU, and OpenSim ↔ FMU.
-3. A short three-mode trajectory test with switch-time and continuity assertions.
-4. Trial-step purity tests for history, monitoring, visualization, and logs.
-5. Reset/reinitialize tests covering active region, active mode, and switch history.
-6. Macro-step-independence tests for the real region configuration.
+1. [ ] Backend-independent contract tests for every component implementation.
+2. [x] Pairwise transfer tests for FEM ↔ OpenSim, FEM ↔ FMU, and OpenSim ↔ FMU.
+3. [x] A short three-mode trajectory test with switch-time and continuity assertions.
+4. [ ] Real-backend trial-step purity tests for history, monitoring, visualization, and logs;
+   generic transactional coverage already exists.
+5. [ ] Real-backend reset/reinitialize tests covering active region, active mode, switch history,
+   and resource cleanup; generic lifecycle coverage already exists.
+6. [ ] Macro-step-independence tests for the real angle-region configuration; deterministic region
+   localization coverage already exists.
 
 Tests dedicated only to the deleted mechanisms were removed. Their useful localization and rollback
 assertions were retained against generated region boundaries.
 
-Heavy backend tests can be marked and run in environments where NGSolve, OpenSim, and the FMU
-artifacts are available. Contract tests should remain runnable with lightweight fakes.
+The real-backend test is marked `fem`, `fmu`, and `opensim` and runs in the existing backend CI job.
+It stays fast by sharing one coarse mesh and excluding contact. Contract tests remain runnable with
+lightweight fakes.
 
 ## Existing work to retain during consolidation
 
@@ -950,9 +1025,14 @@ There is no independent master-algorithm comparison for the FMU-only baseline.
 
 **Priority:** High
 
-`tests/unit/components/test_opensim.py` is empty and `syssimx/components/opensim.py` has low recorded
-coverage. OpenSim represents one third of the heterogeneity claim. FMU coverage is also incomplete
-on platforms without fixtures, and FEM has only one structural case study.
+**Status:** Partially resolved by Milestone 4. The real composition now exercises OpenSim and every
+directed backend transfer in CI. Standalone OpenSim contracts, platform-complete generic FMU
+fixtures, and a second structural FEM example remain open.
+
+`tests/unit/components/test_opensim.py` is empty. The real composition raises recorded coverage of
+`syssimx/components/opensim.py` to 89%, but does not isolate its contracts. OpenSim represents one
+third of the heterogeneity claim. FMU coverage is also incomplete on platforms without fixtures,
+and FEM has only one structural case study.
 
 **Suggested solution**
 
@@ -960,7 +1040,7 @@ on platforms without fixtures, and FEM has only one structural case study.
 - Add mocked FMU unit coverage plus platform-complete integration fixtures where feasible.
 - Add a second structural FEM example to demonstrate that `FEMComponent` generalizes beyond the
   pendulum.
-- Include the real `MasterPendulum` switching tests from MC-14.
+- [x] Include the real `MasterPendulum` switching tests from MC-14.
 
 ### HARD-02 — Slow FEM regressions are outside the normal gate
 
@@ -1157,8 +1237,8 @@ together. Test-only forced cycling already lives in an external signal harness.
 - [x] Remove the time-driven demo cycle from production switching; keep the forced-cycle experiment in
   an external test harness.
 - [x] Move thresholds and signal bands into typed configuration.
-- Add real-backend pairwise and end-to-end switching tests.
-- Document which physical quantities are preserved or lost for each transition.
+- [x] Add real-backend pairwise and end-to-end switching tests.
+- [x] Document which physical quantities are preserved or lost for each transition.
 - [x] After all examples and tests use regions, remove `mode_selector`, public
   `add_switch_indicator()`, and their fixed-target/registration-order infrastructure.
 
@@ -1172,18 +1252,19 @@ together. Test-only forced cycling already lives in an external signal harness.
 
 ## Prioritized next steps
 
-Milestones 1 through 3 established the release-candidate switching mechanism. The remaining order
-focuses on validating physical fidelity and producing evidence without reopening the public API.
+Milestones 1 through 4 established the release-candidate switching mechanism and its canonical
+real-backend transfer gate. The remaining order focuses on higher-fidelity characterization and
+paper/release evidence without reopening the public API.
 
-1. **Validate real backend transitions:** HARD-01, MC-10, and MC-14. Add pairwise and three-model
-   FEM/OpenSim/FMU tests with explicit continuity, conservation, rollback, and resource-lifecycle
-   assertions.
+1. **Characterize residual transfer losses:** MC-10 and the remaining MC-14 lifecycle cases. Measure
+   acceleration and energy discontinuities, specify flexible/contact-state loss semantics, and add
+   real-backend reset and trial-purity checks without putting contact into the fast switching test.
 2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
 3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
    EVID-04 and EVID-05 for a representative benchmark and independent-master comparison.
-4. **Strengthen the validation gate:** HARD-02, including a real OpenSim assertion and
-   a scheduled FEM physics run.
+4. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
+   platform-complete generic FMU fixtures, and a scheduled contact/FEM physics run.
 5. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
    consolidate switch history, automate port lifecycle, and replace backend-private metadata
    access. Do not add another switching policy hierarchy.
