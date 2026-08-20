@@ -633,7 +633,8 @@ class FEMPendulum(FEMComponent):
         if "wall_hit" not in event_names:
             return
 
-        logger.info("[%s] Event 'wall_hit' at t=%.6fs.", self.name, t)
+        if not self.in_trial:
+            logger.info("[%s] Event 'wall_hit' at t=%.6fs.", self.name, t)
 
         # Invert velocity field (keep displacement and old states unchanged)
         if not self._with_contact:
@@ -667,7 +668,8 @@ class FEMPendulum(FEMComponent):
         self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
         self.gap_prev = self._get_contact_gap_distance()
         self._t_prev = t_current
-        self.monitoring_state.gap = self.gap_prev
+        if not self.in_trial:
+            self.monitoring_state.gap = self.gap_prev
 
         # Reduce time step if the pendulum is close to contact.
         if effective_dt <= 1e-4:
@@ -788,6 +790,8 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     def reset(self):
         # The base zeros the Newmark state (u, v, a and previous-step buffers).
+        if self._monitor is not None:
+            self._monitor.close()
         super().reset()
         # Reset the stress fields and reallocate the time-series history.
         self._gf_cauchy_stress.vec[:] = 0
@@ -796,6 +800,9 @@ class FEMPendulum(FEMComponent):
         self._gf_v_history = GridFunction(self._V, multidim=0)
         self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
         self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
+        self.monitoring_state = PendulumMonitoringState()
+        self.monitoring_state.mode = "FEM"
+        self._monitor = None
 
     # ----------------------------------------------------------------------------
     # Helpers for diagnostics and visualization

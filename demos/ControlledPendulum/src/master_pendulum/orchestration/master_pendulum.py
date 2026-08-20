@@ -204,6 +204,9 @@ class MasterPendulum(MultiComponent):
     ):
         super()._update_output_states(t, event_names=event_names)
 
+        if self.in_trial:
+            return
+
         # 2) Update monitoring widgets (only if t is provided)
         if t is not None:
             dt = t - self.t if hasattr(self, "t") else 0.0
@@ -252,6 +255,18 @@ class MasterPendulum(MultiComponent):
         if self.fem is not None:
             display(self._monitor.scene_header)
             self.fem.initialize_scene()
+
+    def reset(self) -> None:
+        """Restore the orchestration and observer state of a fresh instance."""
+        if self._monitor is not None:
+            self._monitor.close()
+        super().reset()
+        self.mode_selector = None
+        self._t_end = 1.0
+        self._with_contact = False
+        self._animate = False
+        self.monitoring_state = PendulumMonitoringState()
+        self._monitor = None
 
     def __del__(self):
         if self._monitor is not None:

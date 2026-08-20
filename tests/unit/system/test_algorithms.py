@@ -488,8 +488,12 @@ class TestTrialStepGuard:
         with HybridAlgorithm._trial_step(mc):
             assert mc._allow_mode_switching is False
             assert mc._record_history is False
+            assert mc.in_trial
+            assert all(model.in_trial for model in mc.models.values())
         assert mc._allow_mode_switching is True
         assert mc._record_history is True
+        assert not mc.in_trial
+        assert all(not model.in_trial for model in mc.models.values())
 
     def test_restores_flags_when_body_raises(self):
         from syssimx.system.algorithms.hybrid import HybridAlgorithm

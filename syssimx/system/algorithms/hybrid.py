@@ -324,7 +324,7 @@ class HybridAlgorithm(Algorithm):
             # Trial advance: suppress history recording and mode switching.
             with self._trial_step(comp):
                 # a) Save the state snapshot, input cache, and indicators at t_left
-                snapshots[comp.name] = comp.snapshot_state()
+                snapshots[comp.name] = comp.checkpoint()
                 input_cache[comp.name] = self._capture_inputs(comp)
                 indicators_left[comp.name] = comp.evaluate_event_indicators()
 
@@ -399,25 +399,12 @@ class HybridAlgorithm(Algorithm):
     def _trial_step(comp: Any):
         """Guard a trial (rolled-back) advance of ``comp``.
 
-        Inside the block the component must not record history and, for
-        multi-model components, must not switch its active model: the caller
-        restores a snapshot afterwards, and that snapshot is only valid for
-        the model that created it. Both flags are restored on exit even if
-        the trial advance raises.
+        Delegates suppression to the recursive component contract so every
+        nested model observes the same trial state. The caller remains
+        responsible for restoring a previously captured checkpoint.
         """
-        original_switch = getattr(comp, "_allow_mode_switching", None)
-        if original_switch is not None:
-            comp._allow_mode_switching = False
-        original_record = getattr(comp, "_record_history", None)
-        if original_record is not None:
-            comp._record_history = False
-        try:
+        with comp.trial_context():
             yield
-        finally:
-            if original_switch is not None:
-                comp._allow_mode_switching = original_switch
-            if original_record is not None:
-                comp._record_history = original_record
 
     def _capture_inputs(self, comp: CoSimComponent) -> dict[str, Any]:
         """Capture the current inputs of the component."""
@@ -432,7 +419,7 @@ class HybridAlgorithm(Algorithm):
         self, comp: CoSimComponent, snapshot: Any, inputs: dict[str, Any], t: float
     ) -> None:
         """Restore the component's state from snapshot and set its inputs."""
-        comp.restore_state(snapshot, t=t)
+        comp.restore_checkpoint(snapshot)
         if inputs:
             comp.set_inputs(inputs, t=t)
 
@@ -531,7 +518,7 @@ class HybridAlgorithm(Algorithm):
                 if t_left_ref > t_left + 1e-12:
                     comp._do_step_internal(t_left, t_left_ref - t_left)
                     comp._update_output_states()
-                working_snapshots[comp.name] = comp.snapshot_state()
+                working_snapshots[comp.name] = comp.checkpoint()
 
         # 7) Bisection loop
         for iteration in range(self.max_iter):
@@ -574,7 +561,7 @@ class HybridAlgorithm(Algorithm):
                 left = mid
                 indicators_left_vals = indicators_mid
                 # Update working snapshots
-                working_snapshots = {comp.name: comp.snapshot_state() for comp in event_sources}
+                working_snapshots = {comp.name: comp.checkpoint() for comp in event_sources}
                 t_left_ref = mid
                 t_event = right
 
@@ -822,13 +809,9 @@ class HybridAlgorithm(Algorithm):
         Executes all permutations of event handling and checks if the final state is the same.
         This requires the component to support state snapshotting and restoration.
 
-        The probe runs inside :meth:`_trial_step`, which suppresses history
-        recording and, for multi-model components, mode switching. Suppressing
-        the switch is required for correctness of the probe itself: a snapshot
-        is only valid for the sub-model that produced it, so a handler that
-        changed the active model would leave the next ``restore_state`` pushing
-        a snapshot into a different model, which components are entitled to
-        reject.
+        The probe runs inside :meth:`_trial_step`, which recursively suppresses
+        observational effects and model switching. A full framework checkpoint
+        is restored between permutations.
 
         Args:
             comp (CoSimComponent): The component to verify commutativity for.
@@ -848,14 +831,14 @@ class HybridAlgorithm(Algorithm):
 
         with self._trial_step(comp):
             # 1) Save initial state
-            initial_snapshot = comp.snapshot_state()
+            initial_snapshot = comp.checkpoint()
             t = comp.t
 
             # 2) Iterate over all orderings
             results = []
             for ordering in permutations(event_names):
                 # a) Restore initial state
-                comp.restore_state(initial_snapshot, t=t)
+                comp.restore_checkpoint(initial_snapshot)
 
                 # b) Handle events in the specified order
                 for event_name in ordering:
@@ -867,7 +850,7 @@ class HybridAlgorithm(Algorithm):
                 results.append(final_state)
 
             # 3) Restore to initial state before leaving the probe
-            comp.restore_state(initial_snapshot, t=t)
+            comp.restore_checkpoint(initial_snapshot)
 
         first_result = results[0]
         if all(self._states_equal(first_result, other) for other in results[1:]):

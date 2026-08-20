@@ -57,8 +57,20 @@ class MockSubComponent(CoSimComponent):
         self.call_log.append(f"set_state({state}, {t})")
         self._state = state.copy()
 
+    def snapshot_state(self) -> dict[str, Any]:
+        return {
+            "state": self._state.copy(),
+            "step_count": self._step_count,
+        }
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._state = snapshot["state"].copy()
+        self._step_count = snapshot["step_count"]
+        self.t = t
+
     def reset(self) -> None:
         self.call_log.append("reset()")
+        super().reset()
         self._state = {"x": 0.0, "v": 0.0}
         self._step_count = 0
 
@@ -167,6 +179,7 @@ class RampSubComponent(CoSimComponent):
         self._y = float(snapshot["y"])
 
     def reset(self) -> None:
+        super().reset()
         self._y = 0.0
 
 

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from syssimx.core.base import CoSimComponent
-from syssimx.core.events import Event, EventIndicator
+from syssimx.core.events import Event, EventIndicator, InternalEventInfo
 from syssimx.core.port import PortSpec, PortState, PortType
 from syssimx.utilities.units import ureg
 from tests.fixtures.components import (
@@ -212,6 +212,43 @@ class TestRecordHistoryFlag:
 
         # Initial sample from initialize() + the one recorded step.
         assert len(comp.history.get_port_history("y")) == 2
+
+
+# ============================================================================
+# Test Checkpoint and Trial Contract
+# ============================================================================
+class TestCheckpointAndTrialContract:
+    """Checkpointing restores framework observables as well as solver state."""
+
+    def test_checkpoint_restores_time_ports_history_and_event_hints(self):
+        comp = HybridSource("Source", x0=0.0, v=1.0)
+        comp.initialize(t0=0.0)
+        checkpoint = comp.checkpoint()
+
+        comp.do_step(t=0.0, dt=1.0)
+        comp.internal_event_hints.append(InternalEventInfo("crossing", 0.5, 0.6))
+        assert comp.t == 1.0
+        assert len(comp.history.get_port_history("x")) == 2
+
+        comp.restore_checkpoint(checkpoint)
+
+        assert comp.t == 0.0
+        assert comp.outputs["x"].get() == 0.0
+        assert comp.outputs["x"].t_last == 0.0
+        assert len(comp.history.get_port_history("x")) == 1
+        assert comp.internal_event_hints == []
+
+    def test_trial_context_suppresses_direct_history_writes(self):
+        comp = HybridSource("Source", x0=0.0, v=1.0)
+        comp.initialize(t0=0.0)
+        before = len(comp.history.get_port_history("x"))
+
+        with comp.trial_context():
+            assert comp.in_trial
+            comp._record_outputs(0.5)
+
+        assert not comp.in_trial
+        assert len(comp.history.get_port_history("x")) == before
 
 
 # ============================================================================

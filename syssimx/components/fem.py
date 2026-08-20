@@ -280,8 +280,10 @@ class FEMComponent(CoSimComponent):
                 if self._record_history:
                     self._record_outputs(t_current)
 
-                # Hook: live visualization / monitoring update.
-                self._after_substep(t_current)
+                # Trial advances must never invoke observers, callbacks, live
+                # monitoring, or visualization hooks.
+                if not self.in_trial:
+                    self._after_substep(t_current)
 
         # Any unstepped remainder is below ``time_tol`` and represents only
         # accumulation round-off. Expose the exact accepted macro endpoint to
