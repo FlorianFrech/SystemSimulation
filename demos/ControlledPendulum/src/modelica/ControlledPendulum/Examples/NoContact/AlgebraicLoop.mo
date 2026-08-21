@@ -5,7 +5,7 @@ model AlgebraicLoop
   type RealOutput = Modelica.Blocks.Interfaces.RealOutput;
   
   // Components
-  Trajectories.SetPoint     set_point;
+  Trajectories.SetPoint     set_point(frequency=2);
   Sensors.AngleSensor       angle_sensor;
   Sensors.AngleDecoder      angle_decoder;
   Controllers.PIDController pid;
@@ -45,7 +45,7 @@ equation
   tau = drive.torque;
   
   annotation(
-    experiment(StartTime = 0, StopTime = 2, Interval = 0.001)
+    experiment(StartTime = 0, StopTime = 1, Interval = 0.001)
   );
 
 end AlgebraicLoop;
