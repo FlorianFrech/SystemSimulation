@@ -7,7 +7,7 @@ import numpy as np
 from IPython.display import display
 
 from syssimx.core.multi_comp import MultiComponent
-from syssimx.utilities.units import ureg
+from syssimx.utilities.units import to_pint_unit, ureg
 
 from ..components import FEMPendulum, FMUPendulum, OpenSimPendulum
 from ..monitoring import PendulumMonitor, PendulumMonitoringState
@@ -31,7 +31,9 @@ def _state_scalar(state: Mapping[str, Any], name: str, expected_unit: str) -> fl
     if hasattr(raw_value, "to"):
         value = float(raw_value.to(expected_unit).magnitude)
     else:
-        source_unit = entry.get("unit", expected_unit)
+        # Backends spell the same unit differently ("rad/s**2", "rad/s^2",
+        # "rad/s2"); the framework parser normalizes all three.
+        source_unit = to_pint_unit(entry.get("unit") or expected_unit)
         value = float(ureg.Quantity(raw_value, source_unit).to(expected_unit).magnitude)
     if not math.isfinite(value):
         raise ValueError(f"Pendulum state '{name}' must be finite.")
@@ -44,28 +46,186 @@ class PendulumState:
 
     theta: float
     omega: float
+    alpha: float
     tau: float
 
     @classmethod
     def from_mapping(cls, state: Mapping[str, Any]) -> "PendulumState":
-        """Normalize a backend state mapping to radians, seconds, and N·m."""
+        """Normalize a backend state mapping to radians, seconds, and N*m."""
         return cls(
             theta=_state_scalar(state, "theta", "rad"),
             omega=_state_scalar(state, "omega", "rad/s"),
+            alpha=_state_scalar(state, "alpha", "rad/s**2"),
             tau=_state_scalar(state, "tau", "N*m"),
         )
 
 
 @dataclass(frozen=True)
+class PendulumEnergy:
+    """Mechanical energy of one pendulum state, in joule.
+
+    ``kinetic`` and ``potential`` are the canonical rigid-body terms that every
+    backend can supply from the transferred state. ``elastic`` is the FEM strain
+    energy and is ``None`` for the rigid backends, which have no elastic degrees
+    of freedom.
+    """
+
+    kinetic: float
+    potential: float
+    elastic: float | None = None
+
+    @property
+    def mechanical(self) -> float:
+        """Rigid mechanical energy that the canonical interface can carry."""
+        return self.kinetic + self.potential
+
+    @property
+    def total(self) -> float:
+        """Mechanical energy including the FEM strain energy when available."""
+        return self.mechanical + (self.elastic or 0.0)
+
+
+@dataclass(frozen=True)
+class RigidPendulumProperties:
+    """Shared rigid-body properties used for canonical energy accounting.
+
+    All three backends are synchronized to one rigid-body parameter set during
+    initialization, so a single energy definition applies to every mode.
+    """
+
+    mass: float
+    length: float
+    inertia: float
+    gravity: float
+
+    def __post_init__(self) -> None:
+        for name, value in vars(self).items():
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(
+                    f"Rigid pendulum property '{name}' must be finite and nonnegative."
+                )
+        if self.inertia <= 0.0:
+            raise ValueError("Rigid pendulum property 'inertia' must be nonzero.")
+
+    def energy(self, state: PendulumState, elastic: float | None = None) -> PendulumEnergy:
+        """Return the mechanical energy of ``state`` with the pivot as datum."""
+        return PendulumEnergy(
+            kinetic=0.5 * self.inertia * state.omega**2,
+            potential=self.mass * self.gravity * self.length * (1.0 - math.cos(state.theta)),
+            elastic=elastic,
+        )
+
+
+@dataclass(frozen=True)
+class BackendStateSemantics:
+    """What one backend exports when left and rebuilds when entered.
+
+    ``exported`` and ``accepted`` name canonical quantities. ``reconstructed``
+    and ``discarded`` name backend-internal state in prose, because that state
+    has no representation in the canonical interface.
+    """
+
+    exported: tuple[str, ...]
+    accepted: tuple[str, ...]
+    reconstructed: tuple[str, ...]
+    discarded: tuple[str, ...]
+
+
+BACKEND_STATE_SEMANTICS: Mapping[str, BackendStateSemantics] = {
+    "FEM": BackendStateSemantics(
+        exported=("theta", "omega", "alpha", "tau"),
+        accepted=("theta", "omega", "tau"),
+        reconstructed=(
+            "rigid displacement field",
+            "rigid velocity field",
+            "rigid acceleration field from the rigid torque balance",
+            "Newmark previous-step vectors set equal to the current step",
+        ),
+        discarded=(
+            "elastic deformation",
+            "elastic strain energy",
+            "Cauchy stress field",
+            "von Mises stress field",
+            "Newmark step history",
+            "contact gap history",
+        ),
+    ),
+    "OpenSim": BackendStateSemantics(
+        exported=("theta", "omega", "alpha", "tau"),
+        accepted=("theta", "omega", "tau"),
+        reconstructed=(
+            "SimTK system state",
+            "integration manager",
+        ),
+        discarded=("integrator step-size and error history",),
+    ),
+    "FMU": BackendStateSemantics(
+        exported=("theta", "omega", "alpha", "tau"),
+        accepted=("theta", "omega", "tau"),
+        reconstructed=("native FMU instance created from theta_start and omega_start",),
+        discarded=(
+            "solver-internal history; the checked-in FMUs declare neither "
+            "canGetAndSetFMUstate nor canSerializeFMUstate",
+        ),
+    ),
+}
+
+
+@dataclass(frozen=True)
+class TransferStateSemantics:
+    """Preserved, reconstructed, and lost state for one directed transfer."""
+
+    source_mode: str
+    target_mode: str
+    preserved: tuple[str, ...]
+    reconstructed: tuple[str, ...]
+    lost: tuple[str, ...]
+
+
+def transfer_state_semantics(source_mode: str, target_mode: str) -> TransferStateSemantics:
+    """Resolve the declared state semantics of ``source_mode`` to ``target_mode``.
+
+    ``preserved`` holds the canonical quantities the source exports and the
+    target accepts. ``lost`` adds the canonical quantities the target cannot
+    accept to the backend-internal state the source discards on export.
+    """
+    try:
+        source = BACKEND_STATE_SEMANTICS[source_mode]
+        target = BACKEND_STATE_SEMANTICS[target_mode]
+    except KeyError as exc:
+        raise ValueError(f"Unknown pendulum backend mode: {exc.args[0]!r}.") from exc
+
+    preserved = tuple(name for name in source.exported if name in target.accepted)
+    dropped = tuple(name for name in source.exported if name not in target.accepted)
+    return TransferStateSemantics(
+        source_mode=source_mode,
+        target_mode=target_mode,
+        preserved=preserved,
+        reconstructed=target.reconstructed,
+        lost=dropped + source.discarded,
+    )
+
+
+@dataclass(frozen=True)
 class PendulumTransferTolerances:
-    """Absolute continuity limits for a backend state transfer."""
+    """Continuity limits for a backend state transfer.
+
+    ``theta``, ``omega``, and ``tau`` are enforced invariants. ``alpha`` and
+    ``energy`` are measured for every transfer but enforced only when a limit is
+    supplied, because neither acceleration nor mechanical energy is preserved by
+    the canonical interface described in :data:`BACKEND_STATE_SEMANTICS`.
+    """
 
     theta: float = 1e-8
     omega: float = 1e-8
     tau: float = 1e-10
+    alpha: float | None = None
+    energy: float | None = None
 
     def __post_init__(self) -> None:
         for name, value in vars(self).items():
+            if value is None:
+                continue
             if not math.isfinite(value) or value < 0.0:
                 raise ValueError(f"Transfer tolerance '{name}' must be finite and nonnegative.")
 
@@ -79,6 +239,13 @@ class PendulumTransferReport:
     time: float
     source: PendulumState
     target: PendulumState
+    source_energy: PendulumEnergy
+    target_energy: PendulumEnergy
+
+    @property
+    def semantics(self) -> TransferStateSemantics:
+        """Declared preserved, reconstructed, and lost state of this transfer."""
+        return transfer_state_semantics(self.source_mode, self.target_mode)
 
     @property
     def theta_error(self) -> float:
@@ -92,14 +259,45 @@ class PendulumTransferReport:
     def tau_error(self) -> float:
         return abs(self.target.tau - self.source.tau)
 
-    def violations(self, tolerances: PendulumTransferTolerances) -> tuple[str, ...]:
-        """Return names of canonical quantities outside their continuity limits."""
-        errors = {
+    @property
+    def alpha_error(self) -> float:
+        """Angular-acceleration discontinuity introduced by the transfer."""
+        return abs(self.target.alpha - self.source.alpha)
+
+    @property
+    def energy_error(self) -> float:
+        """Rigid mechanical-energy discontinuity introduced by the transfer."""
+        return abs(self.target_energy.mechanical - self.source_energy.mechanical)
+
+    @property
+    def elastic_energy_lost(self) -> float:
+        """Strain energy present at the source and absent after the transfer."""
+        return (self.source_energy.elastic or 0.0) - (self.target_energy.elastic or 0.0)
+
+    @property
+    def total_energy_error(self) -> float:
+        """Discontinuity of mechanical plus available elastic energy."""
+        return abs(self.target_energy.total - self.source_energy.total)
+
+    @property
+    def discontinuities(self) -> dict[str, float]:
+        """Measured jump of every canonical quantity, keyed by tolerance name."""
+        return {
             "theta": self.theta_error,
             "omega": self.omega_error,
+            "alpha": self.alpha_error,
             "tau": self.tau_error,
+            "energy": self.energy_error,
         }
-        return tuple(name for name, error in errors.items() if error > getattr(tolerances, name))
+
+    def violations(self, tolerances: PendulumTransferTolerances) -> tuple[str, ...]:
+        """Return names of measured quantities outside an enforced limit."""
+        limits = {name: getattr(tolerances, name) for name in self.discontinuities}
+        return tuple(
+            name
+            for name, error in self.discontinuities.items()
+            if limits[name] is not None and error > limits[name]
+        )
 
 
 @dataclass(frozen=True)
@@ -184,6 +382,10 @@ class MasterPendulum(MultiComponent):
         self._with_contact = False
         self._animate = False
 
+        # Rigid-body properties shared by every backend; the FEM geometry
+        # supplies them during initialization.
+        self.rigid_properties: RigidPendulumProperties | None = None
+
         # Monitoring: the observable state exists from construction (the step
         # loop writes to it); the widget panel is created lazily in
         # setup_monitoring().
@@ -234,6 +436,15 @@ class MasterPendulum(MultiComponent):
         inertia = self.fem.inertia
         mass = self.fem.mass
 
+        # One rigid-body parameter set backs the canonical energy accounting of
+        # every mode, so switch reports compare like with like.
+        self.rigid_properties = RigidPendulumProperties(
+            mass=mass,
+            length=length,
+            inertia=inertia,
+            gravity=9.81 if self.use_gravity else 0.0,
+        )
+
         # Synchronize to OpenSim
         if self.opensim is not None:
             self.opensim.parameters["InitialConditions"]["theta_start"] = theta_start
@@ -277,6 +488,16 @@ class MasterPendulum(MultiComponent):
             }
         return state
 
+    def _strain_energy(self, mode: str) -> float | None:
+        """Return the elastic strain energy of ``mode``, or ``None`` if rigid.
+
+        Only the FEM backend carries elastic degrees of freedom. The read is
+        side-effect-free, so it is safe inside the transfer transaction.
+        """
+        if mode != "FEM" or not self.fem._is_initialized:
+            return None
+        return float(self.fem.strain_energy())
+
     def _build_transfer_report(
         self,
         source_state: dict[str, Any],
@@ -285,13 +506,28 @@ class MasterPendulum(MultiComponent):
         target_mode: str,
         t: float,
     ) -> PendulumTransferReport:
-        """Validate canonical continuity before committing backend identity."""
+        """Validate canonical continuity before committing backend identity.
+
+        The report also measures the acceleration and mechanical-energy
+        discontinuities that the canonical interface does not preserve. They are
+        rejected only when the configured tolerances enforce a limit.
+        """
+        properties = self.rigid_properties
+        if properties is None:
+            raise RuntimeError(
+                f"{self.name}: Rigid properties are unavailable before backend initialization."
+            )
+
+        source = PendulumState.from_mapping(source_state)
+        target = PendulumState.from_mapping(target_state)
         report = PendulumTransferReport(
             source_mode=source_mode,
             target_mode=target_mode,
             time=t,
-            source=PendulumState.from_mapping(source_state),
-            target=PendulumState.from_mapping(target_state),
+            source=source,
+            target=target,
+            source_energy=properties.energy(source, self._strain_energy(source_mode)),
+            target_energy=properties.energy(target, self._strain_energy(target_mode)),
         )
         violations = report.violations(self.transfer_tolerances)
         if violations:
@@ -381,6 +617,7 @@ class MasterPendulum(MultiComponent):
         self._t_end = 1.0
         self._with_contact = False
         self._animate = False
+        self.rigid_properties = None
         self.monitoring_state = PendulumMonitoringState()
         self._monitor = None
 
