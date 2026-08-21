@@ -1585,6 +1585,11 @@ switching work:
 - Run the long Wave 2 notebooks in the scheduled physics gate from HARD-02 rather than on pull
   requests.
 - Add the absolute-path scan to CI so a leak cannot be committed again.
+- Make the saved figures reproducible. `notebooks/03_multi_comp_verification.ipynb` writes the
+  tracked `notebooks/figures/03_multi_component_switching.pdf`, and every execution rewrites it with
+  identical size but different bytes, because Matplotlib stamps a creation date into the PDF. Any
+  notebook run therefore dirties the working tree and any re-run produces a spurious diff. Setting
+  `SOURCE_DATE_EPOCH`, or `pdf.compression`/metadata options, removes the churn.
 
 ## Reproducibility
 
