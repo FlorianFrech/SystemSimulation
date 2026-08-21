@@ -68,6 +68,7 @@ class _SteppingFEM(_MiniFEM):
         self.nominal_dt = nominal_dt
         self.adaptive_dt = adaptive_dt
         self.accepted_steps: list[float] = []
+        self.observed_steps: list[float] = []
 
     def _effective_substep(self, dt: float) -> float:
         return dt if self.nominal_dt is None else self.nominal_dt
@@ -79,6 +80,9 @@ class _SteppingFEM(_MiniFEM):
     def _solve_step(self) -> None:
         self.accepted_steps.append(self.tau_step.Get())
         super()._solve_step()
+
+    def _after_substep(self, t_current: float) -> None:
+        self.observed_steps.append(t_current)
 
 
 def _fill(gf, value: float) -> None:
@@ -233,6 +237,17 @@ def test_substep_loop_still_covers_the_full_macro_step():
 
     assert sum(comp.accepted_steps) == pytest.approx(1e-3, rel=1e-9)
     assert comp.t == pytest.approx(1e-3)
+
+
+def test_trial_step_suppresses_substep_observers():
+    comp = _SteppingFEM(nominal_dt=0.05)
+    comp.initialize(t0=0.0)
+
+    with comp.trial_context():
+        comp.do_step(t=0.0, dt=0.1)
+
+    assert comp.solved == 2
+    assert comp.observed_steps == []
 
 
 def test_do_step_rejects_unrepresentable_time_advance():
