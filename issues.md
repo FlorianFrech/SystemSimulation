@@ -567,6 +567,28 @@ The unchanged skip is the generic FMU fixture whose archive contains `linux64` a
 did not touch, including the aligned assignment blocks in `fem_pendulum.py`; reformatting them
 belongs to a separate cleanup.
 
+### First CI run of the stack
+
+The branch reached GitHub Actions for the first time in pull request #6. The `test-fem` job passed
+on ubuntu with `[dev,fmu,fem,opensim]`, so all three real-backend suites, the linux FMUs, and the
+Milestone 6 fidelity and placement studies reproduce off Windows. The `docs` job passed.
+
+The three `test` matrix jobs failed to collect
+`tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py`. That module guarded only
+on the demo orchestration module, but `master_pendulum.py` imports the backend classes
+unconditionally while `demos/.../components/__init__.py` exports only the models whose backend is
+installed. Without NGSolve the failure is an `ImportError`, not a `ModuleNotFoundError`, so
+`pytest.importorskip` re-raised it instead of skipping.
+
+`3e62c07` guards the module on ngsolve, fmpy, and opensim and marks it `fem`, `fmu`, and `opensim`,
+matching every sibling suite. The module is now skipped in the main matrix job and runs in the
+backend job, where it previously ran in neither: `pytest -m fem` collects 118 tests instead of 87.
+The defect was latent from `61c53c8` in Milestone 3, because the stack had never been pushed.
+
+This is a standing lesson for the remaining milestones. Local verification on Windows with every
+backend installed does not exercise the partial-install path that the main CI matrix uses, so a
+branch should reach CI before its milestone is declared closed.
+
 ### Limitations
 
 - The characterization covers the torque-driven, contact-free, gravity-free regime on one coarse
