@@ -1501,7 +1501,16 @@ v0.3.0, rather than a patch.
 
 **Priority:** High
 
-**Status:** Open, found during Milestone 7.
+**Status:** Worked around on 2026-08-22; the FMU defect itself is still open.
+
+`FMUComponent` no longer calls `fmi2Terminate` or `fmi2FreeInstance` and no longer deletes the
+extraction directory. `reset()` drops the instance reference, and `reinitialize_instance()` creates
+a new slave over the retained extraction directory. With that, the two master-pendulum tutorials and
+the two FMU tutorials execute again in their published configuration, and the master pendulum
+switches through all three backends. The cost is that native instances and extracted FMU directories
+accumulate for the lifetime of the process, so a long session with many switches leaks memory and
+temporary files. The lifecycle tests now assert that neither native call is made, so restoring the
+release path is a deliberate change rather than an accident.
 
 Freeing the native instance of `Pendulum_cvode.fmu` raises Windows exception `0xc0000374`, heap
 corruption, inside `fmi2FreeInstance`. `Pendulum_euler.fmu` survives the identical code paths.
@@ -1538,10 +1547,13 @@ FMU binary is the prime suspect rather than the framework's lifecycle handling.
   calling sequence, and check whether it is platform-specific.
 - Inspect how the CVODE FMU releases solver memory in `fmi2FreeInstance`; regenerate it from the
   Modelica source with a current OpenModelica if the export is at fault.
-- Until it is fixed, decide explicitly whether the demo default should stay `cvode`. The two
-  master-pendulum tutorials cannot be executed, gated, or published with outputs while it stands.
+- Decide explicitly whether the demo default should stay `cvode`. The workaround makes the two
+  master-pendulum tutorials executable and publishable again, but it keeps a defective binary as the
+  default and pays for it with leaked resources.
 - Add both checked-in FMUs to the lifecycle tests instead of only the Euler one, so a regression in
   either is visible. This overlaps HARD-01's uneven backend coverage.
+- Restore explicit release in `FMUComponent` once the FMU is fixed, so long-running sessions stop
+  leaking native instances and extraction directories, and re-point the lifecycle tests at it.
 
 ### HARD-06 — Published notebooks are unexecuted and leak machine-specific paths
 
@@ -1770,10 +1782,10 @@ real-backend transfer gate, its lifecycle/rollback guarantees, and the measured 
 directed transfer. Milestone 7 restored the backend-free switching notebooks and gated them. The
 remaining order focuses on paper/release evidence without reopening the public API.
 
-1. **Unblock the master-pendulum tutorials:** HARD-05. The CVODE FMU corrupts the heap when its
-   instance is freed, so both published tutorials cannot be executed or gated. Their content is
-   already known good against the Euler FMU, so this is the cheapest remaining unblock and it also
-   decides whether the demo default stays `cvode`.
+1. **Close out the CVODE FMU defect:** HARD-05. Dropping the native release calls unblocked both
+   published tutorials, which now execute with the default `cvode` solver, at the price of leaked
+   instances and extraction directories. What remains is confirming the fault sits in the FMU,
+   deciding whether the demo default stays `cvode`, and gating the two tutorials.
 2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
 3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by

@@ -146,12 +146,14 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
 
         system.reset()
 
-        terminate.assert_called_once_with()
-        free_instance.assert_called_once_with()
+        # The native instance is intentionally neither terminated nor freed,
+        # and the extraction directory survives; see issues.md HARD-05.
+        terminate.assert_not_called()
+        free_instance.assert_not_called()
         assert not system.is_initialized
         assert reused.fmu._instance is None
-        assert reused.fmu._unzipdir is None
-        assert not old_unzipdir.exists()
+        assert Path(reused.fmu._unzipdir) == old_unzipdir
+        assert old_unzipdir.is_dir()
         assert reused.opensim.model is None
         assert reused.opensim.state is None
         assert reused.opensim.manager is None
@@ -223,8 +225,9 @@ def test_failed_real_target_validation_restores_the_transaction(monkeypatch):
         assert plant.sync_events == []
         assert plant.fmu._instance is not target_instance
         assert plant.fmu._unzipdir == target_unzipdir
-        terminate_instance.assert_called_once_with()
-        free_instance.assert_called_once_with()
+        # Rollback recreates the slave without releasing the old one; see HARD-05.
+        terminate_instance.assert_not_called()
+        free_instance.assert_not_called()
         instantiate_instance.assert_not_called()
         assert fem_state_snapshot(plant) == fem_before
         assert monitor_snapshot(plant.monitoring_state) == master_monitor_before
