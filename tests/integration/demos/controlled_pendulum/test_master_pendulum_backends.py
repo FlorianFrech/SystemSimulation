@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import logging
-import sys
 from collections.abc import Iterator
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
 from unittest.mock import Mock
 
 import numpy as np
@@ -17,21 +15,25 @@ pytest.importorskip("ngsolve")
 pytest.importorskip("fmpy")
 opensim = pytest.importorskip("opensim")
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem import (  # noqa: E402
-    pendulum_config as cfg,
-)
 from demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum import (  # noqa: E402
     MasterPendulum,
     PendulumState,
     PendulumTransferReport,
 )
-from syssimx.system.algorithms.hybrid import HybridAlgorithm  # noqa: E402
-from syssimx.system.system import System  # noqa: E402
+from tests.integration.demos.controlled_pendulum.real_backend_support import (  # noqa: E402
+    assert_same_pendulum_state,
+    build_real_plant,
+    fem_state_snapshot,
+    history_snapshot,
+    initialize_real_plant,
+    monitor_snapshot,
+    port_snapshot,
+    require_euler_pendulum_fmu,
+)
 
 pytestmark = [pytest.mark.integration, pytest.mark.fem, pytest.mark.fmu, pytest.mark.opensim]
 
 T_FINAL = 7e-4
-SIMULATION_END = 2e-3
 BREAKPOINTS = (1e-4, 2e-4, 3e-4, 4e-4, 5e-4, 6e-4)
 BAND = 1e-5
 EVENT_TIME_TOLERANCE = 2e-6
@@ -40,19 +42,7 @@ EXPECTED_TRANSITIONS = tuple(zip(MODES[:-1], MODES[1:], strict=True))
 LIFECYCLE_BREAKPOINTS = (1e-4, 2e-4)
 LIFECYCLE_MODES = ("FEM", "OpenSim", "FMU")
 
-REPOSITORY_ROOT = Path(__file__).parents[4]
-FMU_PATH = (
-    REPOSITORY_ROOT
-    / "demos"
-    / "ControlledPendulum"
-    / "artifacts"
-    / "fmus"
-    / sys.platform
-    / "Plants"
-    / "Pendulum_euler.fmu"
-)
-if not FMU_PATH.is_file():
-    pytest.skip(f"No Euler pendulum FMU for {sys.platform}: {FMU_PATH}", allow_module_level=True)
+require_euler_pendulum_fmu()
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -68,108 +58,22 @@ def _build_real_plant(
     modes: tuple[str, ...] = MODES,
     breakpoints: tuple[float, ...] = BREAKPOINTS,
 ) -> MasterPendulum:
-    """Build the shared coarse, force-free real-backend configuration."""
-    mesh_params = cfg.MeshParameters(
-        max_element_size=0.08,
-        mesh_order=1,
-        curved_elements=False,
-    )
-    init_params = cfg.InitialConditionParameters(
-        angular_position_deg=5.0,
-        angular_velocity=0.2,
-        drive_torque=0.0,
-    )
-    sim_params = cfg.SimulationParameters(
-        tau=1e-4,
-        t_end=SIMULATION_END,
-        use_gravity=False,
-        with_contact=False,
-    )
-    anim_params = cfg.AnimationParameters(animate=False)
-
-    plant = MasterPendulum(
-        initial_mode="FEM",
-        fmu_solver="euler",
-        switch_config=None,
-    )
-    plant.set_parameters(
-        FEM={
-            "mesh_params": mesh_params,
-            "init_params": init_params,
-            "sim_params": sim_params,
-            "anim_params": anim_params,
-        }
-    )
-    plant.set_switch_regions(
+    """Build the scheduled-switching plant used by this module."""
+    return build_real_plant(
+        modes=modes,
+        breakpoints=breakpoints,
+        band=BAND,
         # Scheduled switching belongs to this external validation harness. The
         # active child's trial time makes event localization observable.
         key=lambda component: float(component.active_comp.t),
-        breakpoints=breakpoints,
-        modes=modes,
-        band=BAND,
     )
-    return plant
-
-
-def _initialize_real_plant(plant: MasterPendulum, t0: float = 0.0) -> System:
-    system = System(name="RealBackendSwitching")
-    system.add_component(plant)
-    algorithm = HybridAlgorithm()
-    algorithm.verbose = False
-    algorithm.tol_time = 1e-9
-    algorithm.tol_value = 1e-12
-    system.algorithm = algorithm
-    system.initialize(t0=t0)
-    plant.set_inputs({"tau": 0.0}, t=t0)
-    return system
-
-
-def _plain(value: Any) -> Any:
-    if value is None or isinstance(value, (bool, str)):
-        return value
-    return float(getattr(value, "magnitude", value))
-
-
-def _port_snapshot(component) -> dict[str, dict[str, tuple[Any, float | None]]]:
-    return {
-        direction: {name: (_plain(port.get()), port.t_last) for name, port in ports.items()}
-        for direction, ports in (("inputs", component.inputs), ("outputs", component.outputs))
-    }
-
-
-def _history_snapshot(component) -> dict[str, tuple[tuple[float, ...], tuple[Any, ...]]]:
-    return {
-        name: (
-            tuple(float(t) for t in data["time"]),
-            tuple(_plain(value) for value in data["values"]),
-        )
-        for name, data in component.get_history().items()
-    }
-
-
-def _monitor_snapshot(state) -> tuple[Any, ...]:
-    return tuple(getattr(state, name) for name in state.traits() if not name.startswith("_"))
-
-
-def _fem_state_snapshot(plant: MasterPendulum) -> dict[str, tuple[float, ...] | float]:
-    snapshot = plant.fem.snapshot_state()
-    return {
-        name: tuple(float(value) for value in snapshot[name])
-        for name in ("u", "v", "a", "u_old", "v_old", "a_old")
-    } | {"tau": float(snapshot["tau"]), "t": float(snapshot["t"])}
-
-
-def _assert_same_pendulum_state(actual: PendulumState, expected: PendulumState) -> None:
-    assert actual.theta == pytest.approx(expected.theta, abs=1e-10)
-    assert actual.omega == pytest.approx(expected.omega, abs=1e-10)
-    assert actual.tau == pytest.approx(expected.tau, abs=1e-12)
 
 
 @pytest.fixture(scope="module")
 def real_backend_run() -> Iterator[MasterPendulum]:
     """Run every directed backend pair once in one 0.7 ms simulation."""
     plant = _build_real_plant()
-    system = _initialize_real_plant(plant)
+    system = initialize_real_plant(plant)
 
     system.run(t0=0.0, tf=T_FINAL, dt=T_FINAL)
 
@@ -226,7 +130,7 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         breakpoints=LIFECYCLE_BREAKPOINTS,
     )
     try:
-        system = _initialize_real_plant(reused)
+        system = initialize_real_plant(reused)
         system.run(t0=0.0, tf=3e-4, dt=3e-4)
         assert reused.active_mode == "FMU"
 
@@ -251,31 +155,31 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         assert reused.opensim.model is None
         assert reused.opensim.state is None
         assert reused.opensim.manager is None
+        assert reused.rigid_properties is None
 
         system.initialize(restart_time)
         reused.set_inputs({"tau": 0.0}, t=restart_time)
-        fresh_system = _initialize_real_plant(fresh, t0=restart_time)
+        fresh_system = initialize_real_plant(fresh, t0=restart_time)
 
         assert system.is_initialized == fresh_system.is_initialized is True
         assert reused.active_region_index == fresh.active_region_index == 2
         assert reused.active_mode == fresh.active_mode == "FMU"
         assert reused.sync_events == fresh.sync_events == []
         assert reused.t == fresh.t == restart_time
+        assert reused.rigid_properties == fresh.rigid_properties
         assert reused.opensim.model is not old_opensim_model
         assert reused.opensim.state is not old_opensim_state
         assert reused.opensim.manager is not old_opensim_manager
-        assert _port_snapshot(reused) == _port_snapshot(fresh)
-        assert _history_snapshot(reused) == _history_snapshot(fresh)
-        assert _monitor_snapshot(reused.monitoring_state) == _monitor_snapshot(
-            fresh.monitoring_state
-        )
+        assert port_snapshot(reused) == port_snapshot(fresh)
+        assert history_snapshot(reused) == history_snapshot(fresh)
+        assert monitor_snapshot(reused.monitoring_state) == monitor_snapshot(fresh.monitoring_state)
         for mode in reused.models:
-            _assert_same_pendulum_state(
+            assert_same_pendulum_state(
                 PendulumState.from_mapping(reused.models[mode].get_state()),
                 PendulumState.from_mapping(fresh.models[mode].get_state()),
             )
-            assert _port_snapshot(reused.models[mode]) == _port_snapshot(fresh.models[mode])
-            assert _history_snapshot(reused.models[mode]) == _history_snapshot(fresh.models[mode])
+            assert port_snapshot(reused.models[mode]) == port_snapshot(fresh.models[mode])
+            assert history_snapshot(reused.models[mode]) == history_snapshot(fresh.models[mode])
     finally:
         reused.reset()
         fresh.reset()
@@ -284,18 +188,18 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
 def test_failed_real_target_validation_restores_the_transaction(monkeypatch):
     plant = _build_real_plant(modes=("FEM", "FMU"), breakpoints=(1e-4,))
     try:
-        _initialize_real_plant(plant)
+        initialize_real_plant(plant)
         plant.set_inputs({"tau": 0.01}, t=0.0)
         components = {"wrapper": plant, **plant.models}
-        ports_before = {name: _port_snapshot(comp) for name, comp in components.items()}
-        histories_before = {name: _history_snapshot(comp) for name, comp in components.items()}
+        ports_before = {name: port_snapshot(comp) for name, comp in components.items()}
+        histories_before = {name: history_snapshot(comp) for name, comp in components.items()}
         states_before = {
             mode: PendulumState.from_mapping(model.get_state())
             for mode, model in plant.models.items()
         }
-        fem_before = _fem_state_snapshot(plant)
-        master_monitor_before = _monitor_snapshot(plant.monitoring_state)
-        fem_monitor_before = _monitor_snapshot(plant.fem.monitoring_state)
+        fem_before = fem_state_snapshot(plant)
+        master_monitor_before = monitor_snapshot(plant.monitoring_state)
+        fem_monitor_before = monitor_snapshot(plant.fem.monitoring_state)
         target_instance = plant.fmu._instance
         target_unzipdir = plant.fmu._unzipdir
         terminate_instance = Mock(wraps=target_instance.terminate)
@@ -322,14 +226,14 @@ def test_failed_real_target_validation_restores_the_transaction(monkeypatch):
         terminate_instance.assert_called_once_with()
         free_instance.assert_called_once_with()
         instantiate_instance.assert_not_called()
-        assert _fem_state_snapshot(plant) == fem_before
-        assert _monitor_snapshot(plant.monitoring_state) == master_monitor_before
-        assert _monitor_snapshot(plant.fem.monitoring_state) == fem_monitor_before
+        assert fem_state_snapshot(plant) == fem_before
+        assert monitor_snapshot(plant.monitoring_state) == master_monitor_before
+        assert monitor_snapshot(plant.fem.monitoring_state) == fem_monitor_before
         for name, comp in components.items():
-            assert _port_snapshot(comp) == ports_before[name]
-            assert _history_snapshot(comp) == histories_before[name]
+            assert port_snapshot(comp) == ports_before[name]
+            assert history_snapshot(comp) == histories_before[name]
         for mode, model in plant.models.items():
-            _assert_same_pendulum_state(
+            assert_same_pendulum_state(
                 PendulumState.from_mapping(model.get_state()), states_before[mode]
             )
     finally:
@@ -342,7 +246,7 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
         breakpoints=LIFECYCLE_BREAKPOINTS,
     )
     try:
-        _initialize_real_plant(plant)
+        initialize_real_plant(plant)
         plant.fem.anim_params.animate = True
         update_master_monitor = Mock()
         update_fem_monitor = Mock()
@@ -357,8 +261,8 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
             if region_index:
                 plant._switch_region(region_index, t=0.0, record=False)
             components = {"wrapper": plant, **plant.models}
-            ports_before = {name: _port_snapshot(comp) for name, comp in components.items()}
-            histories_before = {name: _history_snapshot(comp) for name, comp in components.items()}
+            ports_before = {name: port_snapshot(comp) for name, comp in components.items()}
+            histories_before = {name: history_snapshot(comp) for name, comp in components.items()}
             fem_frames_before = tuple(
                 len(history.vecs)
                 for history in (
@@ -368,8 +272,8 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
                     plant.fem._gf_von_mises_history,
                 )
             )
-            master_monitor_before = _monitor_snapshot(plant.monitoring_state)
-            fem_monitor_before = _monitor_snapshot(plant.fem.monitoring_state)
+            master_monitor_before = monitor_snapshot(plant.monitoring_state)
+            fem_monitor_before = monitor_snapshot(plant.fem.monitoring_state)
             switch_log_before = deepcopy(plant.sync_events)
             checkpoint = plant.checkpoint()
 
@@ -383,8 +287,8 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
             assert plant.active_region_index == region_index
             assert plant.t == 0.0
             assert plant.sync_events == switch_log_before
-            assert _monitor_snapshot(plant.monitoring_state) == master_monitor_before
-            assert _monitor_snapshot(plant.fem.monitoring_state) == fem_monitor_before
+            assert monitor_snapshot(plant.monitoring_state) == master_monitor_before
+            assert monitor_snapshot(plant.fem.monitoring_state) == fem_monitor_before
             assert (
                 tuple(
                     len(history.vecs)
@@ -398,8 +302,8 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
                 == fem_frames_before
             )
             for name, comp in components.items():
-                assert _port_snapshot(comp) == ports_before[name]
-                assert _history_snapshot(comp) == histories_before[name]
+                assert port_snapshot(comp) == ports_before[name]
+                assert history_snapshot(comp) == histories_before[name]
             assert not [
                 record
                 for record in caplog.records
