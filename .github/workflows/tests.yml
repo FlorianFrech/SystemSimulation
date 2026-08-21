@@ -89,6 +89,47 @@ jobs:
         run: |
           pytest -m fem -v
 
+  notebooks:
+    # Executes the switching notebooks that need no simulation backend.
+    #
+    # docs/conf.py sets nb_execution_mode = "off", so Sphinx publishes whatever
+    # outputs a notebook already carries. Without this job an API change can
+    # break a tutorial silently, or a notebook can be published with no
+    # outputs at all, and every other job still passes.
+    #
+    # Not covered here: the two master-pendulum tutorials under
+    # docs/04_tool_integration/04_master_pendulum/. They execute end-to-end
+    # against the Euler FMU, but their default CVODE FMU corrupts the heap
+    # when its native instance is freed, so they cannot be gated yet.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Install the LaTeX toolchain
+        # notebooks/plot_setup.py renders thesis-style figures with usetex and
+        # siunitx, so the verification notebook needs a real LaTeX install.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-extra texlive-science dvipng cm-super
+
+      - name: Execute backend-free switching notebooks
+        run: |
+          pytest --nbmake --nbmake-timeout=900 \
+            docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb \
+            notebooks/03_multi_comp_verification.ipynb
+
   docs:
     runs-on: ubuntu-latest
     env:
