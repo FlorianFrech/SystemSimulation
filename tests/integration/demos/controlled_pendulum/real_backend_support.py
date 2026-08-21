@@ -25,7 +25,9 @@ from demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum 
     PendulumState,
 )
 from syssimx.system.algorithms.hybrid import HybridAlgorithm
+from syssimx.system.connection import Connection
 from syssimx.system.system import System
+from tests.fixtures.components import TorqueSource
 
 REPOSITORY_ROOT = Path(__file__).parents[4]
 FMU_PATH = (
@@ -134,6 +136,26 @@ def initialize_real_plant(
     system.algorithm = make_hybrid_algorithm()
     system.initialize(t0=t0)
     plant.set_inputs({"tau": 0.0}, t=t0)
+    return system
+
+
+def initialize_driven_plant(
+    plant: MasterPendulum,
+    torque: float,
+    t0: float = 0.0,
+    name: str = "DrivenBackendSwitching",
+) -> System:
+    """Initialize ``plant`` with a constant torque source driving ``tau``.
+
+    A connected drive is what makes the FEM backend deform, so the elastic
+    state that a transfer cannot carry is actually present.
+    """
+    system = System(name=name)
+    system.add_component(plant)
+    system.add_component(TorqueSource(name="Drive", torque=torque))
+    system.add_connection(Connection("Drive", "y", plant.name, "tau"))
+    system.algorithm = make_hybrid_algorithm()
+    system.initialize(t0=t0)
     return system
 
 
