@@ -404,6 +404,196 @@ The unchanged skip is the generic FMU fixture whose archive contains `linux64` a
 advances. Acceleration, energy, flexible/contact state, and backend solver-history fidelity remain
 open in MC-10. Real angle-policy macro-step evidence remains open in MC-14.
 
+## Milestone 6 implementation record
+
+Milestone 6 was implemented on 2026-08-21 on the same stacked branch
+`validation/real-backend-lifecycle`. It characterizes what a runtime switch actually preserves and
+loses for the real backends, and it closes the remaining macro-step case of MC-14. The public
+switching API is unchanged: `set_switch_regions()` is still the only model-selection mechanism and
+the transfer is still the Milestone 2 transaction.
+
+- `a4fe054` measures acceleration and energy in the transfer report and declares state semantics;
+- `cf1e597` extracts the shared real-backend harness;
+- `5ceff86` adds the driven six-pair fidelity characterization;
+- `d80c6f6` adds the real angle-region macro-step placement study;
+- `110d24f` applies Ruff formatting to the master-pendulum unit tests.
+
+### Measured quantities
+
+`PendulumState` now carries the angular acceleration alongside angle, angular velocity, and torque.
+Unit normalization goes through the framework parser, so the three backend spellings of the
+acceleration unit (`rad/s**2` for FEM, `rad/s^2` for OpenSim, `rad/s2` for the FMU) all resolve.
+
+`RigidPendulumProperties` records the mass, equivalent length, pivot inertia, and gravity that the
+FEM geometry synchronizes to every backend during initialization. One energy definition therefore
+applies to all three modes, with the pivot as the potential-energy datum:
+
+```
+E_kin = 0.5 * J * omega^2
+E_pot = m * g * L * (1 - cos(theta))
+```
+
+`PendulumEnergy` keeps that rigid mechanical energy separate from the elastic strain energy, which
+only FEM can supply. `FEMPendulum.strain_energy()` exposes the side-effect-free elastic integral
+that `calculate_energy()` already computed, so the report can read it inside the transfer
+transaction and inside a speculative advance.
+
+Every accepted transfer report now exposes `alpha_error`, `energy_error`, `elastic_energy_lost`,
+`total_energy_error`, and a `discontinuities` mapping. `PendulumTransferTolerances` gains `alpha`
+and `energy` limits that default to `None`, meaning measured but not enforced. Angle, angular
+velocity, and torque keep their Milestone 4 acceptance role unchanged.
+
+### Preserved and lost state
+
+`BACKEND_STATE_SEMANTICS` declares, per backend, the canonical quantities it exports on exit, the
+canonical quantities it accepts on entry, the internal state it reconstructs, and the internal state
+it discards. `transfer_state_semantics(source, target)` resolves one directed pair, and every report
+carries it.
+
+| Backend | Accepted on entry | Reconstructed on entry | Discarded on exit |
+|---|---|---|---|
+| FEM | theta, omega, tau | rigid displacement, velocity, and acceleration fields; Newmark previous-step vectors set equal to the current step | elastic deformation, elastic strain energy, Cauchy stress field, von Mises stress field, Newmark step history, contact gap history |
+| OpenSim | theta, omega, tau | SimTK system state, integration manager | integrator step-size and error history |
+| FMU | theta, omega, tau | native instance created from `theta_start` and `omega_start` | solver-internal history; the checked-in FMUs declare neither `canGetAndSetFMUstate` nor `canSerializeFMUstate` |
+
+For every directed pair the preserved set is therefore exactly `(theta, omega, tau)`. Angular
+acceleration is exported by all three backends but accepted by none, so it is always in the lost
+set: each target recomputes it from the torque and its own dynamics.
+
+### Measured transfer discontinuities
+
+One coarse, contact-free, gravity-free plant was driven by a constant 50 N*m torque through
+`FEM -> OpenSim -> FEM -> FMU -> OpenSim -> FMU -> FEM`, covering all six directed pairs in one
+0.7 ms simulation. A drive is what makes the FEM backend deform; without it there is no elastic
+state for a transfer to lose. Rigid properties for this configuration are `m = 1.0912847 kg`,
+`L = 0.18165069 m`, `J = 0.044510365 kg*m^2`, `g = 0`.
+
+| Transfer | t [s] | d_theta [rad] | d_omega [rad/s] | d_tau [N*m] | d_alpha [rad/s^2] | alpha [rad/s^2] | d_E_mech [J] | E_elastic lost [J] | E_mech [J] |
+|---|---|---|---|---|---|---|---|---|---|
+| FEM -> OpenSim | 1.107e-04 | 0.00e+00 | 0.00e+00 | 0.00e+00 | 2.47e-05 | 1.1233e+03 | 0.00e+00 | 2.12e-04 | 1.601e-03 |
+| OpenSim -> FEM | 2.109e-04 | 5.55e-17 | 7.22e-16 | 0.00e+00 | 2.27e-13 | 1.1233e+03 | 1.17e-17 | -4.95e-20 | 3.226e-03 |
+| FEM -> FMU | 3.102e-04 | 0.00e+00 | 0.00e+00 | 0.00e+00 | 2.37e-05 | 1.1233e+03 | 0.00e+00 | 1.70e-04 | 5.394e-03 |
+| FMU -> OpenSim | 4.107e-04 | 0.00e+00 | 0.00e+00 | 0.00e+00 | 2.27e-13 | 1.1233e+03 | 0.00e+00 | 0.00e+00 | 8.151e-03 |
+| OpenSim -> FMU | 5.102e-04 | 0.00e+00 | 0.00e+00 | 0.00e+00 | 2.27e-13 | 1.1233e+03 | 0.00e+00 | 0.00e+00 | 1.144e-02 |
+| FMU -> FEM | 6.103e-04 | 1.67e-16 | 4.44e-16 | 0.00e+00 | 0.00e+00 | 1.1233e+03 | 1.73e-17 | -3.79e-20 | 1.531e-02 |
+
+Four results follow, and each one is now a regression assertion:
+
+- Angle, angular velocity, torque, and rigid mechanical energy are continuous to round-off across
+  every directed pair. The canonical interface carries them exactly.
+- Leaving FEM drops the entire elastic strain energy. At 50 N*m that is 2.12e-04 J against a rigid
+  mechanical energy of 1.60e-03 J, so roughly 13 percent of the instantaneous mechanical energy
+  disappears from the accounting at the first switch. The loss scales quadratically with the drive:
+  at 5 N*m it is 2.12e-06 J.
+- Re-entering FEM starts from a strain-free rigid configuration. The target strain energy is
+  approximately 5e-20 J, which is the quadrature floor rather than a physically recovered field. The
+  small negative `elastic_energy_lost` for a rigid-to-FEM transfer is that floor.
+- Angular acceleration is discontinuous only when the FEM state is left behind: 2.4e-05 rad/s^2 on
+  an acceleration of 1.12e+03 rad/s^2, a relative jump near 2e-08. It scales with the elastic
+  content for the same reason. Rigid-to-rigid and rigid-to-FEM transfers agree to 2.3e-13 rad/s^2
+  because both sides recompute the acceleration from the same torque and inertia.
+
+The honest summary is that the canonical rigid state is conserved exactly, while the flexible state
+is not transported at all: it is dropped on FEM exit and rebuilt as a rigid configuration on FEM
+entry. Frequent FEM switching therefore removes elastic energy from the system monotonically.
+
+### Real angle-region macro-step study
+
+The production `MasterPendulumSwitchConfig` was exercised on `abs(theta)` with real backends, for
+one descending and one ascending boundary crossing, at macro steps of 1e-4 s, 1.5e-4 s, and
+2.5e-4 s. Without gravity, contact, or drive torque the angle is exactly linear in time, so the
+band-edge crossing has a closed form to compare against.
+
+| Boundary | Macro step [s] | Switch time [s] | Closed form [s] | Deviation [s] | abs(theta) [rad] | Band edge [rad] | Distance to grid [s] |
+|---|---|---|---|---|---|---|---|
+| descending-into-FEM | 1.00e-04 | 4.270019531e-04 | 4.269908170e-04 | +1.11e-08 | 0.069999777 | 0.070000000 | 2.70e-05 |
+| descending-into-FEM | 1.50e-04 | 4.270019531e-04 | 4.269908170e-04 | +1.11e-08 | 0.069999777 | 0.070000000 | 2.30e-05 |
+| descending-into-FEM | 2.50e-04 | 4.270019531e-04 | 4.269908170e-04 | +1.11e-08 | 0.069999777 | 0.070000000 | 7.30e-05 |
+| ascending-into-FMU | 1.00e-04 | 9.599609375e-04 | 9.599310886e-04 | +2.98e-08 | 0.279253277 | 0.279252680 | 4.00e-05 |
+| ascending-into-FMU | 1.50e-04 | 9.599487305e-04 | 9.599310886e-04 | +1.76e-08 | 0.279253033 | 0.279252680 | 5.99e-05 |
+| ascending-into-FMU | 2.50e-04 | 9.599609375e-04 | 9.599310886e-04 | +2.98e-08 | 0.279253277 | 0.279252680 | 4.00e-05 |
+
+The descending case starts at 4.5 degrees with `omega = -20 rad/s` in the OpenSim region and enters
+FEM at the lower band edge `0.075 - 0.005`. The ascending case starts at 14.9 degrees with
+`omega = +20 rad/s` and enters FMU at the upper band edge `deg2rad(15) + deg2rad(1)`. Both confirm
+the hysteresis contract: the switch lands on the armed band edge, not on the breakpoint.
+
+Placement deviates from the closed form by at most 3.0e-08 s and spreads by at most 1.2e-08 s
+across macro steps that differ by a factor of 2.5. Both bounds are more than three orders of
+magnitude below the smallest macro step. No switch lands on a communication point; the closest
+approach is 2.3e-05 s.
+
+### Test layout
+
+The three real-backend suites now share one harness in
+`tests/integration/demos/controlled_pendulum/real_backend_support.py`. It builds the coarse
+first-order mesh with contact, gravity, and animation disabled, and it offers both the undriven
+system and the constant-torque system. Each suite keeps its own `importorskip` guards and calls
+`require_euler_pendulum_fmu()` at module level.
+
+- `test_master_pendulum_backends.py` keeps the Milestone 4 and 5 transaction, lifecycle, rollback,
+  and trial-purity coverage.
+- `test_master_pendulum_transfer_fidelity.py` is the driven six-pair characterization.
+- `test_master_pendulum_switch_placement.py` is the real angle-region macro-step study.
+
+No wall contact, gravity, or animation was added to the fast gate. The whole real-backend switching
+slice, including the master-pendulum unit tests, runs in 18.29 s.
+
+### Measured verification on Windows, Python 3.13.5, Pytest 9.1.1
+
+- repository and demo Ruff checks: passed;
+- Ruff formatting of every file changed by this milestone: passed;
+- MyPy: passed for all 27 source files;
+- fast real-backend switching slice: **64 passed in 18.29 s**;
+- full backend-enabled suite with coverage: **689 passed, 1 skipped**, 89% coverage, in 195.56 s;
+- strict offline Sphinx documentation: passed without warnings;
+- locked `uv build --no-sources`: passed.
+
+The final commands were:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx tests demos/ControlledPendulum/src
+.\.venv\Scripts\python.exe -m mypy syssimx --ignore-missing-imports --python-version 3.13 --cache-dir "$env:TEMP\syssimx-m6-mypy"
+.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m6-fast" tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py tests/integration/demos/controlled_pendulum/test_master_pendulum_transfer_fidelity.py tests/integration/demos/controlled_pendulum/test_master_pendulum_switch_placement.py tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py -q
+$env:COVERAGE_FILE = "$env:TEMP\syssimx-m6.coverage"
+.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m6-full-pytest" tests --cov=syssimx --cov-report=term-missing -q
+$env:SYSSIMX_DOCS_OFFLINE = "1"
+.\.venv\Scripts\python.exe -m sphinx -q -b html -W --keep-going -d "$env:TEMP\syssimx-m6-doctrees" docs "$env:TEMP\syssimx-m6-docs"
+uv build --no-sources --out-dir "$env:TEMP\syssimx-m6-dist"
+```
+
+The unchanged skip is the generic FMU fixture whose archive contains `linux64` and C sources but no
+`win64` binary. `ruff format --check` still reports pre-existing deviations in files this milestone
+did not touch, including the aligned assignment blocks in `fem_pendulum.py`; reformatting them
+belongs to a separate cleanup.
+
+### Limitations
+
+- The characterization covers the torque-driven, contact-free, gravity-free regime on one coarse
+  first-order mesh. It does not cover wall contact, gravity, a refined mesh, or the CVODE FMU.
+- The elastic loss is quantified but not compensated. No projection, energy-matching, or
+  pair-specific adapter was added; MC-10's optional adapter items stay open by design.
+- Only the two boundaries of the production policy that the free-motion trajectory can reach in a
+  fast test were studied. A crossing under load, where the FEM elastic content changes the indicator
+  signal itself, is not covered.
+- The strain energy read at a FEM exit is the value at the localized switch time. Elastic energy the
+  FEM had already exchanged with the rigid motion before that instant is not attributed.
+- The reported `alpha` jump is the difference between the FEM rigid proxy and the rigid torque
+  balance. It is not an independent error estimate of either.
+
+### Next steps
+
+1. **EVID-01:** re-run the migrated performance notebook and separate accepted from trial work now
+   that speculative effects are isolated.
+2. **EVID-02 and EVID-03:** the convergence and switch-placement ranking study on the smooth
+   pendulum, reporting error, work, and configuration together.
+3. **HARD-01 and HARD-02:** standalone OpenSim contract tests, a platform-complete generic FMU
+   fixture, and a scheduled slow contact/FEM physics gate that can carry the contact-state
+   fidelity question this milestone deliberately kept out of the fast tests.
+4. **MC-10 remainder:** decide whether the flexible state deserves transport at all. The measured
+   loss is now quantified, so the choice between accepting it, warning on it through an enforced
+   `energy` tolerance, or adding a pair-specific adapter can be made on evidence.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -427,8 +617,9 @@ also contains a capable event-localized switching path.
 The switching mechanism has now been consolidated. `MultiComponent` exposes one public automatic
 switching API, `set_switch_regions()`, and resolves transitions only from localized generated
 boundaries. Transactional transfer and checkpoint/trial behavior remain explicit internal
-contracts. Remaining work concerns physical transfer fidelity, backend coverage, performance
-evidence, and cleanup outside the decision mechanism.
+contracts, and every accepted transfer now declares and measures what it preserves and loses.
+Remaining work concerns backend coverage, performance evidence, and cleanup outside the decision
+mechanism.
 
 The design decision is to expose exactly one public runtime-switching mechanism:
 generalized, event-localized region switching through `set_switch_regions()`. It is the only
@@ -476,8 +667,14 @@ Every accepted region transition calls
 3. Replay the most recently received inputs.
 4. Import the state into the incoming model with `set_state()`.
 5. Refresh incoming output ports.
-6. Update `active_mode` and `active_comp`.
-7. Record the committed switch and active region index.
+6. Build the domain transfer report, which validates the preserved invariants and measures the
+   acceleration and energy the canonical interface does not carry.
+7. Update `active_mode` and `active_comp`.
+8. Record the committed switch, its transfer report, and the active region index.
+
+Steps 1 through 6 run inside the transaction, so a rejected report rolls the whole preparation back.
+`BACKEND_STATE_SEMANTICS` and `transfer_state_semantics()` in the master pendulum declare which
+state each directed transfer preserves, reconstructs, and loses.
 
 ## Findings and proposed solutions
 
@@ -738,41 +935,54 @@ decision source.
 
 ### MC-10 — State transfer has no explicit fidelity or conservation contract
 
-**Priority:** Medium
+**Priority:** Low
 
-**Status:** Partially resolved by Milestones 4 and 5. Transfers are atomic and now have a canonical,
-unit-normalized acceptance contract for angle, angular velocity, and torque. Higher-fidelity and
-conservation guarantees remain open.
+**Status:** Resolved for the declaration and measurement work by Milestone 6. Transfers are atomic,
+have a canonical unit-normalized acceptance contract for angle, angular velocity, and torque, and
+now declare and measure what they lose. Whether the lost flexible state should be transported at all
+is an open design decision, not a missing contract.
 
-The transfer interface preserves a small human-readable state, but the meaning and losses are left
-to each component. In the master pendulum:
+The transfer interface preserves a small human-readable state. Its meaning and its losses are now
+declared per backend in `BACKEND_STATE_SEMANTICS` and resolved per directed pair by
+`transfer_state_semantics()`:
 
-- FEM exports a rigid proxy for a deformable field.
-- Re-entering FEM reconstructs rigid displacement/velocity/acceleration fields and loses flexible
-  deformation, stress, and elastic energy.
-- OpenSim recreates its integration manager.
+- FEM exports a rigid proxy for a deformable field and discards elastic deformation, elastic strain
+  energy, Cauchy and von Mises stress fields, Newmark step history, and contact gap history.
+- Re-entering FEM reconstructs rigid displacement, velocity, and acceleration fields and sets the
+  Newmark previous-step vectors equal to the current step.
+- OpenSim recreates its SimTK state and integration manager and discards integrator step-size and
+  error history.
 - Both checked-in FMUs are reconstructed from physical variables rather than complete solver state;
   their FMI capability metadata explicitly declares native state get/set and serialization
   unavailable.
 
-The real six-direction test proves continuity of the canonical state within configurable absolute
-tolerances. Acceleration, energy, contact state, flexible deformation/stress, and solver history may
-still jump. Frequent switching can therefore still introduce artificial transients outside the
-validated contract.
+Angular acceleration is exported by every backend and accepted by none, so each target recomputes it
+from the torque and its own dynamics.
+
+The measured behavior on the driven six-direction trajectory is recorded under Milestone 6. Angle,
+angular velocity, torque, and rigid mechanical energy are continuous to round-off. The whole elastic
+strain energy is dropped on every FEM exit, roughly 13 percent of the instantaneous mechanical
+energy at 50 N*m, and is never restored on FEM entry. Frequent FEM switching therefore removes
+elastic energy monotonically, which is now a quantified property rather than an unknown.
 
 **Suggested solution**
 
 - [x] Define a canonical `PendulumState` with explicit units.
-- [ ] Add optional fidelity-specific fields only when a backend can supply them consistently.
+- [x] Add optional fidelity-specific fields only when a backend can supply them consistently; the
+  FEM strain energy is carried as an optional term of `PendulumEnergy`.
 - [ ] Support adapters keyed by `(source_mode, target_mode)` if pair-specific projection becomes
-  necessary; the current canonical mapping needs target-specific renaming only.
+  necessary; the current canonical mapping needs target-specific renaming only. Deliberately
+  deferred until the measured loss justifies the mechanism.
 - [x] Define and test preserved angle, angular-velocity, and torque invariants for every transition.
-- [ ] Define energy, acceleration, contact-state, and flexible-field loss semantics.
+- [x] Define energy, acceleration, contact-state, and flexible-field loss semantics.
+- [x] Measure acceleration and mechanical-energy discontinuities for every directed transition.
 - [x] Return immutable accepted-transfer diagnostics in the switch record.
 - [x] Validate canonical continuity after target import and output refresh within configurable
   tolerances.
 - [x] Make switching transactional so a failed import or domain validation leaves the previous mode
   fully intact.
+- [ ] Repeat the characterization with wall contact enabled, on the scheduled slow physics gate
+  tracked by HARD-02.
 
 ### MC-11 — Dead and duplicated abstractions obscure the real design
 
@@ -835,38 +1045,42 @@ Centralizing all mode strings in a stronger type remains optional cleanup.
 
 ### MC-14 — Tests validate generic mechanics but not the real three-backend composition
 
-**Priority:** Medium
+**Priority:** Low
 
-**Status:** Partially resolved by Milestones 4 and 5. Generic localization, hysteresis, chronological
-multi-boundary processing, rollback, and reset scenarios use generated region boundaries. A fast
-automated test now switches one real `MasterPendulum` through all six directed FEM/FMU/OpenSim
-pairs and validates real reset/reinitialize, resource ownership, failed-transfer rollback, and
-trial purity. The real angle-policy macro-step study remains open.
+**Status:** Resolved for the switching composition by Milestones 4 through 6. Generic localization,
+hysteresis, chronological multi-boundary processing, rollback, and reset scenarios use generated
+region boundaries. Fast automated tests now switch one real `MasterPendulum` through all six
+directed FEM/FMU/OpenSim pairs, validate real reset/reinitialize, resource ownership,
+failed-transfer rollback, and trial purity, characterize what each transfer preserves and loses,
+and localize the production angle-region policy across macro-step sizes. Only the
+backend-independent contract tests remain, and they belong to HARD-01.
 
-The real trajectory now detects initialization-order and canonical projection regressions.
-Backend-specific speculative UI/history effects and resource lifecycle replacement now have
-dedicated assertions without contact, gravity, or animation work.
+The real trajectory detects initialization-order and canonical projection regressions.
+Backend-specific speculative UI/history effects and resource lifecycle replacement have dedicated
+assertions without contact, gravity, or animation work.
 
 **Suggested solution**
 
 Add layered tests:
 
-1. [ ] Backend-independent contract tests for every component implementation.
+1. [ ] Backend-independent contract tests for every component implementation; tracked with HARD-01.
 2. [x] Pairwise transfer tests for FEM ↔ OpenSim, FEM ↔ FMU, and OpenSim ↔ FMU.
 3. [x] A short three-mode trajectory test with switch-time and continuity assertions.
 4. [x] Real-backend trial-step purity tests for history, monitoring, visualization, and logs;
    generic transactional coverage already exists.
 5. [x] Real-backend reset/reinitialize tests covering active region, active mode, switch history,
    and resource cleanup; generic lifecycle coverage already exists.
-6. [ ] Macro-step-independence tests for the real angle-region configuration; deterministic region
+6. [x] Macro-step-independence tests for the real angle-region configuration; deterministic region
    localization coverage already exists.
+7. [x] Transfer-fidelity tests that measure the acceleration and energy a switch does not carry.
 
 Tests dedicated only to the deleted mechanisms were removed. Their useful localization and rollback
 assertions were retained against generated region boundaries.
 
-The real-backend test is marked `fem`, `fmu`, and `opensim` and runs in the existing backend CI job.
-It stays fast by sharing one coarse mesh and excluding contact. Contract tests remain runnable with
-lightweight fakes.
+The three real-backend suites are marked `fem`, `fmu`, and `opensim` and run in the existing backend
+CI job. They stay fast by sharing one coarse mesh through
+`tests/integration/demos/controlled_pendulum/real_backend_support.py` and by excluding contact,
+gravity, and animation. Contract tests remain runnable with lightweight fakes.
 
 ## Existing work to retain during consolidation
 
@@ -1238,6 +1452,12 @@ class StateTransfer(Protocol):
 `TransferReport` should describe preserved variables, projection residuals, warnings, and output
 continuity. The executor commits the active-region change only after a successful report.
 
+The report half of this design is implemented in the domain layer rather than as a separate
+service: `MultiComponent._build_transfer_report()` is the hook, and `PendulumTransferReport`
+carries preserved invariants, measured acceleration and energy discontinuities, and the declared
+state semantics of the directed pair. Extracting a standalone `StateTransfer` object is only worth
+doing if a second composite needs the same machinery.
+
 ### 5. Checkpoint and speculative execution
 
 Define a component checkpoint contract that captures everything needed to make speculative work
@@ -1322,27 +1542,24 @@ together. Test-only forced cycling already lives in an external signal harness.
 
 ## Prioritized next steps
 
-Milestones 1 through 5 established the release-candidate switching mechanism, its canonical
-real-backend transfer gate, and its lifecycle/rollback guarantees. The remaining order focuses on
-higher-fidelity characterization and paper/release evidence without reopening the public API.
+Milestones 1 through 6 established the release-candidate switching mechanism, its canonical
+real-backend transfer gate, its lifecycle/rollback guarantees, and the measured fidelity of every
+directed transfer. The remaining order focuses on paper/release evidence without reopening the
+public API.
 
-1. **Characterize residual transfer losses:** MC-10 and the remaining MC-14 macro-step case. Measure
-   acceleration and energy discontinuities, specify flexible/contact-state and solver-history loss
-   semantics, and test the real angle-region policy across macro-step sizes. Keep contact out of the
-   fast switching test; use a separate scheduled physics gate for it.
-2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
+1. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
-3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
+2. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
    EVID-04 and EVID-05 for a representative benchmark and independent-master comparison.
-4. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
+3. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
    platform-complete generic FMU fixtures, and a scheduled contact/FEM physics run.
-5. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
+4. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
    consolidate switch history, automate port lifecycle, and replace backend-private metadata
    access. Do not add another switching policy hierarchy.
-6. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
+5. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before propagating ticks through
    every component API.
-7. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
+6. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
    v0.3.0 only after the chosen gate and paper evidence are archived; the tag triggers the existing
    `publish-pypi.yml` workflow.
 
