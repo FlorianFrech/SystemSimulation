@@ -951,14 +951,21 @@ class FEMPendulum(FEMComponent):
             definedon=self._mesh.Materials("pendulum"),
         )
 
-        # Strain energy
-        SE = Integrate(
-            self._psi_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
-            self._mesh,
-            definedon=self._mesh.Materials("pendulum"),
-        )
+        return KE, PE, self.strain_energy()
 
-        return KE, PE, SE
+    def strain_energy(self) -> float:
+        """Return the elastic strain energy stored in the deformed pendulum.
+
+        The integral reads the current displacement field only, so it is safe
+        to call inside a speculative advance or a state-transfer transaction.
+        """
+        return float(
+            Integrate(
+                self._psi_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
+                self._mesh,
+                definedon=self._mesh.Materials("pendulum"),
+            )
+        )
 
     # ----------------------------------------------------------------------------
     # Visualization methods (delegated to FEMPendulumVisualizer)
