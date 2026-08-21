@@ -62,6 +62,10 @@ class OpenSimComponent(CoSimComponent):
         Reset the component to a clean state before (before initialization).
         """
         super().reset()
+        if self.model is None:
+            self.state = None
+            self.manager = None
+            return
         self.state = self.model.initSystem()
         self.manager = osim.Manager(self.model)
 

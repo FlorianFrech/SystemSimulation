@@ -633,7 +633,8 @@ class FEMPendulum(FEMComponent):
         if "wall_hit" not in event_names:
             return
 
-        logger.info("[%s] Event 'wall_hit' at t=%.6fs.", self.name, t)
+        if not self.in_trial:
+            logger.info("[%s] Event 'wall_hit' at t=%.6fs.", self.name, t)
 
         # Invert velocity field (keep displacement and old states unchanged)
         if not self._with_contact:
@@ -667,7 +668,8 @@ class FEMPendulum(FEMComponent):
         self._contact.Update(self._gf_u.components[0], self._bfa, intorder=10, maxdist=0.5)
         self.gap_prev = self._get_contact_gap_distance()
         self._t_prev = t_current
-        self.monitoring_state.gap = self.gap_prev
+        if not self.in_trial:
+            self.monitoring_state.gap = self.gap_prev
 
         # Reduce time step if the pendulum is close to contact.
         if effective_dt <= 1e-4:
@@ -788,14 +790,32 @@ class FEMPendulum(FEMComponent):
     # ----------------------------------------------------------------------------
     def reset(self):
         # The base zeros the Newmark state (u, v, a and previous-step buffers).
+        if self._monitor is not None:
+            self._monitor.close()
+        has_runtime_fields = all(
+            getattr(self, field_name, None) is not None
+            for field_name in (
+                "_gf_u",
+                "_gf_cauchy_stress",
+                "_gf_von_mises",
+                "_V",
+                "_S_cauchy",
+                "_V_vm",
+            )
+        )
         super().reset()
-        # Reset the stress fields and reallocate the time-series history.
-        self._gf_cauchy_stress.vec[:] = 0
-        self._gf_von_mises.vec[:] = 0
-        self._gf_u_history = GridFunction(self._V, multidim=0)
-        self._gf_v_history = GridFunction(self._V, multidim=0)
-        self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
-        self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
+        if has_runtime_fields:
+            # Reset stress fields and reallocate the time-series history only
+            # after the corresponding finite-element spaces have existed.
+            self._gf_cauchy_stress.vec[:] = 0
+            self._gf_von_mises.vec[:] = 0
+            self._gf_u_history = GridFunction(self._V, multidim=0)
+            self._gf_v_history = GridFunction(self._V, multidim=0)
+            self._gf_cauchy_stress_history = GridFunction(self._S_cauchy, multidim=0)
+            self._gf_von_mises_history = GridFunction(self._V_vm, multidim=0)
+        self.monitoring_state = PendulumMonitoringState()
+        self.monitoring_state.mode = "FEM"
+        self._monitor = None
 
     # ----------------------------------------------------------------------------
     # Helpers for diagnostics and visualization
@@ -931,14 +951,21 @@ class FEMPendulum(FEMComponent):
             definedon=self._mesh.Materials("pendulum"),
         )
 
-        # Strain energy
-        SE = Integrate(
-            self._psi_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
-            self._mesh,
-            definedon=self._mesh.Materials("pendulum"),
-        )
+        return KE, PE, self.strain_energy()
 
-        return KE, PE, SE
+    def strain_energy(self) -> float:
+        """Return the elastic strain energy stored in the deformed pendulum.
+
+        The integral reads the current displacement field only, so it is safe
+        to call inside a speculative advance or a state-transfer transaction.
+        """
+        return float(
+            Integrate(
+                self._psi_p(self._deformation_gradient_p(self._gf_u.components[0]), self._u),
+                self._mesh,
+                definedon=self._mesh.Materials("pendulum"),
+            )
+        )
 
     # ----------------------------------------------------------------------------
     # Visualization methods (delegated to FEMPendulumVisualizer)

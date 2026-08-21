@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import logging
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -26,6 +27,22 @@ from ..utilities.units import QuantityClass, QuantityType, ureg
 from .events import DenseTime
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PortHistoryCheckpoint:
+    """Immutable copy of one port history at a transaction boundary."""
+
+    unit: str | None
+    timestamps: tuple[float, ...]
+    values: tuple[float | int | bool | str, ...]
+
+
+@dataclass(frozen=True)
+class ComponentHistoryCheckpoint:
+    """Opaque, restorable copy of a component's port histories."""
+
+    ports: tuple[tuple[str, PortHistoryCheckpoint], ...]
 
 
 # -------------------------------------------------------------------
@@ -70,6 +87,20 @@ class PortHistory:
         """Clear the history."""
         self._timestamps.clear()
         self._values.clear()
+
+    def checkpoint(self) -> PortHistoryCheckpoint:
+        """Capture an exact copy suitable for transactional rollback."""
+        return PortHistoryCheckpoint(
+            unit=self.unit,
+            timestamps=tuple(self._timestamps),
+            values=tuple(deepcopy(self._values)),
+        )
+
+    def restore_checkpoint(self, checkpoint: PortHistoryCheckpoint) -> None:
+        """Restore a checkpoint without replacing this history object."""
+        self.unit = checkpoint.unit
+        self._timestamps[:] = checkpoint.timestamps
+        self._values[:] = deepcopy(checkpoint.values)
 
     @property
     def time(self) -> np.ndarray:
@@ -216,6 +247,28 @@ class ComponentHistory:
         for port in ports:
             if port in self._port_histories:
                 self._port_histories[port].clear()
+
+    def checkpoint(self) -> ComponentHistoryCheckpoint:
+        """Capture every registered port history for later restoration."""
+        return ComponentHistoryCheckpoint(
+            ports=tuple(
+                (name, port_history.checkpoint())
+                for name, port_history in self._port_histories.items()
+            )
+        )
+
+    def restore_checkpoint(self, checkpoint: ComponentHistoryCheckpoint) -> None:
+        """Restore histories exactly while preserving existing port objects."""
+        saved = dict(checkpoint.ports)
+        for name in tuple(self._port_histories):
+            if name not in saved:
+                del self._port_histories[name]
+        for name, port_checkpoint in saved.items():
+            history = self._port_histories.get(name)
+            if history is None:
+                history = PortHistory(port_name=name, unit=port_checkpoint.unit)
+                self._port_histories[name] = history
+            history.restore_checkpoint(port_checkpoint)
 
     def __len__(self) -> int:
         """Number of ports with history."""

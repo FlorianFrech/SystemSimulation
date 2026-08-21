@@ -35,12 +35,13 @@ See Also:
 import logging
 
 from .__version__ import __version__, __version_info__
-from .core.base import CoSimComponent, PortSpec, PortType
+from .core.base import ComponentCheckpoint, CoSimComponent, PortSpec, PortType
 from .system import Connection, EventConnection, SimulationResult, System, algorithms
 from .viz import SystemGraphVisualizer
 
 __all__ = [
     "CoSimComponent",
+    "ComponentCheckpoint",
     "PortSpec",
     "PortType",
     "System",

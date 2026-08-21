@@ -19,8 +19,22 @@ if "OpenSimPendulum" in __all__:
 
 # MasterPendulum orchestrates all three models, so it requires every backend.
 try:
-    from .orchestration.master_pendulum import MasterPendulum
+    from .orchestration.master_pendulum import (
+        MasterPendulum,
+        MasterPendulumSwitchConfig,
+        PendulumState,
+        PendulumTransferReport,
+        PendulumTransferTolerances,
+    )
 
-    __all__.append("MasterPendulum")
+    __all__.extend(
+        (
+            "MasterPendulum",
+            "MasterPendulumSwitchConfig",
+            "PendulumState",
+            "PendulumTransferReport",
+            "PendulumTransferTolerances",
+        )
+    )
 except ImportError:
     pass

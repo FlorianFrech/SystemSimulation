@@ -482,7 +482,7 @@ class System:
         targets = self.get_event_targets(event.source, event.name)
         if notify:
             for comp_name in targets:
-                self.components[comp_name].handle_event([event.name], t)
+                self.components[comp_name].handle_event([event.name], t, events=[event])
         return targets
 
     # ----------------------------------------------------------------------------
@@ -722,7 +722,7 @@ class System:
 
             # 5d) Zero-step to update outputs for downstream generations
             for comp_name in gen:
-                self.components[comp_name].do_step(0, 0)
+                self.components[comp_name].do_step(t0, 0)
 
         self.is_initialized = True
 
