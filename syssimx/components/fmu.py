@@ -10,7 +10,6 @@ feedthrough evaluation.
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -282,52 +281,6 @@ class FMUComponent(CoSimComponent):
         self._apply_input_starts()
         self._instance.exitInitializationMode()
 
-    def _release_instance(self) -> None:
-        """Terminate and free the current native FMI instance exactly once."""
-        instance = self._instance
-        if instance is None:
-            return
-
-        # Clear ownership first so a cleanup exception cannot lead to a second
-        # call through reset(), free(), or error-handling code.
-        self._instance = None
-        errors: list[Exception] = []
-        if self._is_initialized:
-            try:
-                instance.terminate()
-            except Exception as exc:  # pragma: no cover - backend-specific cleanup fault
-                errors.append(exc)
-        try:
-            instance.freeInstance()
-        except Exception as exc:  # pragma: no cover - backend-specific cleanup fault
-            errors.append(exc)
-        if errors:
-            raise RuntimeError(
-                f"{self.name}: FMU cleanup reported {len(errors)} error(s)."
-            ) from errors[0]
-
-    def _remove_extracted_fmu(self) -> None:
-        """Remove the temporary extraction directory owned by this component."""
-        unzipdir = self._unzipdir
-        if unzipdir is None:
-            return
-        if Path(unzipdir).exists():
-            shutil.rmtree(unzipdir)
-        self._unzipdir = None
-
-    def _release_resources(self) -> None:
-        """Attempt both native-instance and extraction-directory cleanup."""
-        errors: list[Exception] = []
-        for cleanup in (self._release_instance, self._remove_extracted_fmu):
-            try:
-                cleanup()
-            except Exception as exc:  # pragma: no cover - backend/filesystem cleanup fault
-                errors.append(exc)
-        if errors:
-            raise RuntimeError(
-                f"{self.name}: FMU resource cleanup reported {len(errors)} error(s)."
-            ) from errors[0]
-
     def reinitialize_instance(self, t0: float) -> None:
         """Recreate the FMU instance and enter initialized state at ``t0``.
 
@@ -335,8 +288,11 @@ class FMUComponent(CoSimComponent):
         support reliable rollback through ``fmi2Reset`` after stepping, but can
         be restored by creating a fresh instance and applying reconstructed
         initial conditions through parameters.
+
+        The previous instance is dropped without ``fmi2Terminate`` or
+        ``fmi2FreeInstance``: freeing the CVODE pendulum FMU corrupts the heap
+        (issues.md HARD-05). It therefore stays resident until the process ends.
         """
-        self._release_instance()
         self._instantiate_instance(t0)
 
     # ----------------------------------------------------------------------------
@@ -678,29 +634,23 @@ class FMUComponent(CoSimComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
-        """Reset the component and release the FMU instance.
+        """Reset the component and drop the FMU instance reference.
 
-        After reset, the component can be reinitialized via ``initialize()``.
+        The native instance is not terminated or freed and the extracted FMU
+        directory is kept, because freeing the CVODE pendulum FMU corrupts the
+        heap (issues.md HARD-05). After reset, the component can be
+        reinitialized via ``initialize()``, which extracts and instantiates
+        anew.
         """
-        cleanup_error: Exception | None = None
-        try:
-            self._release_resources()
-        except Exception as exc:
-            cleanup_error = exc
-        finally:
-            # Clear framework runtime state even if native cleanup reports an
-            # error, so callers never observe a half-reset component.
-            super().reset()
-            self.inputs.clear()
-            self.outputs.clear()
-            self.parameters.clear()
-            self.parameters = self.get_default_parameters()
-        if cleanup_error is not None:
-            raise cleanup_error
+        if self._instance is not None:
+            self._instance = None
 
-    def free(self) -> None:
-        """Release the native instance and extracted FMU files permanently."""
-        self._release_resources()
+        # Clear runtime state (including _is_initialized via super)
+        super().reset()
+        self.inputs.clear()
+        self.outputs.clear()
+        self.parameters.clear()
+        self.parameters = self.get_default_parameters()
 
     def soft_reset(self, t0: float = 0.0) -> None:
         """Reset the FMU to initial state without releasing the instance.

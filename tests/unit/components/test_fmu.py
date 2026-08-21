@@ -564,7 +564,14 @@ class TestFMUComponentReset:
     """Test FMUComponent reset functionality."""
 
     def test_reset_clears_instance(self, pendulum):
-        """Test that reset clears the FMU instance."""
+        """Test that reset drops the FMU instance without freeing it natively.
+
+        ``reset()`` deliberately does not call ``fmi2Terminate``/
+        ``fmi2FreeInstance`` and does not delete the extraction directory
+        (issues.md HARD-05: freeing the CVODE pendulum FMU corrupts the heap).
+        The instance reference is dropped and a later ``initialize()`` extracts
+        and instantiates a fresh one.
+        """
         assert pendulum._instance is not None
         unzipdir = Path(pendulum._unzipdir)
         assert unzipdir.is_dir()
@@ -572,8 +579,8 @@ class TestFMUComponentReset:
         pendulum.reset()
 
         assert pendulum._instance is None
-        assert pendulum._unzipdir is None
-        assert not unzipdir.exists()
+        assert Path(pendulum._unzipdir) == unzipdir
+        assert unzipdir.is_dir()
 
     def test_reset_clears_history(self, pendulum):
         """Test that reset clears history."""
