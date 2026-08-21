@@ -3,6 +3,17 @@
 import numpy as np
 import pytest
 
+pytestmark = [pytest.mark.fem, pytest.mark.fmu, pytest.mark.opensim]
+
+# Constructing a MasterPendulum instantiates all three backends, so guard on
+# each one. The orchestration module itself imports the backend classes
+# unconditionally, and the demo components package only exports the models
+# whose backend is installed: without these guards a missing backend surfaces
+# as an ImportError that importorskip re-raises instead of skipping.
+pytest.importorskip("ngsolve")
+pytest.importorskip("fmpy")
+pytest.importorskip("opensim")
+
 master_pendulum = pytest.importorskip(
     "demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum"
 )
