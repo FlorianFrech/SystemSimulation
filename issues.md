@@ -616,6 +616,113 @@ branch should reach CI before its milestone is declared closed.
    loss is now quantified, so the choice between accepting it, warning on it through an enforced
    `energy` tolerance, or adding a pair-specific adapter can be made on evidence.
 
+## Milestone 7 implementation record
+
+Milestone 7 was implemented on 2026-08-21 on branch `docs/notebook-execution-gate`, after the
+switching stack merged to `main` as `c670eb9`. It restores the backend-free switching notebooks and
+closes the gap that let them reach `main` unexecuted. It also uncovered a native defect that blocks
+the two master-pendulum tutorials.
+
+- `1b3e033` re-executes the backend-free switching notebooks;
+- `eca3e4c` adds the nbmake CI job and declares the dependency.
+
+### Why the notebooks were empty
+
+`docs/conf.py` sets `nb_execution_mode = "off"`, so Sphinx publishes whatever outputs a notebook
+already carries. Milestone 3 cleared the expensive case-study notebook outputs rather than keeping
+stale ones, and nothing ever re-executed them. Nine tracked notebooks therefore carried zero
+outputs, four of them published pages covering the switching feature, and every CI job stayed green
+because nothing executed a notebook.
+
+| Notebook | Wave | State after this milestone |
+|---|---|---|
+| `docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb` | 1 | executed, gated |
+| `notebooks/03_multi_comp_verification.ipynb` | 1 | executed, gated |
+| `docs/04_tool_integration/04_master_pendulum/01_master_pendulum_basics.ipynb` | 1 | blocked by HARD-05 |
+| `docs/04_tool_integration/04_master_pendulum/02_master_pendulum_switching.ipynb` | 1 | blocked by HARD-05 |
+| `docs/05_case_study/05_multi_model_switching.ipynb` | 2 | deferred to the evidence work |
+| `notebooks/05_casestudy_model_switching.ipynb` | 2 | deferred, EVID-03 |
+| `notebooks/06_casestudy_performance.ipynb` | 2 | deferred, EVID-01 and EVID-04 |
+| `notebooks/performance.ipynb` | 2 | deferred, EVID-01 |
+| `demos/.../master_pendulum/test_master_pendulum_hybrid.ipynb` | n/a | development scratch, not published |
+
+Wave 2 is deliberately not executed yet. EVID-02 and EVID-03 are meant to share one refinement
+study and EVID-04 needs a longer horizon with per-bucket timing and repetitions, so executing those
+notebooks before the experiment design is settled would bake in the superseded 0.4 s, two-switch
+experiment and spend the FEM budget twice.
+
+### Wave 1 results
+
+Both backend-free notebooks execute cleanly against the merged tree with no error outputs. This is
+the first end-to-end confirmation that the Milestone 3 consumer migration works outside the test
+suite.
+
+The two master-pendulum tutorials do **not** execute in their published configuration: the kernel
+dies with Windows exception `0xc0000374`, heap corruption, inside `fmi2FreeInstance`. A diagnostic
+run that forces `fmu_solver="euler"` without modifying either notebook completes every cell of both.
+The notebook content is therefore healthy against the region API, and the sole blocker is the
+CVODE FMU defect recorded as HARD-05.
+
+### Environment provenance
+
+The notebooks were executed with the only registered Jupyter kernel, the Anaconda `env-312`
+environment, not the project `.venv`:
+
+| Item | Recorded value |
+|---|---|
+| Python | 3.12.13 |
+| ngsolve | 6.2.2601 |
+| fmpy | 0.3.28 |
+| opensim | 4.5.2 |
+| numpy / scipy / matplotlib | 2.0.2 / 1.17.1 / 3.10.8 |
+| pint | 0.25.2 |
+
+`syssimx` resolved to the working tree. Pinning this environment and recording it with the executed
+outputs belongs to REPRO-01; until then, published notebook outputs and the tested environment are
+not the same thing.
+
+### The notebook execution gate
+
+A `notebooks` CI job runs `pytest --nbmake` over the two backend-free notebooks. It installs the
+LaTeX toolchain because `notebooks/plot_setup.py` renders thesis-style figures with `usetex` and
+`siunitx`. `nbmake` was added to both mirrored dev dependency lists. Locally the gate completes in
+9.5 s.
+
+The two master-pendulum tutorials are not gated while HARD-05 is open. The Wave 2 notebooks are not
+gated because they are long-running evidence runs, not tutorials; the scheduled physics gate under
+HARD-02 is the right home for them.
+
+### Output hygiene
+
+Executing notebook 3 exposed that `set_professional_style()` returns the `pyplot` module. Called as
+the last expression of a cell, it renders a repr containing the executing machine's absolute install
+path into a published output. The call in notebook 3 now ends with a semicolon.
+
+The return value is kept because several development notebooks under `demos/` use
+`plt = set_professional_style()`. Five published notebooks still call it as a bare last expression
+and will leak the same way when they are executed, so the semicolon has to be applied as each one is
+re-run. Two published notebooks already carry leaked paths from earlier runs. Both points are
+tracked as HARD-06.
+
+### Measured verification
+
+- `pytest --nbmake` over both Wave 1 notebooks: **2 passed in 9.5 s**;
+- repository-wide scan for machine-specific absolute paths in tracked notebook outputs: two
+  published notebooks affected, both pre-existing and unrelated to switching;
+- workflow YAML parses and declares jobs `test`, `test-fem`, `notebooks`, `docs`, `build`.
+
+The final commands were:
+
+```powershell
+$env:PYTHONPATH = "C:\Users\flori\source\repos\FlorianFrech\SystemSimulation"
+jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 notebooks/03_multi_comp_verification.ipynb
+jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb
+pytest -p no:cacheprovider --nbmake --nbmake-timeout=900 docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb notebooks/03_multi_comp_verification.ipynb
+```
+
+The LaTeX package set in the CI job (`texlive-latex-extra`, `texlive-science`, `dvipng`,
+`cm-super`) could not be validated on this Windows host and is verified by the first CI run.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -1390,6 +1497,95 @@ v0.3.0, rather than a patch.
 - Update version, release date, ORCID, DOI, changelog/release notes, and API documentation.
 - Tag v0.3.0 only after the full reproducibility gate is archived.
 
+### HARD-05 — The CVODE pendulum FMU corrupts the heap when its instance is freed
+
+**Priority:** High
+
+**Status:** Open, found during Milestone 7.
+
+Freeing the native instance of `Pendulum_cvode.fmu` raises Windows exception `0xc0000374`, heap
+corruption, inside `fmi2FreeInstance`. `Pendulum_euler.fmu` survives the identical code paths.
+
+This matters because `MasterPendulum(fmu_solver="cvode")` is the **default**, while every automated
+test passes `fmu_solver="euler"`. The defect therefore sits in the demo's default configuration and
+in both published master-pendulum tutorials, and no test can see it.
+
+The crash first appears through the hybrid trial machinery, which frees and recreates the instance
+on every macro step:
+
+```
+hybrid._detect_crossings -> hybrid._restore_with_inputs -> base.restore_checkpoint
+  -> base._restore_checkpoint_solver_state -> FMUPendulum.restore_state
+  -> FMUComponent.reinitialize_instance -> FMUComponent._release_instance -> fmi2FreeInstance
+```
+
+A narrowed repro shows the rollback path is not the trigger. Three independent scenarios were run
+against each FMU:
+
+| Scenario | Native calls exercised | Euler | CVODE |
+|---|---|---|---|
+| `reset()` | terminate + free, exactly once | survives | heap corruption |
+| repeated `reinitialize_instance()` | free + instantiate, five times | survives | heap corruption |
+| checkpoint / trial advance / restore | the hybrid pattern | survives | heap corruption |
+
+Freeing the CVODE instance corrupts the heap unconditionally. Rollback is merely where the
+notebooks reach it first. Because the same `syssimx` code drives both FMUs and only one fails, the
+FMU binary is the prime suspect rather than the framework's lifecycle handling.
+
+**Suggested solution**
+
+- Reproduce against a stock FMI checker to confirm the fault is in the FMU rather than in the
+  calling sequence, and check whether it is platform-specific.
+- Inspect how the CVODE FMU releases solver memory in `fmi2FreeInstance`; regenerate it from the
+  Modelica source with a current OpenModelica if the export is at fault.
+- Until it is fixed, decide explicitly whether the demo default should stay `cvode`. The two
+  master-pendulum tutorials cannot be executed, gated, or published with outputs while it stands.
+- Add both checked-in FMUs to the lifecycle tests instead of only the Euler one, so a regression in
+  either is visible. This overlaps HARD-01's uneven backend coverage.
+
+### HARD-06 — Published notebooks are unexecuted and leak machine-specific paths
+
+**Priority:** Medium
+
+**Status:** Partially addressed by Milestone 7.
+
+Two separate problems in the published notebook set.
+
+First, execution. `nb_execution_mode = "off"` means a notebook can rot, or carry no outputs at all,
+without any job failing. Milestone 7 adds an nbmake gate, but it covers only the two switching
+notebooks that need no simulation backend. Everything else remains ungated: the master-pendulum
+tutorials while HARD-05 is open, the tool-integration notebooks that need real backends, and the
+long-running Wave 2 evidence notebooks.
+
+Second, output hygiene. `set_professional_style()` returns the `pyplot` module, so a bare call as
+the last expression of a cell renders a repr containing the executing machine's absolute install
+path. Notebook 3 was fixed with a semicolon. Five published notebooks still call it the same way
+and will leak when re-executed:
+
+- `notebooks/01_algorithm_verification.ipynb`
+- `notebooks/02_hybrid_verification.ipynb`
+- `notebooks/04_casestudy_baseline.ipynb`
+- `notebooks/05_casestudy_model_switching.ipynb`
+- `notebooks/06_casestudy_performance.ipynb`
+- `notebooks/performance.ipynb`
+
+Two published notebooks already carry leaked paths in committed outputs, from runs predating the
+switching work:
+
+- `docs/03_core_tutorials/01_fundamentals/02_importing_fmus.ipynb`, cells 1 and 17
+- `docs/04_tool_integration/01_modelica/01_modelica_pendulum_basics.ipynb`, cell 3
+
+**Suggested solution**
+
+- Apply the semicolon to each remaining published caller as it is re-executed, or stop returning
+  `plt` and update the `demos/` notebooks that bind its result.
+- Re-execute the two notebooks carrying leaked paths and confirm the scan is clean.
+- Extend the nbmake gate as blockers clear: the master-pendulum tutorials once HARD-05 is fixed,
+  and the backend tutorials in the `test-fem` job.
+- Run the long Wave 2 notebooks in the scheduled physics gate from HARD-02 rather than on pull
+  requests.
+- Add the absolute-path scan to CI so a leak cannot be committed again.
+
 ## Reproducibility
 
 ### REPRO-01 — No archived, pinned reproduction artifact
@@ -1566,22 +1762,28 @@ together. Test-only forced cycling already lives in an external signal harness.
 
 Milestones 1 through 6 established the release-candidate switching mechanism, its canonical
 real-backend transfer gate, its lifecycle/rollback guarantees, and the measured fidelity of every
-directed transfer. The remaining order focuses on paper/release evidence without reopening the
-public API.
+directed transfer. Milestone 7 restored the backend-free switching notebooks and gated them. The
+remaining order focuses on paper/release evidence without reopening the public API.
 
-1. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
+1. **Unblock the master-pendulum tutorials:** HARD-05. The CVODE FMU corrupts the heap when its
+   instance is freed, so both published tutorials cannot be executed or gated. Their content is
+   already known good against the Euler FMU, so this is the cheapest remaining unblock and it also
+   decides whether the demo default stays `cvode`.
+2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
-2. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
-   EVID-04 and EVID-05 for a representative benchmark and independent-master comparison.
-3. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
+3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
+   EVID-04 and EVID-05 for a representative benchmark and independent-master comparison. Settle the
+   experiment design first, then execute the four Wave 2 notebooks once against it; they are still
+   cleared and are the raw material for EVID-01, EVID-03, and EVID-04.
+4. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
    platform-complete generic FMU fixtures, and a scheduled contact/FEM physics run.
-4. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
+5. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
    consolidate switch history, automate port lifecycle, and replace backend-private metadata
    access. Do not add another switching policy hierarchy.
-5. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
+6. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before propagating ticks through
    every component API.
-6. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
+7. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
    v0.3.0 only after the chosen gate and paper evidence are archived; the tag triggers the existing
    `publish-pypi.yml` workflow.
 
@@ -1607,5 +1809,7 @@ The repository is ready to serve as the paper/release baseline when, in addition
 - the benchmark covers all intended regimes and is reproducible from archived raw data;
 - FMU-only results agree with at least one independent master within declared tolerances;
 - supported backends have meaningful automated coverage, including the scheduled slow FEM gate;
+- every published notebook carries outputs produced by a recorded environment, executes in CI or a
+  scheduled gate, and leaks no machine-specific paths;
 - environments and platform FMUs are pinned or attached to the release; and
 - package, citation, DOI/ORCID, changelog, and v0.3.0 release metadata agree.
