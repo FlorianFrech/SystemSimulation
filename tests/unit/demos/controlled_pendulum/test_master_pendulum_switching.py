@@ -17,9 +17,7 @@ RigidPendulumProperties = master_pendulum.RigidPendulumProperties
 transfer_state_semantics = master_pendulum.transfer_state_semantics
 
 MODES = ("FEM", "OpenSim", "FMU")
-DIRECTED_PAIRS = tuple(
-    (source, target) for source in MODES for target in MODES if source != target
-)
+DIRECTED_PAIRS = tuple((source, target) for source in MODES for target in MODES if source != target)
 
 
 def _report(**overrides):
@@ -214,9 +212,9 @@ def test_entering_fem_reconstructs_only_rigid_fields(source_mode):
 
 
 def test_transfers_declare_lost_solver_history_for_every_backend():
-    assert "integrator step-size and error history" in transfer_state_semantics(
-        "OpenSim", "FEM"
-    ).lost
+    assert (
+        "integrator step-size and error history" in transfer_state_semantics("OpenSim", "FEM").lost
+    )
     assert any(
         "canGetAndSetFMUstate" in entry for entry in transfer_state_semantics("FMU", "FEM").lost
     )
