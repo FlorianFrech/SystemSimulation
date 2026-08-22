@@ -657,11 +657,12 @@ Both backend-free notebooks execute cleanly against the merged tree with no erro
 the first end-to-end confirmation that the Milestone 3 consumer migration works outside the test
 suite.
 
-The two master-pendulum tutorials do **not** execute in their published configuration: the kernel
-dies with Windows exception `0xc0000374`, heap corruption, inside `fmi2FreeInstance`. A diagnostic
-run that forces `fmu_solver="euler"` without modifying either notebook completes every cell of both.
-The notebook content is therefore healthy against the region API, and the sole blocker is the
-CVODE FMU defect recorded as HARD-05.
+The two master-pendulum tutorials did **not** execute in their published configuration at the time
+of this milestone. The kernel died with Windows exception `0xc0000374`, heap corruption, inside
+`fmi2FreeInstance`. A diagnostic run that forced `fmu_solver="euler"` without modifying either
+notebook completed every cell of both, so the notebook content was healthy against the region API and
+the sole blocker was the CVODE FMU defect recorded as HARD-05. Both tutorials execute and are
+committed with outputs since that defect was worked around.
 
 ### Environment provenance
 
@@ -688,9 +689,10 @@ LaTeX toolchain because `notebooks/plot_setup.py` renders thesis-style figures w
 `siunitx`. `nbmake` was added to both mirrored dev dependency lists. Locally the gate completes in
 9.5 s.
 
-The two master-pendulum tutorials are not gated while HARD-05 is open. The Wave 2 notebooks are not
-gated because they are long-running evidence runs, not tutorials; the scheduled physics gate under
-HARD-02 is the right home for them.
+The two master-pendulum tutorials were not gated while HARD-05 blocked them. They execute again
+since the workaround, so gating them is now a question of runner cost rather than of a crash. The
+Wave 2 notebooks are not gated because they are long-running evidence runs, not tutorials; the
+scheduled physics gate under HARD-02 is the right home for them.
 
 ### Output hygiene
 
@@ -1497,63 +1499,102 @@ v0.3.0, rather than a patch.
 - Update version, release date, ORCID, DOI, changelog/release notes, and API documentation.
 - Tag v0.3.0 only after the full reproducibility gate is archived.
 
-### HARD-05 — The CVODE pendulum FMU corrupts the heap when its instance is freed
+### HARD-05 — OpenModelica CVODE exports corrupt the heap in `fmi2FreeInstance`
 
 **Priority:** High
 
-**Status:** Worked around on 2026-08-22; the FMU defect itself is still open.
+**Status:** Root cause isolated on 2026-08-22 and worked around in `syssimx`. The defective exports
+are unchanged, and the workaround costs what HARD-07 measures.
 
-`FMUComponent` no longer calls `fmi2Terminate` or `fmi2FreeInstance` and no longer deletes the
-extraction directory. `reset()` drops the instance reference, and `reinitialize_instance()` creates
-a new slave over the retained extraction directory. With that, the two master-pendulum tutorials and
-the two FMU tutorials execute again in their published configuration, and the master pendulum
-switches through all three backends. The cost is that native instances and extracted FMU directories
-accumulate for the lifetime of the process, so a long session with many switches leaks memory and
-temporary files. The lifecycle tests now assert that neither native call is made, so restoring the
-release path is a deliberate change rather than an accident.
+Calling `fmi2FreeInstance` on an affected FMU raises Windows exception `0xC0000374`, heap corruption,
+which takes the whole process down. `FMUComponent` therefore no longer calls `fmi2Terminate` or
+`fmi2FreeInstance` and no longer removes the extraction directory. `reset()` drops the instance
+reference and `reinitialize_instance()` builds a new slave over the retained directory. Both
+master-pendulum tutorials, both FMU tutorials, and the master-pendulum switching path work again with
+the default `cvode` solver.
 
-Freeing the native instance of `Pendulum_cvode.fmu` raises Windows exception `0xc0000374`, heap
-corruption, inside `fmi2FreeInstance`. `Pendulum_euler.fmu` survives the identical code paths.
+**Which call fails**
 
-This matters because `MasterPendulum(fmu_solver="cvode")` is the **default**, while every automated
-test passes `fmu_solver="euler"`. The defect therefore sits in the demo's default configuration and
-in both published master-pendulum tutorials, and no test can see it.
+Every scenario below was run in its own subprocess against each checked-in FMU, so a corrupted heap
+is a recorded exit code rather than a lost session. The scenarios build up from a bare instantiation
+to a full stepped run.
 
-The crash first appears through the hybrid trial machinery, which frees and recreates the instance
-on every macro step:
-
-```
-hybrid._detect_crossings -> hybrid._restore_with_inputs -> base.restore_checkpoint
-  -> base._restore_checkpoint_solver_state -> FMUPendulum.restore_state
-  -> FMUComponent.reinitialize_instance -> FMUComponent._release_instance -> fmi2FreeInstance
-```
-
-A narrowed repro shows the rollback path is not the trigger. Three independent scenarios were run
-against each FMU:
-
-| Scenario | Native calls exercised | Euler | CVODE |
+| Scenario | Calls after instantiation | Affected FMUs | Unaffected FMUs |
 |---|---|---|---|
-| `reset()` | terminate + free, exactly once | survives | heap corruption |
-| repeated `reinitialize_instance()` | free + instantiate, five times | survives | heap corruption |
-| checkpoint / trial advance / restore | the hybrid pattern | survives | heap corruption |
+| `inst_free` | `fmi2FreeInstance` | heap corruption | ok |
+| `init_free` | initialize, `fmi2FreeInstance` | heap corruption | ok |
+| `init_term` | initialize, `fmi2Terminate` | ok | ok |
+| `init_term_free` | initialize, terminate, free | heap corruption | ok |
+| `step_term` | 10 steps, `fmi2Terminate` | ok | ok |
+| `step_free` | 10 steps, `fmi2FreeInstance` | heap corruption | ok |
+| `step_term_free` | 10 steps, terminate, free | heap corruption | ok |
+| `step_term_free_lib` | 10 steps, terminate, free, `freeLibrary` | heap corruption | ok |
+| `step_reset` | 10 steps, `fmi2Reset` | heap corruption | ok |
+| `step_reset_reinit_step` | 10 steps, reset, initialize, 10 steps | heap corruption | ok |
+| `reinstantiate_x5` | five further `fmi2Instantiate` cycles, nothing released | ok | ok |
 
-Freeing the CVODE instance corrupts the heap unconditionally. Rollback is merely where the
-notebooks reach it first. Because the same `syssimx` code drives both FMUs and only one fails, the
-FMU binary is the prime suspect rather than the framework's lifecycle handling.
+Three results matter. `fmi2FreeInstance` is the only failing call, and it already fails on a bare
+instantiation, before initialization mode and before any step. `fmi2Terminate` is safe everywhere,
+so terminating without freeing is a legitimate partial cleanup. `fmi2Reset` fails on exactly the same
+FMUs, which removes `soft_reset()` from the list of escapes and rules out rollback, stepping,
+accumulated solver state, and the hybrid trial machinery as causes.
+
+**Which FMUs fail**
+
+The failure is a property of the export, not of the model. Each affected FMU declares `"s": "cvode"`
+in `resources/<model>_flags.json` and has at least one continuous state. Zero-state CVODE exports
+never allocate the solver and are unaffected.
+
+| FMU | Solver flag | Continuous states | `fmi2FreeInstance` |
+|---|---|---|---|
+| `Plants/Pendulum_cvode` | cvode | 2 | heap corruption |
+| `Plants/Pendulum_euler` | euler | 2 | ok |
+| `Plants/PendulumWithDiscreteWall` | cvode | 2 | heap corruption |
+| `Controllers/PIDControllerReset_cvode` | cvode | 2 | heap corruption |
+| `Controllers/PIDControllerReset_euler` | euler | 2 | ok |
+| `Controllers/PIDController` | cvode | 2 | heap corruption |
+| `Actuators/DriveDynamic` | cvode | 1 | heap corruption |
+| `Sensors/AngleSensor` | cvode | 0 | ok |
+| `Sensors/AngleDecoder` | cvode | 0 | ok |
+| `Trajectories/SetPoint` | cvode | 0 | ok |
+| `docs/.../pendulum_cvode` | cvode | 2 | heap corruption |
+| `docs/.../pendulum_euler` | euler | 2 | ok |
+
+The rule was derived from the first eight rows and then used to predict the remaining four before
+they were run. All four predictions held, including the two zero-state CVODE exports that survive
+and the one-state `DriveDynamic` that does not. Every FMU was produced by OpenModelica 1.26.3.
+
+This makes the fault the CVODE teardown inside the OpenModelica runtime rather than the framework's
+calling sequence. The likely mechanism is a double free or a free of an uninitialized SUNDIALS
+handle, reachable as soon as the solver object exists, which is why a model with no continuous
+states escapes it.
 
 **Suggested solution**
 
-- Reproduce against a stock FMI checker to confirm the fault is in the FMU rather than in the
-  calling sequence, and check whether it is platform-specific.
-- Inspect how the CVODE FMU releases solver memory in `fmi2FreeInstance`; regenerate it from the
-  Modelica source with a current OpenModelica if the export is at fault.
-- Decide explicitly whether the demo default should stay `cvode`. The workaround makes the two
-  master-pendulum tutorials executable and publishable again, but it keeps a defective binary as the
-  default and pays for it with leaked resources.
-- Add both checked-in FMUs to the lifecycle tests instead of only the Euler one, so a regression in
-  either is visible. This overlaps HARD-01's uneven backend coverage.
-- Restore explicit release in `FMUComponent` once the FMU is fixed, so long-running sessions stop
-  leaking native instances and extraction directories, and re-point the lifecycle tests at it.
+The staged plan below restores real cleanup for the FMUs that can take it, without putting a
+crashing call back on any path.
+
+1. Give `FMUComponent` a release policy derived statically at construction. The predicate above is
+   readable from the archive without executing anything, so a component can know whether releasing
+   is safe before it ever instantiates. Release when safe and retain when not. This alone restores
+   correct lifecycle handling for every euler export and for the three zero-state sensor and
+   trajectory FMUs, which is half of the quantization system.
+2. Back the static predicate with an out-of-process capability probe for FMUs it does not recognize,
+   such as exports from another tool. One subprocess per FMU file runs instantiate, terminate, and
+   free, and the result is cached against the file's path, size, and modification time. A crashed
+   probe marks the file unsafe and costs one process, not the session.
+3. Re-export the affected demo FMUs with the euler solver, or with a newer OpenModelica, and confirm
+   with the matrix above. The euler exports are already known good, and switching the demo default
+   away from `cvode` removes the problem from the published tutorials rather than working around it.
+4. Report the defect upstream with the minimal reproduction, which is instantiate followed by
+   `fmi2FreeInstance` on any CVODE export with at least one continuous state. Check whether
+   OpenModelica 1.27 or a nightly build still shows it, and whether the same export crashes on Linux.
+5. Extend the lifecycle tests to both checked-in solver variants instead of only the euler one, and
+   assert the release policy rather than the raw calls, so a regression in either variant is visible.
+   This overlaps HARD-01's uneven backend coverage.
+
+Until step 3 lands, the demo default staying `cvode` is a deliberate choice that keeps a defective
+binary in the published tutorials and pays for it with the retained resources HARD-07 measures.
 
 ### HARD-06 — Published notebooks are unexecuted and leak machine-specific paths
 
@@ -1602,6 +1643,81 @@ switching work:
   identical size but different bytes, because Matplotlib stamps a creation date into the PDF. Any
   notebook run therefore dirties the working tree and any re-run produces a spurious diff. Setting
   `SOURCE_DATE_EPOCH`, or `pdf.compression`/metadata options, removes the churn.
+
+### HARD-07 — Native FMU instances and extraction directories are never released
+
+**Priority:** Medium
+
+**Status:** Measured on 2026-08-22 in `notebooks/08_fmu_memory.ipynb`. Follows directly from the
+HARD-05 workaround.
+
+Creating one usable FMU allocates in three places, and Python owns only one of them. `fmpy.extract()`
+unpacks the archive into a temporary directory that nobody removes on its own. `FMU2Slave` loads the
+model library through `ctypes`, which keeps it mapped until `freeLibrary` is called. `fmi2Instantiate`
+allocates the model state on the C heap, reachable only through the opaque component pointer and
+releasable only by `fmi2FreeInstance`.
+
+`fmpy.fmi2.FMU2Slave` defines no finalizer anywhere in its class hierarchy, so garbage collecting the
+wrapper cannot release any of it. Dropping the wrapper is in fact worse than leaking, because the
+pointer that `fmi2FreeInstance` needs is discarded with the object. The notebook measures this
+directly. Deleting an initialized component and forcing a full collection reclaimed 315 Python
+objects and 0.00 MB of resident memory, and left the extraction directory in place.
+
+**Measured cost**
+
+| Path | Resident growth | Disk growth | Extraction directory |
+|---|---|---|---|
+| `reset()` then `initialize()`, one plant FMU | 0.63 MB per cycle | 5.12 MB per cycle | new every cycle |
+| `reset()` then `initialize()` then `run()`, quantization system of six FMUs | 2.55 MB per cycle | 30.8 MB per cycle | six new every cycle |
+| `reinitialize_instance()`, the hybrid rollback path, euler plant | 0.037 MB per call | none | reused |
+| `reinitialize_instance()`, the hybrid rollback path, CVODE plant | 0.004 MB per call | none | reused |
+| terminate, free, and re-instantiate, the same loop with release, euler plant | 0.00 MB per call | none | reused |
+
+Two things follow. Rollback is much cheaper than the initialization cycle and does not re-extract
+anything, so a hybrid run with many bisection restores grows slowly and only in native heap. The
+expensive path is repeated initialization, where each cycle strands a whole extraction directory, and
+that is the path every parameter study takes. Across the whole measurement the Python heap moved
+0.06 MB per system cycle against 2.55 MB of resident growth, which is what identifies the growth as
+native rather than collectable.
+
+The last row is the control. When the instance is released, the same twenty-cycle loop returns to
+where it started, so the memory is reclaimable in principle and only the affected exports make
+reclaiming it unsafe.
+
+For the current notebooks and tests this is affordable, because they initialize a handful of times
+and the kernel then exits. It is not affordable for a long parameter study, a many-switch run, or a
+session that keeps one kernel alive. One execution of the measurement notebook itself leaves 47
+extraction directories and 241 MB of temporary files behind, which Windows keeps locked until the
+kernel exits.
+
+**Suggested solution**
+
+1. Cache extraction per FMU file rather than per initialization. Key the cache on the resolved path
+   with its size and modification time, and let every component and every later `initialize()` reuse
+   the same directory. This removes the entire disk cost and the repeated unzip, is independent of
+   HARD-05, and is safe for every FMU.
+2. Give rollback an ordered strategy instead of one fixed mechanism. Prefer `fmi2GetFMUstate` and
+   `fmi2SetFMUstate` when the FMU declares the capability, which allocates nothing per restore. Fall
+   back to `fmi2Reset` when the HARD-05 release policy says the FMU tolerates it. Fall back to
+   terminate, free, and re-instantiate when release is safe. Keep today's retain-and-re-instantiate
+   only as the last resort for the affected exports.
+3. Re-export the demo FMUs with `-d=fmuExperimental` so they declare `canGetAndSetFMUstate`. The two
+   FMUs under `docs/04_tool_integration/01_modelica/fmus` already declare it while none of the demo
+   FMUs do, which is why rollback currently re-instantiates instead of restoring state. Pair this with
+   the euler re-export from HARD-05, because tutorial 03 already shows that restoring a CVODE FMU's
+   state produces a fatal `fmi2DoStep` on the next step while the euler FMU restores cleanly.
+4. Release everything releasable at teardown. A `System`-level teardown, or a context manager around
+   a run, can free every instance whose release policy allows it and remove the cached extraction
+   directories, so a completed study returns its memory instead of holding it until the interpreter
+   exits.
+5. Count what is retained and expose it. A per-component counter of stranded instances, surfaced in
+   the run summary and warned on past a threshold, turns a silent leak into a visible number and
+   gives the performance work in EVID-01 a quantity to report.
+6. Consider process isolation only if an affected FMU ever has to be released mid-run. Running that
+   FMU in a worker process gives both crash isolation and real release, at the cost of marshalling
+   every port value across the boundary.
+
+Steps 1 and 2 are worth doing regardless of whether the OpenModelica defect is ever fixed.
 
 ## Reproducibility
 
@@ -1782,10 +1898,12 @@ real-backend transfer gate, its lifecycle/rollback guarantees, and the measured 
 directed transfer. Milestone 7 restored the backend-free switching notebooks and gated them. The
 remaining order focuses on paper/release evidence without reopening the public API.
 
-1. **Close out the CVODE FMU defect:** HARD-05. Dropping the native release calls unblocked both
-   published tutorials, which now execute with the default `cvode` solver, at the price of leaked
-   instances and extraction directories. What remains is confirming the fault sits in the FMU,
-   deciding whether the demo default stays `cvode`, and gating the two tutorials.
+1. **Close out the CVODE FMU defect and its cost:** HARD-05 and HARD-07. The failing call is
+   isolated to `fmi2FreeInstance` on any OpenModelica CVODE export with at least one continuous
+   state, and the workaround that unblocked the tutorials strands one native instance and one
+   extraction directory per initialization. The cheapest next moves are a statically derived release
+   policy and an extraction cache, which need no upstream fix, followed by re-exporting the affected
+   demo FMUs and deciding whether the demo default stays `cvode`.
 2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
    measure accepted versus trial work now that speculative effects are isolated.
 3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
