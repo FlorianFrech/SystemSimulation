@@ -9,7 +9,12 @@ feedthrough evaluation.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
+import shutil
+import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -41,6 +46,152 @@ def _require_fmpy() -> None:
 
 
 _LOG = logging.getLogger(__name__)
+
+
+# ----------------------------------------------------------------------------
+# Extraction cache (issues.md HARD-07)
+# ----------------------------------------------------------------------------
+# ``fmpy.extract()`` unpacks into a fresh temporary directory that nobody
+# removes, so every component and every repeated ``initialize()`` used to strand
+# a whole copy of the archive. Extraction depends only on the file, so it is
+# cached on the file's identity and shared by every consumer of that archive.
+_EXTRACTION_CACHE: dict[tuple[str, int, int], str] = {}
+
+
+def _extraction_key(path: str) -> tuple[str, int, int]:
+    """Identify an archive by path, size, and modification time."""
+    stat = os.stat(path)
+    return (path, stat.st_size, stat.st_mtime_ns)
+
+
+def extract_cached(path: str) -> str:
+    """Extract ``path`` once and reuse that directory for every later call.
+
+    A rebuilt or replaced archive gets a new key and is extracted again, so a
+    stale directory is never handed out. If a cached directory has disappeared
+    underneath us, the archive is extracted afresh.
+
+    Args:
+        path: Resolved path to the ``.fmu`` archive.
+
+    Returns:
+        Path of the extraction directory. Callers must not delete it; it is
+        shared with every other component using the same archive.
+    """
+    key = _extraction_key(path)
+    cached = _EXTRACTION_CACHE.get(key)
+    if cached is not None and Path(cached).is_dir():
+        return cached
+    unzipdir = str(extract(path))
+    _EXTRACTION_CACHE[key] = unzipdir
+    return unzipdir
+
+
+def clear_extraction_cache() -> None:
+    """Remove every cached extraction directory.
+
+    Only safe once no native instance remains alive anywhere in the process:
+    the shared libraries are loaded out of these directories, and on Windows an
+    open handle keeps them locked. Intended for teardown at the end of a run,
+    not between steps.
+    """
+    for unzipdir in list(_EXTRACTION_CACHE.values()):
+        try:
+            shutil.rmtree(unzipdir, ignore_errors=True)
+        except OSError:  # pragma: no cover - platform-specific cleanup fault
+            _LOG.warning("Could not remove FMU extraction directory %s", unzipdir)
+    _EXTRACTION_CACHE.clear()
+
+
+# ----------------------------------------------------------------------------
+# Release policy (issues.md HARD-05)
+# ----------------------------------------------------------------------------
+@dataclass(frozen=True)
+class FMUReleasePolicy:
+    """Whether an export tolerates ``fmi2FreeInstance`` and ``fmi2Reset``.
+
+    Calling either on an OpenModelica CVODE export that allocates a solver
+    corrupts the heap and takes the process down. The condition is a property
+    of the archive, readable without executing anything, so a component can
+    know before it ever instantiates.
+
+    Attributes:
+        releasable: True when the native instance may be terminated and freed.
+        solver: Solver recorded by the export, or ``None`` if not an
+            OpenModelica archive.
+        continuous_states: Continuous states declared by the model description.
+        reason: Human-readable justification, used in logs and diagnostics.
+    """
+
+    releasable: bool
+    solver: str | None
+    continuous_states: int
+    reason: str
+
+
+def _read_solver_flag(path: str) -> str | None:
+    """Return the solver an OpenModelica export recorded, if any.
+
+    The flag lives in ``resources/<model>_flags.json`` inside the archive. Any
+    other producer, or a malformed archive, yields ``None``.
+    """
+    try:
+        with zipfile.ZipFile(path) as archive:
+            for name in archive.namelist():
+                if name.startswith("resources/") and name.endswith("_flags.json"):
+                    flags = json.loads(archive.read(name))
+                    solver = flags.get("s")
+                    return str(solver) if solver is not None else None
+    except (OSError, zipfile.BadZipFile, ValueError, UnicodeDecodeError):
+        return None
+    return None
+
+
+def resolve_release_policy(path: str, model_description: Any) -> FMUReleasePolicy:
+    """Decide statically whether ``path`` may have its instance released.
+
+    An OpenModelica CVODE export with at least one continuous state allocates a
+    SUNDIALS solver whose teardown is defective, and freeing it corrupts the
+    heap. A zero-state CVODE export never allocates the solver and is safe, as
+    is any export using another solver.
+
+    The predicate was derived from eight archives and then correctly predicted
+    the remaining four, including both zero-state CVODE exports that survive
+    and the one-state export that does not.
+
+    Args:
+        path: Resolved path to the ``.fmu`` archive.
+        model_description: Parsed ``fmpy`` model description.
+
+    Returns:
+        The policy for this archive.
+    """
+    solver = _read_solver_flag(path)
+    states = int(getattr(model_description, "numberOfContinuousStates", 0) or 0)
+
+    if solver == "cvode" and states > 0:
+        return FMUReleasePolicy(
+            releasable=False,
+            solver=solver,
+            continuous_states=states,
+            reason=(
+                f"OpenModelica CVODE export with {states} continuous state(s); "
+                "fmi2FreeInstance and fmi2Reset corrupt the heap (issues.md HARD-05)"
+            ),
+        )
+    if solver == "cvode":
+        return FMUReleasePolicy(
+            releasable=True,
+            solver=solver,
+            continuous_states=states,
+            reason="CVODE export with no continuous states, so no solver is allocated",
+        )
+    return FMUReleasePolicy(
+        releasable=True,
+        solver=solver,
+        continuous_states=states,
+        reason=f"solver {solver!r} is not the defective CVODE teardown path",
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -102,6 +253,17 @@ class FMUComponent(CoSimComponent):
             )
         self._instance = None
         self._unzipdir = None
+
+        # Whether this archive tolerates fmi2FreeInstance / fmi2Reset. Derived
+        # statically from the archive, so it is known before the first
+        # instantiation (issues.md HARD-05).
+        self.release_policy: FMUReleasePolicy = resolve_release_policy(self._path, self._md)
+        if not self.release_policy.releasable:
+            _LOG.debug(
+                "%s: native instances will be retained - %s",
+                name,
+                self.release_policy.reason,
+            )
 
         # Port specification containers
         self.input_specs: dict[str, PortSpec] = {}
@@ -261,7 +423,10 @@ class FMUComponent(CoSimComponent):
         Args:
             t0: Simulation start time.
         """
-        self._unzipdir = extract(self._path)
+        # Extraction is cached on the archive's identity, so repeated
+        # initialization and sibling components reuse one directory instead of
+        # stranding a copy each time (issues.md HARD-07).
+        self._unzipdir = extract_cached(self._path)
         self._instantiate_instance(t0)
 
     def _instantiate_instance(self, t0: float) -> None:
@@ -289,11 +454,62 @@ class FMUComponent(CoSimComponent):
         be restored by creating a fresh instance and applying reconstructed
         initial conditions through parameters.
 
-        The previous instance is dropped without ``fmi2Terminate`` or
-        ``fmi2FreeInstance``: freeing the CVODE pendulum FMU corrupts the heap
-        (issues.md HARD-05). It therefore stays resident until the process ends.
+        The outgoing instance is released when :attr:`release_policy` allows it.
+        For the defective CVODE exports it is dropped without ``fmi2Terminate``
+        or ``fmi2FreeInstance`` and stays resident until the process ends,
+        because freeing it corrupts the heap (issues.md HARD-05). This is the
+        hybrid rollback path, so it runs once per restore.
         """
+        self._release_instance()
         self._instantiate_instance(t0)
+
+    # ----------------------------------------------------------------------------
+    # Native resource release
+    # ----------------------------------------------------------------------------
+    def _release_instance(self) -> None:
+        """Terminate and free the native instance when the policy allows.
+
+        Ownership is cleared first, so a fault during cleanup cannot lead to a
+        second release through ``reset()`` or error handling. When the policy
+        forbids release the reference is dropped and the instance is left
+        resident; that leak is deliberate and is measured under HARD-07.
+        """
+        instance = self._instance
+        if instance is None:
+            return
+        self._instance = None
+
+        if not self.release_policy.releasable:
+            _LOG.debug("%s: retaining native instance - %s", self.name, self.release_policy.reason)
+            return
+
+        errors: list[Exception] = []
+        if self._is_initialized:
+            try:
+                instance.terminate()
+            except Exception as exc:  # pragma: no cover - backend-specific cleanup fault
+                errors.append(exc)
+        try:
+            instance.freeInstance()
+        except Exception as exc:  # pragma: no cover - backend-specific cleanup fault
+            errors.append(exc)
+        if errors:
+            raise RuntimeError(
+                f"{self.name}: FMU cleanup reported {len(errors)} error(s)."
+            ) from errors[0]
+
+    def free(self) -> None:
+        """Release the native instance permanently.
+
+        The extraction directory is shared through the module-level cache and is
+        deliberately not removed here; :func:`clear_extraction_cache` owns that
+        and is safe only once no instance remains alive in the process.
+
+        For an archive whose :attr:`release_policy` forbids release this is a
+        no-op beyond dropping the reference, and it says so in the log rather
+        than silently doing nothing.
+        """
+        self._release_instance()
 
     # ----------------------------------------------------------------------------
     # Initialization helpers
@@ -634,23 +850,35 @@ class FMUComponent(CoSimComponent):
     # Reset method
     # ----------------------------------------------------------------------------
     def reset(self) -> None:
-        """Reset the component and drop the FMU instance reference.
+        """Reset the component, releasing the native instance where safe.
 
-        The native instance is not terminated or freed and the extracted FMU
-        directory is kept, because freeing the CVODE pendulum FMU corrupts the
-        heap (issues.md HARD-05). After reset, the component can be
-        reinitialized via ``initialize()``, which extracts and instantiates
-        anew.
+        The instance is terminated and freed when :attr:`release_policy` allows
+        it, and merely dropped when it does not, because freeing a defective
+        CVODE export corrupts the heap (issues.md HARD-05).
+
+        The extraction directory is kept either way. It is shared through the
+        module-level cache, so removing it here would pull it out from under
+        every other component using the same archive (issues.md HARD-07).
+
+        After reset the component can be reinitialized via ``initialize()``,
+        which reuses the cached extraction and instantiates anew.
         """
-        if self._instance is not None:
-            self._instance = None
+        cleanup_error: Exception | None = None
+        try:
+            self._release_instance()
+        except Exception as exc:
+            cleanup_error = exc
 
-        # Clear runtime state (including _is_initialized via super)
+        # Clear runtime state (including _is_initialized via super) even when
+        # native cleanup reported an error, so callers never observe a
+        # half-reset component.
         super().reset()
         self.inputs.clear()
         self.outputs.clear()
         self.parameters.clear()
         self.parameters = self.get_default_parameters()
+        if cleanup_error is not None:
+            raise cleanup_error
 
     def soft_reset(self, t0: float = 0.0) -> None:
         """Reset the FMU to initial state without releasing the instance.
@@ -660,9 +888,21 @@ class FMUComponent(CoSimComponent):
 
         Args:
             t0: New start time for the simulation.
+
+        Raises:
+            RuntimeError: If the FMU is not initialized, or if this archive
+                cannot survive ``fmi2Reset``. That call fails on exactly the
+                exports that cannot be freed, so the release policy governs it
+                too (issues.md HARD-05). Use ``reinitialize_instance()``
+                instead, which rebuilds the instance rather than resetting it.
         """
         if self._instance is None:
             raise RuntimeError(f"{self.name}: Cannot soft_reset - FMU not initialized")
+        if not self.release_policy.releasable:
+            raise RuntimeError(
+                f"{self.name}: fmi2Reset is unsafe for this FMU - "
+                f"{self.release_policy.reason}. Use reinitialize_instance() instead."
+            )
 
         # FMI reset() returns to Instantiated state
         self._instance.reset()

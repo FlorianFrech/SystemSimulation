@@ -146,10 +146,15 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
 
         system.reset()
 
-        # The native instance is intentionally neither terminated nor freed,
-        # and the extraction directory survives; see issues.md HARD-05.
-        terminate.assert_not_called()
-        free_instance.assert_not_called()
+        # Release is governed by the archive's static policy, not by a blanket
+        # workaround (issues.md HARD-05 step 1). This plant is built with the
+        # euler export, which tolerates teardown, so reset() must actually
+        # terminate and free. The extraction directory survives either way: it
+        # is shared through the module-level cache (issues.md HARD-07 step 1).
+        policy = reused.fmu.release_policy
+        assert policy.releasable, policy.reason
+        assert terminate.call_count == 1
+        assert free_instance.call_count == 1
         assert not system.is_initialized
         assert reused.fmu._instance is None
         assert Path(reused.fmu._unzipdir) == old_unzipdir
@@ -225,9 +230,15 @@ def test_failed_real_target_validation_restores_the_transaction(monkeypatch):
         assert plant.sync_events == []
         assert plant.fmu._instance is not target_instance
         assert plant.fmu._unzipdir == target_unzipdir
-        # Rollback recreates the slave without releasing the old one; see HARD-05.
-        terminate_instance.assert_not_called()
-        free_instance.assert_not_called()
+        # Rollback recreates the slave, releasing the outgoing one when the
+        # archive tolerates it (issues.md HARD-05 step 1). This plant uses the
+        # euler export, so the old instance is terminated and freed rather than
+        # stranded. The mocked instance is the released one, so its own
+        # instantiate() is never called again; the replacement is a new object.
+        policy = plant.fmu.release_policy
+        assert policy.releasable, policy.reason
+        assert terminate_instance.call_count == 1
+        assert free_instance.call_count == 1
         instantiate_instance.assert_not_called()
         assert fem_state_snapshot(plant) == fem_before
         assert monitor_snapshot(plant.monitoring_state) == master_monitor_before
