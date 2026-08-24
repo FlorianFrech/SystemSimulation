@@ -78,6 +78,7 @@ dev = [
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-book-theme>=1.1.0",
     "myst-nb>=1.1.0",
+    "nbmake>=1.5.0",            # executes documentation notebooks as tests
     "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
 ]
 
@@ -105,6 +106,7 @@ dev = [
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-book-theme>=1.1.0",
     "myst-nb>=1.1.0",
+    "nbmake>=1.5.0",            # executes documentation notebooks as tests
     "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
 ]
 

@@ -301,3 +301,174 @@ class NoRollbackComponent(CoSimComponent):
 
     def get_state(self) -> dict[str, Any]:
         return {}
+
+
+# ============================================================================
+# Micro-Stepping Source for Internal-Hint Regression Tests
+# ============================================================================
+class MicroSteppingSource(CoSimComponent):
+    """Falls linearly through zero and reports its own crossing bracket.
+
+    Sub-steps internally at ``micro_dt`` and calls ``report_internal_event()``
+    on the sub-step that crosses, exactly as ``FEMPendulum`` does when its
+    contact gap closes.
+
+    The defaults are chosen so that a macro step of ``1e-3`` also straddles the
+    crossing at its endpoints. Both sources of information therefore agree,
+    which is the case in which the hint bracket used to be discarded as a
+    duplicate and the event lost entirely.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        y0: float = 5.5e-4,
+        rate: float = -1.0,
+        micro_dt: float = 1e-4,
+        bounce: bool = False,
+    ):
+        super().__init__(name, group="Event Source")
+        self.y0 = y0
+        self.rate0 = rate
+        self.rate = rate
+        self.micro_dt = micro_dt
+        self.bounce = bounce
+        self._y = y0
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
+
+    def _initialize_component(self, t0: float) -> None:
+        self._y = self.y0
+        self.rate = self.rate0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        t_now = t
+        t_end = t + dt
+        while t_now < t_end - 1e-15:
+            step = min(self.micro_dt, t_end - t_now)
+            y_before = self._y
+            self._y += self.rate * step
+            t_now += step
+            if y_before > 0.0 >= self._y:
+                self.report_internal_event(
+                    event_name="zero",
+                    t_before=t_now - step,
+                    t_after=t_now,
+                    indicator_before=y_before,
+                    indicator_after=self._y,
+                )
+                if self.bounce:
+                    # Return to the positive side inside the same macro step,
+                    # the way a penalty contact repels the pendulum. The macro
+                    # endpoints then show no sign change and the reported
+                    # bracket is the only evidence of the crossing.
+                    self.rate = -self.rate
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["y"].set(self._y, t=t)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._y = float(state["y"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"y": self._y, "rate": self.rate}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._y = float(snapshot["y"])
+        self.rate = float(snapshot["rate"])
+        self.t = t
+
+    def reset(self) -> None:
+        super().reset()
+        self._y = self.y0
+        self.rate = self.rate0
+
+
+# ============================================================================
+# Stale-Input Pair for the HYB-01 Accepted-Trajectory Guard
+# ============================================================================
+class FlippingSource(CoSimComponent):
+    """Emits ``+1`` until its first step, then ``-1`` forever.
+
+    Upstream half of the pair that reproduces the trial/accepted trajectory
+    mismatch: the value an event source reads during detection is not the value
+    it reads during the accepted advance.
+    """
+
+    def __init__(self, name: str):
+        super().__init__(name, group="Upstream")
+        self._v = 1.0
+        self.output_specs.update({"v": PortSpec(name="v", type=PortType.REAL, direction="out")})
+
+    def _initialize_component(self, t0: float) -> None:
+        self._v = 1.0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        if dt > 0.0:
+            self._v = -1.0
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["v"].set(self._v, t=t)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"v": self._v}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._v = float(state["v"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"v": self._v}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._v = float(snapshot["v"])
+        self.t = t
+
+
+class InputEchoSource(CoSimComponent):
+    """Copies its input to its output, and carries the event indicator.
+
+    Declaring ``y`` as direct feedthrough on ``u`` puts this component in a
+    later generation than its upstream, so the accepted advance re-reads the
+    input after the upstream has stepped while detection does not. The
+    indicator therefore changes sign on the accepted trajectory only.
+    """
+
+    def __init__(self, name: str, y0: float = 1.0):
+        super().__init__(name, group="Event Source")
+        self.y0 = y0
+        self._y = y0
+        self.input_specs.update({"u": PortSpec(name="u", type=PortType.REAL, direction="in")})
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
+        self.direct_feedthrough = {"y": {"u"}}
+
+    def _initialize_component(self, t0: float) -> None:
+        self._y = self.y0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        value = self.inputs["u"].get()
+        if value is not None:
+            self._y = float(getattr(value, "magnitude", value))
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["y"].set(self._y, t=t)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._y = float(state["y"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._y = float(snapshot["y"])
+        self.t = t

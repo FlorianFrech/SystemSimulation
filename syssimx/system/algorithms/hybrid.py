@@ -88,6 +88,14 @@ class HybridAlgorithm(Algorithm):
         self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
         self.record_internal_steps: bool = False
 
+        # Detection runs on a different trajectory than the one committed, so a
+        # crossing can escape it (issues.md HYB-01). Every accepted advance that
+        # detection called event-free is checked afterwards, and anything that
+        # slipped through is collected here. Set ``raise_on_missed_event`` to
+        # make the mismatch fatal instead of merely reported.
+        self.raise_on_missed_event: bool = False
+        self.missed_events: list[EventBracket] = []
+
     # --------------------------------------------------------------------------
     # Global Step Method
     # --------------------------------------------------------------------------
@@ -130,6 +138,7 @@ class HybridAlgorithm(Algorithm):
             # 3) If no crossings, do a full step and exit
             if not crossings:
                 self.gauss_seidel_algorithm.step(system, t_left, t_right - t_left)
+                self._report_missed_crossings(event_sources, indicators_left, t_left, t_right)
                 return
 
             logger.info("%s", "=" * 80)
@@ -278,6 +287,70 @@ class HybridAlgorithm(Algorithm):
                     solve_algebraic_scc_ijcsa(system, loop, t)
 
     # --------------------------------------------------------------------------
+    # Accepted-Trajectory Guard
+    # --------------------------------------------------------------------------
+    def _report_missed_crossings(
+        self,
+        event_sources: list[CoSimComponent],
+        indicators_left: dict[str, dict[str, float]],
+        t_left: float,
+        t_right: float,
+    ) -> None:
+        """Check the accepted advance for a crossing detection did not see.
+
+        :meth:`_detect_crossings` advances each event source with the inputs
+        cached at ``t_left``, while the accepted Gauss-Seidel advance re-reads
+        them after the upstream generation has already stepped. The two
+        trajectories therefore differ, and a crossing present on the accepted
+        one but absent from the trial one is never localized.
+
+        For a single-direction indicator that miss is permanent rather than
+        deferred by one macro step: the next interval starts on the far side of
+        zero, and :meth:`~...core.base.CoSimComponent.detect_event_crossings`
+        requires the previous sign to be on the near side, so the crossing can
+        never be observed again. The failure is silent, which is what makes it
+        worth a guard (issues.md HYB-01).
+
+        Indicators are read from the state the accepted advance has already
+        produced, so this costs no model advance.
+
+        Args:
+            event_sources: Components carrying event indicators.
+            indicators_left: Indicator values at ``t_left``, as captured by
+                :meth:`_detect_crossings` before the trial advance.
+            t_left: Start of the accepted interval.
+            t_right: End of the accepted interval.
+
+        Raises:
+            RuntimeError: If ``raise_on_missed_event`` is set and the accepted
+                trajectory contains a crossing that detection missed.
+        """
+        indicators_after = {
+            comp.name: comp.evaluate_event_indicators() for comp in event_sources
+        }
+        missed = self._crossing_brackets_between(
+            event_sources, indicators_left, indicators_after, t_left, t_right
+        )
+        if not missed:
+            return
+
+        self.missed_events.extend(missed)
+        detail = ", ".join(
+            f"{event.source}.{event.name} ({event.value_left:+.6g} -> {event.value_right:+.6g})"
+            for event in missed
+        )
+        message = (
+            f"Event(s) crossed on the accepted trajectory in [{t_left:.8f}, {t_right:.8f}] "
+            f"but were absent from the trial trajectory, so they were never localized: "
+            f"{detail}. Detection uses the inputs cached at the left edge while the accepted "
+            f"advance uses the updated ones (issues.md HYB-01). A falling or rising indicator "
+            f"cannot be re-detected once it has settled on the far side of zero."
+        )
+        if self.raise_on_missed_event:
+            raise RuntimeError(message)
+        logger.warning("%s", message)
+
+    # --------------------------------------------------------------------------
     # Event Detection
     # --------------------------------------------------------------------------
     def _detect_crossings(
@@ -359,10 +432,22 @@ class HybridAlgorithm(Algorithm):
                     sign_tolerance=self.sign_tolerance,
                 )
 
-                # e) Preserve the detected sign-change bracket. Internal-only
-                # hints retain their own bracket even when endpoint signs do
-                # not expose the micro-step crossing.
+                # e) Keep the tightest available sign-change bracket for each
+                # event. An internal micro-step hint is strictly more precise
+                # than the macro endpoints, so it supersedes the macro bracket
+                # for the same event instead of being dropped as a duplicate.
+                #
+                # Dropping it lost the event outright whenever both sources
+                # agreed. The surviving macro bracket spans the whole macro
+                # interval, the hint short-circuit in _locate_event_time only
+                # returns brackets strictly narrower than that interval, and the
+                # algorithm therefore located an event time and then dispatched
+                # nothing. The failure was invisible: detection was strongest
+                # exactly when the event was lost.
+                hint_names = {hint.event_name for hint in filtered_hints}
                 for event_name in macro_events:
+                    if event_name in hint_names:
+                        continue
                     crossings.append(
                         EventBracket(
                             source=comp.name,
@@ -373,19 +458,17 @@ class HybridAlgorithm(Algorithm):
                             value_right=indicators_right[event_name],
                         )
                     )
-                macro_names = set(macro_events)
                 for hint in filtered_hints:
-                    if hint.event_name not in macro_names:
-                        crossings.append(
-                            EventBracket(
-                                source=comp.name,
-                                name=hint.event_name,
-                                t_left=hint.t_before,
-                                t_right=hint.t_after,
-                                value_left=hint.indicator_before,
-                                value_right=hint.indicator_after,
-                            )
+                    crossings.append(
+                        EventBracket(
+                            source=comp.name,
+                            name=hint.event_name,
+                            t_left=hint.t_before,
+                            t_right=hint.t_after,
+                            value_left=hint.indicator_before,
+                            value_right=hint.indicator_after,
                         )
+                    )
 
                 # g) Restore to t_left
                 self._restore_with_inputs(
@@ -489,6 +572,14 @@ class HybridAlgorithm(Algorithm):
                         for event in hint_events
                         if event.t_left <= t_event <= event.t_right + self.tol_time
                     ]
+                    if not located_hints:
+                        # Never locate an instant and then dispatch nothing.
+                        # Fall back to any detected bracket that contains it.
+                        located_hints = [
+                            event
+                            for event in initial_crossings
+                            if event.t_left <= t_event <= event.t_right + self.tol_time
+                        ]
                     return DenseTime(t=t_event, micro=0), located_hints
 
         # 4) Indicator values at boundaries

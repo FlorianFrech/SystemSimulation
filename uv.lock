@@ -2065,6 +2065,22 @@ wheels = [
 ]
 
 [[package]]
+name = "nbmake"
+version = "1.5.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "nbclient" },
+    { name = "nbformat" },
+    { name = "pygments" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/9a/aae201cee5639e1d562b3843af8fd9f8d018bb323e776a2b973bdd5fc64b/nbmake-1.5.5.tar.gz", hash = "sha256:239dc868ea13a7c049746e2aba2c229bd0f6cdbc6bfa1d22f4c88638aa4c5f5c", size = 85929, upload-time = "2024-12-23T18:33:46.774Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/be/b257e12f9710819fde40adc972578bee6b72c5992da1bc8369bef2597756/nbmake-1.5.5-py3-none-any.whl", hash = "sha256:c6fbe6e48b60cacac14af40b38bf338a3b88f47f085c54ac5b8639ff0babaf4b", size = 12818, upload-time = "2024-12-23T18:33:44.566Z" },
+]
+
+[[package]]
 name = "nest-asyncio2"
 version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3585,6 +3601,7 @@ dev = [
     { name = "jupyterlab" },
     { name = "mypy" },
     { name = "myst-nb" },
+    { name = "nbmake" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -3593,6 +3610,7 @@ dev = [
     { name = "sphinx-autodoc-typehints", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "sphinx-autodoc-typehints", version = "3.12.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-book-theme" },
+    { name = "tqdm" },
 ]
 fem = [
     { name = "ngsolve" },
@@ -3610,6 +3628,7 @@ full = [
     { name = "jupyterlab" },
     { name = "mypy" },
     { name = "myst-nb" },
+    { name = "nbmake" },
     { name = "ngsolve" },
     { name = "ompython" },
     { name = "opensim" },
@@ -3621,6 +3640,7 @@ full = [
     { name = "sphinx-autodoc-typehints", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "sphinx-autodoc-typehints", version = "3.12.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-book-theme" },
+    { name = "tqdm" },
     { name = "webgui-jupyter-widgets" },
 ]
 opensim = [
@@ -3635,6 +3655,7 @@ dev = [
     { name = "jupyterlab" },
     { name = "mypy" },
     { name = "myst-nb" },
+    { name = "nbmake" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -3643,6 +3664,7 @@ dev = [
     { name = "sphinx-autodoc-typehints", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "sphinx-autodoc-typehints", version = "3.12.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-book-theme" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -3657,6 +3679,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.5.0" },
     { name = "myst-nb", marker = "extra == 'dev'", specifier = ">=1.1.0" },
+    { name = "nbmake", marker = "extra == 'dev'", specifier = ">=1.5.0" },
     { name = "networkx" },
     { name = "ngsolve", marker = "extra == 'fem'" },
     { name = "numpy" },
@@ -3675,6 +3698,7 @@ requires-dist = [
     { name = "sphinx-book-theme", marker = "extra == 'dev'", specifier = ">=1.1.0" },
     { name = "syssimx", extras = ["all", "dev"], marker = "extra == 'full'" },
     { name = "syssimx", extras = ["fem", "fmu", "opensim"], marker = "extra == 'all'" },
+    { name = "tqdm", marker = "extra == 'dev'", specifier = ">=4.66.0" },
     { name = "traitlets" },
     { name = "webgui-jupyter-widgets", marker = "extra == 'fem'" },
 ]
@@ -3688,12 +3712,14 @@ dev = [
     { name = "jupyterlab", specifier = ">=4.0.0" },
     { name = "mypy", specifier = ">=1.5.0" },
     { name = "myst-nb", specifier = ">=1.1.0" },
+    { name = "nbmake", specifier = ">=1.5.0" },
     { name = "pytest", specifier = ">=7.4.0" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
     { name = "ruff", specifier = ">=0.1.0" },
     { name = "sphinx", specifier = ">=7.0.0" },
     { name = "sphinx-autodoc-typehints", specifier = ">=2.0.0" },
     { name = "sphinx-book-theme", specifier = ">=1.1.0" },
+    { name = "tqdm", specifier = ">=4.66.0" },
 ]
 
 [[package]]
@@ -3800,6 +3826,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/42/5f0e56c01e8d9d36f4e23f367b85ae6cae0c1ecddd5e6977d8388ad27488/tornado-6.5.7-cp39-abi3-win32.whl", hash = "sha256:f8de3bf12d3efdd0cbe7c8887868198f8a91415e3f29fcf258d9b8eb7b1d9ae4", size = 451047, upload-time = "2026-06-08T17:34:46.784Z" },
     { url = "https://files.pythonhosted.org/packages/c9/a4/b393076ffb21b469eec5b328a0534cf03a3b90bfc6b1f09507cdd075d938/tornado-6.5.7-cp39-abi3-win_amd64.whl", hash = "sha256:de942f843533a039ef9fa3d9c88c7cd8a7c94553fb5ad0154270989b3d99a2c4", size = 451485, upload-time = "2026-06-08T17:34:48.248Z" },
     { url = "https://files.pythonhosted.org/packages/71/2e/7b1c769803121b809112cf9a00681c472eae1d80e32d7ec0e0bd61d0d0e1/tornado-6.5.7-cp39-abi3-win_arm64.whl", hash = "sha256:ff934fce95643af5f11efdae618eaa73d469dc588641e5c8d19295a0c65c4796", size = 450506, upload-time = "2026-06-08T17:34:49.702Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.70.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/21/3b/6c24bec5be5e743ffd99576daa5cc077722fc7d5bbc00bd133fa0c698dc6/tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220", size = 795438, upload-time = "2026-07-27T11:33:15.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/1c/01bfd571a64e7f270e6bab5e33777debe0edc56759233ce84f27dec92d14/tqdm-4.70.0-py3-none-any.whl", hash = "sha256:7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953", size = 80184, upload-time = "2026-07-27T11:33:13.167Z" },
 ]
 
 [[package]]
