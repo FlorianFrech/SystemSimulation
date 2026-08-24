@@ -1356,6 +1356,12 @@ one correctness risk that the current detection scheme carries independently of 
 
 **Priority:** High
 
+**Status:** Guarded on 2026-08-24. `HybridAlgorithm` re-evaluates the indicators after every accepted
+advance that detection called event-free, collects anything that slipped through in `missed_events`,
+and warns. `raise_on_missed_event` makes the mismatch fatal. Covered by
+`tests/unit/system/test_hybrid_missed_events.py`. The underlying mismatch stands; only the silence
+is fixed, and escalating the report to a rollback still depends on HYB-02.
+
 [`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L328) advances every event source with
 the inputs cached at `t_left`. The accepted advance re-reads inputs after the upstream generation
 has already stepped, in
@@ -1810,8 +1816,21 @@ v0.3.0, rather than a patch.
 
 **Priority:** High
 
-**Status:** Root cause isolated on 2026-08-22 and worked around in `syssimx`. The defective exports
-are unchanged, and the workaround costs what HARD-07 measures.
+**Status:** Root cause isolated on 2026-08-22. Step 1 landed on 2026-08-24: release is now governed
+by a static per-archive policy instead of a blanket retain-everything workaround. The defective
+exports are unchanged, and steps 2 through 5 remain open.
+
+`resolve_release_policy()` reads the solver flag out of the archive and the continuous-state count
+out of the model description, so a component knows before it ever instantiates whether releasing is
+safe. `FMUComponent.release_policy` carries the verdict and its reason. `reset()`,
+`reinitialize_instance()`, and the restored `free()` release when it allows and retain when it does
+not; `soft_reset()` refuses outright on a retained archive, because `fmi2Reset` fails on exactly the
+same exports. Verified against all thirteen checked-in archives, and against the release path itself
+in a subprocess so a wrong verdict would be an exit code rather than a lost session.
+
+Six of the thirteen archives are now released rather than stranded, including four of the six FMUs in
+the quantization system. Step 5 of the plan below is done: the lifecycle tests assert the policy
+rather than the raw calls.
 
 Calling `fmi2FreeInstance` on an affected FMU raises Windows exception `0xC0000374`, heap corruption,
 which takes the whole process down. `FMUComponent` therefore no longer calls `fmi2Terminate` or
@@ -1955,8 +1974,19 @@ switching work:
 
 **Priority:** Medium
 
-**Status:** Measured on 2026-08-22 in `notebooks/08_fmu_memory.ipynb`. Follows directly from the
-HARD-05 workaround.
+**Status:** Measured on 2026-08-22 in `notebooks/08_fmu_memory.ipynb`. Step 1 landed on 2026-08-24:
+extraction is cached on the archive's identity, so the disk cost is gone for every FMU. Steps 2
+through 6 remain open.
+
+`extract_cached()` keys on path, size, and modification time, so every component and every repeated
+`initialize()` reuses one directory, while a rebuilt archive is still extracted afresh.
+`clear_extraction_cache()` provides the teardown that step 4 will build on. Measured over ten
+`reset()`/`initialize()` cycles: **zero** new extraction directories, for a releasable and a retained
+archive alike, against one whole directory per cycle before.
+
+Resident growth is down to roughly 0.11 MB per cycle and is now dominated by the `ctypes` library
+mapping rather than by the FMI instance, because `freeLibrary` is still never called. That is the
+next thing to attack, and it is independent of the OpenModelica defect.
 
 Creating one usable FMU allocates in three places, and Python owns only one of them. `fmpy.extract()`
 unpacks the archive into a temporary directory that nobody removes on its own. `FMU2Slave` loads the
