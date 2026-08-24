@@ -633,20 +633,24 @@ according to the recorded audit.
 - Update the Sphinx and ReadTheDocs environments in the same change, particularly for Matplotlib,
   so the strict documentation build remains green.
 
-### HARD-04 — Release metadata is stale
+### HARD-04 — Release metadata is incomplete
 
-**Priority:** Medium
+**Priority:** Low
 
-`CITATION.cff` still records v0.2.0 and the prior release date. Generalized region switching and
-`self_handled_events` change the public behavior, while the selector and fixed-indicator switching
-APIs are being removed before release. The next release should therefore be a minor release,
-v0.3.0, rather than a patch.
+**Status:** Mostly resolved by the v0.3.0 release on 2026-08-24. `CHANGELOG.md` exists,
+`syssimx/__version__.py` and `CITATION.cff` read 0.3.0 with a real release date, and the tag
+published to PyPI. Two author-supplied identifiers are still missing.
+
+- The `orcid` line in `CITATION.cff` is still commented out. It was deliberately left for the next
+  release rather than guessed, because a wrong ORCID resolves to nothing or to another person.
+- The `doi` line is still commented out, and no Zenodo deposit exists. A version DOI cannot be
+  minted before the release it identifies, so this was always going to follow the first tag.
 
 **Suggested solution**
 
-- Complete the selected release-blocking fixes and evidence first.
-- Update version, release date, ORCID, DOI, changelog/release notes, and API documentation.
-- Tag v0.3.0 only after the full reproducibility gate is archived.
+- Add the ORCID to `CITATION.cff`.
+- Archive the release on Zenodo, then uncomment `doi` with the version DOI it mints.
+- Both land in v0.3.1 or the next minor release; neither warrants a release of its own.
 
 ### HARD-05 — OpenModelica CVODE exports corrupt the heap in `fmi2FreeInstance`
 
