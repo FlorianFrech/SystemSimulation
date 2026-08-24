@@ -14,9 +14,11 @@ from .basic_components import (
     TorqueSource,
 )
 from .hybrid_components import (
+    FlippingSource,
     HybridCombi,
     HybridListener,
     HybridSource,
+    InputEchoSource,
     MicroSteppingSource,
     NoRollbackComponent,
 )
@@ -47,6 +49,8 @@ __all__ = [
     "TorqueSource",
     "HybridSource",
     "MicroSteppingSource",
+    "FlippingSource",
+    "InputEchoSource",
     "HybridCombi",
     "HybridListener",
     "MockSubComponent",
