@@ -359,10 +359,22 @@ class HybridAlgorithm(Algorithm):
                     sign_tolerance=self.sign_tolerance,
                 )
 
-                # e) Preserve the detected sign-change bracket. Internal-only
-                # hints retain their own bracket even when endpoint signs do
-                # not expose the micro-step crossing.
+                # e) Keep the tightest available sign-change bracket for each
+                # event. An internal micro-step hint is strictly more precise
+                # than the macro endpoints, so it supersedes the macro bracket
+                # for the same event instead of being dropped as a duplicate.
+                #
+                # Dropping it lost the event outright whenever both sources
+                # agreed. The surviving macro bracket spans the whole macro
+                # interval, the hint short-circuit in _locate_event_time only
+                # returns brackets strictly narrower than that interval, and the
+                # algorithm therefore located an event time and then dispatched
+                # nothing. The failure was invisible: detection was strongest
+                # exactly when the event was lost.
+                hint_names = {hint.event_name for hint in filtered_hints}
                 for event_name in macro_events:
+                    if event_name in hint_names:
+                        continue
                     crossings.append(
                         EventBracket(
                             source=comp.name,
@@ -373,19 +385,17 @@ class HybridAlgorithm(Algorithm):
                             value_right=indicators_right[event_name],
                         )
                     )
-                macro_names = set(macro_events)
                 for hint in filtered_hints:
-                    if hint.event_name not in macro_names:
-                        crossings.append(
-                            EventBracket(
-                                source=comp.name,
-                                name=hint.event_name,
-                                t_left=hint.t_before,
-                                t_right=hint.t_after,
-                                value_left=hint.indicator_before,
-                                value_right=hint.indicator_after,
-                            )
+                    crossings.append(
+                        EventBracket(
+                            source=comp.name,
+                            name=hint.event_name,
+                            t_left=hint.t_before,
+                            t_right=hint.t_after,
+                            value_left=hint.indicator_before,
+                            value_right=hint.indicator_after,
                         )
+                    )
 
                 # g) Restore to t_left
                 self._restore_with_inputs(
@@ -489,6 +499,14 @@ class HybridAlgorithm(Algorithm):
                         for event in hint_events
                         if event.t_left <= t_event <= event.t_right + self.tol_time
                     ]
+                    if not located_hints:
+                        # Never locate an instant and then dispatch nothing.
+                        # Fall back to any detected bracket that contains it.
+                        located_hints = [
+                            event
+                            for event in initial_crossings
+                            if event.t_left <= t_event <= event.t_right + self.tol_time
+                        ]
                     return DenseTime(t=t_event, micro=0), located_hints
 
         # 4) Indicator values at boundaries
