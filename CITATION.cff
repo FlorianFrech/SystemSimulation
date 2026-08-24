@@ -7,8 +7,8 @@ authors:
     family-names: Frech
     # orcid: "https://orcid.org/0000-0000-0000-0000"   # add your ORCID before the release
     # email:           # optional
-version: 0.2.0
-date-released: 2026-07-18   # set to the actual submission/release date
+version: 0.3.0
+date-released: 2026-08-24
 license: MIT
 repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
@@ -20,7 +20,10 @@ abstract: >-
   models through a shared component abstraction, derives structural execution metadata
   for initialization, master algorithm execution, and algebraic-loop
   handling, and supports hybrid event localization and runtime switching
-  between alternative models of the same subsystem.
+  between alternative models of the same subsystem. Switching is declared as
+  a map from a scalar signal onto ordered model regions, and each transition
+  is localized to its crossing instant rather than snapped to the
+  communication grid.
 keywords:
   - co-simulation
   - hybrid systems
