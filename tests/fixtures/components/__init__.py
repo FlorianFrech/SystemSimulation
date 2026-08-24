@@ -13,7 +13,15 @@ from .basic_components import (
     Subtractor,
     TorqueSource,
 )
-from .hybrid_components import HybridCombi, HybridListener, HybridSource, NoRollbackComponent
+from .hybrid_components import (
+    FlippingSource,
+    HybridCombi,
+    HybridListener,
+    HybridSource,
+    InputEchoSource,
+    MicroSteppingSource,
+    NoRollbackComponent,
+)
 from .multi_components import (
     EmptyMultiComponent,
     IncompatibleMultiComponent,
@@ -40,6 +48,9 @@ __all__ = [
     "IntegratorComponent",
     "TorqueSource",
     "HybridSource",
+    "MicroSteppingSource",
+    "FlippingSource",
+    "InputEchoSource",
     "HybridCombi",
     "HybridListener",
     "MockSubComponent",

@@ -616,6 +616,115 @@ branch should reach CI before its milestone is declared closed.
    loss is now quantified, so the choice between accepting it, warning on it through an enforced
    `energy` tolerance, or adding a pair-specific adapter can be made on evidence.
 
+## Milestone 7 implementation record
+
+Milestone 7 was implemented on 2026-08-21 on branch `docs/notebook-execution-gate`, after the
+switching stack merged to `main` as `c670eb9`. It restores the backend-free switching notebooks and
+closes the gap that let them reach `main` unexecuted. It also uncovered a native defect that blocks
+the two master-pendulum tutorials.
+
+- `1b3e033` re-executes the backend-free switching notebooks;
+- `eca3e4c` adds the nbmake CI job and declares the dependency.
+
+### Why the notebooks were empty
+
+`docs/conf.py` sets `nb_execution_mode = "off"`, so Sphinx publishes whatever outputs a notebook
+already carries. Milestone 3 cleared the expensive case-study notebook outputs rather than keeping
+stale ones, and nothing ever re-executed them. Nine tracked notebooks therefore carried zero
+outputs, four of them published pages covering the switching feature, and every CI job stayed green
+because nothing executed a notebook.
+
+| Notebook | Wave | State after this milestone |
+|---|---|---|
+| `docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb` | 1 | executed, gated |
+| `notebooks/03_multi_comp_verification.ipynb` | 1 | executed, gated |
+| `docs/04_tool_integration/04_master_pendulum/01_master_pendulum_basics.ipynb` | 1 | blocked by HARD-05 |
+| `docs/04_tool_integration/04_master_pendulum/02_master_pendulum_switching.ipynb` | 1 | blocked by HARD-05 |
+| `docs/05_case_study/05_multi_model_switching.ipynb` | 2 | deferred to the evidence work |
+| `notebooks/05_casestudy_model_switching.ipynb` | 2 | deferred, EVID-03 |
+| `notebooks/06_casestudy_performance.ipynb` | 2 | deferred, EVID-01 and EVID-04 |
+| `notebooks/performance.ipynb` | 2 | deferred, EVID-01 |
+| `demos/.../master_pendulum/test_master_pendulum_hybrid.ipynb` | n/a | development scratch, not published |
+
+Wave 2 is deliberately not executed yet. EVID-02 and EVID-03 are meant to share one refinement
+study and EVID-04 needs a longer horizon with per-bucket timing and repetitions, so executing those
+notebooks before the experiment design is settled would bake in the superseded 0.4 s, two-switch
+experiment and spend the FEM budget twice.
+
+### Wave 1 results
+
+Both backend-free notebooks execute cleanly against the merged tree with no error outputs. This is
+the first end-to-end confirmation that the Milestone 3 consumer migration works outside the test
+suite.
+
+The two master-pendulum tutorials did **not** execute in their published configuration at the time
+of this milestone. The kernel died with Windows exception `0xc0000374`, heap corruption, inside
+`fmi2FreeInstance`. A diagnostic run that forced `fmu_solver="euler"` without modifying either
+notebook completed every cell of both, so the notebook content was healthy against the region API and
+the sole blocker was the CVODE FMU defect recorded as HARD-05. Both tutorials execute and are
+committed with outputs since that defect was worked around.
+
+### Environment provenance
+
+The notebooks were executed with the only registered Jupyter kernel, the Anaconda `env-312`
+environment, not the project `.venv`:
+
+| Item | Recorded value |
+|---|---|
+| Python | 3.12.13 |
+| ngsolve | 6.2.2601 |
+| fmpy | 0.3.28 |
+| opensim | 4.5.2 |
+| numpy / scipy / matplotlib | 2.0.2 / 1.17.1 / 3.10.8 |
+| pint | 0.25.2 |
+
+`syssimx` resolved to the working tree. Pinning this environment and recording it with the executed
+outputs belongs to REPRO-01; until then, published notebook outputs and the tested environment are
+not the same thing.
+
+### The notebook execution gate
+
+A `notebooks` CI job runs `pytest --nbmake` over the two backend-free notebooks. It installs the
+LaTeX toolchain because `notebooks/plot_setup.py` renders thesis-style figures with `usetex` and
+`siunitx`. `nbmake` was added to both mirrored dev dependency lists. Locally the gate completes in
+9.5 s.
+
+The two master-pendulum tutorials were not gated while HARD-05 blocked them. They execute again
+since the workaround, so gating them is now a question of runner cost rather than of a crash. The
+Wave 2 notebooks are not gated because they are long-running evidence runs, not tutorials; the
+scheduled physics gate under HARD-02 is the right home for them.
+
+### Output hygiene
+
+Executing notebook 3 exposed that `set_professional_style()` returns the `pyplot` module. Called as
+the last expression of a cell, it renders a repr containing the executing machine's absolute install
+path into a published output. The call in notebook 3 now ends with a semicolon.
+
+The return value is kept because several development notebooks under `demos/` use
+`plt = set_professional_style()`. Five published notebooks still call it as a bare last expression
+and will leak the same way when they are executed, so the semicolon has to be applied as each one is
+re-run. Two published notebooks already carry leaked paths from earlier runs. Both points are
+tracked as HARD-06.
+
+### Measured verification
+
+- `pytest --nbmake` over both Wave 1 notebooks: **2 passed in 9.5 s**;
+- repository-wide scan for machine-specific absolute paths in tracked notebook outputs: two
+  published notebooks affected, both pre-existing and unrelated to switching;
+- workflow YAML parses and declares jobs `test`, `test-fem`, `notebooks`, `docs`, `build`.
+
+The final commands were:
+
+```powershell
+$env:PYTHONPATH = "C:\Users\flori\source\repos\FlorianFrech\SystemSimulation"
+jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 notebooks/03_multi_comp_verification.ipynb
+jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb
+pytest -p no:cacheprovider --nbmake --nbmake-timeout=900 docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb notebooks/03_multi_comp_verification.ipynb
+```
+
+The LaTeX package set in the CI job (`texlive-latex-extra`, `texlive-science`, `dvipng`,
+`cm-super`) could not be validated on this Windows host and is verified by the first CI run.
+
 ## Scope
 
 This document evaluates the runtime model-switching implementation in:
@@ -1237,6 +1346,269 @@ For the paper, integer time and resolution negotiation should be attributed to t
 hybrid co-simulation literature, including Cremona et al. (2019), rather than presented as a novel
 contribution.
 
+## Hybrid event detection and localization
+
+This section refines EVID-01. EVID-01 records the measured cost of speculative FEM work. The issues
+below record why the obvious reuse fix is not directly legal, which cheaper fixes are available, and
+one correctness risk that the current detection scheme carries independently of cost.
+
+### HYB-01 — Detection runs on a trajectory the system never takes
+
+**Priority:** High
+
+**Status:** Guarded on 2026-08-24. `HybridAlgorithm` re-evaluates the indicators after every accepted
+advance that detection called event-free, collects anything that slipped through in `missed_events`,
+and warns. `raise_on_missed_event` makes the mismatch fatal. Covered by
+`tests/unit/system/test_hybrid_missed_events.py`. The underlying mismatch stands; only the silence
+is fixed, and escalating the report to a rollback still depends on HYB-02.
+
+[`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L328) advances every event source with
+the inputs cached at `t_left`. The accepted advance re-reads inputs after the upstream generation
+has already stepped, in
+[`GaussSeidelAlgorithm.step()`](syssimx/system/algorithms/gauss_seidel.py#L63). In the case-study
+system `Drive` precedes `MasterPendulum`, so the trial advance consumes `tau(t_left)` while the
+accepted advance consumes `tau(t_left + dt)`. Detection therefore evaluates indicators on a
+trajectory that is never committed.
+
+This has two consequences.
+
+1. The trial endpoint cannot be reused as the accepted endpoint without changing the coupling. See
+   HYB-02.
+2. A crossing that is present on the accepted trajectory but absent on the trial trajectory is never
+   detected. For a falling indicator the miss is permanent rather than deferred by one macro step.
+   [`detect_event_crossings()`](syssimx/core/base.py#L1348) requires `prev_sign > 0`, so once the
+   indicator has gone negative without the event firing, the following macro step starts below zero
+   and the crossing can no longer be observed. The notebook `wall_hit` indicator is registered with
+   `direction=-1`, so a missed contact means the pendulum passes through the wall and never
+   recovers.
+
+The window is narrow, because the crossing must fall inside the band by which one macro step of
+torque difference displaces `theta`, and no such miss has been observed in the recorded runs. The
+failure is silent, which is what makes it worth a guard rather than an assumption.
+
+**Suggested solution**
+
+- Re-evaluate the indicators after the accepted advance in the no-crossing branch
+  ([`HybridAlgorithm.step()`](syssimx/system/algorithms/hybrid.py#L131)) and compare them against
+  `indicators_left`. For the case-study indicators this reads cached output ports and costs no
+  backend advance.
+- Report a crossing that appears on the accepted trajectory and was missed during detection, instead
+  of dropping it.
+- Escalate from a report to a rollback and a normal localization pass once HYB-02 has established a
+  transactional accepted advance for event sources.
+
+**Acceptance criteria**
+
+- A regression test builds an event source whose trial and accepted trajectories straddle the
+  threshold differently, and asserts that the mismatch is reported rather than silently discarded.
+
+### HYB-02 — A trial endpoint cannot be committed without re-tearing the execution order
+
+**Priority:** Medium
+
+EVID-01 proposes reusing a trial endpoint as the accepted endpoint. That reuse is not directly legal
+for the reason recorded in HYB-01. The naive alternative, accepting every advance and rolling the
+system back when detection finds a crossing, is blocked by the rollback contract.
+[`FMUComponent`](syssimx/components/fmu.py#L49) implements neither `snapshot_state()` nor
+`restore_state()`, so `supports_rollback` is `False` for `Setpoint`, `PID`, `Drive`, and both
+sensors. Only the three pendulum backends can be un-stepped, and a speculative full sweep would
+require rollback from every component in the system.
+
+A narrower restructuring keeps rollback scoped to event sources. Pin event sources to the front of
+the execution order, advance them once with the inputs at `t_left`, retain that advance, and let
+Gauss-Seidel advance only the remaining components. Roll the event sources back when a crossing is
+found, which they support by contract. Nothing without rollback ever advances speculatively, and a
+no-crossing macro step costs one backend advance per event source instead of two.
+
+The reordering is a different tearing of the same feedback loop rather than a coupling downgrade,
+provided the event source carries no relevant direct-feedthrough edge.
+[`graph.py`](syssimx/system/graph.py#L98) already computes that condition, because a feedthrough
+dependency becomes a zero-delay edge only when the output is actually connected. In the case study
+`theta` and `omega` are not feedthrough outputs and `alpha` is unconnected, so `MasterPendulum` is a
+free node in the `Drive`/`MasterPendulum` cycle and either side may step first.
+
+**Suggested solution**
+
+- Add a skip set to `GaussSeidelAlgorithm.step()` so the hybrid algorithm can exclude components it
+  has already advanced.
+- Replace the unconditional trial-and-restore with a checkpointed advance that is restored only when
+  a crossing is found. Framework history is part of `ComponentCheckpoint`, so it rolls back together
+  with the solver state.
+- Fall back to the current two-advance path whenever an event source carries a relevant feedthrough
+  edge, and assert that condition rather than assuming it.
+- Record the residue that the checkpoint does not cover, which is the monitoring state, the FEM
+  scene, and `sync_events`, and either suppress it during the speculative advance or re-emit it at
+  commit time. This depends on MC-03.
+- Note that `_set_inputs_for_generation()` still writes the later input values into the event
+  source's ports. Recorded input history will not match the values the advance actually consumed
+  unless those ports are skipped as well.
+
+**Acceptance criteria**
+
+- A no-crossing macro step invokes `_do_step_internal()` exactly once per event source.
+- A crossing macro step produces the same located event time and the same accepted trajectory as the
+  current implementation.
+
+### HYB-03 — Detection is unconditional and has no cheap rejection test
+
+**Priority:** High
+
+Every macro step pays a full backend advance per event source, whether or not a crossing is
+plausible. For the master pendulum all three indicators, `wall_hit` and both region boundaries, are
+functions of `theta` alone, and their derivative is bounded by the already available `omega` and
+`alpha`. A macro step whose indicator value exceeds that bound times `dt` cannot contain a crossing,
+so its detection advance is provably unnecessary.
+
+At `dt = 1e-3` and the angular rates reached in the case study, the resulting guard band is a few
+milliradians wide. The detection advance then survives only in the one or two macro steps that
+actually bracket a crossing, which removes almost all speculative FEM work without changing any
+result. This is the cheapest of the options listed under EVID-01, and it requires no rollback
+changes and no execution-order changes.
+
+**Suggested solution**
+
+- Extend `add_event_indicator()` with an optional derivative bound, supplied either as a constant or
+  as a callable evaluated at `t_left`.
+- Skip the detection advance for an indicator when `abs(g(t_left))` exceeds the bound times `dt`,
+  with an explicit safety margin.
+- Treat a missing bound as "no rejection possible" so existing components keep the current behavior.
+- As a second variant for `MultiComponent`, use a cheap sibling model as the predictor. The master
+  pendulum already owns a rigid-body FMU of the same plant, which can bracket a purely kinematic
+  indicator such as `theta - theta_wall` at negligible cost. This variant does not extend to the
+  deformation-driven contact gap, where the FEM internal hint remains the authority.
+
+**Acceptance criteria**
+
+- The contact benchmark reports a materially reduced trial-advance count at an unchanged accepted
+  trajectory and unchanged located event times.
+- A test asserts that an indicator without a declared bound still takes the detection advance.
+
+### HYB-04 — Localization re-steps every event source and ignores the available internal bracket
+
+**Priority:** High
+
+Bisection is the dominant cost of a macro step that does contain an event, not the single discarded
+trial advance. [`_locate_event_time()`](syssimx/system/algorithms/hybrid.py#L524) iterates up to
+`max_iter = 50` times, and each
+[`_evaluate_indicators_at()`](syssimx/system/algorithms/hybrid.py#L640) call re-advances **every**
+event source from `t_left` to the midpoint. An event raised by a cheap component therefore still
+pays repeated FEM advances.
+
+The FEM backend already reports an exact micro-step bracket through
+[`report_internal_event()`](demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py#L704),
+but that hint short-circuits localization only when the bracket is narrower than `tol_time`
+([hybrid.py](syssimx/system/algorithms/hybrid.py#L484)). A sub-step of `1e-4` never satisfies a
+`tol_time` of `1e-8`, so the hint narrows the interval and bisection still runs.
+
+Raising `tol_time` to reach that short-circuit is what exposed HYB-06, which lived in the same code
+and silently dropped events whenever a hint and the macro endpoints agreed. That defect is fixed;
+the work below should keep its regression tests green.
+
+**Suggested solution**
+
+- Restrict the midpoint evaluation to event sources that actually crossed over the macro interval,
+  and document that this assumes one crossing per indicator and macro step.
+- Accept an internal hint bracket directly as the located event time when its width is below a
+  declared localization resolution, rather than requiring `tol_time`. This depends on TIME-01,
+  because the two uses of `tol_time` must be separated first.
+- Report the bisection iteration count per located event so the benchmark can attribute localization
+  cost.
+
+**Acceptance criteria**
+
+- Locating a contact event on the FEM backend consumes no bisection advances when a usable internal
+  bracket exists.
+- Locating an event raised by a cheap component consumes no FEM advances.
+
+### HYB-06 — An internal hint that agreed with the macro endpoints silently lost its event
+
+**Priority:** High
+
+**Status:** Fixed on 2026-08-24 in
+[`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L362) and
+[`_locate_event_time()`](syssimx/system/algorithms/hybrid.py#L486), with regression coverage in
+`tests/unit/system/test_hybrid_internal_hints.py`.
+
+A component that resolves its own crossing reports the bracketing interval through
+`report_internal_event()`. When the macro endpoints straddled the crossing as well, so that both
+sources of information agreed, the algorithm located an event instant and then dispatched nothing.
+
+The loss took two steps. `_detect_crossings()` appended the macro bracket first and then skipped
+any hint whose event name was already present, treating the strictly better information as a
+duplicate. The surviving bracket therefore spanned the whole macro interval. `_locate_event_time()`
+still narrowed the search to the reported bracket and returned early, but it assembled its result
+from `hint_events`, which holds only brackets strictly narrower than the macro interval. The
+macro-wide bracket was filtered out and the function returned an empty event list.
+
+The failure was inverted from intuition. A crossing seen **only** by the internal hint dispatched
+correctly, because no macro bracket existed to displace it. A crossing seen by **both** was lost.
+Detection was strongest exactly where the event disappeared.
+
+**Why the suite did not catch it**
+
+The early return is reachable only when `tol_time` is at least as coarse as the component's internal
+sub-step. At the default `1e-8` the short-circuit never fires, bisection runs normally, and the bug
+is unreachable. Every test and every notebook using the default was therefore immune.
+`notebooks/06_casestudy_performance.ipynb` sets `tol_time = 1.5e-4` deliberately, to let the FEM
+contact hint replace roughly four FEM solves per event, and paid for it with the defect.
+
+**Measured impact**
+
+In the contact benchmark the pendulum makes five wall contacts in the 0.4 s horizon. Before the fix:
+
+| Case | Physical wall descents | Located `wall_hit` events |
+|---|---:|---:|
+| Full FEM | 5 | 2 |
+| Switched FMU/FEM | 5 | 1 |
+
+Both cases traced the same five descents, agreeing to between 0.1 ms and 4.6 ms, so the trajectories
+were never in doubt. What differed was how many of those contacts produced an event. A missed
+`wall_hit` skips its `omega_invert` restitution and the PID integral reset while the FEM penalty
+contact still repels the pendulum, so the run continues plausibly and drifts. Nothing raised.
+
+The notebook's own contact-count self-check did catch the asymmetry, reporting `2` against `1`. It
+had no committed outputs, so there is no evidence it had passed at any point.
+
+After the fix both cases locate all five contacts, and the notebook's four self-checks pass.
+
+**Fix**
+
+An internal hint now supersedes the macro bracket for the same event instead of being discarded, and
+the short-circuit falls back to any detected bracket containing the located instant when
+`hint_events` is empty, so the algorithm can never locate a time and dispatch nothing.
+
+**Residual risk**
+
+A hint bracket carries the direction of the component's *internal* indicator, while a macro bracket
+carries the direction of the *registered* one. `FEMPendulum` reports the contact gap while the
+case study registers `theta`, and the two agree only because both decrease toward contact. A model
+whose internal and registered indicators have opposite sign conventions now dispatches the hint's
+direction. That exposure already existed on the hint-only path; the fix makes the behaviour
+consistent across both paths rather than introducing a new class of it. Making
+`report_internal_event()` state which registered indicator a hint refines would remove it, and
+belongs with the HYB-04 work.
+
+### HYB-05 — MasterPendulum discards its declared direct feedthrough
+
+**Priority:** Low
+
+`MasterPendulum.__init__()` builds `direct_feedthrough` from `PENDULUM_DIRECT_FEEDTHROUGH`, which
+declares that `alpha` depends on `tau`.
+[`_initialize_component()`](demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py#L424)
+then overwrites it with `self.active_comp.direct_feedthrough`, and no pendulum backend declares one,
+so the wrapper's declared dependency is lost during initialization.
+
+This is currently harmless, because `alpha` is unconnected in every case-study system and
+[`graph.py`](syssimx/system/graph.py#L98) ignores feedthrough on unconnected outputs. It stops being
+harmless as soon as `alpha` is wired, and HYB-02 would read the wiped map when checking whether an
+event source may be moved to the front of the execution order.
+
+**Suggested solution**
+
+- Remove the overwrite and keep the declared map, or make the assignment merge rather than replace.
+- Assert during initialization that every registered backend agrees with the declared map, in the
+  same way that `MultiComponent._detect_direct_feedthrough()` already does for its models.
+
 ## Numerical evidence and performance
 
 ### EVID-01 — Speculative FEM work is approximately half of runtime
@@ -1254,6 +1626,50 @@ bisection calls.
 | Trial | 400 | Rolled back |
 | Bisection | 20 | Rolled back |
 
+**The waste belongs to detection, not to switching**
+
+Measured on 2026-08-24 in `notebooks/07_casestudy_performance_nocontact.ipynb`, after its baseline
+was given a constant, never-crossing indicator so that both cases run `HybridAlgorithm` and pay the
+same detection overhead. Before that change the baseline fell back to `GaussSeidelAlgorithm`, took
+no trial advance at all, and the discarded share existed only for the switched case, where it could
+be read as a cost of model switching.
+
+| Notebook | Case | Accepted | Trial | Bisection | Discarded model time |
+|---|---|---:|---:|---:|---:|
+| 7, no contact | Full FEM, no switching | 28.92 s / 400 calls | 28.57 s / 400 calls | none | **49.7 %** |
+| 7, no contact | Switched FEM/FMU | 6.00 s / 405 calls | 5.86 s / 405 calls | 1.40 s / 37 calls | **54.8 %** |
+| 6, with contact | Full FEM, no switching | 216.18 s / 403 calls | 221.54 s / 403 calls | none | **50.6 %** |
+| 6, with contact | Switched FMU/FEM | 100.31 s / 404 calls | 105.03 s / 404 calls | 1.36 s / 7 calls | **51.5 %** |
+
+Four measurements across two notebooks, with contact and without, switching and not. A configuration
+that never switches discards essentially the same fraction as one that does, so the trial-step waste
+is a property of the hybrid detection scheme rather than of `MultiComponent`. That is the empirical
+case for HYB-03.
+
+The two notebooks also bracket what HYB-04 is worth. Notebook 6 spends 1.36 s over 7 bisection calls,
+0.7 % of its model time, because `FEMPendulum` reports its own contact bracket and `tol_time = 1.5e-4`
+is coarse enough to accept it. Notebook 7 has no such hint and spends 1.40 s over 37 calls, 10.6 % of
+its model time, to localize five switches. Localization is nearly free exactly when a component
+reports its own bracket and the algorithm is permitted to use it.
+
+Bookkeeping scales the other way. Orchestration is 2.1 % and 2.5 % of the two runs in notebook 6,
+where a FEM solve costs about 0.54 s, against 13.4 % and 23.5 % in notebook 7, where it costs about
+0.07 s. Checkpoint and restore have a roughly fixed price per macro step, so they dominate where the
+models are cheap.
+
+The same run separates a cost this issue's call table does not. Making the baseline an event source
+moved its orchestration from 1.39 s to 8.93 s, so 7.54 s of checkpoint, restore, and indicator
+bookkeeping sits on top of the 28.57 s of discarded solve. Detection therefore costs that baseline
+36.1 s of a 66.4 s run, or 54 %, and the bookkeeping share is proportionally larger when the model
+itself is cheap: 23.5 % of the switched run against 13.4 % of the baseline. Any estimate of what
+HYB-03 recovers must count the bookkeeping, not only the solve.
+
+Two further numbers from the same run. Removing a stale tolerance margin raised bisection from 4.4
+to 7.4 evaluations per switch, which is what `tol_time = 1e-5` actually costs, for 0.40 s or about
+2 % of the switched run. And the like-for-like wall-time ratio is 3.82x, against the 1.96x the
+mismatched-algorithm comparison reported and the 5.37x its accepted-work column reported; the
+confounded pair bracketed the honest number from both sides.
+
 **Suggested solution**
 
 Evaluate, in increasing architectural scope:
@@ -1264,8 +1680,14 @@ Evaluate, in increasing architectural scope:
 3. Add a component hook such as `can_skip_detection(t, dt)`.
 4. Let event sources provide dense output or a cheap indicator predictor.
 
-Any reuse optimization depends on MC-03: a speculative step must be transactional before it can be
-committed safely.
+Any reuse optimization depends on MC-03, because a speculative step must be transactional before it
+can be committed safely.
+
+The four options above are analyzed in the "Hybrid event detection and localization" section.
+Option 1 is not directly legal as stated and needs the re-tearing recorded in HYB-02, because trial
+and accepted advances consume different inputs (HYB-01). Options 2 through 4 are consolidated in
+HYB-03, which is the cheapest change and the one to attempt first. The table above also understates
+localization work, because bisection re-advances every event source at every midpoint (HYB-04).
 
 ### EVID-02 — A convergence study is missing
 
@@ -1389,6 +1811,258 @@ v0.3.0, rather than a patch.
 - Complete the selected release-blocking fixes and evidence first.
 - Update version, release date, ORCID, DOI, changelog/release notes, and API documentation.
 - Tag v0.3.0 only after the full reproducibility gate is archived.
+
+### HARD-05 — OpenModelica CVODE exports corrupt the heap in `fmi2FreeInstance`
+
+**Priority:** High
+
+**Status:** Root cause isolated on 2026-08-22. Step 1 landed on 2026-08-24: release is now governed
+by a static per-archive policy instead of a blanket retain-everything workaround. The defective
+exports are unchanged, and steps 2 through 5 remain open.
+
+`resolve_release_policy()` reads the solver flag out of the archive and the continuous-state count
+out of the model description, so a component knows before it ever instantiates whether releasing is
+safe. `FMUComponent.release_policy` carries the verdict and its reason. `reset()`,
+`reinitialize_instance()`, and the restored `free()` release when it allows and retain when it does
+not; `soft_reset()` refuses outright on a retained archive, because `fmi2Reset` fails on exactly the
+same exports. Verified against all thirteen checked-in archives, and against the release path itself
+in a subprocess so a wrong verdict would be an exit code rather than a lost session.
+
+Six of the thirteen archives are now released rather than stranded, including four of the six FMUs in
+the quantization system. Step 5 of the plan below is done: the lifecycle tests assert the policy
+rather than the raw calls.
+
+The policy separates two questions, because the evidence only covers one platform. Retention is
+conservative everywhere, since being wrong that way leaks memory while being wrong the other way
+aborts the process. Refusing `fmi2Reset` removes working functionality instead, so
+`FMUReleasePolicy.resettable` refuses only where the fault is recorded. Linux CI exercises
+`soft_reset()` successfully on `tests/fixtures/fmus/Pendulum.fmu`, a CVODE export with two continuous
+states, which is the first direct evidence bearing on step 4: at least `fmi2Reset` on at least that
+export does not fault on Linux. Nothing yet says whether `fmi2FreeInstance` behaves there.
+
+Calling `fmi2FreeInstance` on an affected FMU raises Windows exception `0xC0000374`, heap corruption,
+which takes the whole process down. `FMUComponent` therefore no longer calls `fmi2Terminate` or
+`fmi2FreeInstance` and no longer removes the extraction directory. `reset()` drops the instance
+reference and `reinitialize_instance()` builds a new slave over the retained directory. Both
+master-pendulum tutorials, both FMU tutorials, and the master-pendulum switching path work again with
+the default `cvode` solver.
+
+**Which call fails**
+
+Every scenario below was run in its own subprocess against each checked-in FMU, so a corrupted heap
+is a recorded exit code rather than a lost session. The scenarios build up from a bare instantiation
+to a full stepped run.
+
+| Scenario | Calls after instantiation | Affected FMUs | Unaffected FMUs |
+|---|---|---|---|
+| `inst_free` | `fmi2FreeInstance` | heap corruption | ok |
+| `init_free` | initialize, `fmi2FreeInstance` | heap corruption | ok |
+| `init_term` | initialize, `fmi2Terminate` | ok | ok |
+| `init_term_free` | initialize, terminate, free | heap corruption | ok |
+| `step_term` | 10 steps, `fmi2Terminate` | ok | ok |
+| `step_free` | 10 steps, `fmi2FreeInstance` | heap corruption | ok |
+| `step_term_free` | 10 steps, terminate, free | heap corruption | ok |
+| `step_term_free_lib` | 10 steps, terminate, free, `freeLibrary` | heap corruption | ok |
+| `step_reset` | 10 steps, `fmi2Reset` | heap corruption | ok |
+| `step_reset_reinit_step` | 10 steps, reset, initialize, 10 steps | heap corruption | ok |
+| `reinstantiate_x5` | five further `fmi2Instantiate` cycles, nothing released | ok | ok |
+
+Three results matter. `fmi2FreeInstance` is the only failing call, and it already fails on a bare
+instantiation, before initialization mode and before any step. `fmi2Terminate` is safe everywhere,
+so terminating without freeing is a legitimate partial cleanup. `fmi2Reset` fails on exactly the same
+FMUs, which removes `soft_reset()` from the list of escapes and rules out rollback, stepping,
+accumulated solver state, and the hybrid trial machinery as causes.
+
+**Which FMUs fail**
+
+The failure is a property of the export, not of the model. Each affected FMU declares `"s": "cvode"`
+in `resources/<model>_flags.json` and has at least one continuous state. Zero-state CVODE exports
+never allocate the solver and are unaffected.
+
+| FMU | Solver flag | Continuous states | `fmi2FreeInstance` |
+|---|---|---|---|
+| `Plants/Pendulum_cvode` | cvode | 2 | heap corruption |
+| `Plants/Pendulum_euler` | euler | 2 | ok |
+| `Plants/PendulumWithDiscreteWall` | cvode | 2 | heap corruption |
+| `Controllers/PIDControllerReset_cvode` | cvode | 2 | heap corruption |
+| `Controllers/PIDControllerReset_euler` | euler | 2 | ok |
+| `Controllers/PIDController` | cvode | 2 | heap corruption |
+| `Actuators/DriveDynamic` | cvode | 1 | heap corruption |
+| `Sensors/AngleSensor` | cvode | 0 | ok |
+| `Sensors/AngleDecoder` | cvode | 0 | ok |
+| `Trajectories/SetPoint` | cvode | 0 | ok |
+| `docs/.../pendulum_cvode` | cvode | 2 | heap corruption |
+| `docs/.../pendulum_euler` | euler | 2 | ok |
+
+The rule was derived from the first eight rows and then used to predict the remaining four before
+they were run. All four predictions held, including the two zero-state CVODE exports that survive
+and the one-state `DriveDynamic` that does not. Every FMU was produced by OpenModelica 1.26.3.
+
+This makes the fault the CVODE teardown inside the OpenModelica runtime rather than the framework's
+calling sequence. The likely mechanism is a double free or a free of an uninitialized SUNDIALS
+handle, reachable as soon as the solver object exists, which is why a model with no continuous
+states escapes it.
+
+**Suggested solution**
+
+The staged plan below restores real cleanup for the FMUs that can take it, without putting a
+crashing call back on any path.
+
+1. Give `FMUComponent` a release policy derived statically at construction. The predicate above is
+   readable from the archive without executing anything, so a component can know whether releasing
+   is safe before it ever instantiates. Release when safe and retain when not. This alone restores
+   correct lifecycle handling for every euler export and for the three zero-state sensor and
+   trajectory FMUs, which is half of the quantization system.
+2. Back the static predicate with an out-of-process capability probe for FMUs it does not recognize,
+   such as exports from another tool. One subprocess per FMU file runs instantiate, terminate, and
+   free, and the result is cached against the file's path, size, and modification time. A crashed
+   probe marks the file unsafe and costs one process, not the session.
+3. Re-export the affected demo FMUs with the euler solver, or with a newer OpenModelica, and confirm
+   with the matrix above. The euler exports are already known good, and switching the demo default
+   away from `cvode` removes the problem from the published tutorials rather than working around it.
+4. Report the defect upstream with the minimal reproduction, which is instantiate followed by
+   `fmi2FreeInstance` on any CVODE export with at least one continuous state. Check whether
+   OpenModelica 1.27 or a nightly build still shows it, and whether the same export crashes on Linux.
+5. Extend the lifecycle tests to both checked-in solver variants instead of only the euler one, and
+   assert the release policy rather than the raw calls, so a regression in either variant is visible.
+   This overlaps HARD-01's uneven backend coverage.
+
+Until step 3 lands, the demo default staying `cvode` is a deliberate choice that keeps a defective
+binary in the published tutorials and pays for it with the retained resources HARD-07 measures.
+
+### HARD-06 — Published notebooks are unexecuted and leak machine-specific paths
+
+**Priority:** Medium
+
+**Status:** Partially addressed by Milestone 7.
+
+Two separate problems in the published notebook set.
+
+First, execution. `nb_execution_mode = "off"` means a notebook can rot, or carry no outputs at all,
+without any job failing. Milestone 7 adds an nbmake gate, but it covers only the two switching
+notebooks that need no simulation backend. Everything else remains ungated: the master-pendulum
+tutorials while HARD-05 is open, the tool-integration notebooks that need real backends, and the
+long-running Wave 2 evidence notebooks.
+
+Second, output hygiene. `set_professional_style()` returns the `pyplot` module, so a bare call as
+the last expression of a cell renders a repr containing the executing machine's absolute install
+path. Notebook 3 was fixed with a semicolon. Five published notebooks still call it the same way
+and will leak when re-executed:
+
+- `notebooks/01_algorithm_verification.ipynb`
+- `notebooks/02_hybrid_verification.ipynb`
+- `notebooks/04_casestudy_baseline.ipynb`
+- `notebooks/05_casestudy_model_switching.ipynb`
+- `notebooks/06_casestudy_performance.ipynb`
+- `notebooks/performance.ipynb`
+
+Two published notebooks already carry leaked paths in committed outputs, from runs predating the
+switching work:
+
+- `docs/03_core_tutorials/01_fundamentals/02_importing_fmus.ipynb`, cells 1 and 17
+- `docs/04_tool_integration/01_modelica/01_modelica_pendulum_basics.ipynb`, cell 3
+
+**Suggested solution**
+
+- Apply the semicolon to each remaining published caller as it is re-executed, or stop returning
+  `plt` and update the `demos/` notebooks that bind its result.
+- Re-execute the two notebooks carrying leaked paths and confirm the scan is clean.
+- Extend the nbmake gate as blockers clear: the master-pendulum tutorials once HARD-05 is fixed,
+  and the backend tutorials in the `test-fem` job.
+- Run the long Wave 2 notebooks in the scheduled physics gate from HARD-02 rather than on pull
+  requests.
+- Add the absolute-path scan to CI so a leak cannot be committed again.
+- Make the saved figures reproducible. `notebooks/03_multi_comp_verification.ipynb` writes the
+  tracked `notebooks/figures/03_multi_component_switching.pdf`, and every execution rewrites it with
+  identical size but different bytes, because Matplotlib stamps a creation date into the PDF. Any
+  notebook run therefore dirties the working tree and any re-run produces a spurious diff. Setting
+  `SOURCE_DATE_EPOCH`, or `pdf.compression`/metadata options, removes the churn.
+
+### HARD-07 — Native FMU instances and extraction directories are never released
+
+**Priority:** Medium
+
+**Status:** Measured on 2026-08-22 in `notebooks/08_fmu_memory.ipynb`. Step 1 landed on 2026-08-24:
+extraction is cached on the archive's identity, so the disk cost is gone for every FMU. Steps 2
+through 6 remain open.
+
+`extract_cached()` keys on path, size, and modification time, so every component and every repeated
+`initialize()` reuses one directory, while a rebuilt archive is still extracted afresh.
+`clear_extraction_cache()` provides the teardown that step 4 will build on. Measured over ten
+`reset()`/`initialize()` cycles: **zero** new extraction directories, for a releasable and a retained
+archive alike, against one whole directory per cycle before.
+
+Resident growth is down to roughly 0.11 MB per cycle and is now dominated by the `ctypes` library
+mapping rather than by the FMI instance, because `freeLibrary` is still never called. That is the
+next thing to attack, and it is independent of the OpenModelica defect.
+
+Creating one usable FMU allocates in three places, and Python owns only one of them. `fmpy.extract()`
+unpacks the archive into a temporary directory that nobody removes on its own. `FMU2Slave` loads the
+model library through `ctypes`, which keeps it mapped until `freeLibrary` is called. `fmi2Instantiate`
+allocates the model state on the C heap, reachable only through the opaque component pointer and
+releasable only by `fmi2FreeInstance`.
+
+`fmpy.fmi2.FMU2Slave` defines no finalizer anywhere in its class hierarchy, so garbage collecting the
+wrapper cannot release any of it. Dropping the wrapper is in fact worse than leaking, because the
+pointer that `fmi2FreeInstance` needs is discarded with the object. The notebook measures this
+directly. Deleting an initialized component and forcing a full collection reclaimed 315 Python
+objects and 0.00 MB of resident memory, and left the extraction directory in place.
+
+**Measured cost**
+
+| Path | Resident growth | Disk growth | Extraction directory |
+|---|---|---|---|
+| `reset()` then `initialize()`, one plant FMU | 0.63 MB per cycle | 5.12 MB per cycle | new every cycle |
+| `reset()` then `initialize()` then `run()`, quantization system of six FMUs | 2.55 MB per cycle | 30.8 MB per cycle | six new every cycle |
+| `reinitialize_instance()`, the hybrid rollback path, euler plant | 0.037 MB per call | none | reused |
+| `reinitialize_instance()`, the hybrid rollback path, CVODE plant | 0.004 MB per call | none | reused |
+| terminate, free, and re-instantiate, the same loop with release, euler plant | 0.00 MB per call | none | reused |
+
+Two things follow. Rollback is much cheaper than the initialization cycle and does not re-extract
+anything, so a hybrid run with many bisection restores grows slowly and only in native heap. The
+expensive path is repeated initialization, where each cycle strands a whole extraction directory, and
+that is the path every parameter study takes. Across the whole measurement the Python heap moved
+0.06 MB per system cycle against 2.55 MB of resident growth, which is what identifies the growth as
+native rather than collectable.
+
+The last row is the control. When the instance is released, the same twenty-cycle loop returns to
+where it started, so the memory is reclaimable in principle and only the affected exports make
+reclaiming it unsafe.
+
+For the current notebooks and tests this is affordable, because they initialize a handful of times
+and the kernel then exits. It is not affordable for a long parameter study, a many-switch run, or a
+session that keeps one kernel alive. One execution of the measurement notebook itself leaves 47
+extraction directories and 241 MB of temporary files behind, which Windows keeps locked until the
+kernel exits.
+
+**Suggested solution**
+
+1. Cache extraction per FMU file rather than per initialization. Key the cache on the resolved path
+   with its size and modification time, and let every component and every later `initialize()` reuse
+   the same directory. This removes the entire disk cost and the repeated unzip, is independent of
+   HARD-05, and is safe for every FMU.
+2. Give rollback an ordered strategy instead of one fixed mechanism. Prefer `fmi2GetFMUstate` and
+   `fmi2SetFMUstate` when the FMU declares the capability, which allocates nothing per restore. Fall
+   back to `fmi2Reset` when the HARD-05 release policy says the FMU tolerates it. Fall back to
+   terminate, free, and re-instantiate when release is safe. Keep today's retain-and-re-instantiate
+   only as the last resort for the affected exports.
+3. Re-export the demo FMUs with `-d=fmuExperimental` so they declare `canGetAndSetFMUstate`. The two
+   FMUs under `docs/04_tool_integration/01_modelica/fmus` already declare it while none of the demo
+   FMUs do, which is why rollback currently re-instantiates instead of restoring state. Pair this with
+   the euler re-export from HARD-05, because tutorial 03 already shows that restoring a CVODE FMU's
+   state produces a fatal `fmi2DoStep` on the next step while the euler FMU restores cleanly.
+4. Release everything releasable at teardown. A `System`-level teardown, or a context manager around
+   a run, can free every instance whose release policy allows it and remove the cached extraction
+   directories, so a completed study returns its memory instead of holding it until the interpreter
+   exits.
+5. Count what is retained and expose it. A per-component counter of stranded instances, surfaced in
+   the run summary and warned on past a threshold, turns a silent leak into a visible number and
+   gives the performance work in EVID-01 a quantity to report.
+6. Consider process isolation only if an affected FMU ever has to be released mid-run. Running that
+   FMU in a worker process gives both crash isolation and real release, at the cost of marshalling
+   every port value across the boundary.
+
+Steps 1 and 2 are worth doing regardless of whether the OpenModelica defect is ever fixed.
 
 ## Reproducibility
 
@@ -1566,22 +2240,36 @@ together. Test-only forced cycling already lives in an external signal harness.
 
 Milestones 1 through 6 established the release-candidate switching mechanism, its canonical
 real-backend transfer gate, its lifecycle/rollback guarantees, and the measured fidelity of every
-directed transfer. The remaining order focuses on paper/release evidence without reopening the
-public API.
+directed transfer. Milestone 7 restored the backend-free switching notebooks and gated them. The
+remaining order focuses on paper/release evidence without reopening the public API.
 
-1. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
-   measure accepted versus trial work now that speculative effects are isolated.
-2. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
-   EVID-04 and EVID-05 for a representative benchmark and independent-master comparison.
-3. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
+1. **Close out the CVODE FMU defect and its cost:** HARD-05 and HARD-07. The failing call is
+   isolated to `fmi2FreeInstance` on any OpenModelica CVODE export with at least one continuous
+   state, and the workaround that unblocked the tutorials strands one native instance and one
+   extraction directory per initialization. The cheapest next moves are a statically derived release
+   policy and an extraction cache, which need no upstream fix, followed by re-exporting the affected
+   demo FMUs and deciding whether the demo default stays `cvode`.
+2. **Remove avoidable speculative work:** EVID-01, HYB-01 through HYB-04. HYB-06 is already
+   fixed and its regression tests must stay green through any change to detection or localization.
+   The performance notebooks have been re-run and EVID-01 now carries four measurements of accepted
+   versus trial work. Take HYB-01 first, because it is a silent-miss guard that costs no backend advance and
+   is independent of the cost work. Then take HYB-03, which removes most speculative FEM advances
+   without touching the execution order or the rollback contract. HYB-04 pays off on macro steps
+   that do contain an event. Treat HYB-02 as optional, because it is a redesign of the tearing, and
+   it invalidates every executed notebook and derived figure.
+3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
+   EVID-04 and EVID-05 for a representative benchmark and independent-master comparison. Settle the
+   experiment design first, then execute the four Wave 2 notebooks once against it; they are still
+   cleared and are the raw material for EVID-01, EVID-03, and EVID-04.
+4. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
    platform-complete generic FMU fixtures, and a scheduled contact/FEM physics run.
-4. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
+5. **Simplify the remaining internals:** MC-11, MC-12, and HYB-05. Remove dead adapter/state fields,
    consolidate switch history, automate port lifecycle, and replace backend-private metadata
    access. Do not add another switching policy hierarchy.
-5. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
+6. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before propagating ticks through
    every component API.
-6. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
+7. **Archive a reproducible minor release:** HARD-03, HARD-04, and REPRO-01. Update metadata and tag
    v0.3.0 only after the chosen gate and paper evidence are archived; the tag triggers the existing
    `publish-pypi.yml` workflow.
 
@@ -1607,5 +2295,7 @@ The repository is ready to serve as the paper/release baseline when, in addition
 - the benchmark covers all intended regimes and is reproducible from archived raw data;
 - FMU-only results agree with at least one independent master within declared tolerances;
 - supported backends have meaningful automated coverage, including the scheduled slow FEM gate;
+- every published notebook carries outputs produced by a recorded environment, executes in CI or a
+  scheduled gate, and leaks no machine-specific paths;
 - environments and platform FMUs are pinned or attached to the release; and
 - package, citation, DOI/ORCID, changelog, and v0.3.0 release metadata agree.
