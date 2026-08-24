@@ -1346,6 +1346,263 @@ For the paper, integer time and resolution negotiation should be attributed to t
 hybrid co-simulation literature, including Cremona et al. (2019), rather than presented as a novel
 contribution.
 
+## Hybrid event detection and localization
+
+This section refines EVID-01. EVID-01 records the measured cost of speculative FEM work. The issues
+below record why the obvious reuse fix is not directly legal, which cheaper fixes are available, and
+one correctness risk that the current detection scheme carries independently of cost.
+
+### HYB-01 — Detection runs on a trajectory the system never takes
+
+**Priority:** High
+
+[`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L328) advances every event source with
+the inputs cached at `t_left`. The accepted advance re-reads inputs after the upstream generation
+has already stepped, in
+[`GaussSeidelAlgorithm.step()`](syssimx/system/algorithms/gauss_seidel.py#L63). In the case-study
+system `Drive` precedes `MasterPendulum`, so the trial advance consumes `tau(t_left)` while the
+accepted advance consumes `tau(t_left + dt)`. Detection therefore evaluates indicators on a
+trajectory that is never committed.
+
+This has two consequences.
+
+1. The trial endpoint cannot be reused as the accepted endpoint without changing the coupling. See
+   HYB-02.
+2. A crossing that is present on the accepted trajectory but absent on the trial trajectory is never
+   detected. For a falling indicator the miss is permanent rather than deferred by one macro step.
+   [`detect_event_crossings()`](syssimx/core/base.py#L1348) requires `prev_sign > 0`, so once the
+   indicator has gone negative without the event firing, the following macro step starts below zero
+   and the crossing can no longer be observed. The notebook `wall_hit` indicator is registered with
+   `direction=-1`, so a missed contact means the pendulum passes through the wall and never
+   recovers.
+
+The window is narrow, because the crossing must fall inside the band by which one macro step of
+torque difference displaces `theta`, and no such miss has been observed in the recorded runs. The
+failure is silent, which is what makes it worth a guard rather than an assumption.
+
+**Suggested solution**
+
+- Re-evaluate the indicators after the accepted advance in the no-crossing branch
+  ([`HybridAlgorithm.step()`](syssimx/system/algorithms/hybrid.py#L131)) and compare them against
+  `indicators_left`. For the case-study indicators this reads cached output ports and costs no
+  backend advance.
+- Report a crossing that appears on the accepted trajectory and was missed during detection, instead
+  of dropping it.
+- Escalate from a report to a rollback and a normal localization pass once HYB-02 has established a
+  transactional accepted advance for event sources.
+
+**Acceptance criteria**
+
+- A regression test builds an event source whose trial and accepted trajectories straddle the
+  threshold differently, and asserts that the mismatch is reported rather than silently discarded.
+
+### HYB-02 — A trial endpoint cannot be committed without re-tearing the execution order
+
+**Priority:** Medium
+
+EVID-01 proposes reusing a trial endpoint as the accepted endpoint. That reuse is not directly legal
+for the reason recorded in HYB-01. The naive alternative, accepting every advance and rolling the
+system back when detection finds a crossing, is blocked by the rollback contract.
+[`FMUComponent`](syssimx/components/fmu.py#L49) implements neither `snapshot_state()` nor
+`restore_state()`, so `supports_rollback` is `False` for `Setpoint`, `PID`, `Drive`, and both
+sensors. Only the three pendulum backends can be un-stepped, and a speculative full sweep would
+require rollback from every component in the system.
+
+A narrower restructuring keeps rollback scoped to event sources. Pin event sources to the front of
+the execution order, advance them once with the inputs at `t_left`, retain that advance, and let
+Gauss-Seidel advance only the remaining components. Roll the event sources back when a crossing is
+found, which they support by contract. Nothing without rollback ever advances speculatively, and a
+no-crossing macro step costs one backend advance per event source instead of two.
+
+The reordering is a different tearing of the same feedback loop rather than a coupling downgrade,
+provided the event source carries no relevant direct-feedthrough edge.
+[`graph.py`](syssimx/system/graph.py#L98) already computes that condition, because a feedthrough
+dependency becomes a zero-delay edge only when the output is actually connected. In the case study
+`theta` and `omega` are not feedthrough outputs and `alpha` is unconnected, so `MasterPendulum` is a
+free node in the `Drive`/`MasterPendulum` cycle and either side may step first.
+
+**Suggested solution**
+
+- Add a skip set to `GaussSeidelAlgorithm.step()` so the hybrid algorithm can exclude components it
+  has already advanced.
+- Replace the unconditional trial-and-restore with a checkpointed advance that is restored only when
+  a crossing is found. Framework history is part of `ComponentCheckpoint`, so it rolls back together
+  with the solver state.
+- Fall back to the current two-advance path whenever an event source carries a relevant feedthrough
+  edge, and assert that condition rather than assuming it.
+- Record the residue that the checkpoint does not cover, which is the monitoring state, the FEM
+  scene, and `sync_events`, and either suppress it during the speculative advance or re-emit it at
+  commit time. This depends on MC-03.
+- Note that `_set_inputs_for_generation()` still writes the later input values into the event
+  source's ports. Recorded input history will not match the values the advance actually consumed
+  unless those ports are skipped as well.
+
+**Acceptance criteria**
+
+- A no-crossing macro step invokes `_do_step_internal()` exactly once per event source.
+- A crossing macro step produces the same located event time and the same accepted trajectory as the
+  current implementation.
+
+### HYB-03 — Detection is unconditional and has no cheap rejection test
+
+**Priority:** High
+
+Every macro step pays a full backend advance per event source, whether or not a crossing is
+plausible. For the master pendulum all three indicators, `wall_hit` and both region boundaries, are
+functions of `theta` alone, and their derivative is bounded by the already available `omega` and
+`alpha`. A macro step whose indicator value exceeds that bound times `dt` cannot contain a crossing,
+so its detection advance is provably unnecessary.
+
+At `dt = 1e-3` and the angular rates reached in the case study, the resulting guard band is a few
+milliradians wide. The detection advance then survives only in the one or two macro steps that
+actually bracket a crossing, which removes almost all speculative FEM work without changing any
+result. This is the cheapest of the options listed under EVID-01, and it requires no rollback
+changes and no execution-order changes.
+
+**Suggested solution**
+
+- Extend `add_event_indicator()` with an optional derivative bound, supplied either as a constant or
+  as a callable evaluated at `t_left`.
+- Skip the detection advance for an indicator when `abs(g(t_left))` exceeds the bound times `dt`,
+  with an explicit safety margin.
+- Treat a missing bound as "no rejection possible" so existing components keep the current behavior.
+- As a second variant for `MultiComponent`, use a cheap sibling model as the predictor. The master
+  pendulum already owns a rigid-body FMU of the same plant, which can bracket a purely kinematic
+  indicator such as `theta - theta_wall` at negligible cost. This variant does not extend to the
+  deformation-driven contact gap, where the FEM internal hint remains the authority.
+
+**Acceptance criteria**
+
+- The contact benchmark reports a materially reduced trial-advance count at an unchanged accepted
+  trajectory and unchanged located event times.
+- A test asserts that an indicator without a declared bound still takes the detection advance.
+
+### HYB-04 — Localization re-steps every event source and ignores the available internal bracket
+
+**Priority:** High
+
+Bisection is the dominant cost of a macro step that does contain an event, not the single discarded
+trial advance. [`_locate_event_time()`](syssimx/system/algorithms/hybrid.py#L524) iterates up to
+`max_iter = 50` times, and each
+[`_evaluate_indicators_at()`](syssimx/system/algorithms/hybrid.py#L640) call re-advances **every**
+event source from `t_left` to the midpoint. An event raised by a cheap component therefore still
+pays repeated FEM advances.
+
+The FEM backend already reports an exact micro-step bracket through
+[`report_internal_event()`](demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py#L704),
+but that hint short-circuits localization only when the bracket is narrower than `tol_time`
+([hybrid.py](syssimx/system/algorithms/hybrid.py#L484)). A sub-step of `1e-4` never satisfies a
+`tol_time` of `1e-8`, so the hint narrows the interval and bisection still runs.
+
+Raising `tol_time` to reach that short-circuit is what exposed HYB-06, which lived in the same code
+and silently dropped events whenever a hint and the macro endpoints agreed. That defect is fixed;
+the work below should keep its regression tests green.
+
+**Suggested solution**
+
+- Restrict the midpoint evaluation to event sources that actually crossed over the macro interval,
+  and document that this assumes one crossing per indicator and macro step.
+- Accept an internal hint bracket directly as the located event time when its width is below a
+  declared localization resolution, rather than requiring `tol_time`. This depends on TIME-01,
+  because the two uses of `tol_time` must be separated first.
+- Report the bisection iteration count per located event so the benchmark can attribute localization
+  cost.
+
+**Acceptance criteria**
+
+- Locating a contact event on the FEM backend consumes no bisection advances when a usable internal
+  bracket exists.
+- Locating an event raised by a cheap component consumes no FEM advances.
+
+### HYB-06 — An internal hint that agreed with the macro endpoints silently lost its event
+
+**Priority:** High
+
+**Status:** Fixed on 2026-08-24 in
+[`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L362) and
+[`_locate_event_time()`](syssimx/system/algorithms/hybrid.py#L486), with regression coverage in
+`tests/unit/system/test_hybrid_internal_hints.py`.
+
+A component that resolves its own crossing reports the bracketing interval through
+`report_internal_event()`. When the macro endpoints straddled the crossing as well, so that both
+sources of information agreed, the algorithm located an event instant and then dispatched nothing.
+
+The loss took two steps. `_detect_crossings()` appended the macro bracket first and then skipped
+any hint whose event name was already present, treating the strictly better information as a
+duplicate. The surviving bracket therefore spanned the whole macro interval. `_locate_event_time()`
+still narrowed the search to the reported bracket and returned early, but it assembled its result
+from `hint_events`, which holds only brackets strictly narrower than the macro interval. The
+macro-wide bracket was filtered out and the function returned an empty event list.
+
+The failure was inverted from intuition. A crossing seen **only** by the internal hint dispatched
+correctly, because no macro bracket existed to displace it. A crossing seen by **both** was lost.
+Detection was strongest exactly where the event disappeared.
+
+**Why the suite did not catch it**
+
+The early return is reachable only when `tol_time` is at least as coarse as the component's internal
+sub-step. At the default `1e-8` the short-circuit never fires, bisection runs normally, and the bug
+is unreachable. Every test and every notebook using the default was therefore immune.
+`notebooks/06_casestudy_performance.ipynb` sets `tol_time = 1.5e-4` deliberately, to let the FEM
+contact hint replace roughly four FEM solves per event, and paid for it with the defect.
+
+**Measured impact**
+
+In the contact benchmark the pendulum makes five wall contacts in the 0.4 s horizon. Before the fix:
+
+| Case | Physical wall descents | Located `wall_hit` events |
+|---|---:|---:|
+| Full FEM | 5 | 2 |
+| Switched FMU/FEM | 5 | 1 |
+
+Both cases traced the same five descents, agreeing to between 0.1 ms and 4.6 ms, so the trajectories
+were never in doubt. What differed was how many of those contacts produced an event. A missed
+`wall_hit` skips its `omega_invert` restitution and the PID integral reset while the FEM penalty
+contact still repels the pendulum, so the run continues plausibly and drifts. Nothing raised.
+
+The notebook's own contact-count self-check did catch the asymmetry, reporting `2` against `1`. It
+had no committed outputs, so there is no evidence it had passed at any point.
+
+After the fix both cases locate all five contacts, and the notebook's four self-checks pass.
+
+**Fix**
+
+An internal hint now supersedes the macro bracket for the same event instead of being discarded, and
+the short-circuit falls back to any detected bracket containing the located instant when
+`hint_events` is empty, so the algorithm can never locate a time and dispatch nothing.
+
+**Residual risk**
+
+A hint bracket carries the direction of the component's *internal* indicator, while a macro bracket
+carries the direction of the *registered* one. `FEMPendulum` reports the contact gap while the
+case study registers `theta`, and the two agree only because both decrease toward contact. A model
+whose internal and registered indicators have opposite sign conventions now dispatches the hint's
+direction. That exposure already existed on the hint-only path; the fix makes the behaviour
+consistent across both paths rather than introducing a new class of it. Making
+`report_internal_event()` state which registered indicator a hint refines would remove it, and
+belongs with the HYB-04 work.
+
+### HYB-05 — MasterPendulum discards its declared direct feedthrough
+
+**Priority:** Low
+
+`MasterPendulum.__init__()` builds `direct_feedthrough` from `PENDULUM_DIRECT_FEEDTHROUGH`, which
+declares that `alpha` depends on `tau`.
+[`_initialize_component()`](demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py#L424)
+then overwrites it with `self.active_comp.direct_feedthrough`, and no pendulum backend declares one,
+so the wrapper's declared dependency is lost during initialization.
+
+This is currently harmless, because `alpha` is unconnected in every case-study system and
+[`graph.py`](syssimx/system/graph.py#L98) ignores feedthrough on unconnected outputs. It stops being
+harmless as soon as `alpha` is wired, and HYB-02 would read the wiped map when checking whether an
+event source may be moved to the front of the execution order.
+
+**Suggested solution**
+
+- Remove the overwrite and keep the declared map, or make the assignment merge rather than replace.
+- Assert during initialization that every registered backend agrees with the declared map, in the
+  same way that `MultiComponent._detect_direct_feedthrough()` already does for its models.
+
 ## Numerical evidence and performance
 
 ### EVID-01 — Speculative FEM work is approximately half of runtime
@@ -1363,6 +1620,50 @@ bisection calls.
 | Trial | 400 | Rolled back |
 | Bisection | 20 | Rolled back |
 
+**The waste belongs to detection, not to switching**
+
+Measured on 2026-08-24 in `notebooks/07_casestudy_performance_nocontact.ipynb`, after its baseline
+was given a constant, never-crossing indicator so that both cases run `HybridAlgorithm` and pay the
+same detection overhead. Before that change the baseline fell back to `GaussSeidelAlgorithm`, took
+no trial advance at all, and the discarded share existed only for the switched case, where it could
+be read as a cost of model switching.
+
+| Notebook | Case | Accepted | Trial | Bisection | Discarded model time |
+|---|---|---:|---:|---:|---:|
+| 7, no contact | Full FEM, no switching | 28.92 s / 400 calls | 28.57 s / 400 calls | none | **49.7 %** |
+| 7, no contact | Switched FEM/FMU | 6.00 s / 405 calls | 5.86 s / 405 calls | 1.40 s / 37 calls | **54.8 %** |
+| 6, with contact | Full FEM, no switching | 216.18 s / 403 calls | 221.54 s / 403 calls | none | **50.6 %** |
+| 6, with contact | Switched FMU/FEM | 100.31 s / 404 calls | 105.03 s / 404 calls | 1.36 s / 7 calls | **51.5 %** |
+
+Four measurements across two notebooks, with contact and without, switching and not. A configuration
+that never switches discards essentially the same fraction as one that does, so the trial-step waste
+is a property of the hybrid detection scheme rather than of `MultiComponent`. That is the empirical
+case for HYB-03.
+
+The two notebooks also bracket what HYB-04 is worth. Notebook 6 spends 1.36 s over 7 bisection calls,
+0.7 % of its model time, because `FEMPendulum` reports its own contact bracket and `tol_time = 1.5e-4`
+is coarse enough to accept it. Notebook 7 has no such hint and spends 1.40 s over 37 calls, 10.6 % of
+its model time, to localize five switches. Localization is nearly free exactly when a component
+reports its own bracket and the algorithm is permitted to use it.
+
+Bookkeeping scales the other way. Orchestration is 2.1 % and 2.5 % of the two runs in notebook 6,
+where a FEM solve costs about 0.54 s, against 13.4 % and 23.5 % in notebook 7, where it costs about
+0.07 s. Checkpoint and restore have a roughly fixed price per macro step, so they dominate where the
+models are cheap.
+
+The same run separates a cost this issue's call table does not. Making the baseline an event source
+moved its orchestration from 1.39 s to 8.93 s, so 7.54 s of checkpoint, restore, and indicator
+bookkeeping sits on top of the 28.57 s of discarded solve. Detection therefore costs that baseline
+36.1 s of a 66.4 s run, or 54 %, and the bookkeeping share is proportionally larger when the model
+itself is cheap: 23.5 % of the switched run against 13.4 % of the baseline. Any estimate of what
+HYB-03 recovers must count the bookkeeping, not only the solve.
+
+Two further numbers from the same run. Removing a stale tolerance margin raised bisection from 4.4
+to 7.4 evaluations per switch, which is what `tol_time = 1e-5` actually costs, for 0.40 s or about
+2 % of the switched run. And the like-for-like wall-time ratio is 3.82x, against the 1.96x the
+mismatched-algorithm comparison reported and the 5.37x its accepted-work column reported; the
+confounded pair bracketed the honest number from both sides.
+
 **Suggested solution**
 
 Evaluate, in increasing architectural scope:
@@ -1373,8 +1674,14 @@ Evaluate, in increasing architectural scope:
 3. Add a component hook such as `can_skip_detection(t, dt)`.
 4. Let event sources provide dense output or a cheap indicator predictor.
 
-Any reuse optimization depends on MC-03: a speculative step must be transactional before it can be
-committed safely.
+Any reuse optimization depends on MC-03, because a speculative step must be transactional before it
+can be committed safely.
+
+The four options above are analyzed in the "Hybrid event detection and localization" section.
+Option 1 is not directly legal as stated and needs the re-tearing recorded in HYB-02, because trial
+and accepted advances consume different inputs (HYB-01). Options 2 through 4 are consolidated in
+HYB-03, which is the cheapest change and the one to attempt first. The table above also understates
+localization work, because bisection re-advances every event source at every midpoint (HYB-04).
 
 ### EVID-02 — A convergence study is missing
 
@@ -1904,15 +2211,21 @@ remaining order focuses on paper/release evidence without reopening the public A
    extraction directory per initialization. The cheapest next moves are a statically derived release
    policy and an extraction cache, which need no upstream fix, followed by re-exporting the affected
    demo FMUs and deciding whether the demo default stays `cvode`.
-2. **Remove avoidable speculative work:** EVID-01. Re-run the migrated performance notebook and
-   measure accepted versus trial work now that speculative effects are isolated.
+2. **Remove avoidable speculative work:** EVID-01, HYB-01 through HYB-04. HYB-06 is already
+   fixed and its regression tests must stay green through any change to detection or localization.
+   The performance notebooks have been re-run and EVID-01 now carries four measurements of accepted
+   versus trial work. Take HYB-01 first, because it is a silent-miss guard that costs no backend advance and
+   is independent of the cost work. Then take HYB-03, which removes most speculative FEM advances
+   without touching the execution order or the rollback contract. HYB-04 pays off on macro steps
+   that do contain an event. Treat HYB-02 as optional, because it is a redesign of the tearing, and
+   it invalidates every executed notebook and derived figure.
 3. **Produce numerical evidence:** EVID-02 and EVID-03 together on the smooth pendulum, followed by
    EVID-04 and EVID-05 for a representative benchmark and independent-master comparison. Settle the
    experiment design first, then execute the four Wave 2 notebooks once against it; they are still
    cleared and are the raw material for EVID-01, EVID-03, and EVID-04.
 4. **Strengthen the validation gate:** HARD-01 and HARD-02. Add standalone OpenSim contracts,
    platform-complete generic FMU fixtures, and a scheduled contact/FEM physics run.
-5. **Simplify the remaining internals:** MC-11 and MC-12. Remove dead adapter/state fields,
+5. **Simplify the remaining internals:** MC-11, MC-12, and HYB-05. Remove dead adapter/state fields,
    consolidate switch history, automate port lifecycle, and replace backend-private metadata
    access. Do not add another switching policy hierarchy.
 6. **Improve time semantics incrementally:** finish TIME-04, then introduce integer ticks in the
