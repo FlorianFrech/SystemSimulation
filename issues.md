@@ -1832,6 +1832,14 @@ Six of the thirteen archives are now released rather than stranded, including fo
 the quantization system. Step 5 of the plan below is done: the lifecycle tests assert the policy
 rather than the raw calls.
 
+The policy separates two questions, because the evidence only covers one platform. Retention is
+conservative everywhere, since being wrong that way leaks memory while being wrong the other way
+aborts the process. Refusing `fmi2Reset` removes working functionality instead, so
+`FMUReleasePolicy.resettable` refuses only where the fault is recorded. Linux CI exercises
+`soft_reset()` successfully on `tests/fixtures/fmus/Pendulum.fmu`, a CVODE export with two continuous
+states, which is the first direct evidence bearing on step 4: at least `fmi2Reset` on at least that
+export does not fault on Linux. Nothing yet says whether `fmi2FreeInstance` behaves there.
+
 Calling `fmi2FreeInstance` on an affected FMU raises Windows exception `0xC0000374`, heap corruption,
 which takes the whole process down. `FMUComponent` therefore no longer calls `fmi2Terminate` or
 `fmi2FreeInstance` and no longer removes the extraction directory. `reset()` drops the instance

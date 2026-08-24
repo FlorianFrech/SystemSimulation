@@ -87,6 +87,36 @@ class TestReleasePolicy:
         assert policy.continuous_states == 0
         assert policy.releasable is True
 
+    @pytest.mark.parametrize("platform", ["win32", "cygwin"])
+    def test_reset_is_refused_where_the_fault_is_recorded(self, tmp_path, monkeypatch, platform):
+        monkeypatch.setattr(fmu_module.sys, "platform", platform)
+        policy = resolve_release_policy(str(_archive(tmp_path, solver="cvode")), _description(2))
+
+        assert policy.releasable is False
+        assert policy.resettable is False
+
+    @pytest.mark.parametrize("platform", ["linux", "darwin"])
+    def test_reset_is_allowed_where_it_is_not(self, tmp_path, monkeypatch, platform):
+        """fmi2Reset works on Linux for a CVODE export with continuous states.
+
+        Refusing it there would remove a working feature on the strength of
+        evidence that does not cover the platform. Retaining the instance is
+        still conservative everywhere, because that only costs memory.
+        """
+        monkeypatch.setattr(fmu_module.sys, "platform", platform)
+        policy = resolve_release_policy(str(_archive(tmp_path, solver="cvode")), _description(2))
+
+        assert policy.releasable is False, "retention stays conservative on every platform"
+        assert policy.resettable is True
+
+    @pytest.mark.parametrize("platform", ["win32", "linux"])
+    def test_a_releasable_archive_is_resettable_everywhere(self, tmp_path, monkeypatch, platform):
+        monkeypatch.setattr(fmu_module.sys, "platform", platform)
+        policy = resolve_release_policy(str(_archive(tmp_path, solver="euler")), _description(2))
+
+        assert policy.releasable is True
+        assert policy.resettable is True
+
     def test_policy_is_immutable(self, tmp_path):
         policy = resolve_release_policy(str(_archive(tmp_path)), _description(0))
         assert isinstance(policy, FMUReleasePolicy)
