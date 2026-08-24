@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,6 +107,25 @@ def clear_extraction_cache() -> None:
 # ----------------------------------------------------------------------------
 # Release policy (issues.md HARD-05)
 # ----------------------------------------------------------------------------
+# The heap corruption was isolated on Windows 11 against OpenModelica 1.26.3
+# exports. Whether the same teardown faults on Linux is HARD-05 step 4 and is
+# still open, so the two decisions this policy drives are scoped differently.
+#
+# Retaining an instance is safe on every platform and costs only memory, so
+# ``releasable`` stays conservative everywhere: being wrong in that direction
+# leaks, while being wrong the other way aborts the process.
+#
+# Refusing ``fmi2Reset`` removes working functionality instead, and Linux CI
+# exercises it successfully on a CVODE export with two continuous states, so
+# ``resettable`` only refuses where the fault is actually recorded.
+_DEFECT_PLATFORMS = ("win32", "win64", "cygwin", "msys")
+
+
+def _on_defect_platform() -> bool:
+    """Whether this platform is one the HARD-05 fault was observed on."""
+    return sys.platform.startswith("win") or sys.platform in _DEFECT_PLATFORMS
+
+
 @dataclass(frozen=True)
 class FMUReleasePolicy:
     """Whether an export tolerates ``fmi2FreeInstance`` and ``fmi2Reset``.
@@ -127,6 +147,20 @@ class FMUReleasePolicy:
     solver: str | None
     continuous_states: int
     reason: str
+
+    @property
+    def resettable(self) -> bool:
+        """Whether ``fmi2Reset`` may be called on this archive.
+
+        ``fmi2Reset`` fails on exactly the exports that cannot be freed, but
+        only on the platform where the fault was recorded. Refusing it
+        elsewhere would remove a working feature on the strength of evidence
+        that does not cover that platform, so an archive that cannot be
+        released is still resettable off Windows.
+        """
+        if self.releasable:
+            return True
+        return not _on_defect_platform()
 
 
 def _read_solver_flag(path: str) -> str | None:
@@ -891,16 +925,18 @@ class FMUComponent(CoSimComponent):
 
         Raises:
             RuntimeError: If the FMU is not initialized, or if this archive
-                cannot survive ``fmi2Reset``. That call fails on exactly the
-                exports that cannot be freed, so the release policy governs it
-                too (issues.md HARD-05). Use ``reinitialize_instance()``
-                instead, which rebuilds the instance rather than resetting it.
+                cannot survive ``fmi2Reset`` on this platform. That call fails
+                on exactly the exports that cannot be freed, but only where the
+                fault is recorded, so :attr:`FMUReleasePolicy.resettable`
+                governs it rather than ``releasable`` (issues.md HARD-05). Use
+                ``reinitialize_instance()`` instead, which rebuilds the
+                instance rather than resetting it.
         """
         if self._instance is None:
             raise RuntimeError(f"{self.name}: Cannot soft_reset - FMU not initialized")
-        if not self.release_policy.releasable:
+        if not self.release_policy.resettable:
             raise RuntimeError(
-                f"{self.name}: fmi2Reset is unsafe for this FMU - "
+                f"{self.name}: fmi2Reset is unsafe for this FMU on {sys.platform} - "
                 f"{self.release_policy.reason}. Use reinitialize_instance() instead."
             )
 
