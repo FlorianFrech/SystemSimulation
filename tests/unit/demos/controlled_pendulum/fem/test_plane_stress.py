@@ -30,7 +30,7 @@ from ngsolve import (  # noqa: E402
 )
 from ngsolve.solvers import NewtonMinimization  # noqa: E402
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem.material_laws import (  # noqa: E402
+from syssimx_examples.controlled_pendulum.components.fem.material_laws import (  # noqa: E402
     NeoHookeanMaterial,
     SVKMaterial,
 )

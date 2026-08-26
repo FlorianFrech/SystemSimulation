@@ -133,9 +133,7 @@ class FEMPendulum(FEMComponent):
 
         # Register the multidim history fields the base records each sub-step.
         # Resolved by attribute name so they survive reallocation in reset().
-        self._register_history_field(
-            "_gf_u_history", lambda: self._gf_u.components[0].vec
-        )
+        self._register_history_field("_gf_u_history", lambda: self._gf_u.components[0].vec)
         self._register_history_field("_gf_von_mises_history", lambda: self._gf_von_mises.vec)
         self._register_history_field(
             "_gf_cauchy_stress_history", lambda: self._gf_cauchy_stress.vec
@@ -240,19 +238,19 @@ class FEMPendulum(FEMComponent):
             raise ValueError(f"Unknown material model '{model}'. Choose 'neo_hookean' or 'svk'.")
 
         self._material_pendulum = _material_cls[model](self.E_p, self.nu_p)
-        self._material_wall     = _material_cls[model](self.E_w, self.nu_w)
+        self._material_wall = _material_cls[model](self.E_w, self.nu_w)
 
         # These are the hooks used in _setup_bilinear_form — interface is identical
         self._deformation_gradient_p = self._material_pendulum.C
-        self._psi_p                  = self._material_pendulum.psi
-        self._cauchy_stress_p        = self._material_pendulum.cauchy_stress
-        self._von_mises_p            = self._material_pendulum.von_mises
+        self._psi_p = self._material_pendulum.psi
+        self._cauchy_stress_p = self._material_pendulum.cauchy_stress
+        self._von_mises_p = self._material_pendulum.von_mises
 
         self._deformation_gradient_w = self._material_wall.C
-        self._psi_w                  = self._material_wall.psi
+        self._psi_w = self._material_wall.psi
         # Wall stress hooks for post-processing on the wall region.
-        self._cauchy_stress_w        = self._material_wall.cauchy_stress
-        self._von_mises_w            = self._material_wall.von_mises
+        self._cauchy_stress_w = self._material_wall.cauchy_stress
+        self._von_mises_w = self._material_wall.von_mises
 
     def _create_mesh(self):
         self._mesh = build_mesh(self.geom_params, self.mesh_params, self._with_contact)
@@ -322,9 +320,7 @@ class FEMPendulum(FEMComponent):
         # already participates in the simulation through its strain-energy
         # contribution to the bilinear form, and visualizing its stress
         # field makes the contact response symmetric across the interface.
-        self._S_cauchy = MatrixValued(
-            H1(self._mesh, order=self.mesh_params.mesh_order)
-        )
+        self._S_cauchy = MatrixValued(H1(self._mesh, order=self.mesh_params.mesh_order))
         # Scalar H1 space for stress norm visualization (full mesh)
         self._V_vm = H1(self._mesh, order=self.mesh_params.mesh_order)
 
@@ -371,7 +367,9 @@ class FEMPendulum(FEMComponent):
         Initialize torque control system using distributed traction on rotation boundary.
         """
         # --- Geometric quantities ---
-        N_ref = specialcf.normal(2)  # outward unit normal in reference configuration (on 'rotation')
+        N_ref = specialcf.normal(
+            2
+        )  # outward unit normal in reference configuration (on 'rotation')
         r_ref = self._X_rel  # position vector from pivot to boundary points (reference)
 
         # Deformation gradient restricted to the boundary.
@@ -479,10 +477,12 @@ class FEMPendulum(FEMComponent):
         # inertia
         self.tau_step = Parameter(self.sim_params.tau)
         vel_new = (
-            2 / self.tau_step * (self._u - self._gf_uold.components[0]) - self._gf_vold.components[0]
+            2 / self.tau_step * (self._u - self._gf_uold.components[0])
+            - self._gf_vold.components[0]
         )
         acc_new = (
-            2 / self.tau_step * (vel_new - self._gf_vold.components[0]) - self._gf_aold.components[0]
+            2 / self.tau_step * (vel_new - self._gf_vold.components[0])
+            - self._gf_aold.components[0]
         )
 
         #  gravity force
@@ -734,6 +734,7 @@ class FEMPendulum(FEMComponent):
         if self.anim_params.animate:
             self._viz.redraw()
         self.update_monitoring()
+
     # ----------------------------------------------------------------------------
     # Input/output methods
     # ----------------------------------------------------------------------------
@@ -750,7 +751,6 @@ class FEMPendulum(FEMComponent):
         total_torque = drive_torque - gravity_torque
         alpha = total_torque / self.inertia
         self.outputs["alpha"].set(alpha, t=t)
-
 
     def set_drive_torque(self, torque):
         """
@@ -773,9 +773,7 @@ class FEMPendulum(FEMComponent):
             if out_port.get() is not None
         }
 
-    def _update_output_states(
-        self, t: float | None = None, event_names: list[str] | None = None
-    ):
+    def _update_output_states(self, t: float | None = None, event_names: list[str] | None = None):
         """
         Convert rigid-body proxy to output ports (called by base-class).
         """

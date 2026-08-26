@@ -17,7 +17,7 @@ framework around it:
 - [`syssimx/core/multi_comp.py`](syssimx/core/multi_comp.py)
 - [`syssimx/system/algorithms/hybrid.py`](syssimx/system/algorithms/hybrid.py)
 - [`syssimx/components/fmu.py`](syssimx/components/fmu.py)
-- [`demos/ControlledPendulum/src/master_pendulum/`](demos/ControlledPendulum/src/master_pendulum/)
+- [`syssimx_examples/controlled_pendulum/`](syssimx_examples/controlled_pendulum/)
 
 `MasterPendulum` combines FEM, OpenSim, and FMU implementations behind one
 `MultiComponent`, so it remains the reference case for state transfer, event
@@ -399,7 +399,7 @@ event source from `t_left` to the midpoint. An event raised by a cheap component
 pays repeated FEM advances.
 
 The FEM backend already reports an exact micro-step bracket through
-[`report_internal_event()`](demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py#L704),
+[`report_internal_event()`](syssimx_examples/controlled_pendulum/components/fem/fem_pendulum.py#L704),
 but that hint short-circuits localization only when the bracket is narrower than `tol_time`
 ([hybrid.py](syssimx/system/algorithms/hybrid.py#L484)). A sub-step of `1e-4` never satisfies a
 `tol_time` of `1e-8`, so the hint narrows the interval and bisection still runs.
@@ -430,7 +430,7 @@ the work below should keep its regression tests green.
 
 `MasterPendulum.__init__()` builds `direct_feedthrough` from `PENDULUM_DIRECT_FEEDTHROUGH`, which
 declares that `alpha` depends on `tau`.
-[`_initialize_component()`](demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py#L424)
+[`_initialize_component()`](syssimx_examples/controlled_pendulum/orchestration/master_pendulum.py#L424)
 then overwrites it with `self.active_comp.direct_feedthrough`, and no pendulum backend declares one,
 so the wrapper's declared dependency is lost during initialization.
 

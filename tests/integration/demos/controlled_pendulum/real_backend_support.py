@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem import pendulum_config as cfg
-from demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum import (
+from syssimx_examples.controlled_pendulum.components.fem import pendulum_config as cfg
+from syssimx_examples.controlled_pendulum.orchestration.master_pendulum import (
     MasterPendulum,
     MasterPendulumSwitchConfig,
     PendulumState,

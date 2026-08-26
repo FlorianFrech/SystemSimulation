@@ -15,7 +15,7 @@ pytest.importorskip("fmpy")
 pytest.importorskip("opensim")
 
 master_pendulum = pytest.importorskip(
-    "demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum"
+    "syssimx_examples.controlled_pendulum.orchestration.master_pendulum"
 )
 
 BACKEND_STATE_SEMANTICS = master_pendulum.BACKEND_STATE_SEMANTICS

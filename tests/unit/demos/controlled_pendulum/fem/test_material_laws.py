@@ -19,7 +19,7 @@ import numpy as np  # noqa: E402
 from netgen.occ import OCCGeometry, Rectangle  # noqa: E402
 from ngsolve import CF, GridFunction, Integrate, Mesh, Norm, VectorH1, x, y  # noqa: E402
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem.material_laws import (  # noqa: E402
+from syssimx_examples.controlled_pendulum.components.fem.material_laws import (  # noqa: E402
     NeoHookeanMaterial,
     SVKMaterial,
 )

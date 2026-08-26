@@ -128,7 +128,7 @@ explicit = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["syssimx*"]  # Match actual package name (lowercase)
+include = ["syssimx*", "syssimx_examples*"]
 exclude = ["tests*", "demos*", "examples*", "docs*", "thesis*", ]
 
 [tool.setuptools]

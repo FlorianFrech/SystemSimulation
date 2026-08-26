@@ -176,8 +176,12 @@ class PendulumMonitor:
 
     def _build_layout(self) -> None:
         main_header = HTML(_MAIN_HEADER_HTML)
-        input_header = HTML(f"<div style='{_GROUP_HEADER_STYLE} text-align:center;'>Input Signals</div>")
-        output_header = HTML(f"<div style='{_GROUP_HEADER_STYLE} text-align:center;'>Output Signals</div>")
+        input_header = HTML(
+            f"<div style='{_GROUP_HEADER_STYLE} text-align:center;'>Input Signals</div>"
+        )
+        output_header = HTML(
+            f"<div style='{_GROUP_HEADER_STYLE} text-align:center;'>Output Signals</div>"
+        )
         simulation_header = HTML(
             f"<div style='{_GROUP_HEADER_STYLE} text-align:center;'>Simulation Status</div>"
         )

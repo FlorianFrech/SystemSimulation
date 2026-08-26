@@ -179,6 +179,12 @@ plt.show()
 For the complete walkthrough, see:
 - [Quickstart notebook](docs/01_getting_started/02_quickstart.ipynb)
 
+The installable `syssimx_examples` namespace contains the controlled-pendulum
+case-study implementation used by the documentation and framework-paper
+experiments. Generated models and large result artifacts stay under
+[`demos/ControlledPendulum`](demos/ControlledPendulum/); they are not bundled in
+the Python wheel.
+
 ## Documentation
 
 - [Documentation entry](docs/index.rst)

@@ -1,6 +1,7 @@
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
@@ -326,6 +327,7 @@ class MasterPendulum(MultiComponent):
         name: str = "MasterPendulum",
         initial_mode: Literal["FEM", "OpenSim", "FMU"] = "FMU",
         fmu_solver: Literal["cvode", "euler"] = "cvode",
+        fmu_path: str | Path | None = None,
         switch_config: MasterPendulumSwitchConfig | None = MasterPendulumSwitchConfig(),
         transfer_tolerances: PendulumTransferTolerances = PendulumTransferTolerances(),
     ):
@@ -337,7 +339,7 @@ class MasterPendulum(MultiComponent):
             )
 
         # Instantiate sub-components before delegating to the base class
-        self.fmu = FMUPendulum(name="FMU_Pendulum", solver=fmu_solver)
+        self.fmu = FMUPendulum(name="FMU_Pendulum", solver=fmu_solver, fmu_path=fmu_path)
         self.fem = FEMPendulum(name="FEM_Pendulum")
         self.opensim = OpenSimPendulum(name="OpenSim_Pendulum")
 

@@ -19,7 +19,7 @@ pytest.importorskip("ngsolve")
 pytest.importorskip("fmpy")
 opensim = pytest.importorskip("opensim")
 
-from demos.ControlledPendulum.src.master_pendulum.orchestration.master_pendulum import (  # noqa: E402
+from syssimx_examples.controlled_pendulum.orchestration.master_pendulum import (  # noqa: E402
     MasterPendulumSwitchConfig,
 )
 from tests.integration.demos.controlled_pendulum.real_backend_support import (  # noqa: E402

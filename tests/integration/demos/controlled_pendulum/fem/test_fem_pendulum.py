@@ -16,10 +16,10 @@ ngsolve = pytest.importorskip("ngsolve")
 import numpy as np  # noqa: E402
 from ngsolve import Integrate  # noqa: E402
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem import (  # noqa: E402
+from syssimx_examples.controlled_pendulum.components.fem import (  # noqa: E402
     pendulum_config as cfg,
 )
-from demos.ControlledPendulum.src.master_pendulum.components.fem.fem_pendulum import (  # noqa: E402
+from syssimx_examples.controlled_pendulum.components.fem.fem_pendulum import (  # noqa: E402
     FEMPendulum,
 )
 

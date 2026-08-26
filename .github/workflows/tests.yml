@@ -39,7 +39,7 @@ jobs:
 
       - name: Run linting with Ruff
         run: |
-          ruff check syssimx/ tests/
+          ruff check syssimx/ syssimx_examples/ tests/
 
       - name: Run type checking with MyPy
         if: matrix.python-version == '3.13'
