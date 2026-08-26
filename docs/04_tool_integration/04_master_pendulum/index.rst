@@ -181,12 +181,12 @@ Practical guidelines (what to verify early)
 .. --------------
 
 .. - Multi-model wrapper implementation: ``syssimx/core/multi_comp.py``
-.. - Master pendulum orchestration (multi-model plant): ``demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py``
+.. - Master pendulum orchestration (multi-model plant): ``syssimx_examples/controlled_pendulum/orchestration/master_pendulum.py``
 .. - Submodels:
 
-..   - FMU pendulum: ``demos/ControlledPendulum/src/master_pendulum/components/fmu/fmu_pendulum.py``
-..   - OpenSim pendulum: ``demos/ControlledPendulum/src/master_pendulum/components/opensim/opensim_pendulum.py``
-..   - FEM pendulum: ``demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py``
+..   - FMU pendulum: ``syssimx_examples/controlled_pendulum/components/fmu/fmu_pendulum.py``
+..   - OpenSim pendulum: ``syssimx_examples/controlled_pendulum/components/opensim/opensim_pendulum.py``
+..   - FEM pendulum: ``syssimx_examples/controlled_pendulum/components/fem/fem_pendulum.py``
 
 .. - System-level demonstrations and verification notebooks:
 

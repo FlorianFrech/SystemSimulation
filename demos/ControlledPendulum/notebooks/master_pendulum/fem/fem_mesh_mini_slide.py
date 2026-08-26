@@ -31,7 +31,7 @@ while _repo != _repo.parent and not (_repo / "pyproject.toml").exists():
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from demos.ControlledPendulum.src.master_pendulum.components.fem.pendulum_config import (
+from syssimx_examples.controlled_pendulum.components.fem.pendulum_config import (
     GeometryParameters,
 )
 

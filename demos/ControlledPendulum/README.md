@@ -14,19 +14,23 @@ The `MasterPendulum` orchestrator composes these models behind one interface and
 
 ## Architecture
 
-- **Orchestrator**: `src/master_pendulum/orchestration/master_pendulum.py`
-- **Components**:
-  - `src/master_pendulum/components/fem/`
-  - `src/master_pendulum/components/opensim/`
-  - `src/master_pendulum/components/fmu/`
+- **Canonical Python package**: `syssimx_examples/controlled_pendulum/`
+- **Orchestrator**:
+  `syssimx_examples/controlled_pendulum/orchestration/master_pendulum.py`
+- **Backend adapters**:
+  `syssimx_examples/controlled_pendulum/components/`
 - **Modelica source models**: `src/modelica/ControlledPendulum/`
 - **Generated artifacts**: `artifacts/fmus/linux/`, `artifacts/figures/`, `artifacts/results/`
 
 Core public API:
 
 ```python
-from demos.ControlledPendulum.src import MasterPendulum, FEMPendulum, OpenSimPendulum, FMUPendulum
+from syssimx_examples.controlled_pendulum import MasterPendulum
 ```
+
+The Python example is included in the SysSimX package. Large generated FMUs
+remain demo artifacts rather than wheel contents; `FMUPendulum` and
+`MasterPendulum` accept `fmu_path=` when used outside a source checkout.
 
 ## Notebook Entry Points
 

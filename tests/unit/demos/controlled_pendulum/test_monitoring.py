@@ -1,38 +1,18 @@
 """Unit tests for the shared PendulumMonitor.
 
 The monitoring panel has no FEM/ngsolve dependency, so these tests run in any
-environment. The module is loaded directly by path to avoid importing the
-``master_pendulum`` package (whose ``__init__`` pulls in the FEM/OpenSim/FMU
-components and their optional backends).
+environment.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-
 import pytest
 
 from syssimx.core.port import PortSpec, PortType
-
-_MON_PATH = (
-    Path(__file__).parents[4]
-    / "demos/ControlledPendulum/src/master_pendulum/monitoring.py"
+from syssimx_examples.controlled_pendulum.monitoring import (
+    PendulumMonitor,
+    PendulumMonitoringState,
 )
-
-
-def _load_monitoring():
-    spec = importlib.util.spec_from_file_location("cp_monitoring", _MON_PATH)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["cp_monitoring"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-monitoring = _load_monitoring()
-PendulumMonitor = monitoring.PendulumMonitor
-PendulumMonitoringState = monitoring.PendulumMonitoringState
 
 
 def _specs():

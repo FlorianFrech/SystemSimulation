@@ -26,7 +26,7 @@ At isolation time, `main` equaled `origin/main`, the index was empty, and the or
 ten modified files plus untracked `issues.md`:
 
 - framework: `syssimx/core/multi_comp.py` and `syssimx/system/algorithms/hybrid.py`;
-- case study: `demos/ControlledPendulum/src/master_pendulum/orchestration/master_pendulum.py`;
+- case study: `syssimx_examples/controlled_pendulum/orchestration/master_pendulum.py`;
 - tests: five fixture, unit, and integration files;
 - notebooks/documentation: the advanced switching tutorial and `notebooks/performance.ipynb`;
 - roadmap: untracked `issues.md`.
@@ -392,8 +392,8 @@ Measured verification on Windows, Python 3.13.5, Pytest 9.1.1:
 The final commands were:
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx tests demos/ControlledPendulum/src/master_pendulum/components/fem/fem_pendulum.py demos/ControlledPendulum/src/master_pendulum/components/fmu/fmu_pendulum.py
-.\.venv\Scripts\python.exe -m ruff check --no-cache demos/ControlledPendulum/src/master_pendulum/components/opensim/opensim_pendulum.py tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py
+.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx tests syssimx_examples/controlled_pendulum/components/fem/fem_pendulum.py syssimx_examples/controlled_pendulum/components/fmu/fmu_pendulum.py
+.\.venv\Scripts\python.exe -m ruff check --no-cache syssimx_examples/controlled_pendulum/components/opensim/opensim_pendulum.py tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py
 .\.venv\Scripts\python.exe -m mypy syssimx --ignore-missing-imports --python-version 3.13 --cache-dir "$env:TEMP\syssimx-m5-final-mypy"
 .\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m5-final2-pytest" tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py tests/unit/system/test_system.py -q
 .\.venv\Scripts\pytest.exe -p no:cacheprovider --basetemp "$env:TEMP\syssimx-m5-opensim-cleanup-pytest" tests/integration/demos/controlled_pendulum/test_master_pendulum_backends.py tests/unit/demos/controlled_pendulum/test_master_pendulum_switching.py -q

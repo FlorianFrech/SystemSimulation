@@ -246,8 +246,8 @@ class OpenSimPendulum(OpenSimComponent):
         head_of = osim.PhysicalOffsetFrame()
         head_of.setName("head_of")
         head_of.setParentFrame(head)
-        head_of.set_translation(osim.Vec3(0, length/2, 0))
-        head_of_geom = osim.Cylinder(0.01, length/2)
+        head_of.set_translation(osim.Vec3(0, length / 2, 0))
+        head_of_geom = osim.Cylinder(0.01, length / 2)
         head_of_geom.setColor(osim.Vec3(0.2, 0.8, 0.2))
         head_of.attachGeometry(head_of_geom)
         head.addComponent(head_of)
@@ -350,9 +350,7 @@ class OpenSimPendulum(OpenSimComponent):
         while t_current < t_end:
             # Apply current input
             torque = float(
-                self.inputs["tau"].get().magnitude
-                if self.inputs["tau"].get() is not None
-                else 0
+                self.inputs["tau"].get().magnitude if self.inputs["tau"].get() is not None else 0
             )
             self.actuator.setOverrideActuation(self.state, torque)
             self.realize()
