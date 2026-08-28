@@ -91,6 +91,21 @@ class TestCoSimComponentBasics:
         assert y_value is not None
         assert np.isclose(y_value.magnitude, 0.0)  # 2.0 * 0.0
 
+    def test_initialization_rejects_port_spec_key_name_mismatch(self):
+        comp = GainComponent(name="Gain", gain=2.0)
+        input_spec = comp.input_specs.pop("u")
+        comp.input_specs["command"] = input_spec
+
+        with pytest.raises(ValueError, match="key 'command'.*name 'u'"):
+            comp.initialize(t0=0.0)
+
+    def test_initialization_rejects_port_in_wrong_direction_collection(self):
+        comp = GainComponent(name="Gain", gain=2.0)
+        comp.input_specs["u"] = PortSpec(name="u", type=PortType.REAL, direction="out", unit="N*m")
+
+        with pytest.raises(ValueError, match="input_specs.*direction 'out'"):
+            comp.initialize(t0=0.0)
+
     def test_double_initialization_prevented(self):
         """Test that calling initialize() twice does not reinitialize."""
         comp = HybridSource("Source", x0=5.0, v=1.0, t0=0.0)

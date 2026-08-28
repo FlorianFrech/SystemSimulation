@@ -38,7 +38,9 @@ Example:
 from __future__ import annotations
 
 import logging
+import math
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from ...core.events import DenseTime, Event, EventBracket, InternalEventInfo
@@ -56,6 +58,7 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 # Hybrid Co-Simulation Algorithm
 # --------------------------------------------------------------------------
+@dataclass(slots=True, kw_only=True)
 class HybridAlgorithm(Algorithm):
     """
     Hybrid co-simulation algorithm with event detection and handling.
@@ -78,23 +81,46 @@ class HybridAlgorithm(Algorithm):
             event handling.
     """
 
-    def __init__(self):
-        self.name: str = "Hybrid-Algorithm"
-        self.tol_value: float = 1e-6
-        self.max_iter: int = 50
-        self.sign_tolerance: float = 1e-10
-        self.tol_time: float = 1e-8
-        self.max_microsteps: int = 100
-        self.gauss_seidel_algorithm: GaussSeidelAlgorithm = GaussSeidelAlgorithm()
-        self.record_internal_steps: bool = False
+    name: str = field(init=False, default="Hybrid-Algorithm")
+    tol_value: float = 1e-6
+    max_iter: int = 50
+    sign_tolerance: float = 1e-10
+    tol_time: float = 1e-8
+    max_microsteps: int = 100
+    gauss_seidel_algorithm: GaussSeidelAlgorithm = field(default_factory=GaussSeidelAlgorithm)
+    record_internal_steps: bool = False
+    raise_on_missed_event: bool = False
+    missed_events: list[EventBracket] = field(init=False, default_factory=list)
 
-        # Detection runs on a different trajectory than the one committed, so a
-        # crossing can escape it (issues.md HYB-01). Every accepted advance that
-        # detection called event-free is checked afterwards, and anything that
-        # slipped through is collected here. Set ``raise_on_missed_event`` to
-        # make the mismatch fatal instead of merely reported.
-        self.raise_on_missed_event: bool = False
-        self.missed_events: list[EventBracket] = []
+    def __post_init__(self) -> None:
+        """Validate numerical controls when the algorithm is configured."""
+        for name in ("tol_value", "tol_time"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"{name} must be a finite positive number.")
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be a finite positive number.")
+
+        if isinstance(self.sign_tolerance, bool) or not isinstance(
+            self.sign_tolerance, (int, float)
+        ):
+            raise TypeError("sign_tolerance must be a finite non-negative number.")
+        if not math.isfinite(self.sign_tolerance) or self.sign_tolerance < 0.0:
+            raise ValueError("sign_tolerance must be a finite non-negative number.")
+
+        for name in ("max_iter", "max_microsteps"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be a positive integer.")
+            if value <= 0:
+                raise ValueError(f"{name} must be a positive integer.")
+
+        if not isinstance(self.gauss_seidel_algorithm, GaussSeidelAlgorithm):
+            raise TypeError("gauss_seidel_algorithm must be a GaussSeidelAlgorithm instance.")
+        if not isinstance(self.record_internal_steps, bool):
+            raise TypeError("record_internal_steps must be a bool.")
+        if not isinstance(self.raise_on_missed_event, bool):
+            raise TypeError("raise_on_missed_event must be a bool.")
 
     # --------------------------------------------------------------------------
     # Global Step Method
@@ -211,9 +237,9 @@ class HybridAlgorithm(Algorithm):
                 for event in event_pairs:
                     system.history.record_event(event.source, event.name, current_time)
                     all_handled_events.add(event.pair)
-                    handled_events_this_step[
-                        (event.source, event.name, event.direction)
-                    ] = current_time.t
+                    handled_events_this_step[(event.source, event.name, event.direction)] = (
+                        current_time.t
+                    )
 
                 # b) Indicators before handling
                 indicators_before_handling = {
@@ -325,9 +351,7 @@ class HybridAlgorithm(Algorithm):
             RuntimeError: If ``raise_on_missed_event`` is set and the accepted
                 trajectory contains a crossing that detection missed.
         """
-        indicators_after = {
-            comp.name: comp.evaluate_event_indicators() for comp in event_sources
-        }
+        indicators_after = {comp.name: comp.evaluate_event_indicators() for comp in event_sources}
         missed = self._crossing_brackets_between(
             event_sources, indicators_left, indicators_after, t_left, t_right
         )
@@ -538,9 +562,7 @@ class HybridAlgorithm(Algorithm):
         # 2) Keep internal micro-step brackets as fallbacks for events whose
         # macro endpoints do not expose a sign change.
         hint_events = [
-            event
-            for event in initial_crossings
-            if event.t_left > t_left or event.t_right < t_right
+            event for event in initial_crossings if event.t_left > t_left or event.t_right < t_right
         ]
 
         # 3) Use internal hints to narrow the initial interval
@@ -613,7 +635,9 @@ class HybridAlgorithm(Algorithm):
 
         # 7) Bisection loop
         for iteration in range(self.max_iter):
-            logger.debug("Bisection iteration %d: interval [%.8f, %.8f]", iteration + 1, left, right)
+            logger.debug(
+                "Bisection iteration %d: interval [%.8f, %.8f]", iteration + 1, left, right
+            )
             # a) Check termination: interval width
             if right - left <= self.tol_time:
                 t_event = right

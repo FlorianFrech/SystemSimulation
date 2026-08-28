@@ -9,6 +9,7 @@ import pytest
 from syssimx.core.events import Event
 from syssimx.system import Connection, System
 from syssimx.system.algorithms.gauss_seidel import GaussSeidelAlgorithm
+from syssimx.system.algorithms.hybrid import HybridAlgorithm
 from syssimx.system.algorithms.jacobi import JacobiAlgorithm
 from syssimx.system.connection import EventConnection
 from syssimx.system.graph import (
@@ -748,6 +749,72 @@ class TestSystemAlgorithm:
         sys = System(name="DefaultAlg")
         assert isinstance(sys.algorithm, GaussSeidelAlgorithm)
 
+    def test_initialize_preserves_explicit_hybrid_algorithm_configuration(self):
+        source = HybridSource(name="Source", x0=-1.0, v=1.0)
+        source.add_event_indicator(name="trigger", func=lambda comp: comp.x, direction=1)
+        system = System(name="ConfiguredHybrid")
+        system.add_component(source)
+        algorithm = HybridAlgorithm(tol_time=2e-7, tol_value=3e-8, max_microsteps=17)
+
+        system.set_algorithm(algorithm)
+        system.initialize(t0=0.0)
+
+        assert system.algorithm is algorithm
+        assert system.algorithm.tol_time == 2e-7
+        assert system.algorithm.tol_value == 3e-8
+        assert system.algorithm.max_microsteps == 17
+
+    def test_initialize_rejects_explicit_non_hybrid_algorithm_for_event_sources(self):
+        source = HybridSource(name="Source", x0=-1.0, v=1.0)
+        source.add_event_indicator(name="trigger", func=lambda comp: comp.x, direction=1)
+        system = System(name="InvalidHybrid")
+        system.add_component(source)
+        system.set_algorithm(JacobiAlgorithm())
+
+        with pytest.raises(RuntimeError, match="requires HybridAlgorithm"):
+            system.initialize(t0=0.0)
+
+
+class TestHybridAlgorithmConfiguration:
+    def test_constructor_accepts_and_exposes_validated_options(self):
+        algorithm = HybridAlgorithm(
+            tol_value=1e-7,
+            max_iter=20,
+            sign_tolerance=1e-12,
+            tol_time=1e-9,
+            max_microsteps=12,
+            record_internal_steps=True,
+            raise_on_missed_event=True,
+        )
+
+        assert algorithm.tol_value == 1e-7
+        assert algorithm.max_iter == 20
+        assert algorithm.sign_tolerance == 1e-12
+        assert algorithm.tol_time == 1e-9
+        assert algorithm.max_microsteps == 12
+        assert algorithm.record_internal_steps is True
+        assert algorithm.raise_on_missed_event is True
+
+    @pytest.mark.parametrize(
+        ("option", "value"),
+        [
+            ("tol_value", 0.0),
+            ("tol_time", -1.0),
+            ("sign_tolerance", -1.0),
+            ("max_iter", 0),
+            ("max_microsteps", 0),
+        ],
+    )
+    def test_constructor_rejects_invalid_options(self, option, value):
+        with pytest.raises((TypeError, ValueError), match=option):
+            HybridAlgorithm(**{option: value})
+
+    def test_unknown_configuration_attribute_fails_loudly(self):
+        algorithm = HybridAlgorithm()
+
+        with pytest.raises(AttributeError):
+            algorithm.event_dedup_tol = 1e-4
+
 
 # ============================================================================
 # Test System Component Classification
@@ -840,6 +907,7 @@ class TestSystemHistory:
         assert "A" in history
         assert "B" in history
         assert "Events" in history
+        assert "ModeSwitches" in history
 
 
 # ============================================================================

@@ -156,7 +156,8 @@ class System:
         self._event_targets_by_source: dict[tuple[str, str], list[str]] = {}
 
         # Algorithm
-        self.algorithm: Algorithm = GaussSeidelAlgorithm()
+        self._algorithm: Algorithm = GaussSeidelAlgorithm()
+        self._algorithm_explicitly_set = False
 
         # History Management
         self.history = SystemHistory(system_name=name)
@@ -167,6 +168,16 @@ class System:
     # ----------------------------------------------------------------------------
     # Algorithm
     # ----------------------------------------------------------------------------
+    @property
+    def algorithm(self) -> Algorithm:
+        """Return the configured co-simulation stepping algorithm."""
+        return self._algorithm
+
+    @algorithm.setter
+    def algorithm(self, algorithm: Algorithm) -> None:
+        """Set an algorithm explicitly; equivalent to :meth:`set_algorithm`."""
+        self.set_algorithm(algorithm)
+
     def set_algorithm(self, algorithm: Algorithm) -> None:
         """Set the co-simulation stepping algorithm.
 
@@ -188,13 +199,14 @@ class System:
             >>> system.set_algorithm(JacobiAlgorithm())
 
         Note:
-            If components with event indicators are detected during
-            ``initialize()``, the algorithm is automatically upgraded
-            to ``HybridAlgorithm``.
+            If event indicators are detected during ``initialize()``, an
+            untouched default is promoted to ``HybridAlgorithm``. An explicit
+            non-hybrid selection is rejected instead of being replaced.
         """
         if not isinstance(algorithm, Algorithm):
             raise TypeError("algorithm must implement Algorithm")
-        self.algorithm = algorithm
+        self._algorithm = algorithm
+        self._algorithm_explicitly_set = True
 
     # ----------------------------------------------------------------------------
     # Register components
@@ -274,14 +286,8 @@ class System:
 
         # 5) duplicate and single-assignment checks
         for existing in self.connections:
-            same_source = (
-                existing.src_comp == c.src_comp
-                and existing.src_port == c.src_port
-            )
-            same_destination = (
-                existing.dst_comp == c.dst_comp
-                and existing.dst_port == c.dst_port
-            )
+            same_source = existing.src_comp == c.src_comp and existing.src_port == c.src_port
+            same_destination = existing.dst_comp == c.dst_comp and existing.dst_port == c.dst_port
 
             if same_source and same_destination:
                 raise ValueError(
@@ -596,8 +602,7 @@ class System:
                     )
 
                 already_subscribed = any(
-                    e.name == event_name and e.source == comp.name
-                    for e in comp.event_subscriptions
+                    e.name == event_name and e.source == comp.name for e in comp.event_subscriptions
                 )
                 if not already_subscribed:
                     comp.event_subscriptions.append(
@@ -678,7 +683,15 @@ class System:
         # 1) Classify components and auto-select hybrid algorithm
         self.classify_components()
         if self.event_sources:
-            self.algorithm = HybridAlgorithm()
+            if isinstance(self.algorithm, HybridAlgorithm):
+                pass
+            elif self._algorithm_explicitly_set:
+                raise RuntimeError(
+                    "A system with event sources requires HybridAlgorithm; "
+                    f"got explicitly configured {type(self.algorithm).__name__}."
+                )
+            else:
+                self._algorithm = HybridAlgorithm()
 
         # 2) Ensure all components have port states created so that
         #    _detect_direct_feedthrough() can call evaluate_outputs() and
@@ -841,9 +854,7 @@ class System:
         end_time = timer()
         wall_time = end_time - start_time
         logger.info(f"Simulation completed in {wall_time:.2f} seconds")
-        return SimulationResult.from_system(
-            self, t0=t0, tf=tf, dt=dt_macro, wall_time=wall_time
-        )
+        return SimulationResult.from_system(self, t0=t0, tf=tf, dt=dt_macro, wall_time=wall_time)
 
     # ----------------------------------------------------------------------------
     # Get history of all components
@@ -852,7 +863,7 @@ class System:
         """Retrieve time-series history from all components.
 
         Collects the recorded output history from every component in
-        the system, plus any event history records.
+        the system, plus event and committed mode-switch records.
 
         Returns:
             Dictionary with the following structure:
@@ -860,6 +871,8 @@ class System:
             - Keys are component names, values are tuples of
               ``(time_array, values_dict)`` from ``get_history_arrays()``
             - Special key ``"Events"`` contains event occurrence records
+            - Special key ``"ModeSwitches"`` contains typed switch records,
+              keyed by component name
 
         Example:
             >>> history = system.get_history()
@@ -867,6 +880,7 @@ class System:
             >>> plt.plot(t, values["angle"])
             >>> # Access events
             >>> events = history["Events"]
+            >>> switches = history["ModeSwitches"]
 
         See Also:
             :meth:`CoSimComponent.get_history_arrays`: Component history format
@@ -875,6 +889,7 @@ class System:
         for comp_name, comp in self.components.items():
             history[comp_name] = comp.get_history_arrays()
         history["Events"] = self.history.get_all_event_histories()
+        history["ModeSwitches"] = self.history.get_all_mode_switch_histories()
         return history
 
     # ----------------------------------------------------------------------------
@@ -915,10 +930,7 @@ class System:
             if comp.has_state_events:
                 extras.append("state events")
             suffix = f" [{', '.join(extras)}]" if extras else ""
-            lines.append(
-                f"    - {name} ({type(comp).__name__}): "
-                f"{n_in} in / {n_out} out{suffix}"
-            )
+            lines.append(f"    - {name} ({type(comp).__name__}): {n_in} in / {n_out} out{suffix}")
 
         lines.append(f"  Connections ({len(self.connections)}):")
         for c in self.connections:
@@ -927,9 +939,7 @@ class System:
         if self.event_connections:
             lines.append(f"  Event connections ({len(self.event_connections)}):")
             for ec in self.event_connections:
-                lines.append(
-                    f"    - {ec.src_comp}.{ec.src_port} -> {ec.dst_comp}.{ec.dst_port}"
-                )
+                lines.append(f"    - {ec.src_comp}.{ec.src_port} -> {ec.dst_comp}.{ec.dst_port}")
 
         if self.execution_order:
             lines.append("  Execution order:")

@@ -123,12 +123,15 @@ class CoSimComponent(ABC):
     management, history recording, parameter configuration, and provides
     hooks for hybrid event detection.
 
-    Subclasses must implement the following abstract methods:
+    Every subclass implements only these three lifecycle hooks:
         - ``_initialize_component(t0)``: Component-specific initialization
         - ``_do_step_internal(t, dt)``: Time step computation
         - ``_update_output_states(t, event_names)``: Update output port values
-        - ``get_state()``: Export physical state
-        - ``set_state(state, t)``: Import physical state
+
+    State transfer, exact rollback, and hybrid-event methods are optional
+    capabilities. Components implement ``get_state()`` and ``set_state()`` only
+    when they participate in runtime model switching, and implement the
+    checkpoint/restore hooks only when an algorithm requires rollback.
 
     Attributes:
         name (str): Unique identifier for the component within a system.
@@ -175,12 +178,10 @@ class CoSimComponent(ABC):
                 def _update_output_states(self, t: float, event_names=None) -> None:
                     self.outputs['y'].set(self._state, t=t)
 
-                def get_state(self) -> dict:
-                    return {'y': {'value': self._state, 'unit': '1'}}
-
-                def set_state(self, state: dict, t: float) -> None:
-                    self._state = state['y']['value']
-                    self.t = t
+            This is the complete minimum component contract. Implement
+            ``get_state()`` and ``set_state()`` only when the component must
+            participate in runtime model switching, and implement rollback
+            hooks only for algorithms that perform trial steps.
 
     See Also:
         :class:`PortSpec`: Port specification dataclass
@@ -410,6 +411,9 @@ class CoSimComponent(ABC):
             :class:`PortSpec`: Port specification dataclass
             :class:`PortState`: Mutable port value container
         """
+        self._validate_port_spec_collection(self.input_specs, "in", "input_specs")
+        self._validate_port_spec_collection(self.output_specs, "out", "output_specs")
+
         for spec in self.input_specs.values():
             if spec.name not in self.inputs:
                 self.inputs[spec.name] = PortState(spec)
@@ -418,6 +422,29 @@ class CoSimComponent(ABC):
                 self.outputs[spec.name] = PortState(spec)
             unit = str(spec.unit) if spec.unit is not None else None
             self.history.add_port(spec.name, unit)
+
+    def _validate_port_spec_collection(
+        self,
+        specs: dict[str, PortSpec],
+        expected_direction: str,
+        collection_name: str,
+    ) -> None:
+        """Validate one externally configured port-specification boundary."""
+        for key, spec in specs.items():
+            if not isinstance(spec, PortSpec):
+                raise TypeError(
+                    f"{self.name}.{collection_name}['{key}'] must be a PortSpec instance."
+                )
+            if key != spec.name:
+                raise ValueError(
+                    f"{self.name}.{collection_name} key '{key}' does not match "
+                    f"PortSpec name '{spec.name}'."
+                )
+            if spec.direction != expected_direction:
+                raise ValueError(
+                    f"{self.name}.{collection_name} contains port '{key}' with "
+                    f"direction '{spec.direction}'; expected '{expected_direction}'."
+                )
 
     # -------------------------------------------------------------------
     # Initialization

@@ -101,6 +101,16 @@ class PortSpec:
 
     def __post_init__(self) -> None:
         """Validate port specification at construction time."""
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("Port name must be a non-empty string.")
+        if not isinstance(self.type, PortType):
+            raise TypeError(f"Port '{self.name}': type must be a PortType, got {self.type!r}.")
+        if self.direction not in ("in", "out"):
+            raise ValueError(
+                f"Port '{self.name}': direction must be 'in' or 'out', got {self.direction!r}."
+            )
+        if self.description is not None and not isinstance(self.description, str):
+            raise TypeError(f"Port '{self.name}': description must be a string or None.")
         # Only REAL ports can have units
         if self.type != PortType.REAL and self.unit is not None:
             raise ValueError(

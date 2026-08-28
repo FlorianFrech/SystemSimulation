@@ -137,15 +137,15 @@ def _run_case(case: AngleRegionCase, macro_step: float) -> PlacementResult:
 
         system.run(t0=0.0, tf=SIMULATION_TIME, dt=macro_step)
 
-        assert len(plant.sync_events) == 1, plant.sync_events
-        event = plant.sync_events[0]
+        assert len(plant.switch_events) == 1, plant.switch_events
+        event = plant.switch_events[0]
         return PlacementResult(
             case=case,
             macro_step=macro_step,
-            time=float(event["time"]),
-            angle=abs(event["transfer_report"].source.theta),
-            from_mode=event["from_mode"],
-            to_mode=event["to_mode"],
+            time=float(event.time),
+            angle=abs(event.transfer_report.source.theta),
+            from_mode=event.from_mode,
+            to_mode=event.to_mode,
             region=plant.active_region_index,
         )
     finally:

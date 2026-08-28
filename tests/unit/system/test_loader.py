@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from syssimx.system import SimulationResult
-from syssimx.system.algorithms import GaussSeidelAlgorithm, JacobiAlgorithm
+from syssimx.system.algorithms import GaussSeidelAlgorithm, HybridAlgorithm, JacobiAlgorithm
 from syssimx.system.loader import (
     ConfigError,
     build_system,
@@ -56,6 +56,14 @@ class TestBuildSystem:
         system = build_system(config)
         assert isinstance(system.algorithm, JacobiAlgorithm)
 
+    def test_algorithm_configuration_is_applied(self):
+        config = _config()
+        config["algorithm"] = {"type": "hybrid", "tol_time": 1e-10, "max_iter": 12}
+        system = build_system(config)
+        assert isinstance(system.algorithm, HybridAlgorithm)
+        assert system.algorithm.tol_time == 1e-10
+        assert system.algorithm.max_iter == 12
+
     def test_mapping_endpoint_form(self):
         config = _config()
         config["connections"] = [
@@ -84,6 +92,12 @@ class TestConfigErrors:
         config = _config()
         config["algorithm"] = {"type": "runge_kutta"}
         with pytest.raises(ConfigError, match="Unknown algorithm type 'runge_kutta'"):
+            build_system(config)
+
+    def test_unknown_algorithm_option_fails_loudly(self):
+        config = _config()
+        config["algorithm"] = {"type": "hybrid", "verbose": True}
+        with pytest.raises(ConfigError, match="Invalid configuration.*verbose"):
             build_system(config)
 
     def test_bad_class_spec_format(self):

@@ -31,10 +31,8 @@ from tests.fixtures.components.hybrid_components import (
 # ============================================================================
 @pytest.fixture
 def hybrid_algorithm():
-    """Create a HybridAlgorithm with verbose disabled for testing."""
-    algo = HybridAlgorithm()
-    algo.verbose = False
-    return algo
+    """Create a HybridAlgorithm for testing."""
+    return HybridAlgorithm()
 
 
 # ============================================================================
@@ -178,7 +176,6 @@ class TestEventDetection:
         )
         system.add_event_connection(conn)
         system.initialize(t0=0.0)
-        system.algorithm.verbose = False
 
         # Run simulation past the event time
         system.run(t0=0.0, tf=1.0, dt=0.1)
@@ -214,7 +211,6 @@ class TestEventDetection:
         )
         system.add_event_connection(conn)
         system.initialize(t0=0.0)
-        system.algorithm.verbose = False
 
         system.run(t0=0.0, tf=1.0, dt=0.1)
 
@@ -247,7 +243,6 @@ class TestEventDetection:
         )
         system.add_event_connection(conn)
         system.initialize(t0=0.0)
-        system.algorithm.verbose = False
 
         # Use large step size to test localization
         system.run(t0=0.0, tf=1.0, dt=0.5)
@@ -361,7 +356,6 @@ class TestNonSimultaneousEvents:
         system.add_event_connection(conn1)
         system.add_event_connection(conn2)
         system.initialize(t0=0.0)
-        system.algorithm.verbose = False
 
         initial_v = listener.v
 
@@ -483,7 +477,6 @@ class TestEventChains:
         system.add_event_connection(conn1)
         system.add_event_connection(conn2)
         system.initialize(t0=0.0)
-        system.algorithm.verbose = False
 
         # Classify components
         classification = system.classify_components()

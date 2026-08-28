@@ -19,6 +19,7 @@ class Algorithm(ABC):
     """
 
     name: str
+    __slots__ = ()
 
     @abstractmethod
     def step(self, system: System, t: float, dt: float) -> None:

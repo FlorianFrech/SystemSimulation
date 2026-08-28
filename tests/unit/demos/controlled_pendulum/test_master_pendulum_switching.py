@@ -70,7 +70,7 @@ def test_reset_before_backend_initialization_is_safe():
 
     assert plant.active_mode == "FMU"
     assert plant.active_region_index is None
-    assert plant.sync_events == []
+    assert plant.switch_events == ()
     assert all(not model._is_initialized for model in plant.models.values())
 
 

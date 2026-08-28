@@ -12,6 +12,7 @@ Key Features:
     - Graph-based execution engine with automatic dependency analysis
     - Algebraic loop detection and iterative solving (IJCSA algorithm)
     - Hybrid co-simulation with event detection and superdense time
+    - Event-localized runtime model switching with typed handover records
     - Multiple master algorithms: Jacobi, Gauss-Seidel, Hybrid
 
 Example:
@@ -36,6 +37,8 @@ import logging
 
 from .__version__ import __version__, __version_info__
 from .core.base import ComponentCheckpoint, CoSimComponent, PortSpec, PortType
+from .core.history import ModeSwitchEvent
+from .core.multi_comp import MultiComponent, SwitchRegions
 from .system import Connection, EventConnection, SimulationResult, System, algorithms
 from .viz import SystemGraphVisualizer
 
@@ -44,6 +47,9 @@ __all__ = [
     "ComponentCheckpoint",
     "PortSpec",
     "PortType",
+    "MultiComponent",
+    "SwitchRegions",
+    "ModeSwitchEvent",
     "System",
     "SimulationResult",
     "SystemGraphVisualizer",

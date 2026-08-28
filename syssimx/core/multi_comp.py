@@ -62,10 +62,11 @@ import math
 from bisect import bisect_right
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 from .base import CoSimComponent
 from .events import InternalEventInfo
+from .history import ModeSwitchEvent
 from .port import PortSpec
 
 logger = logging.getLogger(__name__)
@@ -74,44 +75,6 @@ logger = logging.getLogger(__name__)
 # Type Aliases
 # -------------------------------------------------------------------
 ModeKey = str  # e.g., "FEM", "OpenSim", "FMU"
-
-
-# -------------------------------------------------------------------
-# State Adapter Protocol (for incompatible component interfaces)
-# -------------------------------------------------------------------
-class StateAdapter(Protocol):
-    """Protocol for adapting state between components with different interfaces.
-
-    Implement this protocol to provide custom state translation logic
-    when switching between models that use different state variable names,
-    units, or representations.
-
-    Example:
-        >>> class FMUAdapter:
-        ...     def adapt_state(self, source_state, target_component):
-        ...         # FMU uses 'q0', 'omega0' instead of 'q', 'omega'
-        ...         return {
-        ...             'q0': source_state['q'],
-        ...             'omega0': source_state['omega']
-        ...         }
-    """
-
-    def adapt_state(
-        self, source_state: dict[str, Any], target_component: CoSimComponent
-    ) -> dict[str, Any]:
-        """Convert state from source format to target component's format.
-
-        Args:
-            source_state: State dictionary from the source component,
-                typically in the format returned by ``get_state()``.
-            target_component: The component that will receive the
-                adapted state via ``set_state()``.
-
-        Returns:
-            Adapted state dictionary compatible with the target
-            component's ``set_state()`` method.
-        """
-        ...
 
 
 @dataclass(frozen=True)
@@ -262,9 +225,8 @@ class MultiComponent(CoSimComponent):
         active_mode (ModeKey): Key of the currently active model.
         active_comp (CoSimComponent): Reference to the currently active
             component instance. Always set after ``__init__``.
-        state_adapters (dict[ModeKey, StateAdapter]): Optional per-mode
-            state adapters for complex translation logic.
-        sync_events (list): Log of mode switch events for debugging.
+        switch_events (tuple[ModeSwitchEvent, ...]): Committed model switches
+            recorded by the component's common history object.
 
     Example:
         Minimal subclass implementation::
@@ -284,7 +246,7 @@ class MultiComponent(CoSimComponent):
     See Also:
         :class:`CoSimComponent`: Parent class with full interface docs
         :class:`SwitchRegions`: Immutable region switching configuration
-        :class:`StateAdapter`: Protocol for state translation
+        :class:`~syssimx.core.history.ModeSwitchEvent`: Typed switch record
     """
 
     def __init__(
@@ -337,12 +299,6 @@ class MultiComponent(CoSimComponent):
         self._region_boundaries_by_event: dict[str, RegionBoundary] = {}
         self._initializing_regions: bool = False
 
-        # State adapters (optional): {mode_key: adapter}
-        self.state_adapters: dict[ModeKey, StateAdapter] = {}
-
-        # List of synchronization events (for logging/debugging)
-        self.sync_events: list = []
-
         # Flag to prevent mode switching during event detection
         self._allow_mode_switching: bool = True
 
@@ -351,16 +307,12 @@ class MultiComponent(CoSimComponent):
         # without forwarding inputs to inactive models on every step.
         self._latest_inputs: tuple[dict[str, Any], float | None] | None = None
 
-        # When True, switch records in ``sync_events`` include the
+        # When True, switch records include the
         # pre-adaptation source state and the synchronized target state.
         # Default False because reading the target state calls
         # ``active_comp.get_state()`` once per switch, which can be
         # expensive for high-fidelity models.
         self.record_switch_state: bool = False
-
-        # Previous and current state for synchronization
-        self._prev_state: dict[str, Any] | None = None
-        self._curr_state: dict[str, Any] | None = None
 
     @property
     def switch_regions(self) -> SwitchRegions | None:
@@ -387,6 +339,11 @@ class MultiComponent(CoSimComponent):
     def active_comp(self) -> CoSimComponent:
         """Return the component assigned to :attr:`active_mode`."""
         return self.models[self.active_mode]
+
+    @property
+    def switch_events(self) -> tuple[ModeSwitchEvent, ...]:
+        """Return committed switches from the component's common history."""
+        return self.history.mode_switch_events
 
     # -------------------------------------------------------------------
     # State Adaptation Hook
@@ -826,7 +783,7 @@ class MultiComponent(CoSimComponent):
         to_mode: ModeKey,
         prepared: _PreparedStateTransfer,
     ) -> None:
-        """Append one record of the completed switch to ``sync_events``.
+        """Record one completed switch in the component's common history.
 
         Always logs the time, source mode, and target mode. When
         ``self.record_switch_state`` is ``True``, the record also
@@ -842,17 +799,16 @@ class MultiComponent(CoSimComponent):
             to_mode: Mode key that is active after the switch.
             prepared: Validated source and target states from the transaction.
         """
-        record: dict[str, Any] = {
-            "time": t,
-            "from_mode": from_mode,
-            "to_mode": to_mode,
-        }
-        if self.record_switch_state:
-            record["retrieved"] = prepared.source_state
-            record["now"] = prepared.target_state
-        if prepared.transfer_report is not None:
-            record["transfer_report"] = prepared.transfer_report
-        self.sync_events.append(record)
+        self.history.record_mode_switch(
+            ModeSwitchEvent(
+                time=t,
+                from_mode=from_mode,
+                to_mode=to_mode,
+                source_state=prepared.source_state if self.record_switch_state else None,
+                target_state=prepared.target_state if self.record_switch_state else None,
+                transfer_report=prepared.transfer_report,
+            )
+        )
 
     # -------------------------------------------------------------------
     # Input/Output Delegation
@@ -1089,9 +1045,6 @@ class MultiComponent(CoSimComponent):
             "active_mode": self._active_mode,
             "active_region_index": self.active_region_index,
             "latest_inputs": self._latest_inputs,
-            "sync_events": self.sync_events,
-            "prev_state": self._prev_state,
-            "curr_state": self._curr_state,
             "initializing_regions": self._initializing_regions,
         }
 
@@ -1100,9 +1053,6 @@ class MultiComponent(CoSimComponent):
         self._active_mode = metadata["active_mode"]
         self.active_region_index = metadata["active_region_index"]
         self._latest_inputs = metadata["latest_inputs"]
-        self.sync_events[:] = metadata["sync_events"]
-        self._prev_state = metadata["prev_state"]
-        self._curr_state = metadata["curr_state"]
         self._initializing_regions = metadata["initializing_regions"]
 
     def restore_state(self, snapshot, t) -> None:
@@ -1225,8 +1175,5 @@ class MultiComponent(CoSimComponent):
         self._active_mode = self._initial_mode
         self._latest_inputs = None
         self.active_region_index = None
-        self.sync_events.clear()
-        self._prev_state = None
-        self._curr_state = None
         self._initializing_regions = False
         self._allow_mode_switching = True

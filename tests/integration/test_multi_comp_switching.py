@@ -38,22 +38,18 @@ def _run_regions(
     )
     system = System(name="RegionSwitchingSystem")
     system.add_component(plant)
-    algorithm = HybridAlgorithm()
-    algorithm.verbose = False
-    algorithm.tol_time = 1e-8
-    algorithm.tol_value = 1e-14
-    system.algorithm = algorithm
+    system.set_algorithm(HybridAlgorithm(tol_time=1e-8, tol_value=1e-14))
     system.initialize(t0=0.0)
     system.run(t0=0.0, tf=tf, dt=dt)
     return plant
 
 
 def _switch_times(plant: RegionMultiComponent) -> list[float]:
-    return [float(event["time"]) for event in plant.sync_events]
+    return [float(event.time) for event in plant.switch_events]
 
 
 def _visited_modes(plant: RegionMultiComponent) -> list[ModeKey]:
-    return [event["to_mode"] for event in plant.sync_events]
+    return [event.to_mode for event in plant.switch_events]
 
 
 class TestRegionSwitchingInvariants:

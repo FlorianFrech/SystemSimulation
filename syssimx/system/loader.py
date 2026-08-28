@@ -1,4 +1,8 @@
-"""Declarative system descriptions: build a ``System`` from YAML/JSON.
+"""Experimental declarative system descriptions for YAML and JSON.
+
+.. warning::
+   This loader is experimental. Its configuration schema may change between
+   minor releases and is not part of the stable framework API yet.
 
 A system description is a mapping with the following shape (YAML shown;
 JSON with the same structure is equally supported)::
@@ -35,10 +39,9 @@ from __future__ import annotations
 
 import importlib
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from ..core.base import CoSimComponent
 from .algorithms import (
@@ -52,7 +55,7 @@ from .connection import Connection, EventConnection
 from .results import SimulationResult
 from .system import System
 
-ALGORITHMS: dict[str, type[Algorithm]] = {
+ALGORITHMS: dict[str, Callable[..., Algorithm]] = {
     "jacobi": JacobiAlgorithm,
     "gauss_seidel": GaussSeidelAlgorithm,
     "hybrid": HybridAlgorithm,
@@ -87,6 +90,13 @@ def load_config(path: str | Path) -> dict[str, Any]:
     if path.suffix.lower() == ".json":
         config = json.loads(text)
     else:
+        try:
+            import yaml
+        except ImportError as exc:  # pragma: no cover - depends on installation
+            raise ModuleNotFoundError(
+                "YAML configuration requires PyYAML; install 'syssimx[config]'. "
+                "JSON configuration works with the basic installation."
+            ) from exc
         config = yaml.safe_load(text)
     if not isinstance(config, dict):
         raise ConfigError(f"{path}: top level of a system description must be a mapping")
@@ -146,16 +156,19 @@ def build_system(config: dict[str, Any] | str | Path) -> System:
     if algo_cfg:
         if not isinstance(algo_cfg, dict):
             raise ConfigError(
-                f"'algorithm' must be a mapping with a 'type' key, "
-                f"got {type(algo_cfg).__name__}"
+                f"'algorithm' must be a mapping with a 'type' key, got {type(algo_cfg).__name__}"
             )
         algo_type = algo_cfg.get("type")
         if algo_type not in ALGORITHMS:
             raise ConfigError(
-                f"Unknown algorithm type '{algo_type}'. "
-                f"Available: {', '.join(sorted(ALGORITHMS))}"
+                f"Unknown algorithm type '{algo_type}'. Available: {', '.join(sorted(ALGORITHMS))}"
             )
-        system.set_algorithm(ALGORITHMS[algo_type]())
+        algorithm_options = {key: value for key, value in algo_cfg.items() if key != "type"}
+        try:
+            algorithm = ALGORITHMS[algo_type](**algorithm_options)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"Invalid configuration for algorithm '{algo_type}': {exc}") from exc
+        system.set_algorithm(algorithm)
 
     return system
 
@@ -235,9 +248,7 @@ def _build_component(entry: dict[str, Any]) -> CoSimComponent:
         ) from exc
 
     if not isinstance(component, CoSimComponent):
-        raise ConfigError(
-            f"Component '{entry['name']}': {entry['class']} is not a CoSimComponent"
-        )
+        raise ConfigError(f"Component '{entry['name']}': {entry['class']} is not a CoSimComponent")
 
     parameters = entry.get("parameters")
     if parameters:
@@ -258,9 +269,7 @@ def _build_component(entry: dict[str, Any]) -> CoSimComponent:
 def _resolve_class(spec: str) -> type:
     """Resolve a ``"module.path:ClassName"`` import spec to a class."""
     if ":" not in spec:
-        raise ConfigError(
-            f"Invalid class spec '{spec}': expected 'module.path:ClassName'"
-        )
+        raise ConfigError(f"Invalid class spec '{spec}': expected 'module.path:ClassName'")
     module_path, class_name = spec.rsplit(":", 1)
     try:
         module = importlib.import_module(module_path)
@@ -269,9 +278,7 @@ def _resolve_class(spec: str) -> type:
     try:
         cls = getattr(module, class_name)
     except AttributeError as exc:
-        raise ConfigError(
-            f"Module '{module_path}' has no attribute '{class_name}'"
-        ) from exc
+        raise ConfigError(f"Module '{module_path}' has no attribute '{class_name}'") from exc
     if not isinstance(cls, type):
         raise ConfigError(f"'{spec}' does not resolve to a class")
     return cls

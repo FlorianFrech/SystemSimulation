@@ -156,6 +156,32 @@ class TestPortSpecCreation:
         with pytest.raises(Exception):
             spec.name = "modified"
 
+    @pytest.mark.parametrize("name", ["", "   "])
+    def test_empty_port_name_raises_at_construction(self, name):
+        with pytest.raises(ValueError, match="non-empty"):
+            PortSpec(name=name, type=PortType.REAL, direction="in")
+
+    def test_non_enum_port_type_raises_at_construction(self):
+        with pytest.raises(TypeError, match="must be a PortType"):
+            PortSpec(name="x", type="real", direction="in")  # type: ignore[arg-type]
+
+    def test_non_string_description_raises_at_construction(self):
+        with pytest.raises(TypeError, match="description must be a string"):
+            PortSpec(
+                name="x",
+                type=PortType.REAL,
+                direction="in",
+                description=42,  # type: ignore[arg-type]
+            )
+
+    def test_invalid_direction_raises_at_construction(self):
+        with pytest.raises(ValueError, match="direction"):
+            PortSpec(
+                name="x",
+                type=PortType.REAL,
+                direction="sideways",  # type: ignore[arg-type]
+            )
+
     def test_invalid_unit_string_raises_at_construction(self):
         """Test that invalid unit strings raise ValueError at construction."""
         with pytest.raises(ValueError, match="Invalid unit string"):

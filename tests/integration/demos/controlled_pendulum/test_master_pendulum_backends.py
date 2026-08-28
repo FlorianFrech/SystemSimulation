@@ -82,12 +82,12 @@ def real_backend_run() -> Iterator[MasterPendulum]:
 
 
 def test_real_backends_cover_every_directed_transfer(real_backend_run: MasterPendulum):
-    events = real_backend_run.sync_events
-    actual_transitions = tuple((event["from_mode"], event["to_mode"]) for event in events)
+    events = real_backend_run.switch_events
+    actual_transitions = tuple((event.from_mode, event.to_mode) for event in events)
     expected_times = [breakpoint + BAND for breakpoint in BREAKPOINTS]
 
     assert actual_transitions == EXPECTED_TRANSITIONS
-    assert [event["time"] for event in events] == pytest.approx(
+    assert [event.time for event in events] == pytest.approx(
         expected_times, abs=EVENT_TIME_TOLERANCE
     )
     assert real_backend_run.active_region_index == len(MODES) - 1
@@ -97,7 +97,7 @@ def test_real_backends_cover_every_directed_transfer(real_backend_run: MasterPen
 def test_real_backend_transfers_preserve_canonical_physical_state(
     real_backend_run: MasterPendulum,
 ):
-    reports = [event["transfer_report"] for event in real_backend_run.sync_events]
+    reports = [event.transfer_report for event in real_backend_run.switch_events]
 
     assert len(reports) == len(EXPECTED_TRANSITIONS)
     assert all(isinstance(report, PendulumTransferReport) for report in reports)
@@ -171,7 +171,7 @@ def test_real_backend_reset_reinitialize_matches_fresh_instance(monkeypatch):
         assert system.is_initialized == fresh_system.is_initialized is True
         assert reused.active_region_index == fresh.active_region_index == 2
         assert reused.active_mode == fresh.active_mode == "FMU"
-        assert reused.sync_events == fresh.sync_events == []
+        assert reused.switch_events == fresh.switch_events == ()
         assert reused.t == fresh.t == restart_time
         assert reused.rigid_properties == fresh.rigid_properties
         assert reused.opensim.model is not old_opensim_model
@@ -227,7 +227,7 @@ def test_failed_real_target_validation_restores_the_transaction(monkeypatch):
         assert plant.active_region_index == 0
         assert plant.active_mode == "FEM"
         assert plant.t == 0.0
-        assert plant.sync_events == []
+        assert plant.switch_events == ()
         assert plant.fmu._instance is not target_instance
         assert plant.fmu._unzipdir == target_unzipdir
         # Rollback recreates the slave, releasing the outgoing one when the
@@ -288,7 +288,7 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
             )
             master_monitor_before = monitor_snapshot(plant.monitoring_state)
             fem_monitor_before = monitor_snapshot(plant.fem.monitoring_state)
-            switch_log_before = deepcopy(plant.sync_events)
+            switch_log_before = deepcopy(plant.switch_events)
             checkpoint = plant.checkpoint()
 
             caplog.clear()
@@ -300,7 +300,7 @@ def test_real_trial_advances_are_observationally_pure(monkeypatch, caplog):
             assert plant.active_mode == mode
             assert plant.active_region_index == region_index
             assert plant.t == 0.0
-            assert plant.sync_events == switch_log_before
+            assert plant.switch_events == switch_log_before
             assert monitor_snapshot(plant.monitoring_state) == master_monitor_before
             assert monitor_snapshot(plant.fem.monitoring_state) == fem_monitor_before
             assert (

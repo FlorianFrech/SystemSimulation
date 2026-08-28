@@ -120,11 +120,7 @@ def build_angle_region_plant(
 
 def make_hybrid_algorithm() -> HybridAlgorithm:
     """Return the quiet, tightly localized algorithm used by every harness."""
-    algorithm = HybridAlgorithm()
-    algorithm.verbose = False
-    algorithm.tol_time = TOL_TIME
-    algorithm.tol_value = TOL_VALUE
-    return algorithm
+    return HybridAlgorithm(tol_time=TOL_TIME, tol_value=TOL_VALUE)
 
 
 def initialize_real_plant(

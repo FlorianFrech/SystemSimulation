@@ -39,10 +39,28 @@ class PortHistoryCheckpoint:
 
 
 @dataclass(frozen=True)
+class ModeSwitchEvent:
+    """One committed runtime model replacement.
+
+    The optional state snapshots are present only when a ``MultiComponent``
+    enables detailed transfer recording. ``transfer_report`` contains any
+    compact, domain-specific acceptance evidence produced by the wrapper.
+    """
+
+    time: float
+    from_mode: str
+    to_mode: str
+    source_state: dict[str, Any] | None = None
+    target_state: dict[str, Any] | None = None
+    transfer_report: Any | None = None
+
+
+@dataclass(frozen=True)
 class ComponentHistoryCheckpoint:
     """Opaque, restorable copy of a component's port histories."""
 
     ports: tuple[tuple[str, PortHistoryCheckpoint], ...]
+    mode_switch_events: tuple[ModeSwitchEvent, ...]
 
 
 # -------------------------------------------------------------------
@@ -167,6 +185,7 @@ class ComponentHistory:
 
     component_name: str
     _port_histories: dict[str, PortHistory] = field(default_factory=dict)
+    _mode_switch_events: list[ModeSwitchEvent] = field(default_factory=list)
 
     def add_port(self, port_name: str, unit: str | None = None) -> None:
         """Register a port for history tracking."""
@@ -188,6 +207,15 @@ class ComponentHistory:
     def get_all_histories(self) -> dict[str, PortHistory]:
         """Get all port histories as dictionary."""
         return dict(self._port_histories)
+
+    def record_mode_switch(self, event: ModeSwitchEvent) -> None:
+        """Record one committed runtime model replacement."""
+        self._mode_switch_events.append(event)
+
+    @property
+    def mode_switch_events(self) -> tuple[ModeSwitchEvent, ...]:
+        """Return committed model replacements in chronological order."""
+        return tuple(self._mode_switch_events)
 
     def to_dict(
         self, port_names: list[str] | None = None, units: dict[str, str] | None = None
@@ -247,6 +275,8 @@ class ComponentHistory:
         for port in ports:
             if port in self._port_histories:
                 self._port_histories[port].clear()
+        if port_names is None:
+            self._mode_switch_events.clear()
 
     def checkpoint(self) -> ComponentHistoryCheckpoint:
         """Capture every registered port history for later restoration."""
@@ -254,7 +284,8 @@ class ComponentHistory:
             ports=tuple(
                 (name, port_history.checkpoint())
                 for name, port_history in self._port_histories.items()
-            )
+            ),
+            mode_switch_events=tuple(deepcopy(self._mode_switch_events)),
         )
 
     def restore_checkpoint(self, checkpoint: ComponentHistoryCheckpoint) -> None:
@@ -269,6 +300,7 @@ class ComponentHistory:
                 history = PortHistory(port_name=name, unit=port_checkpoint.unit)
                 self._port_histories[name] = history
             history.restore_checkpoint(port_checkpoint)
+        self._mode_switch_events[:] = deepcopy(checkpoint.mode_switch_events)
 
     def __len__(self) -> int:
         """Number of ports with history."""
@@ -344,6 +376,21 @@ class SystemHistory:
     def get_all_event_histories(self) -> dict[tuple[str, str], list[DenseTime]]:
         """Get all recorded event histories."""
         return dict(self._event_histories)
+
+    def get_mode_switch_history(self, component_name: str) -> tuple[ModeSwitchEvent, ...]:
+        """Return model replacements recorded by one registered component."""
+        component_history = self._component_histories.get(component_name)
+        if component_history is None:
+            return ()
+        return component_history.mode_switch_events
+
+    def get_all_mode_switch_histories(self) -> dict[str, tuple[ModeSwitchEvent, ...]]:
+        """Return model replacements for every component that switched."""
+        return {
+            component_name: events
+            for component_name, history in self._component_histories.items()
+            if (events := history.mode_switch_events)
+        }
 
     # ----------------------------------------------------------------------------
     # Retrieval Methods

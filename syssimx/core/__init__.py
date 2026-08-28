@@ -1,5 +1,7 @@
 from .base import ComponentCheckpoint, CoSimComponent
 from .events import DenseTime, Event, EventIndicator, InternalEventInfo
+from .history import ModeSwitchEvent
+from .multi_comp import MultiComponent, SwitchRegions
 from .port import PortSpec, PortState, PortType
 
 __all__ = [
@@ -12,4 +14,7 @@ __all__ = [
     "EventIndicator",
     "InternalEventInfo",
     "DenseTime",
+    "ModeSwitchEvent",
+    "MultiComponent",
+    "SwitchRegions",
 ]

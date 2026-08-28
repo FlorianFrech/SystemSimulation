@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from syssimx.core.events import DenseTime
-from syssimx.core.history import ComponentHistory, PortHistory, SystemHistory
+from syssimx.core.history import ComponentHistory, ModeSwitchEvent, PortHistory, SystemHistory
 from syssimx.utilities.units import Quantity, ureg
 
 
@@ -158,6 +158,18 @@ class TestComponentHistory:
         comp_history = ComponentHistory(component_name="CompA")
         assert comp_history.component_name == "CompA"
         assert comp_history._port_histories == {}
+
+    def test_mode_switch_events_are_recorded_and_restored_with_history(self):
+        comp_history = ComponentHistory(component_name="Plant")
+        first = ModeSwitchEvent(time=0.2, from_mode="FEM", to_mode="FMU")
+        second = ModeSwitchEvent(time=0.4, from_mode="FMU", to_mode="FEM")
+        comp_history.record_mode_switch(first)
+        checkpoint = comp_history.checkpoint()
+        comp_history.record_mode_switch(second)
+
+        comp_history.restore_checkpoint(checkpoint)
+
+        assert comp_history.mode_switch_events == (first,)
 
     def test_add_port(self):
         """Test adding PortHistory to ComponentHistory."""
@@ -324,6 +336,16 @@ class TestSystemHistory:
         sys_history.add_component(comp_history.component_name, comp_history)
         assert "CompA" in sys_history._component_histories
         assert sys_history._component_histories["CompA"] == comp_history
+
+    def test_mode_switch_history_is_read_from_registered_component_history(self):
+        sys_history = SystemHistory("System")
+        comp_history = ComponentHistory(component_name="Plant")
+        event = ModeSwitchEvent(time=0.2, from_mode="FEM", to_mode="FMU")
+        comp_history.record_mode_switch(event)
+        sys_history.add_component("Plant", comp_history)
+
+        assert sys_history.get_mode_switch_history("Plant") == (event,)
+        assert sys_history.get_all_mode_switch_histories() == {"Plant": (event,)}
 
     def test_get_component_history(self):
         """Test retrieving ComponentHistory from SystemHistory."""

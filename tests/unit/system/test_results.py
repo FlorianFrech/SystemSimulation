@@ -2,9 +2,10 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from syssimx import Connection, SimulationResult, System
-from tests.fixtures.components import ConstantSource, IntegratorComponent
+from syssimx import Connection, ModeSwitchEvent, SimulationResult, System
+from tests.fixtures.components import ConstantSource, IntegratorComponent, TorqueSource
 
 
 def _make_system() -> System:
@@ -49,7 +50,7 @@ class TestSimulationResult:
         result = system.run(t0=0.0, tf=1.0, dt=0.1)
 
         df = result.to_dataframe()
-        assert list(df.columns) == ["component", "port", "time", "value"]
+        assert list(df.columns) == ["component", "port", "time", "value", "unit"]
         assert set(df["component"].unique()) == {"Src", "Int"}
         # Integrator of constant 1.0 ends at ~1.0
         y_int = df[(df["component"] == "Int") & (df["port"] == "y")]
@@ -63,6 +64,20 @@ class TestSimulationResult:
         assert "time" in df.columns
         assert "y" in df.columns
         assert np.isclose(df["y"].iloc[-1], 1.0)
+        assert df.attrs["units"] == {"y": None}
+
+    def test_result_preserves_units_from_component_history(self):
+        system = System(name="UnitfulResult")
+        system.add_component(TorqueSource(name="Torque", torque=2.5))
+        system.initialize(t0=0.0)
+
+        result = system.run(t0=0.0, tf=0.2, dt=0.1)
+        long_df = result.to_dataframe()
+        wide_df = result.to_dataframe(component="Torque")
+
+        assert result.units == {"Torque": {"y": "N*m"}}
+        assert set(long_df["unit"]) == {"N*m"}
+        assert wide_df.attrs["units"] == {"y": "N*m"}
 
     def test_to_csv_roundtrip(self, tmp_path):
         system = _make_system()
@@ -74,12 +89,33 @@ class TestSimulationResult:
         assert "y" in df.columns
         assert len(df) > 0
 
+    def test_unitful_wide_csv_includes_units_in_column_names(self, tmp_path):
+        system = System(name="UnitfulCsv")
+        system.add_component(TorqueSource(name="Torque", torque=2.5))
+        system.initialize(t0=0.0)
+        result = system.run(t0=0.0, tf=0.2, dt=0.1)
+
+        path = result.to_csv(tmp_path / "torque.csv", component="Torque")
+        df = pd.read_csv(path)
+
+        assert "y [N*m]" in df.columns
+
     def test_from_system_captures_events_key(self):
         system = _make_system()
         system.run(t0=0.0, tf=0.2, dt=0.1)
         result = SimulationResult.from_system(system, t0=0.0, tf=0.2, dt=0.1)
         # Events are captured separately, not as a component history
         assert "Events" not in result.histories
+
+    def test_from_system_captures_typed_mode_switches(self):
+        system = _make_system()
+        event = ModeSwitchEvent(time=0.1, from_mode="coarse", to_mode="fine")
+        system.components["Int"].history.record_mode_switch(event)
+
+        result = SimulationResult.from_system(system, t0=0.0, tf=0.1, dt=0.1)
+
+        assert result.mode_switches == {"Int": (event,)}
+        assert "ModeSwitches" not in result.histories
 
     def test_empty_result_dataframe(self):
         result = SimulationResult(
@@ -93,7 +129,57 @@ class TestSimulationResult:
         )
         df = result.to_dataframe()
         assert df.empty
-        assert list(df.columns) == ["component", "port", "time", "value"]
+        assert list(df.columns) == ["component", "port", "time", "value", "unit"]
+
+    def test_misaligned_port_history_fails_at_result_construction(self):
+        with pytest.raises(ValueError, match="Comp.y.*2 timestamps.*1 values"):
+            SimulationResult(
+                system_name="Malformed",
+                t0=0.0,
+                tf=1.0,
+                dt=0.1,
+                wall_time=0.0,
+                algorithm="GaussSeidelAlgorithm",
+                histories={"Comp": (np.array([0.0, 0.1]), {"y": np.array([1.0])})},
+            )
+
+    def test_non_vector_time_history_fails_at_result_construction(self):
+        with pytest.raises(ValueError, match="Comp.*time history must be one-dimensional"):
+            SimulationResult(
+                system_name="Malformed",
+                t0=0.0,
+                tf=1.0,
+                dt=0.1,
+                wall_time=0.0,
+                algorithm="GaussSeidelAlgorithm",
+                histories={"Comp": (np.array([[0.0, 0.1]]), {"y": np.array([1.0])})},
+            )
+
+    def test_decreasing_time_history_fails_at_result_construction(self):
+        with pytest.raises(ValueError, match="monotonically non-decreasing"):
+            SimulationResult(
+                system_name="Malformed",
+                t0=0.0,
+                tf=1.0,
+                dt=0.1,
+                wall_time=0.0,
+                algorithm="GaussSeidelAlgorithm",
+                histories={
+                    "Comp": (np.array([0.1, 0.0]), {"y": np.array([1.0, 2.0])})
+                },
+            )
+
+    def test_scalar_port_history_fails_at_result_construction(self):
+        with pytest.raises(ValueError, match="Comp.y.*sample axis"):
+            SimulationResult(
+                system_name="Malformed",
+                t0=0.0,
+                tf=1.0,
+                dt=0.1,
+                wall_time=0.0,
+                algorithm="GaussSeidelAlgorithm",
+                histories={"Comp": (np.array([0.0]), {"y": np.array(1.0)})},
+            )
 
 
 # ============================================================================
@@ -158,30 +244,3 @@ class TestDescribe:
         report = system.describe()
         assert isinstance(report, str)
         assert report.count("\n") >= 5
-
-
-class TestWideFormatMisalignedPorts:
-    def test_misaligned_port_skipped_in_wide_format(self):
-        """Ports whose sampling differs from the component time grid are
-        skipped instead of crashing the DataFrame constructor."""
-        result = SimulationResult(
-            system_name="Misaligned",
-            t0=0.0,
-            tf=1.0,
-            dt=0.1,
-            wall_time=0.0,
-            algorithm="GaussSeidelAlgorithm",
-            histories={
-                "Comp": (
-                    np.array([0.0, 0.1, 0.2]),
-                    {
-                        "aligned": np.array([1.0, 2.0, 3.0]),
-                        "misaligned": np.array([1.0, 2.0]),  # one sample short
-                    },
-                )
-            },
-        )
-        df = result.to_dataframe(component="Comp")
-        assert "aligned" in df.columns
-        assert "misaligned" not in df.columns
-        assert len(df) == 3

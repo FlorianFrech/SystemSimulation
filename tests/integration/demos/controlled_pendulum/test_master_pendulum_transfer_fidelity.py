@@ -88,8 +88,8 @@ def reports(
 ) -> dict[tuple[str, str], PendulumTransferReport]:
     """Map every directed backend pair to its accepted transfer report."""
     collected = {
-        (event["from_mode"], event["to_mode"]): event["transfer_report"]
-        for event in driven_backend_run.sync_events
+        (event.from_mode, event.to_mode): event.transfer_report
+        for event in driven_backend_run.switch_events
     }
     assert tuple(collected) == DIRECTED_PAIRS
     return collected

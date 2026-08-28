@@ -10,8 +10,11 @@ from dataclasses import FrozenInstanceError
 import numpy as np
 import pytest
 
+from syssimx import ModeSwitchEvent
+from syssimx import MultiComponent as PublicMultiComponent
+from syssimx import SwitchRegions as PublicSwitchRegions
 from syssimx.core.events import Event
-from syssimx.core.multi_comp import SwitchRegions
+from syssimx.core.multi_comp import MultiComponent, SwitchRegions
 from syssimx.utilities import Quantity
 from tests.fixtures.components import (
     EmptyMultiComponent,
@@ -29,6 +32,11 @@ def _magnitude(value, default: float = 0.0) -> float:
     if value is None:
         return default
     return float(getattr(value, "magnitude", value))
+
+
+def test_switching_types_are_part_of_the_primary_public_api():
+    assert PublicMultiComponent is MultiComponent
+    assert PublicSwitchRegions is SwitchRegions
 
 
 # ============================================================================
@@ -115,20 +123,20 @@ class TestModeSwitching:
         state_b = multi_comp.active_comp.get_state()
         assert state_b == state_a
 
-    def test_switch_mode_records_minimal_sync_event_by_default(
+    def test_switch_mode_records_minimal_switch_event_by_default(
         self, multi_comp: SimpleMultiComponent
     ):
         """Each switch logs time, from_mode, to_mode; state fields are omitted by default."""
         multi_comp._switch_mode(new_mode="B", t=0.2)
 
-        sync_events = multi_comp.sync_events
-        assert len(sync_events) == 1
-        event = sync_events[0]
-        assert np.isclose(event["time"], 0.2)
-        assert event["from_mode"] == "A"
-        assert event["to_mode"] == "B"
-        assert "retrieved" not in event
-        assert "now" not in event
+        switch_events = multi_comp.switch_events
+        assert len(switch_events) == 1
+        event = switch_events[0]
+        assert np.isclose(event.time, 0.2)
+        assert event.from_mode == "A"
+        assert event.to_mode == "B"
+        assert event.source_state is None
+        assert event.target_state is None
 
     def test_switch_mode_records_state_when_enabled(self, multi_comp: SimpleMultiComponent):
         """Enabling record_switch_state adds the pre- and post-switch state snapshots."""
@@ -138,9 +146,9 @@ class TestModeSwitching:
 
         multi_comp._switch_mode(new_mode="B", t=0.2)
 
-        event = multi_comp.sync_events[0]
-        assert event["retrieved"] == state_a
-        assert event["now"] == state_a
+        event = multi_comp.switch_events[0]
+        assert event.source_state == state_a
+        assert event.target_state == state_a
 
 
 # ============================================================================
@@ -585,7 +593,7 @@ class TestSwitchRegions:
 
         assert plant.active_region_index == 2
         assert plant.active_mode == "C"
-        assert plant.sync_events == []
+        assert plant.switch_events == ()
 
     def test_region_map_is_not_polled_during_accepted_steps(self):
         evaluations = 0
@@ -669,7 +677,7 @@ class TestTransactionalRegionSwitching:
         assert plant.active_region_index == 0
         assert plant.active_mode == "A"
         assert plant.active_comp is source
-        assert plant.sync_events == []
+        assert plant.switch_events == ()
         assert self._observable_state(plant) == wrapper_before
         assert self._observable_state(source) == source_before
         assert source.get_state() == source_physical_before
@@ -706,7 +714,7 @@ class TestTransactionalRegionSwitching:
         assert plant.active_region_index == 0
         assert plant.active_mode == "A"
         assert plant.active_comp is source
-        assert plant.sync_events == []
+        assert plant.switch_events == ()
         assert self._observable_state(plant) == wrapper_before
         assert self._observable_state(source) == source_before
         assert source.get_state() == source_physical_before
@@ -727,7 +735,7 @@ class TestTransactionalRegionSwitching:
         reused = build()
         reused.initialize(0.0)
         reused.do_step(0.0, 1.0)
-        reused.sync_events.append({"time": 1.0, "from_mode": "C", "to_mode": "B"})
+        reused.history.record_mode_switch(ModeSwitchEvent(time=1.0, from_mode="C", to_mode="B"))
         reused.reset()
         reused.initialize(3.0)
 
@@ -736,7 +744,7 @@ class TestTransactionalRegionSwitching:
 
         assert reused.active_region_index == fresh.active_region_index == 2
         assert reused.active_mode == fresh.active_mode == "C"
-        assert reused.sync_events == fresh.sync_events == []
+        assert reused.switch_events == fresh.switch_events == ()
         assert self._observable_state(reused) == self._observable_state(fresh)
         for mode in reused.models:
             assert self._observable_state(reused.models[mode]) == self._observable_state(
