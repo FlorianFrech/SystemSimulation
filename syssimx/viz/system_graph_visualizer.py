@@ -13,9 +13,10 @@ from __future__ import annotations
 import colorsys
 import hashlib
 from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
-from graphviz import Digraph
-from IPython.display import display
+if TYPE_CHECKING:
+    from graphviz import Digraph
 
 from ..core.base import CoSimComponent
 from ..core.port import PortSpec, PortType
@@ -342,7 +343,8 @@ class SystemGraphVisualizer:
             filename: Output filename; an extension is optional and will be stripped.
             format: Graphviz output format (e.g., "svg", "png").
         """
-        self.dot = Digraph(
+        DigraphClass, display_graph = _require_visualization_dependencies()
+        self.dot = DigraphClass(
             comment=f"System: {self.system.name}",
             format=format,
             engine="dot",
@@ -399,7 +401,7 @@ class SystemGraphVisualizer:
 
         render_name = filename.rsplit(".", 1)[0]
         self.dot.render(filename=render_name, view=False)
-        display(self.dot)
+        display_graph(self.dot)
 
     def save(self, filepath: str) -> None:
         """Save the current graph to a file.
@@ -547,3 +549,24 @@ class SystemGraphVisualizer:
                 arrowhead="odot",
                 fontcolor=COLOR_EVENT,
             )
+
+
+def _require_visualization_dependencies() -> tuple[Any, Any]:
+    """Import Graphviz and use notebook display only when available."""
+    try:
+        from graphviz import Digraph
+    except ImportError as exc:  # pragma: no cover - depends on installation
+        raise ModuleNotFoundError(
+            "System graph visualization requires graphviz; install 'syssimx[viz]'."
+        ) from exc
+
+    try:
+        from IPython.display import display as display_graph
+    except ImportError:  # pragma: no cover - depends on installation
+        return Digraph, _ignore_display
+
+    return Digraph, display_graph
+
+
+def _ignore_display(_graph: Any) -> None:
+    """Accept a rendered graph when IPython display support is unavailable."""

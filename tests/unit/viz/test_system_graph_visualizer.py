@@ -17,11 +17,17 @@ from tests.fixtures.systems import (
 def no_graphviz_render(monkeypatch):
     """Disable graph rendering/display for visualization tests."""
 
+    from graphviz import Digraph
+
     def fake_render(self, filename: str, view: bool = False, cleanup: bool = False):
         return filename
 
-    monkeypatch.setattr(viz_mod.Digraph, "render", fake_render, raising=False)
-    monkeypatch.setattr(viz_mod, "display", lambda *args, **kwargs: None)
+    monkeypatch.setattr(Digraph, "render", fake_render, raising=False)
+    monkeypatch.setattr(
+        viz_mod,
+        "_require_visualization_dependencies",
+        lambda: (Digraph, lambda *args, **kwargs: None),
+    )
 
 
 class TestSystemGraphVisualizer:

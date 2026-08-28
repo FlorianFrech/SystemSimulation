@@ -7,16 +7,8 @@ name = "syssimx"
 dynamic = ["version"]
 dependencies = [
     "numpy",
-    "scipy",
     "pint",
     "networkx",
-    "pandas",
-    "matplotlib",        # Used in demos and plotting
-    "ipywidgets",        # Used in UI components
-    "traitlets",         # Used in PendulumMonitoringState
-    "graphviz",         # For system graph visualization
-    "pydot",            # Alternative graph rendering
-    "pyyaml",           # Declarative system descriptions (syssimx.system.loader)
 ]
 requires-python = ">=3.11"
 authors = [
@@ -62,6 +54,29 @@ opensim = [
     "opensim>=4.6",
 ]
 
+# Result tables and CSV export
+results = [
+    "pandas",
+]
+
+# Experimental YAML configuration loader (JSON uses the standard library)
+config = [
+    "pyyaml",
+]
+
+# Graphviz system visualization
+viz = [
+    "graphviz",
+]
+
+# Tutorial and case-study user interfaces
+examples = [
+    "matplotlib",
+    "ipywidgets",
+    "traitlets",
+    "ipython>=8.12.0",
+]
+
 # Development tools
 # Kept as a pip-compatible extra. The uv development workflow uses the
 # mirrored [dependency-groups].dev group below.
@@ -80,11 +95,17 @@ dev = [
     "myst-nb>=1.1.0",
     "nbmake>=1.5.0",            # executes documentation notebooks as tests
     "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
+    "pandas",
+    "pyyaml",
+    "graphviz",
+    "matplotlib",
+    "ipywidgets",
+    "traitlets",
 ]
 
 # Complete installation with all features
 all = [
-    "syssimx[fmu,fem,opensim]",
+    "syssimx[fmu,fem,opensim,results,config,viz,examples]",
 ]
 
 # Complete development environment
@@ -108,6 +129,12 @@ dev = [
     "myst-nb>=1.1.0",
     "nbmake>=1.5.0",            # executes documentation notebooks as tests
     "tqdm>=4.66.0",             # progress bars in the benchmark notebooks
+    "pandas",
+    "pyyaml",
+    "graphviz",
+    "matplotlib",
+    "ipywidgets",
+    "traitlets",
 ]
 
 [project.urls]
