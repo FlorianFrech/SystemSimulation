@@ -9,6 +9,43 @@ Issue identifiers such as `MC-05` or `HARD-07` refer to the working record in
 that document. The detailed implementation records for the runtime-switching
 redesign are in [`MILESTONES.md`](MILESTONES.md).
 
+## [Unreleased]
+
+### Added
+
+- Exported `MultiComponent`, `SwitchRegions`, and the new typed
+  `ModeSwitchEvent` from the primary `syssimx` API. Committed handovers are
+  available through `MultiComponent.switch_events`, `SystemHistory`, and
+  `SimulationResult.mode_switches`.
+- Added validated constructor options for `HybridAlgorithm`; stale or unknown
+  options now fail instead of becoming inert instance attributes. The
+  experimental declarative loader forwards algorithm options and rejects
+  malformed ones.
+
+### Changed
+
+- Systems with event sources now always use `HybridAlgorithm`. An untouched
+  default is promoted automatically, an explicitly configured hybrid instance
+  is preserved, and an explicit non-hybrid choice raises instead of being
+  silently replaced.
+- `SimulationResult` preserves port units in tables and CSV exports and rejects
+  malformed, non-monotone, or misaligned histories rather than omitting data.
+- Clarified the minimum custom-component contract as three lifecycle hooks.
+  `PortSpec` now validates its name, enum type, direction, and description, and
+  component initialization validates dictionary keys and collection direction.
+- Curated the published API reference around supported interfaces. The
+  declarative loader and CLI are now explicitly labeled experimental.
+- Reduced the basic installation to NumPy, Pint, and NetworkX. Results, YAML,
+  visualization, and notebook interfaces now have focused optional extras and
+  are imported only when used. Unused SciPy and pydot requirements were
+  removed.
+
+### Removed
+
+- Removed the unused `StateAdapter` protocol, `state_adapters`, `_prev_state`,
+  and `_curr_state` switching fields. The duplicate dictionary-based
+  `sync_events` log is replaced by the typed common-history records above.
+
 ## [0.3.0] — 2026-08-24
 
 A minor release rather than a patch: the public switching API changed, and two
@@ -136,5 +173,6 @@ across FMU, OpenSim, and FEM backends.
 
 Initial public releases. See the git history for details.
 
+[Unreleased]: https://github.com/FlorianFrech/SystemSimulation/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.2.0

@@ -87,28 +87,28 @@ state each directed transfer preserves, reconstructs, and loses.
 
 ## Multi-component and switching
 
-MC-01 through MC-10 and MC-14 are resolved; see the changelog. What follows is
+MC-01 through MC-11 and MC-14 are resolved; see the changelog. What follows is
 the remainder.
 
 ### MC-11 — Dead and duplicated abstractions obscure the real design
 
 **Priority:** Medium
 
-**Status:** Partially resolved by Milestones 1 and 3.
+**Status:** Resolved after v0.3.0; summarized under ``Unreleased`` in the changelog.
 
 The region-specific duplication is gone: one immutable configuration owns typed one-per-boundary
 records, and `active_region_index` is authoritative. The following cleanup remains:
 
-- `StateAdapter` and `state_adapters` are documented but not used by state transfer.
-- `_prev_state` and `_curr_state` are unused.
-- Wrapper `sync_events` duplicates part of the system event history.
+- [x] Remove unused `StateAdapter` and `state_adapters`.
+- [x] Remove unused `_prev_state` and `_curr_state` fields.
+- [x] Replace wrapper `sync_events` with typed records in the common component/system history.
 
 **Suggested solution**
 
-- Remove dead fields or implement the advertised adapter mechanism.
+- [x] Remove dead fields rather than advertising an unused adapter mechanism.
 - [x] Replace parallel switching dictionaries with immutable `SwitchRegions` and typed boundaries.
 - [x] Store one authoritative active-region index and derive mode/component through properties.
-- Record a structured `ModeSwitchEvent` in the common system history.
+- [x] Record a structured `ModeSwitchEvent` in the common system history.
 - [x] Represent one region boundary once, retaining crossing direction as event metadata.
 
 ### MC-12 — MultiComponent and MasterPendulum rely heavily on private internals
@@ -580,8 +580,110 @@ There is no independent master-algorithm comparison for the FMU-only baseline.
 
 **Suggested solution**
 
-- Run the same FMU through PyFMI and CoFMPy and compare trajectories/events.
-- Prefer these pip-installable tools over heavier toolchains whose setup cost is disproportionate.
+- Run a short compatibility spike with PyFMI and CoFMPy, then select one independent master.
+- Compare the same FMU trajectory and events; avoid making two comparison toolchains a requirement.
+
+### Execution plan for EVID-02 through EVID-05
+
+This section is the single task list for the paper evidence. The notebooks remain reporting
+artifacts; they must not become a second source of experiment definitions or manually entered
+numbers. Do not start the expensive runs until the HYB-03 scope decision is closed and the runtime
+behaviour is frozen at a recorded commit.
+
+#### Task E1 — Freeze the protocol and raw-data contract
+
+**Dependencies:** HYB-03 scope decision.
+
+**Acceptance criteria**
+
+- [ ] Record the framework commit, operating system, Python and backend versions, model-artifact
+  hashes, solver tolerances, initial conditions, time horizon, macro-step grid, warm-up policy, and
+  repetition count in a machine-readable manifest.
+- [ ] Define one tidy raw-data schema covering run identity, strategy, backend, step size, repeat,
+  state errors, switch errors, event counts, work counters, and timing categories.
+- [ ] Provide one command that runs a cheap smoke configuration and validates the manifest and raw
+  files without executing the full FEM campaign.
+
+**Likely files:** a small runner under `scripts/evidence/`, shared experiment helpers under
+`syssimx_examples/controlled_pendulum/`, and raw outputs under a dedicated `evidence/` directory.
+
+**Verification checkpoint:** review the protocol and one smoke-run artifact before any long run.
+
+#### Task E2 — Combine convergence and switch-placement refinement
+
+**Dependencies:** E1. Closes EVID-02 and EVID-03 together.
+
+**Acceptance criteria**
+
+- [ ] Use the smooth, contact-free pendulum with identical parameters and state-transfer rules for
+  localized and communication-grid switching. Use at least four step sizes with a refinement ratio
+  of two and an independently computed reference finer than the smallest reported step.
+- [ ] Record errors in `theta` and `omega` (final and trajectory norms), switch-time error, switch
+  count and order, accepted/trial/bisection work, and wall time for every refinement level.
+- [ ] Report pairwise and fitted observed order, plus a reference-sensitivity check. Do not claim an
+  asymptotic order if the finest levels do not show a stable slope or if event sequences differ.
+
+**Likely reporting files:** `notebooks/02_hybrid_verification.ipynb` for convergence and
+`notebooks/05_casestudy_model_switching.ipynb` for placement, both loading the same raw refinement
+data rather than rerunning independent variants.
+
+**Verification checkpoint:** inspect the refinement table and event sequences before performance
+measurements; a missing or additional switch invalidates the corresponding error comparison.
+
+#### Task E3 — Run the representative performance campaign
+
+**Dependencies:** E2 and a frozen implementation. Closes EVID-04.
+
+**Acceptance criteria**
+
+- [ ] Choose a horizon that contains enough repeated switches to make initialization and one-off
+  effects non-dominant; document that choice from a pilot run rather than selecting it after seeing
+  the final ratios.
+- [ ] Measure full-model and switched cases with and without contact. Separate accepted, trial,
+  bisection, transfer, backend-initialization, orchestration, and total wall time.
+- [ ] Use a warm-up followed by at least five repetitions per reported case, or preregister a
+  resource-based reduction to three. Report every observation and summarize with median and spread,
+  not only the fastest run.
+
+**Likely reporting files:** `notebooks/06_casestudy_performance.ipynb` and
+`notebooks/07_casestudy_performance_nocontact.ipynb`, rendering archived raw timing data.
+
+**Verification checkpoint:** finish one complete pilot matrix, estimate the overnight budget, and
+review it before launching repetitions. Preserve failed runs and reasons instead of silently
+discarding them.
+
+#### Task E4 — Cross-validate the FMU-only baseline
+
+**Dependencies:** E1. May run independently of E2 and E3 after the protocol is fixed. Closes
+EVID-05.
+
+**Acceptance criteria**
+
+- [ ] Select one independent master after a short compatibility spike; record why it was selected
+  and pin its version. Do not make installing two comparison frameworks a requirement.
+- [ ] Run the same FMU, inputs, initial state, horizon, and communication grid in SysSimX and the
+  independent master, with solver-setting differences documented.
+- [ ] Compare aligned `theta`/`omega` trajectories and event times against declared absolute and
+  relative tolerances. Explain any discrepancy rather than tuning tolerances after the comparison.
+
+**Verification checkpoint:** archive a minimal comparison run before expanding to the full horizon.
+
+#### Task E5 — Produce the paper reproduction artifact
+
+**Dependencies:** E2 through E4. Completes the numerical part of REPRO-01.
+
+**Acceptance criteria**
+
+- [ ] Every paper figure and table is generated from committed or archived raw files by one
+  documented command; notebooks contain no hand-copied result values.
+- [ ] Archive the protocol, raw data, environment metadata, logs, artifact hashes, and rendered
+  outputs together, tied to one immutable framework commit or release tag.
+- [ ] Reproduce the cheap refinement and cross-validation paths in a clean environment; document the
+  expected runtime and hardware for the slow FEM campaign rather than requiring reviewers to rerun
+  it interactively.
+
+**Final checkpoint:** review claims against the archived tables, then freeze the paper release and
+update EVID-02 through EVID-05 and REPRO-01 with links to their evidence artifacts.
 
 ## Framework hardening and release work
 
@@ -624,13 +726,15 @@ produced an approximately 1e8 rad/s result passed the ordinary test gate.
 
 **Priority:** Low
 
+**Status:** Resolved after v0.3.0; summarized under ``Unreleased`` in the changelog.
+
 SciPy, Matplotlib, ipywidgets, traitlets, and pydot are not imported by the core `syssimx` package
 according to the recorded audit.
 
 **Suggested solution**
 
-- Move them to demo, documentation, or visualization extras as appropriate.
-- Update the Sphinx and ReadTheDocs environments in the same change, particularly for Matplotlib,
+- [x] Move them to demo, documentation, or visualization extras as appropriate.
+- [x] Update the Sphinx and ReadTheDocs environments in the same change, particularly for Matplotlib,
   so the strict documentation build remains green.
 
 ### HARD-04 — Release metadata is incomplete
@@ -949,14 +1053,14 @@ the next release.
 5. **Reduce speculative work.** HYB-01's escalation from report to rollback
    depends on HYB-02's re-tearing; HYB-04 pays off on macro steps that contain
    an event. HYB-05 is a one-line cleanup.
-6. **Simplify the remaining internals.** MC-11, MC-12, MC-13. Remove dead
-   adapter and state fields, consolidate switch history, and replace
-   backend-private access with stable contracts.
+6. **Simplify the remaining internals.** MC-12 and MC-13. Replace
+   backend-private access with stable contracts and optionally centralize mode
+   names.
 7. **Improve time semantics incrementally.** TIME-04, then integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before
    propagating ticks through every component API.
-8. **Archive a reproducible artifact.** HARD-03 and REPRO-01, for the release
-   that accompanies the paper.
+8. **Archive a reproducible artifact.** REPRO-01, for the release that
+   accompanies the paper.
 
 ## Definition of done
 

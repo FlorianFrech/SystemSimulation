@@ -1,43 +1,44 @@
-System
-==============
+System API
+==========
 
-Connection
-----------
+Assembly and execution
+----------------------
 
-.. automodule:: syssimx.system.connection
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
+.. autoclass:: syssimx.System
+   :members: add_component, add_connection, add_event_connection, set_algorithm, initialize, run, get_history, describe, reset
 
-System Class
-------------
+.. autoclass:: syssimx.Connection
+   :members: key
 
-.. automodule:: syssimx.system.system
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autoclass:: syssimx.EventConnection
+   :members: event_name, target_comp, key
 
-Simulation Results
-------------------
+Results
+-------
 
-.. automodule:: syssimx.system.results
-   :members:
-   :undoc-members:
-   :show-inheritance:
+``SimulationResult`` preserves the unit metadata recorded by component ports.
+Long-format tables include a ``unit`` column, wide tables store units in
+``DataFrame.attrs['units']``, and wide CSV headers include units. Malformed or
+misaligned histories raise an exception instead of being silently omitted.
+DataFrame and CSV support requires the ``results`` installation extra.
 
-Declarative System Descriptions
--------------------------------
+.. autoclass:: syssimx.SimulationResult
+   :members: from_system, component_names, to_dataframe, to_csv
 
-.. automodule:: syssimx.system.loader
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Experimental declarative loader and CLI
+---------------------------------------
 
-Graph Analysis
---------------
+.. warning::
 
-.. automodule:: syssimx.system.graph
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   The YAML/JSON schema, loader functions, and ``syssimx`` command-line
+   interface are experimental. They may change between minor releases and are
+   not part of the stable framework API. YAML input requires the ``config``
+   installation extra; JSON uses the Python standard library.
+
+.. autofunction:: syssimx.system.loader.load_config
+
+.. autofunction:: syssimx.system.loader.build_system
+
+.. autofunction:: syssimx.system.loader.run_from_config
+
+.. autoexception:: syssimx.system.loader.ConfigError

@@ -1,10 +1,8 @@
-Visualization Utilities
-=======================
+Visualization
+=============
 
-System Graph Visualizer
-------------------------
+Graph visualization is optional. Install ``syssimx[viz]`` and ensure the
+Graphviz executable is available on the host system.
 
-.. automodule:: syssimx.viz.system_graph_visualizer
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autoclass:: syssimx.SystemGraphVisualizer
+   :members: visualize, save

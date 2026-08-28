@@ -1,32 +1,29 @@
-Co-Simulation Components
-===================================
+Backend Components
+==================
 
-FMU Component
+FMU component
 -------------
 
-.. automodule:: syssimx.components.fmu
-   :members:
-   :undoc-members:
+.. autoclass:: syssimx.components.fmu.FMUComponent
+   :members: initialize, do_step, get_state, set_state, reset, free
    :show-inheritance:
 
-NGSolve Structural-Dynamics FEM Component
+NGSolve structural-dynamics FEM component
 -----------------------------------------
 
 ``FEMComponent`` is an abstract base for transient structural mechanics in
 NGSolve. It supplies constant-average-acceleration Newmark state management,
-micro-stepping, rollback, and field-history support. Subclasses still define
-the mesh, finite-element spaces, variational form, solver, ports, and physical
-state mapping. It is not a backend-neutral adapter for arbitrary FEM analyses.
+micro-stepping, rollback, and field-history support. Subclasses define the
+mesh, finite-element spaces, variational form, solver, ports, and physical
+state mapping.
 
-.. automodule:: syssimx.components.fem
-   :members:
-   :undoc-members:
+.. autoclass:: syssimx.components.fem.FEMComponent
+   :members: initialize, do_step, get_state, set_state, reset, free
    :show-inheritance:
 
-OpenSim Component
+OpenSim component
 -----------------
 
-.. automodule:: syssimx.components.opensim
-   :members:
-   :undoc-members:
+.. autoclass:: syssimx.components.opensim.OpenSimComponent
+   :members: initialize, do_step, get_state, set_state, reset, free
    :show-inheritance:

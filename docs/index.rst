@@ -82,8 +82,10 @@ Key Features
    Connect FMUs, OpenSim models, and NGSolve transient structural-dynamics
    models in a single system.
 
-**Multi-Model Switching**
-   Dynamically switch between multiple models of the same component during simulation.
+**Event-Localized Model Switching**
+   Replace a component's active internal model at a localized hybrid event
+   while preserving its system-facing ports and connections. Committed
+   handovers are available as typed switch records.
 
 **Unit-Aware Connections**
    Automatic unit conversion between ports using Pint.

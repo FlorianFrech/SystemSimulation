@@ -1,4 +1,7 @@
-"""Command-line interface for SysSimX.
+"""Experimental command-line interface for SysSimX.
+
+The command and declarative file schema may change between minor releases;
+they are not part of the stable framework API yet.
 
 Provides the ``syssimx`` console script::
 
@@ -28,7 +31,10 @@ def main(argv: list[str] | None = None) -> int:
     """Entry point for the ``syssimx`` console script."""
     parser = argparse.ArgumentParser(
         prog="syssimx",
-        description="Run and inspect SysSimX co-simulation systems from declarative descriptions.",
+        description=(
+            "Experimental: run and inspect SysSimX co-simulation systems "
+            "from declarative descriptions."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -40,9 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Write results to this CSV file (tidy long format)",
     )
-    run_parser.add_argument(
-        "--quiet", action="store_true", help="Suppress the progress line"
-    )
+    run_parser.add_argument("--quiet", action="store_true", help="Suppress the progress line")
 
     describe_parser = subparsers.add_parser(
         "describe", help="Print the structural report of a system description"
@@ -80,9 +84,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         def progress(t: float, tf: float) -> None:
             print(f"\r  t = {t:.6g} / {tf:.6g} s", end="", file=sys.stderr)
 
-    result = run_from_config(
-        args.config, t0=args.t0, tf=args.tf, dt=args.dt, progress=progress
-    )
+    result = run_from_config(args.config, t0=args.t0, tf=args.tf, dt=args.dt, progress=progress)
     if not args.quiet:
         print(file=sys.stderr)
 

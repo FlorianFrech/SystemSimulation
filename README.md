@@ -35,7 +35,7 @@ The public [brand assets](logo/dist/) include the light/dark wordmarks, applicat
 
 - **Multi-Tool Integration:** Connect FMUs, OpenSim models, and NGSolve transient structural-dynamics models in a single system.
 
-- **Multi-Model Switching:** Dynamically switch between multiple models of the same component during simulation.
+- **Event-Localized Model Switching:** Replace one component's active internal model at a localized event while its external ports and connections remain unchanged. Typed switch records expose the committed handover.
 
 - **Unit-Aware Connections:** Automatic unit conversion between ports using Pint.
 
@@ -43,7 +43,7 @@ The public [brand assets](logo/dist/) include the light/dark wordmarks, applicat
 
 ## Installation
 
-The `syssimx` package is available on [PyPI](https://pypi.org/project/syssimx/). You can install it using `pip`. Optional extras are available for FMI, OpenSim, and NGSolve structural-dynamics support.
+The `syssimx` package is available on [PyPI](https://pypi.org/project/syssimx/). The basic install contains only the execution core. DataFrame export, visualization, configuration, examples, and external simulation backends are optional extras.
 
 ### Basic install
 
@@ -57,6 +57,10 @@ pip install syssimx
 pip install "syssimx[fmu]"
 pip install "syssimx[fem]"
 pip install "syssimx[opensim]"
+pip install "syssimx[results]"  # pandas DataFrames and CSV export
+pip install "syssimx[viz]"     # Graphviz system diagrams
+pip install "syssimx[config]"  # experimental YAML configuration loader
+pip install "syssimx[examples]" # plotting and notebook interfaces
 pip install "syssimx[dev]"
 pip install "syssimx[all]"
 pip install "syssimx[full]"
@@ -102,10 +106,7 @@ uv publish
 The example below creates a simple linear source feeding an integrator.
 
 ```python
-import matplotlib.pyplot as plt
-
-from syssimx import CoSimComponent, Connection, System
-from syssimx.core import PortSpec, PortType
+from syssimx import CoSimComponent, Connection, PortSpec, PortType, System
 
 
 class LinearSource(CoSimComponent):
@@ -166,18 +167,42 @@ system.initialize(t0=0.0)
 result = system.run(t0=0.0, tf=5.0, dt=0.1)
 
 t_vals, data = result["Integrator"]
-y_vals = data["y"]
-
-plt.plot(t_vals, y_vals)
-plt.xlabel("Time (s)")
-plt.ylabel("Integrator output")
-plt.title("SysSimX Quickstart")
-plt.grid(True)
-plt.show()
+print(t_vals[-1], data["y"][-1])
 ```
 
 For the complete walkthrough, see:
 - [Quickstart notebook](docs/01_getting_started/02_quickstart.ipynb)
+
+## Primary Switching API
+
+Subclass `MultiComponent` to translate state between interchangeable models,
+then declare an ordered region map. SysSimX turns each region crossing into a
+localized hybrid event and records only committed handovers.
+
+```python
+from syssimx import MultiComponent, SwitchRegions
+from syssimx.system.algorithms import HybridAlgorithm
+
+# `plant` is an application-specific MultiComponent subclass containing the
+# models named here and implementing `_adapt_state`.
+plant.set_switch_regions(SwitchRegions(
+    key=lambda wrapper: abs(float(wrapper.active_comp.get_outputs()["theta"])),
+    breakpoints=[0.075, 0.262],
+    modes=["FEM", "OpenSim", "FMU"],
+    band=0.005,
+))
+
+system.set_algorithm(HybridAlgorithm(tol_time=1e-8, tol_value=1e-6))
+system.initialize(t0=0.0)
+result = system.run(t0=0.0, tf=5.0, dt=0.01)
+
+for switch in result.mode_switches.get(plant.name, ()):
+    print(switch.time, switch.from_mode, switch.to_mode)
+```
+
+The wrapper keeps its system-facing ports and connections throughout the run.
+See the [switching API](docs/02_api/core.rst) and the
+[advanced switching tutorial](docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb).
 
 The installable `syssimx_examples` namespace contains the controlled-pendulum
 case-study implementation used by the documentation and framework-paper
@@ -200,6 +225,9 @@ the Python wheel.
 ## Project Status
 
 SysSimX is under active development. APIs and behavior may evolve as algorithms and component integrations are extended.
+
+The declarative YAML/JSON loader and the `syssimx` command-line interface are
+experimental and are not part of the stable public API yet.
 
 ## License
 

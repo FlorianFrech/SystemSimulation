@@ -1,41 +1,36 @@
-SysSimX Package
-===============
+Public API
+==========
 
-.. automodule:: syssimx
-   :no-members:
-   :no-undoc-members:
-   :no-private-members:
-   :no-inherited-members:
-   :no-index:
+SysSimX deliberately keeps the stable, top-level API small. The following
+names can be imported directly from ``syssimx``:
 
-The top-level package re-exports the most commonly used classes for convenient
-imports. Detailed API documentation for those classes is available in the
-module-specific pages in this API reference.
+Core simulation
+---------------
 
-Re-exported names
------------------
+- :class:`~syssimx.System`
+- :class:`~syssimx.Connection` and :class:`~syssimx.EventConnection`
+- :class:`~syssimx.CoSimComponent`
+- :class:`~syssimx.PortSpec` and :class:`~syssimx.PortType`
+- :class:`~syssimx.SimulationResult`
 
-- :class:`~syssimx.core.base.CoSimComponent`, :class:`~syssimx.core.base.PortSpec`,
-  :class:`~syssimx.core.base.PortType` — see :doc:`core`
-- :class:`~syssimx.system.system.System`,
-  :class:`~syssimx.system.connection.Connection`,
-  :class:`~syssimx.system.connection.EventConnection`,
-  :class:`~syssimx.system.results.SimulationResult` — see :doc:`system`
-- :class:`~syssimx.viz.system_graph_visualizer.SystemGraphVisualizer` — see :doc:`viz`
-- ``FMUComponent`` and ``OpenSimComponent``; ``FEMComponent`` is specifically
-  the NGSolve transient structural-dynamics base. These names are available
-  when their optional backends are installed; see :doc:`components`.
+Runtime model switching
+-----------------------
 
-The declarative loader (:func:`~syssimx.system.loader.build_system`,
-:func:`~syssimx.system.loader.run_from_config`,
-:func:`~syssimx.system.loader.load_config`,
-:class:`~syssimx.system.loader.ConfigError`) is importable from
-``syssimx.system``; see :doc:`system`.
+- :class:`~syssimx.MultiComponent`
+- :class:`~syssimx.SwitchRegions`
+- :class:`~syssimx.ModeSwitchEvent`
 
-Command-Line Interface
-----------------------
+These switching types are the primary interface for event-localized runtime
+model replacement. See :doc:`core` for the contract and
+:doc:`../03_core_tutorials/03_advanced/04_multi_component_switching` for a
+worked example.
 
-.. automodule:: syssimx.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Optional integrations
+---------------------
+
+``FMUComponent``, ``FEMComponent``, and ``OpenSimComponent`` are available
+when their backend extras are installed. ``SystemGraphVisualizer`` requires
+the ``viz`` extra. See :doc:`components` and :doc:`viz`.
+
+The loader and command-line interface are experimental and intentionally not
+part of this stable top-level surface. See the warning in :doc:`system`.

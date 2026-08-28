@@ -52,10 +52,6 @@ myst_dmath_double_inline = True  # optional, only if you need it
 
 # Autodoc settings
 autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,
-    "private-members": True,
-    "show-inheritance": True,
     "member-order": "bysource",
 }
 autodoc_typehints = "description"
@@ -76,7 +72,7 @@ warnings.filterwarnings(
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
-napoleon_include_private_with_doc = True
+napoleon_include_private_with_doc = False
 # Render ``Attributes:`` sections as fields on the class instead of creating
 # a second set of indexed ``py:attribute`` directives beside autodoc members.
 napoleon_use_ivar = True
