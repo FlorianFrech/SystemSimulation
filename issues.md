@@ -741,20 +741,27 @@ according to the recorded audit.
 
 **Priority:** Low
 
-**Status:** Mostly resolved by the v0.3.0 release on 2026-08-24. `CHANGELOG.md` exists,
-`syssimx/__version__.py` and `CITATION.cff` read 0.3.0 with a real release date, and the tag
-published to PyPI. Two author-supplied identifiers are still missing.
+**Status:** v0.4.0 prepared on 2026-09-06. `syssimx/__version__.py` and `CITATION.cff` read 0.4.0,
+`CHANGELOG.md` closes the entry with that date, and the tag and PyPI publication are still pending.
+The bump is **minor, not patch**: the release removes public API (`StateAdapter`, `state_adapters`,
+`sync_events`) and turns three previously silent behaviours into errors. Both author-supplied
+identifiers are still missing.
 
-- The `orcid` line in `CITATION.cff` is still commented out. It was deliberately left for the next
-  release rather than guessed, because a wrong ORCID resolves to nothing or to another person.
+- The `orcid` line in `CITATION.cff` is still commented out, because no ORCID is registered for the
+  author yet. It was never a matter of deferral; a wrong ORCID resolves to nothing or to another
+  person, so the line stays commented until a real one exists.
 - The `doi` line is still commented out, and no Zenodo deposit exists. A version DOI cannot be
-  minted before the release it identifies, so this was always going to follow the first tag.
+  minted before the release it identifies, so it follows the tag.
 
 **Suggested solution**
 
-- Add the ORCID to `CITATION.cff`.
-- Archive the release on Zenodo, then uncomment `doi` with the version DOI it mints.
-- Both land in v0.3.1 or the next minor release; neither warrants a release of its own.
+- Tag `v0.4.0` and let the PyPI workflow publish it.
+- Archive the release on Zenodo, then uncomment `doi` with the version DOI it mints. This is the
+  same deposit REPRO-01 needs, so do it once and reference it from both.
+- Register an ORCID and fill the line in a later release. It blocks nothing.
+- Record the release procedure in `CONTRIBUTING.md`. `scripts/bump_version.py` rewrites only
+  `syssimx/__version__.py`, while `CHANGELOG.md` and `CITATION.cff` also carry the version and are
+  edited by hand, which is easy to miss.
 
 ### HARD-05 — OpenModelica CVODE exports corrupt the heap in `fmi2FreeInstance`
 

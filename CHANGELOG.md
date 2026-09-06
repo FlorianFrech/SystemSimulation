@@ -11,6 +11,10 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.4.0] — 2026-09-06
+
 ### Added
 
 - Exported `MultiComponent`, `SwitchRegions`, and the new typed
@@ -173,6 +177,7 @@ across FMU, OpenSim, and FEM backends.
 
 Initial public releases. See the git history for details.
 
-[Unreleased]: https://github.com/FlorianFrech/SystemSimulation/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FlorianFrech/SystemSimulation/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.4.0
 [0.3.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.2.0
