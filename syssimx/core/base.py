@@ -1133,14 +1133,18 @@ class CoSimComponent(ABC):
             t: Current simulation time to associate with the recorded values.
 
         Note:
-            Only ports with non-None values are recorded. This method is
-            called internally and typically should not be overridden.
+            Every output port is recorded, in one pass. Recording only some
+            of them would leave the rest permanently behind, and each
+            component's history is exported against a single shared time
+            axis. ``PortState`` assigns a type-appropriate default on
+            construction, so a port always holds a value by the time it can
+            be recorded. This method is called internally and typically
+            should not be overridden.
         """
         if not self._record_history or self.in_trial:
             return
         for name, port in self.outputs.items():
-            if port.value is not None:
-                self.history.append(name, t, port.value)
+            self.history.append(name, t, port.value)
 
     def get_history(
         self, port_names: list[str] | None = None, units: dict[str, str] | None = None

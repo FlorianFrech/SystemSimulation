@@ -171,6 +171,30 @@ class TestComponentHistory:
 
         assert comp_history.mode_switch_events == (first,)
 
+    def test_drop_last_sample_keeps_ports_aligned(self):
+        """A superseded instant is dropped from every port together."""
+        comp_history = ComponentHistory(component_name="Comp")
+        comp_history.add_port("theta")
+        comp_history.add_port("wall_hit")
+        for t in (0.0, 0.1):
+            comp_history.append("theta", t=t, value=t)
+            comp_history.append("wall_hit", t=t, value=False)
+
+        comp_history.drop_last_sample()
+
+        time, values = comp_history.to_arrays()
+        assert np.array_equal(time, np.array([0.0]))
+        assert all(len(v) == 1 for v in values.values())
+
+    def test_drop_last_sample_on_empty_history_is_a_no_op(self):
+        """Dropping from an empty history must not raise."""
+        comp_history = ComponentHistory(component_name="Comp")
+        comp_history.add_port("theta")
+
+        comp_history.drop_last_sample()
+
+        assert len(comp_history.get_port_history("theta")) == 0
+
     def test_to_arrays_rejects_unequal_sample_counts(self):
         """A short port must not be silently exported against a longer axis.
 

@@ -383,6 +383,36 @@ class TestSystemInitialization:
         with pytest.raises(RuntimeError, match="already initialized"):
             sys.initialize(t0=0.0)
 
+    def test_initialize_records_t0_once_per_port(self):
+        """t0 must appear once, holding the settled values.
+
+        initialize() records a provisional sample before this generation's
+        inputs have propagated; the zero-length settling step then records
+        the values that actually start the run. Keeping both put a doubled
+        point at the start of every trace and a zero-length interval into any
+        diff over the timestamps.
+        """
+        sys = System(name="SingleT0")
+        upstream = IntegratorComponent("A")
+        downstream = SimpleGain(name="B", gain=2.0)
+        sys.add_component(upstream)
+        sys.add_component(downstream)
+        sys.add_connection(
+            Connection(
+                src_comp="A",
+                src_port=next(iter(upstream.output_specs)),
+                dst_comp="B",
+                dst_port=next(iter(downstream.input_specs)),
+            )
+        )
+
+        sys.initialize(t0=0.0)
+
+        for comp in (upstream, downstream):
+            for port_history in comp.history.get_all_histories().values():
+                assert len(port_history) == 1
+                assert port_history.time[0] == 0.0
+
     def test_reset_allows_reinitialization_with_clean_history(self):
         """``reset()`` is the supported way to start a fresh run."""
         sys = System(name="ResetInit")

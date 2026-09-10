@@ -21,6 +21,19 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
   monotonically, and re-running an initialization cell in a notebook
   silently corrupted the data. Call `reset()` to start a fresh run.
 
+- `t0` is recorded once per port instead of twice. `initialize()` records a
+  provisional sample before a generation's inputs have propagated, and the
+  zero-length settling step then records the values that actually start the
+  run; both were kept. Every trace began with a doubled point, and any
+  difference over the timestamps saw a zero-length interval. The provisional
+  sample is now dropped, so the recorded `t0` holds the settled values.
+  **Sample counts drop by one per port; re-run notebooks to regenerate.**
+
+- `_record_outputs()` no longer skips output ports individually. The guard was
+  unreachable — `PortState` assigns a type-appropriate default on construction,
+  so a port always holds a value — but it implied that partial recording was
+  acceptable, which would desynchronize a component's histories.
+
 - `ComponentHistory.to_arrays()` now verifies that the exported ports share
   one time axis instead of returning the first port's timestamps for all of
   them. A port that had dropped a sample was previously exported against a

@@ -741,9 +741,19 @@ class System:
                 if set(loop).issubset(gen_set):
                     solve_algebraic_scc_ijcsa(self, loop, t0)
 
-            # 5d) Zero-step to update outputs for downstream generations
+            # 5d) Zero-step to update outputs for downstream generations.
+            #     initialize() already recorded a provisional sample at t0,
+            #     before this generation's inputs had been propagated, so the
+            #     values it stored can be stale. Drop it and let the settling
+            #     step below record t0 once, with the values that actually
+            #     start the run. Without this every port carries a duplicate
+            #     t0, which puts a doubled point at the start of every trace
+            #     and a zero-length interval into any diff over the timestamps.
             for comp_name in gen:
-                self.components[comp_name].do_step(t0, 0)
+                comp = self.components[comp_name]
+                if comp._record_history and not comp.in_trial:
+                    comp.history.drop_last_sample()
+                comp.do_step(t0, 0)
 
         self.is_initialized = True
 

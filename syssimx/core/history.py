@@ -106,6 +106,12 @@ class PortHistory:
         self._timestamps.clear()
         self._values.clear()
 
+    def drop_last(self) -> None:
+        """Remove the most recent sample, if there is one."""
+        if self._timestamps:
+            self._timestamps.pop()
+            self._values.pop()
+
     def checkpoint(self) -> PortHistoryCheckpoint:
         """Capture an exact copy suitable for transactional rollback."""
         return PortHistoryCheckpoint(
@@ -289,6 +295,17 @@ class ComponentHistory:
             values_dict[port] = self._port_histories[port].get_values(as_unit=target_unit)
 
         return time, values_dict
+
+    def drop_last_sample(self) -> None:
+        """Remove the most recent sample from every port history.
+
+        Used when a provisional recording is superseded at the same instant,
+        so the instant is stored once rather than twice. Every port of a
+        component is recorded in one pass, so they are dropped in one pass
+        and stay aligned.
+        """
+        for port_history in self._port_histories.values():
+            port_history.drop_last()
 
     def clear(self, port_names: list[str] | None = None) -> None:
         """Clear history for specified ports or all ports."""
