@@ -125,3 +125,6 @@ docs/03_core_tutorials/02_intermediate/declarative_results.csv
 docs/**/figures/algebraic_loop_graph
 docs/**/figures/execution_order_graph
 docs/**/figures/simple_hybrid_system
+
+# OpenSim writes this beside whichever notebook ran; regenerated, never committed.
+opensim.log
