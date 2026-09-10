@@ -670,6 +670,14 @@ class System:
             but before ``run()``. Calling ``initialize()`` locks the system
             against further component additions.
         """
+        if self.is_initialized:
+            raise RuntimeError(
+                "System is already initialized. Initializing again would append a "
+                "second set of samples at t0 to every component history, leaving a "
+                "time axis that no longer increases monotonically. Call reset() "
+                "first to start a fresh run."
+            )
+
         if not math.isfinite(t0):
             raise ValueError("Initial time t0 must be finite.")
 

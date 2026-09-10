@@ -171,6 +171,52 @@ class TestComponentHistory:
 
         assert comp_history.mode_switch_events == (first,)
 
+    def test_to_arrays_rejects_unequal_sample_counts(self):
+        """A short port must not be silently exported against a longer axis.
+
+        Every port of a component is recorded in the same pass, so unequal
+        counts mean samples were dropped for some ports only. Exporting the
+        first port's time axis for all of them would misalign the rest and
+        still produce a plottable result.
+        """
+        comp_history = ComponentHistory(component_name="Comp")
+        comp_history.add_port("theta")
+        comp_history.add_port("wall_hit")
+        for t in (0.0, 0.1, 0.2):
+            comp_history.append("theta", t=t, value=t)
+        comp_history.append("wall_hit", t=0.0, value=False)
+        comp_history.append("wall_hit", t=0.1, value=False)
+
+        with pytest.raises(ValueError, match="not aligned"):
+            comp_history.to_arrays()
+
+    def test_to_arrays_rejects_divergent_timestamps(self):
+        """Equal counts are not enough; the instants must match too."""
+        comp_history = ComponentHistory(component_name="Comp")
+        comp_history.add_port("theta")
+        comp_history.add_port("wall_hit")
+        for t in (0.0, 0.1):
+            comp_history.append("theta", t=t, value=t)
+        comp_history.append("wall_hit", t=0.0, value=False)
+        comp_history.append("wall_hit", t=0.2, value=False)
+
+        with pytest.raises(ValueError, match="first differ at sample 1"):
+            comp_history.to_arrays()
+
+    def test_to_arrays_accepts_aligned_ports(self):
+        """The ordinary case still exports one shared axis."""
+        comp_history = ComponentHistory(component_name="Comp")
+        comp_history.add_port("theta")
+        comp_history.add_port("wall_hit")
+        for t in (0.0, 0.1):
+            comp_history.append("theta", t=t, value=t)
+            comp_history.append("wall_hit", t=t, value=False)
+
+        time, values = comp_history.to_arrays()
+
+        assert np.array_equal(time, np.array([0.0, 0.1]))
+        assert set(values) == {"theta", "wall_hit"}
+
     def test_add_port(self):
         """Test adding PortHistory to ComponentHistory."""
         comp_history = ComponentHistory(component_name="CompB")

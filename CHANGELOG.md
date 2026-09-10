@@ -11,7 +11,21 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- `System.initialize()` now raises instead of running a second time. It was
+  not idempotent: component `initialize()` returns early when already
+  initialized, but the zero-length step at `t0` did not, so a second call
+  appended another sample at `t0` to every component history after the run
+  had advanced past it. The recorded time axis then stopped increasing
+  monotonically, and re-running an initialization cell in a notebook
+  silently corrupted the data. Call `reset()` to start a fresh run.
+
+- `ComponentHistory.to_arrays()` now verifies that the exported ports share
+  one time axis instead of returning the first port's timestamps for all of
+  them. A port that had dropped a sample was previously exported against a
+  longer axis, which silently shifted its values against every other port
+  and still produced a plottable result.
 
 ## [0.4.0] — 2026-09-06
 

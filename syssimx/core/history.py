@@ -251,19 +251,40 @@ class ComponentHistory:
 
         Returns:
             Tuple of (time_array, {port_name: values_array})
+
+        Raises:
+            ValueError: If the exported ports do not share one time axis.
+                Every port of a component is recorded together, so a
+                divergence means samples were dropped or added for some
+                ports and not others. Returning the first port's axis for
+                all of them would silently misalign the rest.
         """
-        ports = port_names if port_names else list(self._port_histories.keys())
+        requested = port_names if port_names else list(self._port_histories.keys())
+        ports = [name for name in requested if name in self._port_histories]
 
         if not ports:
             return np.array([]), {}
 
-        # Get common time array from first port
-        time = self._port_histories[ports[0]].time
+        reference = ports[0]
+        time = self._port_histories[reference].time
 
         values_dict = {}
         for port in ports:
-            if port not in self._port_histories:
-                continue
+            port_time = self._port_histories[port].time
+            if len(port_time) != len(time):
+                raise ValueError(
+                    f"Port histories are not aligned: '{reference}' has "
+                    f"{len(time)} samples but '{port}' has {len(port_time)}. "
+                    "All ports of a component are recorded together, so this "
+                    "means samples were dropped or added for some ports only."
+                )
+            if len(time) and not np.array_equal(port_time, time):
+                index = int(np.flatnonzero(port_time != time)[0])
+                raise ValueError(
+                    f"Port histories are not aligned: '{reference}' and "
+                    f"'{port}' first differ at sample {index}, "
+                    f"t={time[index]!r} against t={port_time[index]!r}."
+                )
             target_unit = units.get(port) if units else None
             values_dict[port] = self._port_histories[port].get_values(as_unit=target_unit)
 

@@ -366,6 +366,37 @@ class TestSystemInitialization:
 
         assert sys.is_initialized is False
 
+    def test_initialize_twice_is_refused(self):
+        """A second initialize would corrupt every recorded history.
+
+        Component ``initialize()`` is idempotent, but the system's zero-length
+        step at ``t0`` is not: it appends another sample at ``t0`` to every
+        component after the run has already advanced past it, leaving a time
+        axis that no longer increases monotonically. Re-running an
+        initialization cell in a notebook must fail loudly, not silently
+        corrupt the data.
+        """
+        sys = System(name="DoubleInit")
+        sys.add_component(SimpleGain(name="Gain", gain=2.0))
+        sys.initialize(t0=0.0)
+
+        with pytest.raises(RuntimeError, match="already initialized"):
+            sys.initialize(t0=0.0)
+
+    def test_reset_allows_reinitialization_with_clean_history(self):
+        """``reset()`` is the supported way to start a fresh run."""
+        sys = System(name="ResetInit")
+        comp = SimpleGain(name="Gain", gain=2.0)
+        sys.add_component(comp)
+        sys.initialize(t0=0.0)
+        samples_after_first = len(comp.history.get_port_history("y"))
+
+        sys.reset()
+        assert sys.is_initialized is False
+        sys.initialize(t0=0.0)
+
+        assert len(comp.history.get_port_history("y")) == samples_after_first
+
 
 # ============================================================================
 # Test System Run Lifecycle
