@@ -33,17 +33,20 @@ observable trace. That work is summarized in
 [`CHANGELOG.md`](CHANGELOG.md) and recorded in
 [`MILESTONES.md`](MILESTONES.md).
 
-Four themes remain open, in rough order of what gates what:
+Five themes remain open, in rough order of what gates what:
 
-1. **Detection cost and correctness.** Roughly half of all model time is
+1. **Reproducibility of the physics.** An identical FEM run does not reproduce
+   itself while NGSolve threading is left at its default, and marginal contact
+   events appear or vanish between runs. REPRO-02.
+2. **Detection cost and correctness.** Roughly half of all model time is
    computed and rolled back, and detection still runs on a trajectory the
    system never commits. HYB-01 through HYB-05, EVID-01.
-2. **Numerical evidence for the paper.** Convergence order and switch placement
+3. **Numerical evidence for the paper.** Convergence order and switch placement
    are unmeasured, and the benchmark is short. EVID-02 through EVID-05.
-3. **Backend and platform coverage.** The validation gate is uneven, and a
+4. **Backend and platform coverage.** The validation gate is uneven, and a
    green local run does not imply a green CI run for anything touching FMU
    lifecycle. HARD-01, HARD-02.
-4. **Native resource lifecycle.** The defective CVODE exports are still
+5. **Native resource lifecycle.** The defective CVODE exports are still
    retained, and no archive's library is ever unmapped. HARD-05, HARD-07.
 
 ## Current runtime-switching mechanisms
@@ -1033,40 +1036,96 @@ results. The FMU artifact directory is roughly 32 MB and lacks win64 support.
 - Provide one-command or scripted reproduction for every reported figure/table.
 - Store raw numerical outputs and environment metadata alongside rendered notebooks.
 
+### REPRO-02 — FEM results are not reproducible run to run
+
+**Priority:** High
+
+Repeating an identical FEM run changes the answer. The `FemToFemPendulum` control in
+`notebooks/06_casestudy_performance.ipynb` puts two identically parameterised FEM pendulums behind
+one region map, so the physics is the same on both sides of every switch. Run twice in the same
+process, it resolved five wall contacts and then four. Under `ngsolve.SetNumThreads(1)` three runs
+produced bit-identical contact *and* switch instants. Raw data, figures, and the driver scripts are
+in `results/determinism/`.
+
+The cause is `FEMPendulum._do_step_internal`, which wraps its whole sub-stepping loop in
+`with TaskManager():` (`syssimx/components/fem.py`) without pinning a thread count. NGSolve's
+parallel reductions accumulate in scheduling-dependent order, so results are not bitwise
+reproducible. The component makes a determinism-affecting choice silently and records it nowhere.
+
+`wall_descents` equalled the located contact count in every run, so this is not a detection failure
+and is unrelated to HYB-01. The trajectories genuinely differ.
+
+Scope. The first four bounces are reproducible even with threading on; all scatter falls in the
+fifth bounce and the departure after it, where the setpoint lifts the pendulum off the wall and
+about a millisecond of phase decides whether a fifth contact occurs. So the defect does not
+randomise a run — it decides marginal events. That is worse for evidence than uniform noise,
+because most runs agree and the disagreement is rare enough to miss in a handful of repetitions.
+
+What it invalidates.
+
+- Any physics claim resting on a single run: contact sequences, handover quality, trajectory error.
+  `n = 1` only carries meaning once a run is deterministic.
+- The notebook 6 self-check, which compares the located contact instants of two single runs. Without
+  a baseline noise band its threshold cannot mean anything.
+- EVID-01's contact-case measurements are unaffected: those are medians over repetitions with a
+  drift check, which is the correct treatment for a varying quantity.
+- RQ2 in the paper's `evidence_plan.md`. NB5's "six switches, zero contract violations" is an `n = 1`
+  observation of a quantity that varies unless that notebook already pinned threads. Check which.
+
+**Suggested solution**
+
+1. Pin the thread count for any run that produces physics evidence, and record it in
+   `BENCHMARK_ENV` beside the other run configuration. Whether that belongs in `fem.py`, in the
+   notebooks, or behind an explicit flag is an API decision; making it implicit is not an option.
+2. Keep threading enabled for timing evidence. Single-threaded costs about 2.2x (944.7 s against
+   430.3 s for the same control), and a serial configuration is not one anyone would deploy. Never
+   mix the two in one comparison: the switched case runs the FEM for roughly half the horizon, so
+   the two benchmark cases need not scale together when threads are removed.
+3. Re-run any retained physics result single-threaded before it is quoted.
+4. Decide whether marginal-event sensitivity is itself worth reporting. A contact that appears or
+   vanishes with thread scheduling is a property of the contact model and time resolution, not only
+   of threading, and a reader of section 7 may reasonably want to know it.
+
 ## Prioritized next steps
 
 v0.3.0 released the consolidated switching mechanism, the FMU release policy,
 and the event-localization fixes. The order below is what gates the paper and
 the next release.
 
-1. **Settle the detection-cost question before generating paper numbers.**
+1. **Pin the FEM thread count before any physics result is quoted.** REPRO-02.
+   An identical FEM run does not reproduce itself: the same control resolved five
+   wall contacts and then four in one process. Every claim about contact
+   sequences, handover quality, or trajectory error currently rests on single
+   runs of a quantity that varies. One line fixes it; the cost is about 2.2x
+   runtime and applies to physics evidence only, not to timing.
+2. **Settle the detection-cost question before generating paper numbers.**
    EVID-01 now carries four measurements putting speculative model time at about
    half of all model time, with and without contact and with and without
    switching. HYB-03's rate-bounded rejection would move every performance
    number in both benchmark notebooks, and notebook 6 costs about 65 minutes per
    run. Decide whether it is in scope first, then measure once.
-2. **Produce the numerical evidence.** EVID-02 and EVID-03 together on the
+3. **Produce the numerical evidence.** EVID-02 and EVID-03 together on the
    smooth pendulum, so one refinement study answers convergence order and switch
    placement. Then EVID-04 for a representative horizon and EVID-05 for an
    independent-master comparison.
-3. **Close the platform gap in the gate.** HARD-01 and HARD-02. Shipping
+4. **Close the platform gap in the gate.** HARD-01 and HARD-02. Shipping
    `win64` binaries for the three fixture FMUs is cheap and removes the case
    where a green local run hides a real regression, which happened during the
    v0.3.0 work. Add standalone OpenSim contracts and a scheduled contact run.
-4. **Finish the native lifecycle.** HARD-05 steps 2 through 5 and HARD-07 steps
+5. **Finish the native lifecycle.** HARD-05 steps 2 through 5 and HARD-07 steps
    2 through 6. The capability probe and the `fmi2GetFMUstate` rollback path are
    the two with real leverage; re-exporting the demo FMUs with euler would
    remove the problem rather than working around it.
-5. **Reduce speculative work.** HYB-01's escalation from report to rollback
+6. **Reduce speculative work.** HYB-01's escalation from report to rollback
    depends on HYB-02's re-tearing; HYB-04 pays off on macro steps that contain
    an event. HYB-05 is a one-line cleanup.
-6. **Simplify the remaining internals.** MC-12 and MC-13. Replace
+7. **Simplify the remaining internals.** MC-12 and MC-13. Replace
    backend-private access with stable contracts and optionally centralize mode
    names.
-7. **Improve time semantics incrementally.** TIME-04, then integer ticks in the
+8. **Improve time semantics incrementally.** TIME-04, then integer ticks in the
    master layer. Address TIME-01 through resolution negotiation before
    propagating ticks through every component API.
-8. **Archive a reproducible artifact.** REPRO-01, for the release that
+9. **Archive a reproducible artifact.** REPRO-01, for the release that
    accompanies the paper.
 
 ## Definition of done

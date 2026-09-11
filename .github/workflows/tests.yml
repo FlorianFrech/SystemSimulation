@@ -125,10 +125,16 @@ jobs:
             texlive-latex-extra texlive-science dvipng cm-super
 
       - name: Execute backend-free switching notebooks
+        # 01_mechanism.ipynb is the renamed 03_multi_comp_verification.ipynb.
+        # It is the only evidence notebook with no FMU or FEM dependency, so it
+        # is the only one gateable here; the rest need the demo artifacts and
+        # the ngsolve/opensim environment.
+        env:
+          SYSSIMX_PAPER_RESULTS: ${{ runner.temp }}/results
         run: |
           pytest --nbmake --nbmake-timeout=900 \
             docs/03_core_tutorials/03_advanced/04_multi_component_switching.ipynb \
-            notebooks/03_multi_comp_verification.ipynb
+            notebooks/01_mechanism.ipynb
 
   docs:
     runs-on: ubuntu-latest

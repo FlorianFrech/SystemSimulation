@@ -1,7 +1,48 @@
+import os
+from functools import lru_cache
 from pathlib import Path
 from shutil import move
 
 from OMPython import ModelicaSystem
+
+# The tracked FMUs under demos/ControlledPendulum/artifacts/fmus are built with
+# this compiler, and syssimx.components.fmu carries a CVODE workaround that was
+# isolated against it. Rebuilding with another OpenModelica therefore changes
+# artifacts the rest of the project treats as fixed.
+OMC_VERSION_PINNED = "1.26.3"
+
+
+@lru_cache(maxsize=None)
+def pin_openmodelica() -> str:
+    """Pin and report the OpenModelica that builds every FMU in this module.
+
+    OMPython resolves omc through OPENMODELICAHOME and PATH, so a second
+    OpenModelica installation on the machine silently changes which compiler
+    produces the artifacts. ``SYSSIMX_OM_HOME`` selects the installation;
+    ``SYSSIMX_OM_ALLOW_ANY=1`` lifts the check for a deliberate experiment.
+    """
+    from OMPython import OMCSessionZMQ
+
+    om_home = os.environ.get("SYSSIMX_OM_HOME")
+    if om_home:
+        os.environ["OPENMODELICAHOME"] = om_home
+
+    session = OMCSessionZMQ()
+    try:
+        version = str(session.sendExpression("getVersion()")).strip()
+    finally:
+        del session
+
+    if (OMC_VERSION_PINNED not in version
+            and os.environ.get("SYSSIMX_OM_ALLOW_ANY") != "1"):
+        raise RuntimeError(
+            f"The tracked FMUs are built with OpenModelica "
+            f"{OMC_VERSION_PINNED}, but omc reports {version!r}. Set "
+            f"SYSSIMX_OM_HOME to the pinned installation, or "
+            f"SYSSIMX_OM_ALLOW_ANY=1 to rebuild with another toolchain "
+            f"deliberately."
+        )
+    return version
 
 
 def get_models_within_package(package_path: Path) -> list[str]:
@@ -26,6 +67,7 @@ def create_modelica_system(package_file_path: Path, composed_model_name: str) ->
     Returns:
         ModelicaSystem: An instance of ModelicaSystem for the specified model.
     """
+    pin_openmodelica()
     modelica_system = ModelicaSystem(
         fileName=str(package_file_path),
         modelName=composed_model_name,

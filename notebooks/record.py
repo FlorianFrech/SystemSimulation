@@ -26,6 +26,7 @@ Usage::
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -33,7 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__all__ = ["record", "provenance", "results_dir"]
+__all__ = ["record", "provenance", "results_dir", "paper_results_dir"]
 
 
 def _repository_root(start: Path | None = None) -> Path:
@@ -55,6 +56,59 @@ def results_dir(start: Path | None = None) -> Path:
     directory = _repository_root(start) / "results"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
+
+
+def _assert_quotable(payload_provenance: dict, smoke: bool) -> None:
+    """Refuse to write a campaign file from a tree that cannot be recovered.
+
+    ``evidence_plan.md`` D1: until the measured revision is pushed and tagged, a
+    reader cannot obtain it, so a file without the ``.smoke`` suffix - which
+    ``results/README.md`` declares quotable - is a promise the repository cannot
+    keep. A dirty working tree is the same problem in stronger form: the
+    revision string names a commit that does not describe what actually ran.
+
+    Set ``SYSSIMX_ALLOW_DIRTY_RESULTS=1`` to override, deliberately.
+    """
+    if smoke:
+        return
+    revision = payload_provenance.get("syssimx_revision") or ""
+    if revision.endswith("-dirty") and os.environ.get("SYSSIMX_ALLOW_DIRTY_RESULTS") != "1":
+        raise RuntimeError(
+            f"Refusing to write a campaign result measured on a dirty tree "
+            f"({revision}). A file without the .smoke suffix is quotable by the "
+            f"convention in results/README.md, and this revision cannot be obtained "
+            f"by a reader. Commit and tag the framework first, run with smoke=True, "
+            f"or set SYSSIMX_ALLOW_DIRTY_RESULTS=1 if you know why you want this."
+        )
+
+
+def paper_results_dir(start: Path | None = None) -> tuple[Path, str]:
+    """Where recorded numbers belong: the paper repository's ``results/``.
+
+    The notebooks run from the SysSimX checkout because that is the only tree
+    that can execute them, while their artifacts belong to the paper. Resolving
+    that by walking up for a repository marker finds ``pyproject.toml`` first and
+    writes into the framework repo, which is not where the manuscript reads.
+
+    ``SYSSIMX_PAPER_RESULTS`` names the destination explicitly. Unset, this falls
+    back to a sibling ``SysSimX-Framework-Paper`` checkout, which is a
+    convenience for the usual layout and not a contract: it assumes a fixed
+    directory name next to this one. Set the variable in CI and on any machine
+    whose checkout is laid out differently.
+
+    Returns:
+        The directory, created on demand, and a short string naming how it was
+        resolved, for the notebook to print.
+    """
+    override = os.environ.get("SYSSIMX_PAPER_RESULTS")
+    if override:
+        directory = Path(override).expanduser().resolve()
+        source = "SYSSIMX_PAPER_RESULTS"
+    else:
+        directory = _repository_root(start).parent / "SysSimX-Framework-Paper" / "results"
+        source = "sibling SysSimX-Framework-Paper checkout"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory, source
 
 
 def _git_describe(path: Path) -> str | None:
@@ -178,11 +232,12 @@ def record(
     suffix = ".smoke.json" if smoke else ".json"
     path = target_dir / f"{figure_id}{suffix}"
 
+    prov = provenance(notebook=notebook, smoke=smoke, extra=extra_provenance)
+    _assert_quotable(prov, smoke)
+
     document = {
         "id": figure_id,
-        "provenance": provenance(
-            notebook=notebook, smoke=smoke, extra=extra_provenance
-        ),
+        "provenance": prov,
         "values": _jsonable(payload),
     }
     path.write_text(json.dumps(document, indent=2, sort_keys=False) + "\n", encoding="utf-8")

@@ -9,12 +9,20 @@ REFERENCE_COLOR = "#1A1A1A"
 
 # Unified palette for §6.5.1, §6.5.2, §6.5.3 figures.
 # Move to thesis/notebooks/plot_setup.py to share across notebooks.
+# Okabe-Ito: distinguishable in print, in greyscale, and under the common
+# forms of colour vision deficiency. The previous tab10 blue/green/orange trio
+# collapsed to near-identical greys and was hard to separate for deuteranopes,
+# which matters here because the model identity *is* the message.
 MODEL_COLORS = {
-    "FEM":     "#1f77b4",   # blue   — high-fidelity plant
-    "FMU":     "#2ca02c",   # green  — rigid-body plant
-    "OpenSim": "#ff7f0e",   # orange — musculoskeletal plant
+    "FEM":     "#0072B2",   # blue          — deformable, high-fidelity plant
+    "FMU":     "#009E73",   # bluish green  — rigid-body plant
+    "OpenSim": "#E69F00",   # orange        — multibody plant
 }
-REFERENCE_STYLE = dict(color="#d62728", linestyle="--", linewidth=1.4, alpha=0.85)
+# The reference is an underlay, not a competitor: a neutral grey rail that the
+# coloured co-simulation sits on, so "follows closely" reads as coincidence
+# rather than as two lines fighting for attention.
+REFERENCE_STYLE = dict(color="0.62", linestyle="-", linewidth=2.6,
+                       solid_capstyle="round", zorder=1)
 WALL_STYLE      = dict(color="0.45", linestyle=":", linewidth=1.0)
 GRID_STYLE      = dict(alpha=0.4)
 PANEL_LABEL_STYLE = dict(

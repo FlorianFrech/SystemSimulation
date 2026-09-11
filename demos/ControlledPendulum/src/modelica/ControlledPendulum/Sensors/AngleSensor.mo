@@ -26,7 +26,8 @@ model AngleSensor
   parameter Real samplePeriod(unit="s") = 0.01 "Sampling period";
 
   // Optional external noise input (additive)
-  Modelica.Blocks.Interfaces.RealInput noise(unit="V") if useNoise;
+  Modelica.Blocks.Interfaces.RealInput noise(unit="V") if useNoise
+    "Optional additive noise, present only when useNoise = true";
 
 protected
   // Quantizer settings
@@ -42,6 +43,11 @@ protected
   Integer code;
   Real v_quant(unit="V");
   Real noise_val(unit="V");
+  // A conditional component may only appear in a connect equation (Modelica
+  // spec 4.4.5), so the noise signal is routed through an unconditional
+  // internal connector before it is used in an equation.
+  Modelica.Blocks.Interfaces.RealInput noise_internal(unit="V")
+    "Needed to connect to the conditional noise connector";
   discrete Real v_hold(unit="V", start=0);
 
 equation
@@ -59,7 +65,11 @@ equation
   v_adc_in = min(max(v_pot_wiper, 0), v_adc);
 
   // Add optional external noise and clamp again
-  noise_val = if useNoise then noise else 0;
+  connect(noise, noise_internal);
+  if not useNoise then
+    noise_internal = 0;
+  end if;
+  noise_val = noise_internal;
   v_adc_noisy = min(max(v_adc_in + noise_val, 0), v_adc);
 
   v_out = v_hold;

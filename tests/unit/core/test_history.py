@@ -386,6 +386,44 @@ class TestComponentHistory:
         assert "present" in comp_history
         assert "absent" not in comp_history
 
+    def test_backfill_puts_a_late_port_on_the_existing_time_axis(self):
+        """A port registered after recording started joins the shared axis."""
+        comp_history = ComponentHistory(component_name="C")
+        comp_history.add_port("x")
+        for t in (0.0, 0.1, 0.2):
+            comp_history.append("x", t, t)
+
+        comp_history.add_port("late")
+        comp_history.backfill("late", False)
+
+        time, values = comp_history.to_arrays()
+        assert np.array_equal(time, np.array([0.0, 0.1, 0.2]))
+        assert list(values["late"]) == [False, False, False]
+
+    def test_backfill_leaves_a_port_that_already_has_samples(self):
+        """Back-filling is only for empty histories; it never rewrites data."""
+        comp_history = ComponentHistory(component_name="C")
+        comp_history.add_port("x")
+        comp_history.append("x", 0.0, 1.0)
+        comp_history.add_port("y")
+        comp_history.append("y", 0.0, 2.0)
+
+        comp_history.backfill("y", False)
+
+        assert list(comp_history.get_port_history("y").values) == [2.0]
+
+    def test_backfill_on_the_only_port_is_a_no_op(self):
+        """With no other port there is no axis to join."""
+        comp_history = ComponentHistory(component_name="C")
+        comp_history.add_port("solo")
+        comp_history.backfill("solo", False)
+        assert len(comp_history.get_port_history("solo")) == 0
+
+    def test_backfill_rejects_an_unregistered_port(self):
+        comp_history = ComponentHistory(component_name="C")
+        with pytest.raises(KeyError):
+            comp_history.backfill("missing", False)
+
 
 # ============================================================================
 # Test System History Creation and Validation

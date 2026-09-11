@@ -1279,7 +1279,13 @@ class CoSimComponent(ABC):
             self.outputs[name].set(False, t=self.t)
             self.history.add_port(name)
             self._update_output_states(self.t)
-            self._record_outputs(self.t)
+            # The other ports already hold samples, and a component is exported
+            # against one shared time axis. Back-filling puts the new port on
+            # that axis; re-recording every port instead would leave this one
+            # permanently one sample short and duplicate the others' last
+            # sample. The event had not fired at any earlier instant, so False
+            # is the value those samples would have carried.
+            self.history.backfill(name, False)
 
     @property
     def has_state_events(self) -> bool:

@@ -493,6 +493,48 @@ class TestEventIndicatorEdgeCases:
         assert "trigger" in comp.output_specs
         assert comp.outputs["trigger"].spec.type == PortType.EVENT
 
+    def test_late_event_port_joins_the_shared_time_axis(self):
+        """A port created after initialize() must not start a sample behind.
+
+        Every port of a component is exported against one time axis, so a
+        late-registered event port is back-filled onto the samples the other
+        ports already hold. Without that it stays permanently short and
+        ``get_history_arrays()`` rejects the component.
+        """
+        comp = HybridSource("Source", x0=0.0, v=1.0, t0=0.0)
+        comp.initialize(t0=0.0)
+        comp.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)
+
+        for step in range(3):
+            comp.do_step(step * 0.1, 0.1)
+
+        time, values = comp.get_history_arrays()
+        assert len(time) == 4
+        assert all(len(series) == len(time) for series in values.values())
+        assert not values["trigger"][0]
+
+    def test_registration_order_does_not_change_the_recorded_history(self):
+        """Registering before or after initialize() records the same samples."""
+        early = HybridSource("Early", x0=0.0, v=1.0, t0=0.0)
+        early.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)
+        early.initialize(t0=0.0)
+
+        late = HybridSource("Late", x0=0.0, v=1.0, t0=0.0)
+        late.initialize(t0=0.0)
+        late.add_event_indicator(name="trigger", func=lambda c: c.x, direction=1)
+
+        for comp in (early, late):
+            for step in range(3):
+                comp.do_step(step * 0.1, 0.1)
+
+        early_time, early_values = early.get_history_arrays()
+        late_time, late_values = late.get_history_arrays()
+
+        assert np.array_equal(early_time, late_time)
+        assert early_values.keys() == late_values.keys()
+        for name, series in early_values.items():
+            assert np.array_equal(series, late_values[name]), name
+
 
 # ============================================================================
 # Test CoSimComponent Event Subscription Edge Cases

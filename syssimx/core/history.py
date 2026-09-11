@@ -204,6 +204,43 @@ class ComponentHistory:
             raise KeyError(f"Port '{port_name}' not registered for history tracking")
         self._port_histories[port_name].append(t, value)
 
+    def backfill(self, port_name: str, value: Any) -> None:
+        """Pad a late-registered port onto the component's existing time axis.
+
+        A port registered after recording has started owns an empty history
+        while every other port already holds samples. Because a component is
+        exported against one shared time axis (:meth:`to_arrays`), such a port
+        would stay permanently short. This fills it with ``value`` at each
+        timestamp the other ports already carry, so it joins the axis aligned.
+
+        Does nothing when the port already holds samples, or when it is the
+        only port and there is no axis to join.
+
+        Args:
+            port_name: Port to pad. Must be registered.
+            value: Value to record for every pre-existing timestamp.
+
+        Raises:
+            KeyError: If ``port_name`` is not registered.
+        """
+        if port_name not in self._port_histories:
+            raise KeyError(f"Port '{port_name}' not registered for history tracking")
+
+        target = self._port_histories[port_name]
+        if len(target):
+            return
+
+        reference = next(
+            (history for name, history in self._port_histories.items()
+             if name != port_name and len(history)),
+            None,
+        )
+        if reference is None:
+            return
+
+        for timestamp in reference.time:
+            target.append(float(timestamp), value)
+
     def get_port_history(self, port_name: str) -> PortHistory:
         """Get history object for a specific port."""
         if port_name not in self._port_histories:
