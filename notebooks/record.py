@@ -58,6 +58,30 @@ def results_dir(start: Path | None = None) -> Path:
     return directory
 
 
+def _threading_provenance() -> dict[str, Any]:
+    """How the FEM backend was threaded, which decides whether a run repeats.
+
+    `issues.md` REPRO-02: `FEMPendulum._do_step_internal` enters `TaskManager()`
+    without pinning a thread count, so NGSolve's parallel reductions accumulate
+    in scheduling-dependent order and an identical run does not reproduce
+    itself. The author decided on 2026-09-11 not to pin it - a serial
+    configuration is not one anyone would deploy - so evidence is made robust by
+    repetition instead.
+
+    NGSolve exposes `SetNumThreads` but no getter, so the count cannot be read
+    back. What is recordable is whether anything pinned it and how many cores
+    were available. Absence of a pin is itself the fact worth recording: it says
+    a single run of this artifact is not reproducible.
+    """
+    pinned = os.environ.get("NGS_NUM_THREADS")
+    return {
+        "ngsolve_threads_pinned": pinned is not None,
+        "ngsolve_num_threads_env": pinned,
+        "cpu_count": os.cpu_count(),
+        "reproducible_single_run": pinned is not None,
+    }
+
+
 def _assert_quotable(payload_provenance: dict, smoke: bool) -> None:
     """Refuse to write a campaign file from a tree that cannot be recovered.
 
@@ -175,6 +199,7 @@ def provenance(
         "processor": platform.processor(),
     }
     block.update(_framework_provenance())
+    block.update(_threading_provenance())
     if extra:
         block["extra"] = _jsonable(extra)
     return block
