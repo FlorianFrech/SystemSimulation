@@ -34,7 +34,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__all__ = ["record", "provenance", "results_dir", "paper_results_dir"]
+__all__ = [
+    "record",
+    "provenance",
+    "results_dir",
+    "paper_results_dir",
+    "MEASUREMENT_PATHS",
+]
 
 
 def _repository_root(start: Path | None = None) -> Path:
@@ -88,21 +94,45 @@ def _assert_quotable(payload_provenance: dict, smoke: bool) -> None:
     ``evidence_plan.md`` D1: until the measured revision is pushed and tagged, a
     reader cannot obtain it, so a file without the ``.smoke`` suffix - which
     ``results/README.md`` declares quotable - is a promise the repository cannot
-    keep. A dirty working tree is the same problem in stronger form: the
-    revision string names a commit that does not describe what actually ran.
+    keep. Uncommitted changes are the same problem in stronger form: the revision
+    string names a commit that does not describe what actually ran.
+
+    Only the *measured surface* counts, `MEASUREMENT_PATHS`. An edited notebook,
+    `issues.md`, a doc or a test does not change a recorded number, and refusing
+    on those made the check an obstacle. Editing the framework, a plant, the
+    Modelica sources, the FMU artifacts, or the shared evidence code does.
 
     Set ``SYSSIMX_ALLOW_DIRTY_RESULTS=1`` to override, deliberately.
     """
-    if smoke:
+    if smoke or os.environ.get("SYSSIMX_ALLOW_DIRTY_RESULTS") == "1":
         return
+
     revision = payload_provenance.get("syssimx_revision") or ""
-    if revision.endswith("-dirty") and os.environ.get("SYSSIMX_ALLOW_DIRTY_RESULTS") != "1":
+    dirty = payload_provenance.get("dirty_measurement_paths")
+
+    if dirty is None:
+        # Not a source checkout, or git could not answer. The revision string is
+        # then the only evidence, and an artifact whose revision is unknown
+        # cannot be obtained by a reader either.
+        if revision and not revision.endswith("-dirty"):
+            return
         raise RuntimeError(
-            f"Refusing to write a campaign result measured on a dirty tree "
-            f"({revision}). A file without the .smoke suffix is quotable by the "
-            f"convention in results/README.md, and this revision cannot be obtained "
-            f"by a reader. Commit and tag the framework first, run with smoke=True, "
-            f"or set SYSSIMX_ALLOW_DIRTY_RESULTS=1 if you know why you want this."
+            f"Cannot establish which revision produced this result "
+            f"(revision {revision or 'unknown'}). A file without the .smoke suffix "
+            f"is quotable by the convention in results/README.md. Run from a clean "
+            f"source checkout, use smoke=True, or set SYSSIMX_ALLOW_DIRTY_RESULTS=1."
+        )
+
+    if dirty:
+        listed = "\n  ".join(dirty[:10])
+        more = f"\n  ... and {len(dirty) - 10} more" if len(dirty) > 10 else ""
+        raise RuntimeError(
+            f"Refusing to write a campaign result: {len(dirty)} uncommitted change(s) "
+            f"on the measured surface, so revision {revision} does not describe what "
+            f"ran and a reader cannot obtain it.\n  {listed}{more}\n"
+            f"Commit these, run with smoke=True, or set SYSSIMX_ALLOW_DIRTY_RESULTS=1. "
+            f"Changes outside record.MEASUREMENT_PATHS - notebooks, docs, tests, "
+            f"issues.md - do not trigger this."
         )
 
 
@@ -152,6 +182,73 @@ def _git_describe(path: Path) -> str | None:
     return output or None
 
 
+# Paths whose content decides what a measurement computes. A dirty tree only
+# invalidates a campaign result when the dirt is in one of these; editing a
+# notebook's prose, `issues.md`, the docs or the tests changes nothing a number
+# depends on, and blocking on that made the guard an obstacle rather than a
+# check.
+#
+# The inclusions are deliberate and each is measured, not merely nearby:
+#   syssimx/                the framework under measurement
+#   syssimx_examples/       the FEM, FMU and OpenSim plants that *are* the models
+#   demos/.../src/          the Modelica sources of the monolithic reference
+#   demos/.../artifacts/    the exported FMUs the loop actually runs
+#   notebooks/evidence/     shared measurement code: plant, loop, instrumentation
+#   notebooks/record.py     this file; it decides what is written and gated
+#
+# A notebook itself is excluded on the argument that its measurement-relevant
+# state - the `Scenario`, the repetition count, the tolerances - is carried into
+# the provenance block, so a reader can see it without the file. That argument is
+# not airtight: a notebook can also change its own analysis. Narrow or widen this
+# tuple rather than reaching for SYSSIMX_ALLOW_DIRTY_RESULTS.
+MEASUREMENT_PATHS: tuple[str, ...] = (
+    "syssimx/",
+    "syssimx_examples/",
+    "demos/ControlledPendulum/src/",
+    "demos/ControlledPendulum/artifacts/",
+    "notebooks/evidence/",
+    "notebooks/record.py",
+)
+
+
+def _dirty_measurement_paths(repo: Path | None) -> list[str] | None:
+    """Repository-relative paths under `MEASUREMENT_PATHS` with uncommitted changes.
+
+    Returns an empty list when the measured surface is clean, and ``None`` when
+    the question cannot be answered - no git, no checkout, or an installed wheel
+    rather than a source tree. ``None`` is not "clean": it means the artifact
+    cannot say, which is itself recorded.
+    """
+    if repo is None:
+        return None
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+
+    dirty: list[str] = []
+    for line in completed.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:].strip().strip('"')
+        # Renames read "old -> new"; the destination is what exists now.
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        path = path.replace("\\", "/")
+        if any(path.startswith(prefix) for prefix in MEASUREMENT_PATHS):
+            dirty.append(path)
+    return sorted(dirty)
+
+
 def _framework_provenance() -> dict[str, Any]:
     """Version and source revision of the framework under measurement.
 
@@ -177,9 +274,11 @@ def _framework_provenance() -> dict[str, Any]:
         source = Path(syssimx.__file__).resolve().parent.parent
         info["syssimx_path"] = str(source)
         info["syssimx_revision"] = _git_describe(source)
+        info["dirty_measurement_paths"] = _dirty_measurement_paths(source)
     except ImportError:
         info["syssimx_path"] = None
         info["syssimx_revision"] = None
+        info["dirty_measurement_paths"] = None
     return info
 
 
