@@ -8,7 +8,7 @@ authors:
     # orcid: "https://orcid.org/0000-0000-0000-0000"   # no ORCID registered yet; fill in when one exists
     # email:           # optional
 version: 0.4.0
-date-released: 2026-09-06
+date-released: 2026-09-12
 license: MIT
 repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
