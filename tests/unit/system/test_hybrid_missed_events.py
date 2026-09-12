@@ -18,7 +18,7 @@ import pytest
 
 from syssimx.system import Connection, System
 from syssimx.system.algorithms.hybrid import HybridAlgorithm
-from tests.fixtures.components import FlippingSource, InputEchoSource
+from tests.fixtures.components import FlippingSource, InputEchoSource, MicroSteppingSource
 
 
 def _indicator(comp):
@@ -29,7 +29,7 @@ def _generation_of(system, name):
     return next(i for i, gen in enumerate(system.execution_order) if name in gen)
 
 
-def _build():
+def _build(*, include_detected_crossing=False):
     """Upstream flips +1 -> -1 on its first step; the event source echoes it.
 
     Detection sees the echo of ``+1`` because it steps with the cached input.
@@ -50,6 +50,10 @@ def _build():
     system.add_component(upstream)
     system.add_component(echo)
     system.add_component(sink)
+    if include_detected_crossing:
+        trigger = MicroSteppingSource("Trigger")
+        trigger.add_event_indicator("zero", func=_indicator, direction=-1)
+        system.add_component(trigger)
     system.add_connection(Connection("Upstream", "v", "Echo", "u"))
     system.add_connection(Connection("Echo", "y", "Sink", "u"))
     system.initialize(t0=0.0)
@@ -109,3 +113,16 @@ def test_guard_is_quiet_when_the_trajectories_agree(caplog):
 
     assert system.algorithm.missed_events == []
     assert not [record for record in caplog.records if "HYB-01" in record.message]
+
+
+def test_guard_is_armed_when_another_crossing_enters_the_event_branch():
+    """A detected event must not hide a different accepted-trajectory crossing."""
+    system, _ = _build(include_detected_crossing=True)
+    algorithm = system.algorithm
+    assert isinstance(algorithm, HybridAlgorithm)
+    algorithm.raise_on_missed_event = True
+
+    with pytest.raises(RuntimeError, match=r"never localized: Echo\.zero"):
+        system.run(0.0, 1e-3, 1e-3)
+
+    assert [event.pair for event in algorithm.missed_events] == [("Echo", "zero")]

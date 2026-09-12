@@ -193,6 +193,8 @@ class HybridAlgorithm(Algorithm):
                 t_right,
                 internal_hints,
             )
+            if not initial_events:
+                self._report_empty_localization(crossings, dense_time)
 
             logger.info("Event located at t=%.8f", dense_time.t)
             logger.debug(
@@ -219,6 +221,13 @@ class HybridAlgorithm(Algorithm):
             initial_events = new_events
             # 6) Step all components to event time
             self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
+            self._report_missed_crossings(
+                event_sources,
+                indicators_left,
+                t_left,
+                dense_time.t,
+                detected_crossings=crossings,
+            )
 
             # 7) Iterative event handling
             all_handled_events = set()
@@ -321,6 +330,8 @@ class HybridAlgorithm(Algorithm):
         indicators_left: dict[str, dict[str, float]],
         t_left: float,
         t_right: float,
+        *,
+        detected_crossings: list[EventBracket] | None = None,
     ) -> None:
         """Check the accepted advance for a crossing detection did not see.
 
@@ -346,6 +357,8 @@ class HybridAlgorithm(Algorithm):
                 :meth:`_detect_crossings` before the trial advance.
             t_left: Start of the accepted interval.
             t_right: End of the accepted interval.
+            detected_crossings: Crossings already found on the trial trajectory.
+                These are not misses when they also appear on the accepted trajectory.
 
         Raises:
             RuntimeError: If ``raise_on_missed_event`` is set and the accepted
@@ -355,10 +368,12 @@ class HybridAlgorithm(Algorithm):
         missed = self._crossing_brackets_between(
             event_sources, indicators_left, indicators_after, t_left, t_right
         )
+        if detected_crossings:
+            detected_pairs = {event.pair for event in detected_crossings}
+            missed = [event for event in missed if event.pair not in detected_pairs]
         if not missed:
             return
 
-        self.missed_events.extend(missed)
         detail = ", ".join(
             f"{event.source}.{event.name} ({event.value_left:+.6g} -> {event.value_right:+.6g})"
             for event in missed
@@ -370,6 +385,28 @@ class HybridAlgorithm(Algorithm):
             f"advance uses the updated ones (issues.md HYB-01). A falling or rising indicator "
             f"cannot be re-detected once it has settled on the far side of zero."
         )
+        self._apply_missed_event_policy(missed, message)
+
+    def _report_empty_localization(
+        self, detected_crossings: list[EventBracket], dense_time: DenseTime
+    ) -> None:
+        """Report a located instant to which no detected crossing was attributed."""
+        detail = ", ".join(
+            f"{event.source}.{event.name} in [{event.t_left:.8f}, {event.t_right:.8f}]"
+            for event in detected_crossings
+        )
+        message = (
+            f"Event localization returned no events at t={dense_time.t:.8f} after detecting: "
+            f"{detail}. Advancing to that instant would silently drop the crossing "
+            f"(issues.md HYB-07)."
+        )
+        self._apply_missed_event_policy(detected_crossings, message)
+
+    def _apply_missed_event_policy(
+        self, missed: list[EventBracket], message: str
+    ) -> None:
+        """Record missed crossings and apply the configured warning/exception policy."""
+        self.missed_events.extend(missed)
         if self.raise_on_missed_event:
             raise RuntimeError(message)
         logger.warning("%s", message)
@@ -695,6 +732,15 @@ class HybridAlgorithm(Algorithm):
             located_events = [
                 event
                 for event in hint_events
+                if event.t_left <= t_event <= event.t_right + self.tol_time
+            ]
+        if not located_events:
+            # The final trial re-evaluation may disagree with the detection
+            # that opened localization. Retain any opening bracket containing
+            # the located instant rather than returning an empty dispatch list.
+            located_events = [
+                event
+                for event in initial_crossings
                 if event.t_left <= t_event <= event.t_right + self.tol_time
             ]
         # 9) Restore all components to state at t_left

@@ -269,6 +269,11 @@ and warns. `raise_on_missed_event` makes the mismatch fatal. Covered by
 `tests/unit/system/test_hybrid_missed_events.py`. The underlying mismatch stands; only the silence
 is fixed, and escalating the report to a rollback still depends on HYB-02.
 
+**The guard's event-branch blind spot was fixed on 2026-09-12.** The accepted-trajectory check
+now also runs after the advance to a located event, excluding crossings already seen by the trial
+trajectory. A different crossing can therefore no longer hide merely because another event selected
+the event-handling branch. Covered by `test_guard_is_armed_when_another_crossing_enters_the_event_branch`.
+
 [`_detect_crossings()`](syssimx/system/algorithms/hybrid.py#L328) advances every event source with
 the inputs cached at `t_left`. The accepted advance re-reads inputs after the upstream generation
 has already stepped, in
@@ -447,6 +452,138 @@ event source may be moved to the front of the execution order.
 - Remove the overwrite and keep the declared map, or make the assignment merge rather than replace.
 - Assert during initialization that every registered backend agrees with the declared map, in the
   same way that `MultiComponent._detect_direct_feedthrough()` already does for its models.
+
+### HYB-07 — Localization can return an instant with no events, and the crossing is lost
+
+**Priority:** High
+
+**Status:** Fix implemented and covered by focused regression tests on 2026-09-12. A direct 0.9 s
+contact smoke run then completed with 12 switches, 12 contacts, and zero `missed_events`; the 2 s
+campaign horizon has not yet been repeated. The defect was reproduced at `v0.4.0-2-gbb7d0b4` and
+blocked the contact campaign in `notebooks/03_switching.ipynb`.
+
+**One consequence for the paper, not a defect.** The recovered event is the one that localized at
+exactly the macro endpoint, so it now fires *on* a communication point: `min_off_grid_s = 3.49e-16`
+in `T1.smoke.json`, against `5.47e-5` in the pre-fix 0.4 s run, which never hit one. The off-grid
+offset is the statistic section 6.1 uses to separate this mechanism from a grid-snapped trigger, so
+it must be reported as a distribution over the switches rather than as a minimum.
+
+**Open for the paper.** The fix postdates `v0.4.0`, so the paper baseline revision changes and
+`results_predate_tagged_revision` in the comparison manifest must be re-resolved against a new tag.
+The confirming artifact is a `.smoke` file at `n_repeats = 1` with a dirty measured surface.
+
+`MasterPendulum` aborts partway through a contact run with
+
+```
+RuntimeError: MasterPendulum: Boundary 0 crossed in direction -1 from
+inconsistent region 2; expected 1.
+```
+
+The message names the symptom, not the cause. The wrapper is in region 2 (`FMU`) while the
+region key has fallen to the inner boundary, which can only happen if the intervening
+`region_boundary_1` transition never ran. That check in
+[`_resolve_region_target()`](syssimx/core/multi_comp.py#L541) is doing its job: without it
+the run would commit an `FMU -> FEM` handover that the region map does not define, and that
+transfer would enter the T1 handover table as evidence.
+
+**What the instrumented run shows.** Logging every detection, every localization and every
+committed switch over a 0.9 s contact run gives 14 detections, of which one is lost:
+
+```
+[0.3850,0.3860]  located 0.38529688  handled=True   region_boundary_1   -> OpenSim to FMU
+[0.4650,0.4660]  located 0.46600000  handled=False  region_boundary_1   <-- dropped
+[0.4950,0.4960]  located 0.49519531  handled=True   region_boundary_0   -> RuntimeError
+```
+
+The crossing at `[0.465, 0.466]` **was detected and was localized**. No handler ran, no switch
+was committed, and the macro step then advanced past it. Eighty milliseconds later the key
+reached the inner boundary and the consistency check refused the two-region jump.
+
+This is not HYB-01. Detection saw this crossing on its own trial trajectory. The event is
+dropped after localization.
+
+**Mechanism before the fix.** [`_locate_event_time()`](syssimx/system/algorithms/hybrid.py#L536)
+ended at
+
+```python
+t_event = right
+located_events = self._crossing_brackets_between(
+    event_sources, indicators_left_vals, indicators_right_vals, left, right,
+)
+if not located_events:
+    located_events = [
+        event for event in hint_events
+        if event.t_left <= t_event <= event.t_right + self.tol_time
+    ]
+return DenseTime(t=t_event, micro=0), located_events
+```
+
+`hint_events` is `initial_crossings` filtered to brackets strictly inside the macro interval,
+so it holds only internal micro-step hints. A crossing found from a macro-endpoint sign change
+is not in it. When the re-evaluation over `[left, right]` yields nothing, the fallback
+therefore yields nothing either, and the method returns a located instant with an **empty**
+event list.
+
+The caller then advances to that instant and dispatches nothing:
+
+```python
+dense_time, initial_events = self._locate_event_time(...)
+...
+self.gauss_seidel_algorithm.step(system, t_left, dense_time.t - t_left)
+while event_pairs and current_time.micro < self.max_microsteps:
+```
+
+The loop body never executes with an empty `event_pairs`. The miss is then permanent for the
+same reason as in HYB-01: `detect_event_crossings()` requires `prev_sign > 0`, so once the
+indicator has settled on the far side the crossing can never be observed again.
+
+The hint path already guarded against exactly this, at
+[`hybrid.py#L596`](syssimx/system/algorithms/hybrid.py#L596), with the comment *"Never locate
+an instant and then dispatch nothing"* and a second fallback to `initial_crossings`. The
+bisection path had the first fallback but not the second.
+
+In the recorded run the localized time was `0.46600000`, exactly the right edge of the macro
+interval, which means bisection never narrowed and the final re-evaluation over the full
+interval disagreed with the detection that opened it.
+
+**Why the existing guard was silent before the fix.** `raise_on_missed_event = True` was set and
+recorded in
+the artifact provenance, and it never fired.
+[`_report_missed_crossings()`](syssimx/system/algorithms/hybrid.py#L318) was called only inside
+the `if not crossings:` branch at
+[`hybrid.py#L167`](syssimx/system/algorithms/hybrid.py#L167). A crossing dropped inside the
+event-handling branch is structurally invisible to it. **Absence of a missed-event warning is
+not evidence that no event was missed.**
+
+**What is ruled out.** A three-region `MultiComponent` using the `MasterPendulumSwitchConfig`
+policy verbatim, driven by a prescribed ramp with no FEM, no contact and no coupling,
+completes correctly when two boundaries fall inside one macro step (tested at 0.44 and 0.87
+steps between the armed edges), producing sequential single-region transitions. Dispatch
+ordering is not the cause. `threshold_for()` also returns the same value for boundary 0 in
+regions 1 and 2, so committing a switch never moves another boundary's indicator across zero.
+
+**Implemented fix**
+
+- The bisection fallback now matches the hint path: when `located_events` is empty, it falls
+  back to `initial_crossings` whose bracket contains `t_event`, so a localized instant always
+  dispatches the crossing that opened it.
+- An empty result after both fallbacks is recorded as a missed event and routed through the same
+  warning/exception policy as accepted-trajectory misses, so
+  `raise_on_missed_event` covers it.
+- The missed-event guard now also runs on the event-handling branch and excludes crossings already
+  detected on the trial trajectory.
+- `_resolve_region_target()` remains strict. It is the only reason this
+  surfaced instead of silently producing an undefined `FMU -> FEM` handover. Do not relax it
+  to tolerate multi-region jumps.
+
+The focused tests are `tests/unit/system/test_hybrid_localization_fallback.py` and
+`tests/unit/system/test_hybrid_missed_events.py`. The direct 0.9 s smoke run completed in 756.843 s;
+the formerly dropped transition committed at `0.46600000` (`FMU -> OpenSim`), followed by the valid
+`0.49519531` transition (`OpenSim -> FEM`). Closing HYB-07 still requires the 2 s contact horizon.
+
+**Reproduction.** `notebooks/03_switching.ipynb` with `HORIZON_S = 0.9`, the contact scenario,
+`event_tol_time = 1e-5`, `CAMPAIGN = False`. The exact instant moves between runs under
+REPRO-02; the failure recurred on every attempt at 0.9 s and 2.0 s.
 
 ## Numerical evidence and performance
 
@@ -1112,6 +1249,11 @@ What this costs, concretely:
 v0.3.0 released the consolidated switching mechanism, the FMU release policy,
 and the event-localization fixes. The order below is what gates the paper and
 the next release.
+
+**HYB-07 verification comes before all of it.** The localized-empty-dispatch defect is fixed under
+focused tests and the 0.9 s contact reproduction completes, but the 2.0 s campaign horizon still
+needs to complete before the switching campaign resumes. Every item below assumes a run that
+finishes.
 
 1. **Pin the FEM thread count before any physics result is quoted.** REPRO-02.
    An identical FEM run does not reproduce itself: the same control resolved five

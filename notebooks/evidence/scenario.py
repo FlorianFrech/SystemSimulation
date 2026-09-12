@@ -72,6 +72,14 @@ class Scenario:
     n_warmup: int = 1
     n_repeats: int = 5
 
+    # issues.md HYB-01: detection advances event sources with the inputs cached
+    # at the left edge, so a crossing on the accepted trajectory can be absent
+    # from the trial one and is then never localized. The guard reports such a
+    # miss; this makes it fatal at the point it happens, which is the only way
+    # to learn which indicator and which instant. Recorded in provenance so an
+    # artifact says whether it ran guarded.
+    raise_on_missed_event: bool = False
+
     @property
     def gated(self) -> bool:
         return self.gate_t_open_s > 0.0

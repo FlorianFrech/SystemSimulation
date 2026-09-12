@@ -11,6 +11,14 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- Hybrid localization now retains a macro-endpoint crossing when its final trial
+  re-evaluation yields no event. A still-empty localization is reported through
+  `raise_on_missed_event`, and the accepted-trajectory guard also runs when a
+  different crossing selected the event-handling branch. The strict region map
+  remains unchanged. (HYB-07)
+
 ## [0.4.0] — 2026-09-12
 
 ### Added

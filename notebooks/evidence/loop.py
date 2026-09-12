@@ -151,5 +151,6 @@ def assemble_system(
         system.algorithm.tol_time = scenario.event_tol_time
         system.algorithm.tol_value = scenario.event_tol_value
         system.algorithm.record_internal_steps = False
+        system.algorithm.raise_on_missed_event = scenario.raise_on_missed_event
 
     return system, plant
