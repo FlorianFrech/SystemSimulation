@@ -11,6 +11,8 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-12
+
 ### Fixed
 
 - Hybrid localization now retains a macro-endpoint crossing when its final trial
@@ -212,7 +214,8 @@ across FMU, OpenSim, and FEM backends.
 
 Initial public releases. See the git history for details.
 
-[Unreleased]: https://github.com/FlorianFrech/SystemSimulation/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/FlorianFrech/SystemSimulation/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.4.1
 [0.4.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.4.0
 [0.3.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FlorianFrech/SystemSimulation/releases/tag/v0.2.0
