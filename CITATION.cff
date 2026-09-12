@@ -12,7 +12,11 @@ date-released: 2026-09-12
 license: MIT
 repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
-# doi: "10.5281/zenodo.XXXXXXX"   # uncomment after Zenodo mints the version DOI
+doi: "10.5281/zenodo.22724958"          # version DOI, pins v0.4.0
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.20631910"
+    description: "Concept DOI, always resolves to the latest release"
 abstract: >-
   SysSimX is a Python framework for heterogeneous hybrid co-simulation
   with runtime model switching. It couples Functional Mock-up Units
