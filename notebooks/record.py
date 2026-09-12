@@ -194,21 +194,61 @@ def _git_describe(path: Path) -> str | None:
 #   demos/.../src/          the Modelica sources of the monolithic reference
 #   demos/.../artifacts/    the exported FMUs the loop actually runs
 #   notebooks/evidence/     shared measurement code: plant, loop, instrumentation
-#   notebooks/record.py     this file; it decides what is written and gated
+#   notebooks/              the instruments themselves, code only - see below
 #
-# A notebook itself is excluded on the argument that its measurement-relevant
-# state - the `Scenario`, the repetition count, the tolerances - is carried into
-# the provenance block, so a reader can see it without the file. That argument is
-# not airtight: a notebook can also change its own analysis. Narrow or widen this
-# tuple rather than reaching for SYSSIMX_ALLOW_DIRTY_RESULTS.
+# Notebooks were excluded at first, on the argument that their
+# measurement-relevant state travels into the provenance block. That argument is
+# not airtight: a notebook can also change its own analysis, and the analysis is
+# what produces the number. They are included as of 2026-09-12.
+#
+# Included on their **code only**. A notebook file changes every time it runs,
+# because execution counts and outputs are stored in it, so comparing the file
+# would make the guard self-defeating: running an instrument would invalidate
+# the result it produced. `_notebook_code_changed` compares only the source of
+# the code cells against HEAD.
 MEASUREMENT_PATHS: tuple[str, ...] = (
     "syssimx/",
     "syssimx_examples/",
     "demos/ControlledPendulum/src/",
     "demos/ControlledPendulum/artifacts/",
-    "notebooks/evidence/",
-    "notebooks/record.py",
+    "notebooks/",
 )
+
+
+def _notebook_code(blob: str) -> list[str]:
+    """Source of every code cell, ignoring outputs, counts and metadata."""
+    try:
+        document = json.loads(blob)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return [
+        "".join(cell.get("source", []))
+        for cell in document.get("cells", [])
+        if cell.get("cell_type") == "code"
+    ]
+
+
+def _notebook_code_changed(repo: Path, path: str) -> bool:
+    """Did `path`'s code cells change against HEAD, ignoring stored outputs?
+
+    An untracked notebook, or one git cannot read at HEAD, counts as changed:
+    absence of a committed version is exactly the case where a reader cannot
+    obtain the instrument.
+    """
+    try:
+        committed = subprocess.run(
+            ["git", "show", f"HEAD:{path}"],
+            cwd=str(repo), capture_output=True, text=True, timeout=15, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if committed.returncode != 0:
+        return True
+    try:
+        current = (repo / path).read_text(encoding="utf-8")
+    except OSError:
+        return True
+    return _notebook_code(current) != _notebook_code(committed.stdout)
 
 
 def _dirty_measurement_paths(repo: Path | None) -> list[str] | None:
@@ -244,8 +284,16 @@ def _dirty_measurement_paths(repo: Path | None) -> list[str] | None:
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
         path = path.replace("\\", "/")
-        if any(path.startswith(prefix) for prefix in MEASUREMENT_PATHS):
-            dirty.append(path)
+        if not any(path.startswith(prefix) for prefix in MEASUREMENT_PATHS):
+            continue
+        # A notebook counts only when its *code* moved; stored outputs and
+        # execution counts change on every run and mean nothing here.
+        if path.endswith(".ipynb") and not _notebook_code_changed(repo, path):
+            continue
+        # Figures are outputs of the instruments, not inputs to them.
+        if "/figures/" in path:
+            continue
+        dirty.append(path)
     return sorted(dirty)
 
 
