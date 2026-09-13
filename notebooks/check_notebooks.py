@@ -31,6 +31,7 @@ NOTEBOOKS = (
     "03_switching.ipynb",
     "04_performance.ipynb",
     "05_placement.ipynb",
+    "06_determinism.ipynb",
 )
 
 # Names the kernel provides that are not builtins.

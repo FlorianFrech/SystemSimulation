@@ -84,7 +84,9 @@ def _threading_provenance() -> dict[str, Any]:
         "ngsolve_threads_pinned": pinned is not None,
         "ngsolve_num_threads_env": pinned,
         "cpu_count": os.cpu_count(),
-        "reproducible_single_run": pinned is not None,
+        # 06_determinism, 2026-09-13: only one thread is bit-identical. Six
+        # threads diverged by 2.6e-4 rad in 50 ms, so "pinned" alone is not enough.
+        "reproducible_single_run": pinned == "1",
     }
 
 

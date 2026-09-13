@@ -6,6 +6,8 @@ between cases, which is what makes the comparison like-for-like.
 
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 
 from syssimx import Connection, EventConnection, FMUComponent, System
@@ -117,6 +119,15 @@ def assemble_system(
     component's one time axis from the first sample.
     """
     setpoint, pid, drive, angle_sensor, angle_decoder = create_common_components(fmu_paths)
+
+    # Before initialize(): SetNumThreads is process-global and must be in place
+    # before the FEM enters its first TaskManager. NGS_NUM_THREADS mirrors it
+    # because NGSolve has no getter and record() reads the environment.
+    if scenario.ngsolve_threads > 0:
+        import ngsolve
+
+        ngsolve.SetNumThreads(scenario.ngsolve_threads)
+        os.environ["NGS_NUM_THREADS"] = str(scenario.ngsolve_threads)
 
     if scenario.contact:
         plant.add_event_indicator("wall_hit", func=wall_contact_indicator, direction=-1)

@@ -80,6 +80,12 @@ class Scenario:
     # artifact says whether it ran guarded.
     raise_on_missed_event: bool = False
 
+    # NGSolve thread count for the FEM backend. 0 leaves NGSolve at its default.
+    # 06_determinism (2026-09-13): one thread is bit-identical within and across
+    # processes; six threads is not, and the default is not. Physics evidence
+    # pins 1. Timing evidence stays at the default, which is what anyone deploys.
+    ngsolve_threads: int = 0
+
     @property
     def gated(self) -> bool:
         return self.gate_t_open_s > 0.0
