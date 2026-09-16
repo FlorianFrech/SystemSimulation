@@ -1209,40 +1209,34 @@ What it invalidates.
 - RQ2 in the paper's `evidence_plan.md`. NB5's "six switches, zero contract violations" is an `n = 1`
   observation of a quantity that varies unless that notebook already pinned threads. Check which.
 
-**Decision, 2026-09-11: threads stay unpinned. Evidence is repeated instead.**
+**Revised 2026-09-13 for physics evidence.** `notebooks/06_determinism.ipynb`
+compared the full-FEM case bit for bit, one process per thread count. One thread
+was bit-identical within and across processes. Six threads, equal to the physical
+core count, was not, and neither was the default. A fixed count above one is
+therefore not enough. `03_switching` now pins one thread through
+`Scenario.ngsolve_threads` and takes one run; `record()` marks a run reproducible
+only at one thread. Timing evidence in `04_performance` keeps the default, which
+answers the objection below: each result declares its setting.
 
-Pinning was rejected: a serial configuration is not one anyone would deploy, and pinning for
-physics while leaving threads on for timing would put two different machines behind one paper.
-The consequence is accepted rather than worked around — **the FEM is a stochastic instrument, and
-any claim resting on it must be a distribution, not a run.**
+**Superseded decision, 2026-09-11.** The original policy left NGSolve
+threading unpinned and repeated all FEM-backed evidence. The
+`06_determinism.ipynb` result above invalidated the assumption that a fixed
+multi-thread count was reproducible.
 
-What this costs, concretely:
+**Current policy, 2026-09-13.** `03_switching` pins one NGSolve thread and uses
+one deterministic run for correctness and handover evidence. `04_performance`
+keeps default threading and reports repeated timing measurements plus distinct
+event-sequence classes. `record()` declares a single run reproducible only when
+the recorded thread count is one. Existing unpinned physics artifacts remain
+inadmissible.
 
-- `03_switching` now repeats its run `N_REPEATS = 5` times and reports the free measurements as a
-  median with the observed run-to-run spread. It asserts that the repetitions agree on the switch
-  count before aggregating: disagreement there is this defect showing up, and aggregating across
-  different event sequences would hide it.
-- `04_performance` was already correct; it takes medians over repetitions with a drift check.
-- Any RQ1 claim that needed a second, refined FEM run is off the critical path. §6.1 is re-scoped
-  to localization measured *within* one run, plus `01_mechanism`'s exact-reference result, neither
-  of which is exposed to this defect. `05_placement` remains an instrument but gates nothing.
-- `record()` writes an `ngsolve_threads_pinned` / `reproducible_single_run` block into every
-  artifact's provenance, so a reader can see that a single run of it is not reproducible. NGSolve
-  exposes `SetNumThreads` but no getter, so what is recorded is whether anything pinned it.
+**Remaining work**
 
-**Remaining solution**
-
-1. ~~Pin the thread count for any run that produces physics evidence.~~ Rejected above. The
-   component still makes a determinism-affecting choice silently, which is worth fixing at the
-   `fem.py` level by recording the choice rather than by removing it.
-2. Keep threading enabled for timing evidence. Single-threaded costs about 2.2x (944.7 s against
-   430.3 s for the same control), and a serial configuration is not one anyone would deploy. Never
-   mix the two in one comparison: the switched case runs the FEM for roughly half the horizon, so
-   the two benchmark cases need not scale together when threads are removed.
-3. Re-run any retained physics result single-threaded before it is quoted.
-4. Decide whether marginal-event sensitivity is itself worth reporting. A contact that appears or
-   vanishes with thread scheduling is a property of the contact model and time resolution, not only
-   of threading, and a reader of section 7 may reasonably want to know it.
+1. Re-run every retained physics artifact with the one-thread policy before it
+   is quoted.
+2. Keep default threading for timing evidence and report its observed spread.
+3. State marginal-event sensitivity as a limitation when scheduling changes the
+   contact sequence.
 
 ## Prioritized next steps
 
@@ -1255,12 +1249,10 @@ focused tests and the 0.9 s contact reproduction completes, but the 2.0 s campai
 needs to complete before the switching campaign resumes. Every item below assumes a run that
 finishes.
 
-1. **Pin the FEM thread count before any physics result is quoted.** REPRO-02.
-   An identical FEM run does not reproduce itself: the same control resolved five
-   wall contacts and then four in one process. Every claim about contact
-   sequences, handover quality, or trajectory error currently rests on single
-   runs of a quantity that varies. One line fixes it; the cost is about 2.2x
-   runtime and applies to physics evidence only, not to timing.
+1. **Re-run retained physics evidence with one NGSolve thread.** REPRO-02.
+   `03_switching` now pins one thread and uses one deterministic run; old
+   unpinned artifacts remain inadmissible. Timing evidence stays on default
+   threads and uses repetitions.
 2. **Settle the detection-cost question before generating paper numbers.**
    EVID-01 now carries four measurements putting speculative model time at about
    half of all model time, with and without contact and with and without

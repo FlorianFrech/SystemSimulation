@@ -1,8 +1,9 @@
 # Evidence notebooks
 
-Five notebooks, one per claim the paper makes. Each declares one `Scenario`,
-produces one or two single-panel figures, and emits its numbers through
-`record()` so nothing reaches the manuscript by being read off a plot.
+Six notebooks: five produce claim evidence and one qualifies the FEM threading
+policy. Each declares one `Scenario`, produces focused figures or tables, and
+emits its numbers through `record()` so nothing reaches the manuscript by being
+read off a plot.
 
 | Notebook | Claim | Register IDs | Backends needed |
 |---|---|---|---|
@@ -11,6 +12,7 @@ produces one or two single-panel figures, and emits its numbers through
 | `03_switching.ipynb` | RQ2 handover cost: per-switch transfer report, boundary localization | `T1`, `F3` | FMI, OpenSim, FEM, OpenModelica |
 | `04_performance.ipynb` | RQ3 runtime trade-off, both contact regimes (`CONTACT` toggle) | `T2_*`, `F5_*` | FMI, FEM |
 | `05_placement.ipynb` | RQ1 Campaign A: placement error and observed order | `F1`, `F2` | FMI, FEM |
+| `06_determinism.ipynb` | Reproducibility qualification for FEM-backed evidence | `DET_threads` | FEM |
 
 `V1` and `V2` are **not** register entries. `guideline/planning/evidence_plan.md`
 section 3 owns `F1`–`F7` and `T1`–`T4`, and nothing enters the manuscript that is
