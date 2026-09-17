@@ -167,11 +167,19 @@ def paper_results_dir(start: Path | None = None) -> tuple[Path, str]:
     return directory, source
 
 
-def _git_describe(path: Path) -> str | None:
-    """``git describe`` for the repository containing *path*, or ``None``."""
+def _git_describe(path: Path, *, dirty: bool = False) -> str | None:
+    """``git describe`` for the repository containing *path*, or ``None``.
+
+    ``--dirty`` is deliberately not passed. Git calls a tree dirty when any
+    tracked file differs, and a notebook writes its figures before it calls
+    ``record()``, so every run would be dirty by construction and the suffix
+    would say nothing. The caller appends the suffix from
+    :func:`_dirty_measurement_paths` instead, so it means what the admission
+    rule means: code, models, or evidence helpers differ from the named commit.
+    """
     try:
         completed = subprocess.run(
-            ["git", "describe", "--tags", "--always", "--dirty"],
+            ["git", "describe", "--tags", "--always"],
             cwd=str(path),
             capture_output=True,
             text=True,
@@ -181,7 +189,9 @@ def _git_describe(path: Path) -> str | None:
     except (OSError, subprocess.SubprocessError):
         return None
     output = completed.stdout.strip()
-    return output or None
+    if not output:
+        return None
+    return f"{output}-dirty" if dirty else output
 
 
 # Paths whose content decides what a measurement computes. A dirty tree only
@@ -240,7 +250,11 @@ def _notebook_code_changed(repo: Path, path: str) -> bool:
     try:
         committed = subprocess.run(
             ["git", "show", f"HEAD:{path}"],
-            cwd=str(repo), capture_output=True, text=True, timeout=15, check=False,
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return True
@@ -323,8 +337,14 @@ def _framework_provenance() -> dict[str, Any]:
 
         source = Path(syssimx.__file__).resolve().parent.parent
         info["syssimx_path"] = str(source)
-        info["syssimx_revision"] = _git_describe(source)
-        info["dirty_measurement_paths"] = _dirty_measurement_paths(source)
+        # The suffix follows the measured surface. ``None`` means the question
+        # could not be answered, which is not the same as clean, so it marks the
+        # revision dirty rather than quietly blessing it.
+        dirty_paths = _dirty_measurement_paths(source)
+        info["syssimx_revision"] = _git_describe(
+            source, dirty=dirty_paths is None or bool(dirty_paths)
+        )
+        info["dirty_measurement_paths"] = dirty_paths
     except ImportError:
         info["syssimx_path"] = None
         info["syssimx_revision"] = None

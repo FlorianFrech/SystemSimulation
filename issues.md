@@ -700,38 +700,47 @@ so it cannot fake a crossing. The stored gap is updated each sub-step,
 restored with checkpoints and refreshed on a state transfer
 (`FEMPendulum.set_state`), and it is read without recomputing the contact set.
 
-### HYB-09 — The FEM region clears the bounce envelope by only 2.7 %
+### HYB-09 — The FEM region must clear the bounce envelope
 
 **Priority:** Medium
 
-**Status:** Accepted on purpose 2026-09-17. Breakpoint kept at 0.075 rad.
+**Status:** Fixed on 2026-09-17 by widening the hysteresis band. Both notebooks
+now use edges 0.070 / 0.100 rad, that is breakpoint 0.085 rad with a band of
+0.015 rad.
 
 The FEM region is entered below the lower edge and left above the upper one, so a
-whole contact episode has to fit under the upper edge. The 1.0 s contact run
-measured, at `v0.4.2` with the HYB-08 cause 1 fix (earlier run: 3.1 %):
+whole contact episode has to fit under the upper edge. With the packaged edges
+0.070 / 0.080 the margin shrank as the other fixes landed, and then went
+negative:
 
 ```text
-bounce peak       max 0.077885 rad, median 0.064667 rad
-region edges      enter below 0.070000, leave above 0.080000 rad
-clearance to exit  +0.002115 rad, 2.7 % of the peak
+edges 0.070 / 0.080, run of 2026-09-16   peak 0.077575 rad   clearance 3.1 %
+edges 0.070 / 0.080, HYB-08 cause 1      peak 0.077885 rad   clearance 2.7 %
+edges 0.070 / 0.080, HYB-08 both causes  peak 0.079688 rad   the last rebound
+                                         crossed 0.080 at 0.9873 s, left FEM and
+                                         returned 10 ms later: 12 switches
+edges 0.070 / 0.100, same run            peak 0.078252 rad   clearance 27.8 %,
+                                         10 switches, 14 contacts against 14
 ```
 
-A bounce 2.7 % higher would leave FEM in the middle of an episode and return at
-once, adding a switch pair.
+**The entry edge is what costs fidelity, and it did not move.** Raising the
+breakpoint to 0.092 rad was tried and rejected: it moved the *entry* to 0.087 rad
+and tripled the first-cluster contact-time deviation from the rigid reference,
+from 3.95e-03 s to 1.15e-02 s, because more of the swing ran in the deformable
+model. Widening the band keeps entry at 0.070 rad and moves only the exit, so a
+contact episode stays in the FEM until the swing is clearly away from the wall.
+In the 1.0 s run with the wider band the deviation is 8.5e-05 s at the first
+contact of a cluster and 8.2e-03 s at the last, so the drift accumulates inside
+the contact episode rather than at the handover.
 
-**Raising the breakpoint was tried and rejected.** At 0.092 rad the clearance
-rose to 31.1 %, but the first-cluster contact-time deviation from the rigid
-reference roughly tripled, from 3.95e-03 s to 1.15e-02 s, because more of the
-swing ran in the deformable model. The case study exists to reproduce ideal
-elastic contact with a hyperelastic FEM, so agreement with the rigid reference
-matters more here than margin. The extra FEM time at 0.092 rad is small, so part
-of the growth likely comes from the handover itself: the FEM starts undeformed at
-each switch, and the entry angle sets the elastic transient it begins with. That
-is worth reporting under RQ2.
+The FEM starts undeformed at every switch, so the entry angle sets the elastic
+transient it begins with. That is why the entry edge carries the fidelity cost
+while the exit edge does not, and it is worth reporting under RQ2.
 
-**Why the small margin is acceptable.** With one NGSolve thread the run is
-bit-identical, so the 2.7 % margin cannot flip between repetitions. It can flip
-under any change to parameters, FMUs, toolchain, or package versions. The
+**The margin still has to be watched.** With one NGSolve thread the run is
+bit-identical, so 27.8 % cannot flip between repetitions. It can flip under any
+change to parameters, FMUs, toolchain, or package versions, and the history above
+shows it moving under framework fixes alone. The
 bounce-envelope cell in `03_switching` reports the clearance on every run and is
 the guard. The value is declared in section 5 of the manuscript, and figure F7
 draws the region strip to scale from it.
