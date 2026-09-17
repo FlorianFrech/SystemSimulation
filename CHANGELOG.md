@@ -11,6 +11,29 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-17
+
+### Fixed
+
+- Hybrid event handling no longer dispatches a located event before the accepted
+  trajectory has crossed. Localization runs on the trial trajectory, which holds
+  inputs at the left edge of the step, so its crossing can lie ahead of the
+  committed one. Such an event was dispatched early and then again at the
+  committed crossing. It is now withheld and detected again from the located
+  instant. Events backed by a component's own hint are still dispatched. (HYB-08)
+
+### Added
+
+- `HybridAlgorithm.max_deferrals` (default 50) bounds how often a located event
+  may be withheld per macro step. Beyond it the event is dispatched with a
+  warning.
+
+### Changed
+
+- Event instants can move from the trial crossing to the committed one, and
+  dependent switch instants can move with them. Results recorded with 0.4.1 are
+  not reproduced bit-for-bit.
+
 ## [0.4.1] - 2026-09-12
 
 ### Fixed

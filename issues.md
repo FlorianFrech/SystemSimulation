@@ -294,6 +294,11 @@ This has two consequences.
    `direction=-1`, so a missed contact means the pendulum passes through the wall and never
    recovers.
 
+3. The reverse also happens: detection can locate a crossing that the accepted trajectory reaches
+   only later. Dispatching at the located instant then fires the event early and again at the
+   committed crossing. This is HYB-08, fixed in `v0.4.2` by withholding such events until the
+   committed state has crossed.
+
 The window is narrow, because the crossing must fall inside the band by which one macro step of
 torque difference displaces `theta`, and no such miss has been observed in the recorded runs. The
 failure is silent, which is what makes it worth a guard rather than an assumption.
@@ -584,6 +589,123 @@ the formerly dropped transition committed at `0.46600000` (`FMU -> OpenSim`), fo
 **Reproduction.** `notebooks/03_switching.ipynb` with `HORIZON_S = 0.9`, the contact scenario,
 `event_tol_time = 1e-5`, `CAMPAIGN = False`. The exact instant moves between runs under
 REPRO-02; the failure recurred on every attempt at 0.9 s and 2.0 s.
+
+### HYB-08 — One wall impact is dispatched twice, 31 microseconds apart
+
+**Priority:** High
+
+**Status:** Fixed in code on 2026-09-17, for release in `v0.4.2`. The cause is
+HYB-01 acting in the reverse direction. Covered by
+`tests/unit/system/test_hybrid_premature_dispatch.py`. Closing it still needs
+the 03_switching rerun at `v0.4.2` to show 14 contacts against 14.
+
+**Observed.** The 1.0 s contact run of `notebooks/03_switching.ipynb` at
+`paper-baseline-2026-09-16-3-gaadfe0b`, starting in FMU with the 0.30 rad launch
+gate, located **15 contacts against the reference's 14**. The extra one doubles
+the fifth contact of the first cluster:
+
+```text
+0.33198125
+0.33201250    3.125e-05 s later
+```
+
+Everything else pairs one-to-one. The 0.4 s run with the same settings shows the
+same pair, as 6 contacts against 5.
+
+**Consequence for the evidence.** Contacts are compared pairwise by index, so the
+extra event shifts every later pair and the run self-classifies as
+`NOT COMPARABLE` with `max |delta| = 1.824e-01 s`. That number describes the
+misalignment, not the trajectory. Paired nearest-neighbour with the duplicate
+removed, all 14 reference contacts match and the largest deviation is
+**7.1e-03 s**. The first dispatch left `omega` unchanged, because the FEM plant
+ignores `omega_invert`, so the trajectory itself is not affected; only the
+contact count and the pairing are.
+
+**Cause, confirmed by the dispatch diagnostic.** At the first dispatch the
+committed state had **not** reached the wall:
+
+```text
+dispatch 0.33198125   theta = +6.791e-05 rad   fem.gap = +1.848e-05 m
+trial trajectory      theta(0.3320) = -1.416e-04 rad
+committed trajectory  theta(0.3320) = +1.797e-05 rad
+committed crossing    about 0.3320032 s, 22 us after the first dispatch
+```
+
+Localization bisects on the trial trajectory, which holds `Drive.tau` at the
+left edge of the macro step. The accepted advance re-reads the updated torque
+(HYB-01), so the trial crossing lies about 22 us ahead of the committed one.
+The algorithm dispatched at the trial instant, on a state still on the positive
+side. The committed crossing then fell into the next macro step, where it was
+detected and dispatched again. The duplicate filter lives for one call to
+`step()`, so it never saw the first dispatch.
+
+Two explanations recorded earlier were rejected by the same data. Neither signal
+had crossed at the first dispatch, so it was not the FEM gap hint and the angle
+indicator disagreeing. `theta` never rose between the two dispatches, so it was
+not a micro-bounce of the penalty contact.
+
+**Attempt 1, reverted: widen the duplicate-root window.** A window tied to the
+located bracket width still produced 6 contacts against 5, because the two
+dispatches fall in different macro steps. It was also unsafe, since after the
+HYB-07 fallback a bracket can be a whole macro step wide.
+
+**Fix.** After the accepted advance to the located instant, `HybridAlgorithm.step`
+checks each located event against the committed state
+(`_premature_event_pairs`). An event counts as reached if its indicator has
+changed sign since `t_left`, or if its source reported a hint for it during the
+accepted advance. The second clause keeps hint-only events from HYB-07. Events
+not yet reached are withheld. If nothing is left to dispatch, detection resumes
+from the located instant and finds the crossing where the committed state makes
+it. `max_deferrals` (default 50) bounds the loop per macro step. Beyond it the
+event is dispatched with a warning.
+
+**Behaviour change.** Event instants move from the trial crossing to the
+committed one. In the case study that shift is tens of microseconds. Switch
+instants that depend on contact handling can move as well, so V1, V2, T1 and T2
+must be regenerated at `v0.4.2`.
+
+### HYB-09 — The FEM region clears the bounce envelope by only 3.1 %
+
+**Priority:** Medium
+
+**Status:** Accepted on purpose 2026-09-17. Breakpoint kept at 0.075 rad.
+
+The FEM region is entered below the lower edge and left above the upper one, so a
+whole contact episode has to fit under the upper edge. The 1.0 s contact run
+measured:
+
+```text
+bounce peak       max 0.077575 rad, median 0.065795 rad
+region edges      enter below 0.070000, leave above 0.080000 rad
+clearance to exit  +0.002425 rad, 3.1 % of the peak
+```
+
+A bounce 3.1 % higher would leave FEM in the middle of an episode and return at
+once, adding a switch pair.
+
+**Raising the breakpoint was tried and rejected.** At 0.092 rad the clearance
+rose to 31.1 %, but the first-cluster contact-time deviation from the rigid
+reference roughly tripled, from 3.95e-03 s to 1.15e-02 s, because more of the
+swing ran in the deformable model. The case study exists to reproduce ideal
+elastic contact with a hyperelastic FEM, so agreement with the rigid reference
+matters more here than margin. The extra FEM time at 0.092 rad is small, so part
+of the growth likely comes from the handover itself: the FEM starts undeformed at
+each switch, and the entry angle sets the elastic transient it begins with. That
+is worth reporting under RQ2.
+
+**Why the small margin is acceptable.** With one NGSolve thread the run is
+bit-identical, so the 3.1 % margin cannot flip between repetitions. It can flip
+under any change to parameters, FMUs, toolchain, or package versions. The
+bounce-envelope cell in `03_switching` reports the clearance on every run and is
+the guard. The value is declared in section 5 of the manuscript, and figure F7
+draws the region strip to scale from it.
+
+**Provenance gap, fixed in the notebook.** `Scenario.provenance()` records
+`switch_threshold_rad`, `switch_band_rad` and `region_modes`, but
+`MasterPendulum` takes its region map from `MasterPendulumSwitchConfig` and
+ignores them, so `T1.json` reported a two-region map for a three-region run.
+`03_switching` now builds the switch config from `FEM_BREAKPOINT_RAD` and records
+the installed map under `region_map`.
 
 ## Numerical evidence and performance
 

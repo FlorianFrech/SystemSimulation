@@ -7,14 +7,14 @@ authors:
     family-names: Frech
     # orcid: "https://orcid.org/0000-0000-0000-0000"   # no ORCID registered yet; fill in when one exists
     # email:           # optional
-version: 0.4.1
-date-released: 2026-09-12
+version: 0.4.2
+date-released: 2026-09-17
 license: MIT
 repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
-# Version DOI for v0.4.1. Zenodo mints it from the GitHub release, so this
-# stays at the v0.4.0 value until that release exists; update it then.
-doi: "10.5281/zenodo.22724958"          # TODO v0.4.1: replace after Zenodo mints it
+# Version DOI for v0.4.2. Zenodo mints it from the GitHub release, so this
+# keeps the previous version DOI until that release exists; update it then.
+doi: "10.5281/zenodo.22724958"          # TODO v0.4.2: replace after Zenodo mints it
 identifiers:
   - type: doi
     value: "10.5281/zenodo.20631910"
