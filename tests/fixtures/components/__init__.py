@@ -21,6 +21,8 @@ from .hybrid_components import (
     InputEchoSource,
     MicroSteppingSource,
     NoRollbackComponent,
+    RateIntegratingSource,
+    RateStepSource,
 )
 from .multi_components import (
     EmptyMultiComponent,
@@ -49,6 +51,8 @@ __all__ = [
     "TorqueSource",
     "HybridSource",
     "MicroSteppingSource",
+    "RateIntegratingSource",
+    "RateStepSource",
     "FlippingSource",
     "InputEchoSource",
     "HybridCombi",

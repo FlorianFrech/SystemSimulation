@@ -472,3 +472,87 @@ class InputEchoSource(CoSimComponent):
     def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
         self._y = float(snapshot["y"])
         self.t = t
+
+
+class RateStepSource(CoSimComponent):
+    """Emits ``before`` until its first step, then ``after`` forever.
+
+    Upstream half of the pair that reproduces a *premature* localization: the
+    event source integrates ``before`` during detection and ``after`` during the
+    accepted advance, so the two trajectories cross zero at different instants.
+    """
+
+    def __init__(self, name: str, before: float = -2.0, after: float = -0.8):
+        super().__init__(name, group="Upstream")
+        self.before = before
+        self.after = after
+        self._v = before
+        self.output_specs.update({"v": PortSpec(name="v", type=PortType.REAL, direction="out")})
+
+    def _initialize_component(self, t0: float) -> None:
+        self._v = self.before
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        if dt > 0.0:
+            self._v = self.after
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["v"].set(self._v, t=t)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"v": self._v}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._v = float(state["v"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"v": self._v}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._v = float(snapshot["v"])
+        self.t = t
+
+
+class RateIntegratingSource(CoSimComponent):
+    """Integrates its input as a rate, ``y' = u``, and carries the indicator.
+
+    The declared feedthrough on ``u`` is structural only: it places this
+    component after its upstream, so the accepted advance re-reads the input
+    after the upstream has stepped while detection does not.
+    """
+
+    def __init__(self, name: str, y0: float = 1.0):
+        super().__init__(name, group="Event Source")
+        self.y0 = y0
+        self._y = y0
+        self.input_specs.update({"u": PortSpec(name="u", type=PortType.REAL, direction="in")})
+        self.output_specs.update({"y": PortSpec(name="y", type=PortType.REAL, direction="out")})
+        self.direct_feedthrough = {"y": {"u"}}
+
+    def _initialize_component(self, t0: float) -> None:
+        self._y = self.y0
+
+    def _do_step_internal(self, t: float, dt: float) -> None:
+        value = self.inputs["u"].get()
+        if value is not None:
+            self._y += float(getattr(value, "magnitude", value)) * dt
+
+    def _update_output_states(
+        self, t: float | None = None, event_names: list[str] | None = None
+    ) -> None:
+        self.outputs["y"].set(self._y, t=t)
+
+    def get_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def set_state(self, state: dict[str, Any], t: float) -> None:
+        self._y = float(state["y"])
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {"y": self._y}
+
+    def restore_state(self, snapshot: dict[str, Any], t: float) -> None:
+        self._y = float(snapshot["y"])
+        self.t = t

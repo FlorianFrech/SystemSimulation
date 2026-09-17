@@ -75,6 +75,9 @@ class HybridAlgorithm(Algorithm):
         sign_tolerance (float): Tolerance for detecting sign changes in event indicators.
         tol_time (float): Tolerance for time comparisons.
         max_microsteps (int): Maximum number of microsteps for event handling.
+        max_deferrals (int): Maximum number of located events per macro step
+            that are held back because the accepted trajectory has not crossed
+            yet (HYB-08). Beyond it they are dispatched with a warning.
         gauss_seidel_algorithm (GaussSeidelAlgorithm): Fallback algorithm for
             continuous integration in the absence of events.
         record_internal_steps (bool): If True, records internal steps during
@@ -87,6 +90,7 @@ class HybridAlgorithm(Algorithm):
     sign_tolerance: float = 1e-10
     tol_time: float = 1e-8
     max_microsteps: int = 100
+    max_deferrals: int = 50
     gauss_seidel_algorithm: GaussSeidelAlgorithm = field(default_factory=GaussSeidelAlgorithm)
     record_internal_steps: bool = False
     raise_on_missed_event: bool = False
@@ -114,6 +118,11 @@ class HybridAlgorithm(Algorithm):
                 raise TypeError(f"{name} must be a positive integer.")
             if value <= 0:
                 raise ValueError(f"{name} must be a positive integer.")
+
+        if isinstance(self.max_deferrals, bool) or not isinstance(self.max_deferrals, int):
+            raise TypeError("max_deferrals must be a non-negative integer.")
+        if self.max_deferrals < 0:
+            raise ValueError("max_deferrals must be a non-negative integer.")
 
         if not isinstance(self.gauss_seidel_algorithm, GaussSeidelAlgorithm):
             raise TypeError("gauss_seidel_algorithm must be a GaussSeidelAlgorithm instance.")
@@ -151,6 +160,12 @@ class HybridAlgorithm(Algorithm):
         # Suppress only a repeated detection of the same root and direction.
         # Opposite-direction recrossings remain distinct physical events.
         handled_events_this_step: dict[tuple[str, str, int | None], float] = {}
+
+        # Located events the accepted trajectory had not reached yet, and were
+        # therefore held back and re-detected (HYB-08). Bounded by max_deferrals so a
+        # localization that keeps landing short of the committed crossing cannot
+        # loop forever.
+        deferrals = 0
 
         while t_left < t_right - eps:
             # 1) Prpare inputs: set inputs and resolve algebraic loops
@@ -228,6 +243,44 @@ class HybridAlgorithm(Algorithm):
                 dense_time.t,
                 detected_crossings=crossings,
             )
+
+            # 6b) Dispatch only what the accepted trajectory has reached (HYB-08).
+            #
+            # Localization runs on the trial trajectory, which holds inputs at
+            # the left edge, while the accepted advance re-reads them. The
+            # instant can therefore be right for the trial and early for the
+            # committed state. Dispatching there fires the event before the
+            # committed indicator has crossed; the committed crossing then
+            # follows, possibly in the next macro step, where no duplicate filter
+            # remembers the first dispatch, and the event fires a second time.
+            premature = self._premature_event_pairs(
+                event_sources, initial_events, indicators_left, t_left, dense_time.t
+            )
+            if premature:
+                if deferrals < self.max_deferrals:
+                    deferrals += 1
+                    initial_events = [e for e in initial_events if e.pair not in premature]
+                    logger.info(
+                        "Deferring %s at t=%.8f: the accepted trajectory has not "
+                        "crossed yet (HYB-08)",
+                        ", ".join(f"{source}.{name}" for source, name in sorted(premature)),
+                        dense_time.t,
+                    )
+                    if not initial_events:
+                        # Nothing left to dispatch at this instant. The components
+                        # already stand at dense_time, so detection resumes from
+                        # there and finds the crossing where the committed state
+                        # actually makes it.
+                        t_left = dense_time.t
+                        continue
+                else:
+                    logger.warning(
+                        "Dispatching %s at t=%.8f although the accepted trajectory "
+                        "has not crossed: deferral limit of %d reached (HYB-08)",
+                        ", ".join(f"{source}.{name}" for source, name in sorted(premature)),
+                        dense_time.t,
+                        self.max_deferrals,
+                    )
 
             # 7) Iterative event handling
             all_handled_events = set()
@@ -386,6 +439,67 @@ class HybridAlgorithm(Algorithm):
             f"cannot be re-detected once it has settled on the far side of zero."
         )
         self._apply_missed_event_policy(missed, message)
+
+    def _premature_event_pairs(
+        self,
+        event_sources: list[CoSimComponent],
+        events: list[EventBracket],
+        indicators_left: dict[str, dict[str, float]],
+        t_left: float,
+        t_event: float,
+    ) -> set[tuple[str, str]]:
+        """Return the located events the accepted trajectory has not reached.
+
+        This is the counterpart of :meth:`_report_missed_crossings`. That guard
+        catches a crossing the accepted advance made and detection did not. This
+        one catches a crossing detection located that the accepted advance has
+        not made yet, because the two advances see different upstream inputs
+        (issues.md HYB-01).
+
+        An event counts as reached when either piece of evidence is present on
+        the committed state:
+
+        - its indicator changed sign between ``t_left`` and ``t_event``, judged
+          by the same rule detection uses, or
+        - the event source reported the event as an internal hint during the
+          accepted advance.
+
+        The second clause keeps events whose only evidence is a component's own
+        micro-step bracket, such as a contact that closes and reopens inside one
+        macro step (HYB-07). Their indicator shows no sign change at the
+        endpoints, and deferring them would lose them.
+
+        Must be called directly after the accepted advance to ``t_event``, while
+        the event sources still hold the committed state and the hints that
+        advance reported. Reading the hints consumes them, which is harmless:
+        every later detection only considers hints inside its own interval.
+
+        Args:
+            event_sources: Components carrying event indicators.
+            events: Located events about to be dispatched at ``t_event``.
+            indicators_left: Indicator values at ``t_left`` on the committed state.
+            t_left: Start of the accepted advance.
+            t_event: Located instant the accepted advance has reached.
+
+        Returns:
+            ``(source, name)`` pairs of the events that have not been reached.
+        """
+        if not events:
+            return set()
+
+        committed = {comp.name: comp.evaluate_event_indicators() for comp in event_sources}
+        reached = {
+            event.pair
+            for event in self._crossing_brackets_between(
+                event_sources, indicators_left, committed, t_left, t_event
+            )
+        }
+        for comp in event_sources:
+            for hint in comp.get_internal_event_hints():
+                if hint.t_after > t_left and hint.t_before < t_event + self.tol_time:
+                    reached.add((comp.name, hint.event_name))
+
+        return {event.pair for event in events if event.pair not in reached}
 
     def _report_empty_localization(
         self, detected_crossings: list[EventBracket], dense_time: DenseTime
