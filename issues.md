@@ -590,14 +590,15 @@ the formerly dropped transition committed at `0.46600000` (`FMU -> OpenSim`), fo
 `event_tol_time = 1e-5`, `CAMPAIGN = False`. The exact instant moves between runs under
 REPRO-02; the failure recurred on every attempt at 0.9 s and 2.0 s.
 
-### HYB-08 — One wall impact is dispatched twice, 31 microseconds apart
+### HYB-08 — One wall impact is dispatched twice
 
 **Priority:** High
 
-**Status:** Fixed in code on 2026-09-17, for release in `v0.4.2`. The cause is
-HYB-01 acting in the reverse direction. Covered by
-`tests/unit/system/test_hybrid_premature_dispatch.py`. Closing it still needs
-the 03_switching rerun at `v0.4.2` to show 14 contacts against 14.
+**Status:** Two causes, both fixed on 2026-09-17. Cause 1 is HYB-01 acting in
+the reverse direction, fixed in `hybrid.py` for `v0.4.2` and covered by
+`tests/unit/system/test_hybrid_premature_dispatch.py`. Cause 2 is two signals
+under one event name, fixed in `notebooks/evidence/loop.py`. Closing the issue
+still needs the 1.0 s `03_switching` rerun to show 14 contacts against 14.
 
 **Observed.** The 1.0 s contact run of `notebooks/03_switching.ipynb` at
 `paper-baseline-2026-09-16-3-gaadfe0b`, starting in FMU with the 0.30 rad launch
@@ -664,7 +665,42 @@ committed one. In the case study that shift is tens of microseconds. Switch
 instants that depend on contact handling can move as well, so V1, V2, T1 and T2
 must be regenerated at `v0.4.2`.
 
-### HYB-09 — The FEM region clears the bounce envelope by only 3.1 %
+**Cause 2: two signals under one event name.** The 1.0 s rerun with the fix
+above still located 15 contacts against 14. The extra pair opens the third
+cluster, 10 ms after the OpenSim to FEM switch at 0.828688 s:
+
+```text
+0.839000
+0.839100    1.0e-04 s later, one FEM sub-step near the wall
+max theta between them  +6.72e-04 rad, about |omega| x 1e-4 s
+```
+
+`FEMPendulum` reports `wall_hit` as a hint when its **contact gap** closes
+(`_post_solve`). The notebooks judged the same event by the **angle**
+(`wall_contact_indicator`). For a deformable body the two reach zero at
+different instants, in either order. Here the gap closed at 0.839000 while the
+angle was still one sub-step from the wall. The hint justified the first
+dispatch, which is what the HYB-07 hint clause is for. The angle crossed in the
+next macro step and justified the second. Neither signal can produce both on
+its own within one 1e-4 s sub-step, so the pair is one dispatch from each. The
+diagnostic was off for this run, so the gap at 0.839000 is inferred, not
+recorded.
+
+This is a modelling inconsistency, not a framework defect: SysSimX dispatched
+what the model defined. The framework does not check that an indicator and a
+hint under one name describe the same quantity. That is a stated limitation.
+
+**Fix for cause 2.** `wall_contact_indicator` now returns the FEM's stored
+contact gap while a FEM model with wall contact is active, and the angle
+otherwise. Contact for a deformable body is the surface touching the wall,
+which is also what the rigid reference's contact flag means. Every contact
+happens in the FEM region, so the rigid models' angle criterion is unchanged.
+The handover changes the signal at 0.07 to 0.08 rad, where both are positive,
+so it cannot fake a crossing. The stored gap is updated each sub-step,
+restored with checkpoints and refreshed on a state transfer
+(`FEMPendulum.set_state`), and it is read without recomputing the contact set.
+
+### HYB-09 — The FEM region clears the bounce envelope by only 2.7 %
 
 **Priority:** Medium
 
@@ -672,15 +708,15 @@ must be regenerated at `v0.4.2`.
 
 The FEM region is entered below the lower edge and left above the upper one, so a
 whole contact episode has to fit under the upper edge. The 1.0 s contact run
-measured:
+measured, at `v0.4.2` with the HYB-08 cause 1 fix (earlier run: 3.1 %):
 
 ```text
-bounce peak       max 0.077575 rad, median 0.065795 rad
+bounce peak       max 0.077885 rad, median 0.064667 rad
 region edges      enter below 0.070000, leave above 0.080000 rad
-clearance to exit  +0.002425 rad, 3.1 % of the peak
+clearance to exit  +0.002115 rad, 2.7 % of the peak
 ```
 
-A bounce 3.1 % higher would leave FEM in the middle of an episode and return at
+A bounce 2.7 % higher would leave FEM in the middle of an episode and return at
 once, adding a switch pair.
 
 **Raising the breakpoint was tried and rejected.** At 0.092 rad the clearance
@@ -694,7 +730,7 @@ each switch, and the entry angle sets the elastic transient it begins with. That
 is worth reporting under RQ2.
 
 **Why the small margin is acceptable.** With one NGSolve thread the run is
-bit-identical, so the 3.1 % margin cannot flip between repetitions. It can flip
+bit-identical, so the 2.7 % margin cannot flip between repetitions. It can flip
 under any change to parameters, FMUs, toolchain, or package versions. The
 bounce-envelope cell in `03_switching` reports the clearance on every run and is
 the guard. The value is declared in section 5 of the manuscript, and figure F7

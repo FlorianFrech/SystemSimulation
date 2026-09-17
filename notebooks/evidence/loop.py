@@ -63,7 +63,24 @@ class PIDController(FMUComponent):
 
 
 def wall_contact_indicator(comp) -> float:
-    """Signed distance of the plant angle from the wall at theta = 0."""
+    """Signed distance of the plant from the wall.
+
+    A FEM model with wall contact is judged by its contact gap in metres, the
+    quantity its own ``wall_hit`` hint reports. Its rigid-equivalent angle
+    reaches zero at a different instant, so judging the same event by both
+    signals dispatched one impact twice (issues.md HYB-08). Every other model
+    is judged by its angle, with the wall at theta = 0.
+
+    The gap is the value the FEM stores after each sub-step, restores with a
+    checkpoint, and refreshes on a state transfer. It is never recomputed here:
+    ``_get_contact_gap_distance()`` updates the contact set and would perturb
+    the run. At a handover the signal changes from angle to gap, far from the
+    wall where both are positive, so the change cannot fake a crossing.
+    """
+    model = getattr(comp, "active_comp", comp)
+    gap = getattr(model, "gap", None)
+    if getattr(model, "_with_contact", False) and gap is not None:
+        return float(gap)
     return scalar_value(comp.get_outputs()["theta"]) - 0.0
 
 
