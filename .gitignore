@@ -128,3 +128,7 @@ docs/**/figures/simple_hybrid_system
 
 # OpenSim writes this beside whichever notebook ran; regenerated, never committed.
 opensim.log
+
+# Notebook smoke figures and trajectory caches
+notebooks/figures/*.smoke.pdf
+notebooks/figures/*.npz
