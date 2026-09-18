@@ -16,6 +16,8 @@ __all__ = [
     "mode_intervals",
     "mode_active_time",
     "contact_event_times",
+    "fem_contact_closures",
+    "check_contact_dispatch",
     "trajectory_error_metrics",
     "distance_to_grid",
     "run_measured_case",
@@ -42,6 +44,41 @@ def contact_event_times(system, plant) -> list[float]:
     """Located `wall_hit` instants from the system event history."""
     events = system.get_history().get("Events", {})
     return [float(record.t) for record in events.get((plant.name, "wall_hit"), [])]
+
+
+def fem_contact_closures(plant) -> int | None:
+    """Gap closures the FEM resolved inside accepted advances.
+
+    Read from the contact-enabled FEM model behind `plant`, whether `plant` is
+    that model or a `MultiComponent` wrapping it. `None` when no such model
+    exists, which is the no-contact regime.
+    """
+    models = getattr(plant, "models", None) or {"plant": plant}
+    for model in models.values():
+        if getattr(model, "_with_contact", False) and hasattr(model, "contact_closures"):
+            return int(model.contact_closures)
+    return None
+
+
+def check_contact_dispatch(plant, contact_times, label: str = "") -> None:
+    """Raise unless every physical closure was dispatched as `wall_hit`.
+
+    The coordinator's own missed-event guard compares indicator signs at the
+    macro endpoints and cannot see a contact episode shorter than a macro step.
+    This check compares what the FEM did on the committed trajectory with what
+    the event history records; a mismatch means the instrument lost or
+    duplicated an impact (issues.md HYB-10) and the run is not evidence.
+    """
+    closures = fem_contact_closures(plant)
+    if closures is None:
+        return
+    dispatched = len(contact_times)
+    if closures != dispatched:
+        raise AssertionError(
+            f"{label + ': ' if label else ''}the FEM closed its contact gap "
+            f"{closures} times inside accepted advances but {dispatched} wall_hit "
+            f"events were dispatched (HYB-10)"
+        )
 
 
 def distance_to_grid(t_value: float, step: float) -> float:
@@ -89,6 +126,7 @@ def _collect_outputs(system, plant, case_name, initial_mode, intervals) -> dict:
         "alpha": np.asarray(data["alpha"], dtype=float),
         "switch_events": list(getattr(plant, "switch_events", [])),
         "contact_times": contact_event_times(system, plant),
+        "contact_closures": fem_contact_closures(plant),
         "initial_mode": initial_mode,
         "mode_intervals": intervals,
     }
@@ -181,6 +219,9 @@ def run_measured_case(
         "fem_active_sim_s": mode_active_time(intervals, "FEM"),
         "n_switches": len(switch_events),
         "n_contacts": len(contact_event_times(system, plant)),
+        # Physical closures on the committed trajectory; the notebooks assert
+        # this equals n_contacts (HYB-10). None without a contact FEM.
+        "n_closures": fem_contact_closures(plant),
     }
     # Seeded so both cases carry the same columns even though the baseline has
     # no FMU model at all.

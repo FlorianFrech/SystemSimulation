@@ -145,12 +145,13 @@ class Scenario:
 
 
 # The wall is at theta = 0 and the FEM holds the inner region containing it.
-# tol_time sits above the FEM's own 1e-4 s contact sub-step on purpose:
-# `FEMPendulum` reports its bracketing interval through `report_internal_event`,
-# and `_locate_event_time` accepts such a hint directly when it is already
-# narrower than tol_time, skipping bisection. A tighter value makes the
-# algorithm re-derive a time the FEM already knew, at about four extra FEM
-# solves per event. The cost is placement, which this scenario does not measure.
+# tol_time is the Scenario default of 1e-5 s, the same in every configuration
+# (03_switching, and both regimes of 04_performance), so one tolerance describes
+# the whole evidence set. Until 2026-09-18 this scenario used 1.5e-4 s, above the
+# FEM's 1e-4 s contact sub-step, so that `_locate_event_time` accepted the FEM's
+# own bracket without bisection. That saved about four FEM solves per contact and
+# cost every contact reported in the first sub-step (issues.md HYB-10). At 1e-5
+# the FEM's bracket still narrows the search; bisection then finishes inside it.
 CONTACT_SCENARIO = Scenario(
     name="contact",
     contact=True,
@@ -158,12 +159,10 @@ CONTACT_SCENARIO = Scenario(
     switch_band_rad=0.005,
     gate_t_open_s=0.03,
     gate_offset_rad=0.35,
-    event_tol_time=1.5e-4,
 )
 
 # No wall, no launch gate, and a wider band. Without contact there is no
-# self-reported bracket to accept, so tol_time is the sole stopping rule and is
-# set an order finer.
+# self-reported bracket, so tol_time is the sole stopping rule.
 NO_CONTACT_SCENARIO = Scenario(
     name="nocontact",
     contact=False,

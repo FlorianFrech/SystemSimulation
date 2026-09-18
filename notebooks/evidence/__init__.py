@@ -61,6 +61,8 @@ _LAZY = {
     "mode_intervals": "analysis",
     "mode_active_time": "analysis",
     "contact_event_times": "analysis",
+    "fem_contact_closures": "analysis",
+    "check_contact_dispatch": "analysis",
     "distance_to_grid": "analysis",
     "trajectory_error_metrics": "analysis",
     "run_measured_case": "analysis",
