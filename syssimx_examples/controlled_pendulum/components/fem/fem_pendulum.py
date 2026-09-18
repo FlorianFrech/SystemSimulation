@@ -220,6 +220,13 @@ class FEMPendulum(FEMComponent):
         if self._with_contact:
             self.gap = self._get_contact_gap_distance()
             self.gap_prev = self.gap
+        # Physical gap closures resolved inside accepted advances. Trial
+        # advances are excluded, so this counts what the committed trajectory
+        # did, independent of whether the coordinator dispatched `wall_hit`.
+        # The evidence notebooks assert it equals the dispatched count; a
+        # contact the FEM bounced but nobody dispatched is otherwise invisible
+        # (issues.md HYB-10).
+        self.contact_closures = 0
 
         self.setup_monitoring()
 
@@ -700,6 +707,8 @@ class FEMPendulum(FEMComponent):
         if self._with_contact:
             self.gap = self._get_contact_gap_distance()
             if self.gap_prev > 0.0 and self.gap <= 0.0:
+                if not self.in_trial:
+                    self.contact_closures += 1
                 # Report internal event with precise timing from the micro-steps.
                 self.report_internal_event(
                     event_name="wall_hit",
@@ -790,6 +799,7 @@ class FEMPendulum(FEMComponent):
         # The base zeros the Newmark state (u, v, a and previous-step buffers).
         if self._monitor is not None:
             self._monitor.close()
+        self.contact_closures = 0
         has_runtime_fields = all(
             getattr(self, field_name, None) is not None
             for field_name in (

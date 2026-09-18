@@ -11,6 +11,31 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-18
+
+### Fixed
+
+- Hybrid event detection no longer discards an internal event hint whose
+  bracket ends within `tol_time` of the interval start. With `tol_time` at or
+  above a component's sub-step, every crossing reported in the first sub-step
+  after detection started was dropped, silently, and a wall contact of the FEM
+  pendulum was then bounced without being dispatched. The two hint filters are
+  plain interval intersections now; `tol_time` bounds localization precision
+  only. (HYB-10)
+
+### Added
+
+- `FEMPendulum.contact_closures` counts the gap closures the model resolved
+  inside accepted advances. It is the physical count a coordinator's dispatched
+  `wall_hit` events must match; the evidence notebooks assert that equality.
+  (HYB-10)
+
+### Changed
+
+- Contact runs with a coarse `tol_time` dispatch every contact they resolve.
+  Event counts and dependent instants recorded with 0.4.2 under such settings
+  are not reproduced.
+
 ## [0.4.2] - 2026-09-17
 
 ### Fixed

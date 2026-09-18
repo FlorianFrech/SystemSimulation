@@ -125,3 +125,36 @@ def test_bounce_hides_the_crossing_from_the_macro_endpoints():
     comp.do_step(0.0, MACRO_DT)
     assert _indicator(comp) > 0.0, "both macro endpoints must sit on the positive side"
     assert [hint.event_name for hint in comp.get_internal_event_hints()] == ["zero"]
+
+
+def test_crossing_in_the_first_sub_step_is_dispatched():
+    """HYB-10: a hint from the first sub-step after detection starts must count.
+
+    The filters in ``_detect_crossings()`` and ``_get_earliest_event_hint()``
+    excluded any hint whose ``t_after`` lay within ``tol_time`` of the interval
+    start. With ``tol_time`` at or above the component's sub-step that is every
+    crossing reported in the first sub-step, at a macro-step edge or at a
+    located instant after an HYB-08 deferral. The margin protected nothing:
+    hints are cleared at the start of each advance and consumed on read, so
+    every hint belongs to the advance just made. ``04_performance`` lost up to
+    two of fourteen wall contacts this way, silently, and the count varied with
+    NGSolve thread scheduling.
+    """
+    # Crosses on the very first 1e-4 sub-step of the macro step, then bounces,
+    # so the endpoints show no sign change and the hint is the only evidence.
+    comp = MicroSteppingSource("Source", y0=0.5e-4, bounce=True)
+    comp.add_event_indicator("zero", func=_indicator, direction=-1)
+
+    system = System(name="first sub-step hint")
+    system.add_component(comp)
+    system.initialize(t0=0.0)
+    system.algorithm.tol_time = COARSE_TOL_TIME
+
+    system.run(0.0, MACRO_DT, MACRO_DT)
+
+    records = system.get_history().get("Events", {}).get(("Source", "zero"), [])
+    assert len(records) == 1, "a crossing reported in the first sub-step was dropped"
+    assert 0.0 <= float(records[0].t) <= 1e-4 + COARSE_TOL_TIME, (
+        "the event must be located inside the reported bracket, not by a "
+        "bisection of the macro endpoints"
+    )

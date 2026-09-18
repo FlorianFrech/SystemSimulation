@@ -585,9 +585,14 @@ class HybridAlgorithm(Algorithm):
                 raw_hints = comp.get_internal_event_hints()
                 filtered_hints = []
                 if raw_hints:
-                    # Only keep hints that are strictly within the interval
+                    # Keep every hint whose bracket intersects the interval. No
+                    # margin: hints are cleared at the start of each advance and
+                    # consumed on read, so each one belongs to the advance just
+                    # made. A margin of tol_time discarded every crossing
+                    # reported in the first sub-step whenever tol_time was at or
+                    # above the component's sub-step (issues.md HYB-10).
                     for hint in raw_hints:
-                        if hint.t_after > t_left + self.tol_time and hint.t_before < t_right:
+                        if hint.t_after > t_left and hint.t_before < t_right:
                             filtered_hints.append(hint)
                             logger.debug(
                                 "Internal hint: %s.%s in [%.8f, %.8f]",
@@ -876,8 +881,9 @@ class HybridAlgorithm(Algorithm):
         earliest: InternalEventInfo | None = None
         for comp_name, hints in internal_hints.items():
             for hint in hints:
-                # Filter hints to current interval
-                if t_left is not None and hint.t_after <= t_left + self.tol_time:
+                # Filter hints to current interval. No tol_time margin here
+                # either; see _detect_crossings and issues.md HYB-10.
+                if t_left is not None and hint.t_after <= t_left:
                     continue  # Hint is at or before current interval start
                 if t_right is not None and hint.t_before >= t_right:
                     continue  # Hint is after current interval

@@ -103,6 +103,9 @@ def test_impact_peak_omega_matches_rigid_body_theory():
     assert peak == pytest.approx(omega_max, rel=0.1), (
         f"Peak |ω|={peak:.3f} rad/s; theory predicts {omega_max:.3f} rad/s"
     )
+    # The swing reaches the wall, so the accepted-advance closure counter that
+    # the evidence notebooks check against dispatched events must have moved.
+    assert pend.contact_closures >= 1
 
 
 def test_rigid_rotation_initial_condition_has_small_stress():

@@ -36,8 +36,10 @@ observable trace. That work is summarized in
 Five themes remain open, in rough order of what gates what:
 
 1. **Reproducibility of the physics.** An identical FEM run does not reproduce
-   itself while NGSolve threading is left at its default, and marginal contact
-   events appear or vanish between runs. REPRO-02.
+   itself while NGSolve threading is left at its default. REPRO-02. The contact
+   events that appeared or vanished between such runs were not marginal
+   impacts: the hint filter dropped them (HYB-10, fixed), and thread scheduling
+   only decided which runs were hit.
 2. **Detection cost and correctness.** Roughly half of all model time is
    computed and rolled back, and detection still runs on a trajectory the
    system never commits. HYB-01 through HYB-05, EVID-01.
@@ -168,6 +170,13 @@ One global tolerance currently serves both event-hint acceptance and switch loca
 Notebook 6 favors contact with `tol_time = 1.5e-4`; notebook 5 favors switch placement with
 `tol_time = 1e-5`. Neither choice is inherently wrong, but the trade-off is hidden in one global
 float.
+
+**Narrowed 2026-09-18.** Until HYB-10, `tol_time` also served as the margin that decided whether
+a component's hint was heard at all, and the coarse setting silently dropped contacts. That use is
+removed. `tol_time` now bounds how precisely an instant is located and how located instants are
+compared with each other, nothing else. The remaining questionable use is the resume offset after
+a dispatch, HYB-11. Since the same day every evidence configuration uses the `Scenario` default of
+1e-5 s; `CONTACT_SCENARIO` no longer overrides it.
 
 **Suggested solution**
 
@@ -752,6 +761,106 @@ ignores them, so `T1.json` reported a two-region map for a three-region run.
 `03_switching` now builds the switch config from `FEM_BREAKPOINT_RAD` and records
 the installed map under `region_map`.
 
+### HYB-10 — The hint filter dropped every crossing reported in the first sub-step
+
+**Priority:** High
+
+**Status:** Fixed on 2026-09-18 in `syssimx/system/algorithms/hybrid.py`, two
+lines, covered by
+`test_crossing_in_the_first_sub_step_is_dispatched` in
+`tests/unit/system/test_hybrid_internal_hints.py`. Released in v0.4.3. The
+`04_performance` contact campaign recorded at v0.4.2 must be re-run.
+
+**Observed.** The 1.0 s contact campaign of `notebooks/04_performance.ipynb` at
+v0.4.2 with default NGSolve threads recorded 12, 13, 13, 12 and 14 contacts for
+the full-FEM case and 14, 13, 13, 14 and 13 for the switched case, against 14
+in the one-thread `03_switching` run and 14 in the reference. In the cached
+full-FEM repeat 0 the rigid-proxy angle reaches −1.1e-3 rad at 0.5816 s and
+−1.2e-3 rad at 0.8390 s and rebounds both times with no `wall_hit` in the event
+history. The impacts happened; the coordinator never dispatched them.
+
+**Cause.** `_detect_crossings()` kept a hint only if
+`hint.t_after > t_left + tol_time`, and `_get_earliest_event_hint()` applied
+the same margin. `CONTACT_SCENARIO` sets `tol_time = 1.5e-4` above the FEM's
+1e-4 s contact sub-step on purpose, so that the short-circuit in
+`_locate_event_time()` accepts the FEM's bracket without bisection. With that
+ordering a closure reported in the **first sub-step after any start of
+detection** has `t_after = t_left + 1e-4 <= t_left + 1.5e-4` and was dropped.
+Two such starts exist: the macro-step left edge (the 0.8390 s contact sits on
+the grid) and the located instant after an HYB-08 deferral (the 0.5816 s
+contact closes in sub-step `[0.5815, 0.5816]`; its committed closure fell just
+past the trial one and was lost on resume).
+
+A contact episode closes and reopens within one or two sub-steps, so the
+endpoint indicator never sees it and the hint is the only evidence (HYB-07). With
+the hint gone the no-crossing branch committed the step, the FEM bounced inside
+it, and `_report_missed_crossings()` compares endpoint signs only, so
+`missed_events` stayed empty. `raise_on_missed_event=True` would not have caught
+it. A dropped dispatch also skips `PID.resetI`, so the controller trajectory
+diverged after every lost contact.
+
+Thread scheduling entered only through REPRO-02: the default thread count moves
+the trajectory by about 1e-7 rad between repetitions, enough to move a closure
+across a sub-step boundary. One thread fixes the outcome without removing the
+defect. `03_switching` was immune because its `tol_time` of 1e-5 lies below the
+sub-step.
+
+**The margin protected nothing.** Hints are cleared at the start of every
+`_do_step_internal()` (`syssimx/components/fem.py`) and on `restore_state()`,
+and `get_internal_event_hints()` consumes them, so every hint the algorithm
+sees belongs to the advance it just made. A dispatched contact cannot be
+re-detected: afterwards the FEM holds `gap <= 0`, the closing hint needs
+`gap_prev > 0`, and a falling endpoint crossing needs a positive left value.
+
+**Fix.** Both filters are plain interval intersections now:
+`hint.t_after > t_left and hint.t_before < t_right`. `tol_time` no longer
+decides whether a component's report is heard (TIME-01).
+
+**Guard added 2026-09-18.** `FEMPendulum.contact_closures` counts gap closures
+resolved inside accepted advances (`_post_solve`, `not self.in_trial`), reset
+on `reset()`. `notebooks/evidence/analysis.py` exposes it as
+`fem_contact_closures()` and `check_contact_dispatch()`, records it as
+`n_closures` beside `n_contacts`, and both evidence notebooks assert the two
+are equal for every evaluated run. This is the invariant the coordinator's
+endpoint guard cannot check, and it would have caught this issue and any
+remaining HYB-01 loss. `tests/integration/.../test_fem_pendulum.py` asserts the
+counter moves in the contact test.
+
+**Tolerance unified 2026-09-18.** `CONTACT_SCENARIO` no longer overrides
+`event_tol_time`; every evidence configuration uses the `Scenario` default of
+1e-5 s. Bisection now finishes inside the FEM's bracket, about four extra FEM
+solves per contact, paid equally by both `04_performance` cases.
+
+**Consequence for the evidence.** Recorded contact counts from `04_performance`
+at v0.4.2 are an instrument artefact and must not be presented as marginal
+contacts of the penalty model. Re-run both regimes at v0.4.3 and expect 14
+contacts in every repetition of both cases.
+
+### HYB-11 — The resume offset after a dispatch skips `tol_time` of physical time
+
+**Priority:** Medium
+
+**Status:** Open, found 2026-09-18 by reading, not confirmed by a run. Not
+fixed in v0.4.3 on purpose: it does not affect event counts, and removing the
+offset needs a different guard against re-detection at the same instant.
+
+After handling an event, `HybridAlgorithm.step()` sets
+`t_left = dense_time.t + self.tol_time` (step 9) without advancing any
+component. The next trial and accepted advances integrate `t_right - t_left`,
+which is `tol_time` less than the physical time remaining in the macro step, so
+after every dispatched event the time label runs ahead of the physical state by
+`tol_time`. At 1.5e-4 that is 0.15 ms per contact and about 2 ms over the 14
+contacts of the 1.0 s horizon; at 1e-5 in `03_switching` it is 0.14 ms in
+total. Whether an FMU integrates by the given step size or to the given
+communication point decides whether the components stay mutually consistent
+under this offset; that is unverified.
+
+**Suggested solution.** Resume at `t_left = dense_time.t` and rely on
+`handled_events_this_step` and the far-side indicator sign to prevent
+re-detection, then verify on the case study that contact instants shift by the
+predicted amount. Add a test that the integrated physical time over a macro
+step with one event equals the macro step.
+
 ## Numerical evidence and performance
 
 ### EVID-01 — Speculative FEM work is approximately half of runtime
@@ -1068,7 +1177,10 @@ identifiers are still missing.
 - Register an ORCID and fill the line in a later release. It blocks nothing.
 - Record the release procedure in `CONTRIBUTING.md`. `scripts/bump_version.py` rewrites only
   `syssimx/__version__.py`, while `CHANGELOG.md` and `CITATION.cff` also carry the version and are
-  edited by hand, which is easy to miss.
+  edited by hand, which is easy to miss. It was missed for v0.4.2: `CITATION.cff` still read 0.4.2
+  when v0.4.3 was prepared on 2026-09-18, and the `doi` line carries a version DOI marked TODO.
+  Extend the script to rewrite `version` and `date-released` in `CITATION.cff`, or check them in
+  CI against `__version__`.
 
 ### HARD-05 — OpenModelica CVODE exports corrupt the heap in `fmi2FreeInstance`
 
@@ -1321,6 +1433,20 @@ kernel exits.
    every port value across the boundary.
 
 Steps 1 and 2 are worth doing regardless of whether the OpenModelica defect is ever fixed.
+
+**Consequence for the evidence, recorded 2026-09-18.** Because the checked-in
+plant FMU lacks `canGetAndSetFMUstate`, `FMUPendulum.restore_state()` rebuilds
+the CVODE instance from `theta` and `omega` through `reinitialize_instance()`
+after every trial advance of the hybrid algorithm. In the switched case-study
+runs the FMU region is therefore a CVODE integrator restarted at every macro
+step from its complete physical state, while the FMI-only baseline of
+`02_baseline` (no event sources, no trials) runs one continuous instance. The
+state is complete, so the trajectory is not wrong, but three things follow: the
+FMU region pays one instantiation per macro step, which RQ3 charges to it; one
+retained CVODE instance is stranded per macro step under HARD-05; and §5 of the
+paper must say that rollback for the FMU plant is re-instantiation, not state
+restore. Step 3 above (re-export with `canGetAndSetFMUstate`) removes all three
+and is the right fix for a later paper.
 
 ## Reproducibility
 
