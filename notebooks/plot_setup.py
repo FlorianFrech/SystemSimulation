@@ -13,6 +13,19 @@ REFERENCE_COLOR = "#1A1A1A"
 # forms of colour vision deficiency. The previous tab10 blue/green/orange trio
 # collapsed to near-identical greys and was hard to separate for deuteranopes,
 # which matters here because the model identity *is* the message.
+# Okabe-Ito by role, so a figure asks for a role and never for a hex code.
+# The list is closed. A figure that needs a colour this does not define needs a
+# decision recorded in the paper repository's figure_style.md first.
+SERIES_COLORS = {
+    "primary":    "#0072B2",   # blue
+    "secondary":  "#009E73",   # bluish green
+    "tertiary":   "#E69F00",   # orange
+    "deviation":  "#D55E00",   # vermillion, for error and residual series
+    "quaternary": "#CC79A7",   # reddish purple
+    "quinary":    "#56B4E9",   # sky blue
+}
+# Okabe-Ito yellow #F0E442 is deliberately absent. It fails on white in print.
+
 MODEL_COLORS = {
     "FEM":     "#0072B2",   # blue          — deformable, high-fidelity plant
     "FMU":     "#009E73",   # bluish green  — rigid-body plant
@@ -43,25 +56,27 @@ PANEL_LABEL_STYLE = dict(
     fontweight="bold", fontsize=10,
     bbox=dict(facecolor="white", edgecolor="none", alpha=0.9, pad=2),
 )
-TIMING_TOTAL_COLOR = "#2F4858"
+TIMING_TOTAL_COLOR = SERIES_COLORS["primary"]
 TIMING_FEM_COLOR   = MODEL_COLORS["FEM"]
 
+# Macro step is an ordered quantity, so the sequence runs cool to warm as the
+# step coarsens. All four are Okabe-Ito.
 STEP_SIZE_COLORS = {
-    0.02: "#7C8DA6",
-    0.01: "#D58936",
-    0.005: "#4F8F6B",
-    0.001: "#B23A48",
+    0.02: SERIES_COLORS["quinary"],
+    0.01: SERIES_COLORS["primary"],
+    0.005: SERIES_COLORS["tertiary"],
+    0.001: SERIES_COLORS["deviation"],
 }
 
 METRIC_COLORS = {
-    "e_inf": "#2F4858",
-    "e_2": "#C75C2D",
+    "e_inf": SERIES_COLORS["primary"],
+    "e_2": SERIES_COLORS["deviation"],
 }
 
 ALGO_COLORS = {
-    "Analytic": "#1A1A1A",
-    "Jacobi": "#D55E00",
-    "Gauss-Seidel": "#0072B2",
+    "Analytic": REFERENCE_COLOR,
+    "Jacobi": SERIES_COLORS["deviation"],
+    "Gauss-Seidel": SERIES_COLORS["primary"],
 }
 
 ALGO_MARKERS = {
@@ -74,6 +89,41 @@ ALGO_LINESTYLES = {
     "Jacobi": "--",
     "Gauss-Seidel": "-.",
 }
+
+def legend_above(target, handles=None, ncol=3, **kwargs):
+    """Place one legend above the figure, centred and unframed.
+
+    Every manuscript figure carries exactly one legend, and it goes above the
+    plotting area rather than into a corner of it. A legend inside the axes
+    moves whenever the data does, covers the curve it explains on the next
+    run, and forces a reader who has found one legend to look for a second.
+
+    Pass the ``Figure`` for a multi-panel figure and the ``Axes`` for a single
+    panel. ``handles`` is optional and lets a caller order the entries, which
+    matters because Matplotlib fills a multi-column legend column by column.
+    """
+    options = dict(loc="lower center", frameon=False, fontsize=8, ncol=ncol,
+                   handlelength=2.0, columnspacing=1.5, borderaxespad=0.0)
+    options.update(kwargs)
+    is_figure = isinstance(target, plt.Figure)
+    options.setdefault("bbox_to_anchor", (0.5, 1.0) if is_figure else (0.5, 1.02))
+    if handles is not None:
+        return target.legend(handles=handles, **options)
+    return target.legend(**options)
+
+
+def panel_labels(axes, labels=None, y=0.94, va="top"):
+    """Letter each panel in the upper left, bold, over a white box.
+
+    The box is what keeps the letter readable where a dense curve runs through
+    the corner. Pass ``y`` and ``va`` for a panel too short to hold a label at
+    the top, such as an annotation strip.
+    """
+    letters = labels if labels is not None else [f"({c})" for c in "abcdefgh"]
+    for label, ax in zip(letters, axes):
+        ax.text(0.012, y, label, transform=ax.transAxes, ha="left", va=va,
+                **PANEL_LABEL_STYLE)
+
 
 def set_professional_style(latex=True, fontsize=10, savefig_format="pdf"):
     """Configure Matplotlib for thesis-style scientific plots."""
