@@ -25,6 +25,20 @@ REFERENCE_STYLE = dict(color="0.62", linestyle="-", linewidth=2.6,
                        solid_capstyle="round", zorder=1)
 WALL_STYLE      = dict(color="0.45", linestyle=":", linewidth=1.0)
 GRID_STYLE      = dict(alpha=0.4)
+# A handover is a rule, not data: it marks where something happened without
+# competing with the curve it annotates.
+HANDOVER_STYLE  = dict(color="0.45", linestyle="--", linewidth=0.8)
+# Deviation, error and residual series. Okabe-Ito vermillion, which is distinct
+# from every model colour in both hue and luminance.
+DEVIATION_COLOR = "#D55E00"
+# The band that marks where the expensive model was active. Neutral grey, not a
+# model colour, because the trajectory drawn over it already carries colour and
+# a grey fill is unambiguous in greyscale.
+ACTIVE_BAND_COLOR = "0.45"
+# Background fills below 0.10 vanish in print; above 0.15 they compete with the
+# data. Only one state is ever shaded, so the band reads in greyscale
+# (figure_style.md section 3).
+MODE_BAND_ALPHA = 0.12
 PANEL_LABEL_STYLE = dict(
     fontweight="bold", fontsize=10,
     bbox=dict(facecolor="white", edgecolor="none", alpha=0.9, pad=2),
