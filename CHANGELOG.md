@@ -11,6 +11,20 @@ redesign are in [`MILESTONES.md`](MILESTONES.md).
 
 ## [Unreleased]
 
+### Added
+
+- `FEMComponent.history_times` stamps every recorded field frame with the
+  simulation time of its sub-step, and `reset()` clears it. A frame could
+  previously be mapped to an instant only through the output history, which
+  does not align with it by index, because `restore_state` records an output
+  sample without a field frame. The stamps let a field be read at a named
+  instant, such as a located switch.
+- `notebooks/evidence/fem_fields.py` and `notebooks/fem_figures.py` select the
+  FEM field at the peak of the first resolved impact and at the FEM -> rigid
+  switch that discarded the most strain energy, cache it, and draw the mesh and
+  stress figures F3d and F3e of `03_switching`. The selection is emitted with
+  T1 as `fem_field_frames`.
+
 ## [0.4.3] - 2026-09-18
 
 ### Fixed

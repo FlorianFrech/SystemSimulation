@@ -312,8 +312,9 @@ def test_record_history_frame_appends_when_enabled():
     assert len(comp._gf_hist.vecs) == 0
 
     comp._record_history = True
-    comp._record_history_frame()
+    comp._record_history_frame(0.25)
     assert len(comp._gf_hist.vecs) == 1
+    assert comp.history_times == (0.25,)
 
 
 def test_record_history_frame_skipped_when_disabled():
@@ -321,8 +322,45 @@ def test_record_history_frame_skipped_when_disabled():
     comp.initialize(t0=0.0)
 
     comp._record_history = False
-    comp._record_history_frame()
+    comp._record_history_frame(0.25)
     assert len(comp._gf_hist.vecs) == 0
+    assert comp.history_times == ()
+
+
+def test_history_frames_are_stamped_with_substep_end_times():
+    """One time per frame, at the end of each accepted sub-step."""
+    comp = _SteppingFEM(nominal_dt=0.1)
+    comp.initialize(t0=0.0)
+
+    comp.do_step(0.0, 0.3)
+
+    assert len(comp._gf_hist.vecs) == len(comp.history_times) == 3
+    assert np.allclose(comp.history_times, [0.1, 0.2, 0.3])
+
+
+def test_trial_advance_adds_neither_frame_nor_time():
+    comp = _SteppingFEM(nominal_dt=0.1)
+    comp.initialize(t0=0.0)
+    comp.do_step(0.0, 0.1)
+
+    comp._record_history = False
+    comp.do_step(0.1, 0.2)
+    comp._record_history = True
+
+    assert len(comp._gf_hist.vecs) == len(comp.history_times) == 1
+
+
+def test_restore_state_adds_no_frame_time():
+    """Restore records an output sample but no field frame, so the frame times
+    are the only reliable map from a frame to its instant."""
+    comp = _SteppingFEM(nominal_dt=0.1)
+    comp.initialize(t0=0.0)
+    comp.do_step(0.0, 0.2)
+    snapshot = comp.snapshot_state()
+
+    comp.restore_state(snapshot, t=0.2)
+
+    assert len(comp._gf_hist.vecs) == len(comp.history_times) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +376,17 @@ def test_reset_zeros_newmark_state():
 
     for gf in (comp._gf_u, comp._gf_v, comp._gf_a, comp._gf_uold, comp._gf_vold, comp._gf_aold):
         assert np.allclose(_vec(gf), 0.0)
+
+
+def test_reset_forgets_history_times():
+    comp = _SteppingFEM(nominal_dt=0.1)
+    comp.initialize(t0=0.0)
+    comp.do_step(0.0, 0.2)
+    assert comp.history_times
+
+    comp.reset()
+
+    assert comp.history_times == ()
 
 
 # ---------------------------------------------------------------------------

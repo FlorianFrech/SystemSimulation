@@ -72,6 +72,11 @@ class FEMComponent(CoSimComponent):
 
         # Registered multidim history fields: (history_attr_name, source_vec_fn).
         self._history_fields: list[tuple[str, Callable[[], Any]]] = []
+        # Simulation time of every recorded history frame. Frame k of every
+        # registered field was taken at _history_times[k]. The output history
+        # is not a substitute: restore_state records an output sample without
+        # a field frame, so the two sequences do not align by index.
+        self._history_times: list[float] = []
 
         # Time of the most recent accepted sub-step start (used by hooks that
         # report internal events with [t_before, t_after] intervals).
@@ -121,8 +126,8 @@ class FEMComponent(CoSimComponent):
         """
         self._history_fields.append((history_attr, source_vec_fn))
 
-    def _record_history_frame(self) -> None:
-        """Append one frame to every registered history field.
+    def _record_history_frame(self, t: float) -> None:
+        """Append one frame to every registered history field, stamped with ``t``.
 
         Skipped when ``_record_history`` is False (e.g. during hybrid trial
         steps) so the history reflects accepted simulation time only.
@@ -131,6 +136,12 @@ class FEMComponent(CoSimComponent):
             return
         for history_attr, source_vec_fn in self._history_fields:
             getattr(self, history_attr).AddMultiDimComponent(source_vec_fn())
+        self._history_times.append(float(t))
+
+    @property
+    def history_times(self) -> tuple[float, ...]:
+        """Simulation time of every recorded history frame, in frame order."""
+        return tuple(self._history_times)
 
     # ------------------------------------------------------------------
     # Snapshot / restore for hybrid event localization
@@ -272,8 +283,9 @@ class FEMComponent(CoSimComponent):
                 # Hook: post-solve diagnostics (event detection, stress, ...).
                 self._post_solve(t_current)
 
-                # Visualization history (gated by _record_history).
-                self._record_history_frame()
+                # Field history, stamped with the sub-step end time (gated by
+                # _record_history).
+                self._record_history_frame(t_current)
 
                 # Outputs and recorded port history.
                 self._update_output_states(t_current)
@@ -313,8 +325,9 @@ class FEMComponent(CoSimComponent):
     # Reset
     # ------------------------------------------------------------------
     def reset(self) -> None:
-        """Zero the Newmark state grid functions."""
+        """Zero the Newmark state grid functions and forget the frame times."""
         super().reset()
+        self._history_times.clear()
         for gf in (
             self._gf_u,
             self._gf_v,

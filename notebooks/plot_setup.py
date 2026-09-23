@@ -56,6 +56,37 @@ PANEL_LABEL_STYLE = dict(
     fontweight="bold", fontsize=10,
     bbox=dict(facecolor="white", edgecolor="none", alpha=0.9, pad=2),
 )
+# FEM model artifacts: the mesh and its stress fields (figure_style.md sections
+# 2 and 3). Keys are the boundary names the pendulum mesh carries. The pendulum
+# contact surface takes the FEM colour because the pendulum is the deformable
+# body. The pivot is a boundary condition rather than a contact surface, and
+# the fixed wall takes the wall grey and the wall's dotted line. Line style
+# repeats every distinction, since FEM blue and the wall grey sit at almost the
+# same luminance.
+BOUNDARY_STYLES = {
+    "rotation":     dict(color=SERIES_COLORS["quinary"], linestyle="-",
+                         label="Pivot and drive torque"),
+    "contact_head": dict(color=MODEL_COLORS["FEM"], linestyle="-",
+                         label="Pendulum contact surface"),
+    "contact_wall": dict(color=SERIES_COLORS["quaternary"], linestyle="--",
+                         label="Wall contact surface"),
+    "fix":          dict(color=WALL_STYLE["color"], linestyle=":",
+                         label="Fixed wall support"),
+}
+BOUNDARY_LINEWIDTH = 2.0
+# The two bodies differ in lightness only, so they read in greyscale and no
+# tint competes with the boundary colours. Two light tints would be the two
+# background fills section 3 forbids.
+BODY_FILLS = {"pendulum": "0.93", "wall": "0.80"}
+BODY_LABELS = {"pendulum": "Pendulum", "wall": "Wall"}
+MESH_LINE_STYLE = dict(edgecolor="0.40", linewidth=0.22)
+FIELD_MESH_STYLE = dict(edgecolor="0.10", linewidth=0.15, alpha=0.35)
+# A scalar field takes one sequential map, never categorical colours. Viridis
+# is monotone in lightness and survives greyscale.
+FIELD_CMAP = "viridis"
+FIELD_LEVELS = 8
+PEAK_MARKER_STYLE = dict(marker="o", s=18, facecolor="white", edgecolor="black",
+                         linewidth=0.7, zorder=8)
 TIMING_TOTAL_COLOR = SERIES_COLORS["primary"]
 TIMING_FEM_COLOR   = MODEL_COLORS["FEM"]
 
