@@ -8,7 +8,8 @@ live solver, so a style change costs seconds.
   impact the FEM resolved, zoomed on the contact. (b) is the outgoing state of
   the FEM -> rigid switch that discarded the most strain energy. The wall
   carries no field in (b), because the discarded energy is integrated over the
-  pendulum only (``FEMPendulum.strain_energy``).
+  pendulum only (``FEMPendulum.strain_energy``). Each colour bar ends at its
+  panel's peak, and that end is labelled with the value.
 
 Geometry is drawn in the current configuration at displacement scale one. With
 steel on steel the elastic deformation is invisible at that scale, and only the
@@ -145,10 +146,28 @@ def _field_panel(ax, fig, geometry, frame, *, bodies, zoom=None):
 
     bar = fig.colorbar(filled, ax=ax, shrink=0.72, pad=0.03, aspect=22)
     bar.set_label(rf"$\sigma_\mathrm{{vM}}$ in \si{{{unit}}}")
-    bar.locator = MaxNLocator(nbins=5)
-    bar.update_ticks()
+    _peak_ticks(bar, peak_pa / scale)
     bar.outline.set_linewidth(0.6)
     return peak_xy
+
+
+def _peak_ticks(bar, peak):
+    """Round ticks below the peak, and the peak itself as the top tick.
+
+    The contour levels run from zero to the panel's peak, so the colour bar
+    already ends exactly there. Labelling that end with the value lets the
+    reader read the peak off the figure with a tick label, the one kind of
+    in-image number figure_style.md section 1 allows without the section 9
+    exception. It is rounded to three significant figures by siunitx, exactly as
+    the caption macro rounds the same recorded value, so the two cannot differ.
+    Round ticks within a fifth of the peak are dropped, or they collide with it.
+    """
+    round_ticks = [t for t in MaxNLocator(nbins=4).tick_values(0.0, peak)
+                   if 0.0 <= t <= 0.8 * peak]
+    ticks = [*round_ticks, peak]
+    labels = [f"{t:g}" for t in round_ticks]
+    labels.append(rf"\num[round-mode=figures,round-precision=3]{{{peak!r}}}")
+    bar.set_ticks(ticks, labels=labels)
 
 
 def draw_mesh(geometry):
