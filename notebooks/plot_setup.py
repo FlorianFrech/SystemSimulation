@@ -60,9 +60,9 @@ PANEL_LABEL_STYLE = dict(
 # 2 and 3). Keys are the boundary names the pendulum mesh carries. The pendulum
 # contact surface takes the FEM colour because the pendulum is the deformable
 # body. The pivot is a boundary condition rather than a contact surface, and
-# the fixed wall takes the wall grey and the wall's dotted line. Line style
-# repeats every distinction, since FEM blue and the wall grey sit at almost the
-# same luminance.
+# the fixed wall support uses vermillion with a dash-dot line so it remains
+# distinct from both the grey wall mesh and the contact-boundary colours.
+
 BOUNDARY_STYLES = {
     "rotation":     dict(color=SERIES_COLORS["quinary"], linestyle="-",
                          label="Pivot and drive torque"),
@@ -70,7 +70,7 @@ BOUNDARY_STYLES = {
                          label="Pendulum contact surface"),
     "contact_wall": dict(color=SERIES_COLORS["quaternary"], linestyle="--",
                          label="Wall contact surface"),
-    "fix":          dict(color=WALL_STYLE["color"], linestyle=":",
+    "fix":          dict(color=SERIES_COLORS["deviation"], linestyle="-.",
                          label="Fixed wall support"),
 }
 BOUNDARY_LINEWIDTH = 2.0
