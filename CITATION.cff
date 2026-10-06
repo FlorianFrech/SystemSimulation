@@ -14,10 +14,10 @@ repository-code: "https://github.com/FlorianFrech/SystemSimulation"
 url: "https://syssimx.readthedocs.io/"
 # Version DOI for v0.4.3. Zenodo mints it from the GitHub release, so this
 # keeps the previous version DOI until that release exists; update it then.
-doi: "10.5281/zenodo.22724958"          # TODO v0.4.3: replace after Zenodo mints it
+doi: "10.5281/zenodo.22847052"          
 identifiers:
   - type: doi
-    value: "10.5281/zenodo.20631910"
+    value: "10.5281/zenodo.22847052"
     description: "Concept DOI, always resolves to the latest release"
 abstract: >-
   SysSimX is a Python framework for heterogeneous hybrid co-simulation
