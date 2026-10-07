@@ -1,6 +1,6 @@
 # Evidence notebooks
 
-Six notebooks: five produce claim evidence and one qualifies the FEM threading
+Seven notebooks: six produce claim evidence and one qualifies the FEM threading
 policy. Each declares one `Scenario`, produces focused figures or tables, and
 emits its numbers through `record()` so nothing reaches the manuscript by being
 read off a plot.
@@ -13,6 +13,7 @@ read off a plot.
 | `04_performance.ipynb` | RQ3 runtime trade-off, both contact regimes (`CONTACT` toggle) | `T2_*`, `F5_*` | FMI, FEM |
 | `05_placement.ipynb` | RQ1 Campaign A: placement error and observed order | `F1`, `F2` | FMI, FEM |
 | `06_determinism.ipynb` | Reproducibility qualification for FEM-backed evidence | `DET_threads` | FEM |
+| `07_trajectory_comparison.ipynb` | Controlled contact-free trajectory comparison with two fresh-process runs per strategy at one thread | `T2_nocontact_traj` | FMI, FEM |
 
 `V1` and `V2` are **not** register entries. `guideline/planning/evidence_plan.md`
 section 3 owns `F1`–`F7` and `T1`–`T4`, and nothing enters the manuscript that is
@@ -44,6 +45,7 @@ import the FEM backend it does not use.
 | `loop.py` | FMU discovery, the closed control loop, `assemble_system` |
 | `instrument.py` | Phase attribution: accepted, trial, bisection, events |
 | `analysis.py` | Mode timelines, error metrics, `run_measured_case` |
+| `trajectory.py` | Separate single-thread trajectory producer, raw-run checksums, repeatability gate, and union-grid comparison |
 
 ## Where numbers go
 
@@ -66,6 +68,23 @@ Override with `SYSSIMX_OM_HOME`. They fail loudly on a version mismatch: the
 reference is only comparable within one toolchain.
 
 ## Running
+
+Run `07_trajectory_comparison` in `env-paper-313` after committing and pushing
+its code. It preserves the 1.0 s contact-free policy from `04_performance` but
+pins one NGSolve thread. Two fresh-process executions of each strategy must
+repeat bit for bit before it records a comparison. The notebook kernel's thread
+setting remains untouched; the timing campaign keeps its existing default-thread
+records. From `notebooks/`, the equivalent commands are:
+
+```text
+python -m evidence.trajectory --preflight
+python -m evidence.trajectory
+```
+
+`--smoke` is a 0.05 s pipeline check with two runs per strategy and a `.smoke`
+record. Archive the producer's complete raw directory: four NPZ files, worker
+metadata and logs, and `manifest.json`. Do not infer an isolated switching error
+or a simultaneous accuracy/runtime operating point from the two experiments.
 
 Only `01_mechanism.ipynb` is gated in CI — it is the one notebook with no FMU or
 FEM dependency. The rest need the demo artifacts under
