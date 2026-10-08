@@ -132,3 +132,6 @@ opensim.log
 # Notebook smoke figures and trajectory caches
 notebooks/figures/*.smoke.pdf
 notebooks/figures/*.npz
+
+# Raw trajectory-campaign runs; archived with the evidence bundle, not in git
+notebooks/figures/T2_*_traj_*/
