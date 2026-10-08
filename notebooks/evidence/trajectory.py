@@ -137,6 +137,18 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _fmu_input_hashes(models: list, repo: Path, *, expected_count: int) -> dict:
+    """Hash the archives actually referenced by FMUComponent._path."""
+    paths = {
+        Path(model._path).resolve()
+        for model in models
+        if hasattr(model, "_path") and Path(model._path).suffix.lower() == ".fmu"
+    }
+    if len(paths) != expected_count:
+        raise ValueError(f"Expected {expected_count} FMU inputs, found {len(paths)}.")
+    return {path.relative_to(repo).as_posix(): _sha256(path) for path in sorted(paths)}
+
+
 def _pin_threads() -> None:
     import ngsolve
 
@@ -191,6 +203,8 @@ def _verify_workers(metadata: list[dict], scenario: Scenario, source: dict, smok
         if not block["ngsolve_threads_pinned"] or block["ngsolve_num_threads_env"] != "1":
             raise ValueError("Worker did not pin one NGSolve thread.")
         name, hashes = meta["case"], meta["fmu_sha256"]
+        if not hashes:
+            raise ValueError("Worker FMU input manifest is empty.")
         if name in manifests and manifests[name] != hashes:
             raise ValueError("FMU inputs changed between repetitions.")
         manifests[name] = hashes
@@ -231,8 +245,7 @@ def _worker(case: str, target: Path, smoke: bool) -> None:
     initial = {key: ev.scalar_value(outputs[key]) for key in ("theta", "omega")}
     initial_mode = getattr(plant, "active_mode", "FEM")
     models = [*system.components.values(), *getattr(plant, "models", {}).values()]
-    paths = {Path(model.fmu_path).resolve() for model in models if hasattr(model, "fmu_path")}
-    hashes = {str(p.relative_to(repo)).replace("\\", "/"): _sha256(p) for p in sorted(paths)}
+    hashes = _fmu_input_hashes(models, repo, expected_count=5 + int(case == "switched"))
     last_progress = scenario.t0
 
     def progress(t_now, _t_final):

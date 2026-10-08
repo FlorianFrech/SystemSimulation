@@ -109,7 +109,9 @@ def test_valid_campaign_emits_counts_and_pair_metrics():
     assert result["max_abs_delta_rad"] == 0.0
 
 
-@pytest.mark.parametrize("problem", ["revision", "thread", "scenario", "fmu", "backend"])
+@pytest.mark.parametrize(
+    "problem", ["revision", "thread", "scenario", "fmu", "backend", "empty_fmu"]
+)
 def test_workers_cannot_mix_configurations_or_inputs(problem):
     from copy import deepcopy
 
@@ -140,8 +142,11 @@ def test_workers_cannot_mix_configurations_or_inputs(problem):
         workers[1]["scenario"]["switch_threshold_rad"] = 0.1
     elif problem == "fmu":
         workers[1]["fmu_sha256"]["sensor.fmu"] = "changed export"
-    else:
+    elif problem == "backend":
         workers[1]["backend_versions"]["ngsolve"] = "a different version"
+    else:
+        for worker in workers:
+            worker["fmu_sha256"] = {}
     with pytest.raises(ValueError):
         _verify_workers(workers, make_scenario(), source, smoke=False)
 
@@ -194,3 +199,24 @@ def test_malformed_switch_history_cannot_be_admitted():
     switched[0]["switch_times"] = np.array([0.1])
     with pytest.raises(ValueError, match="Switch identities"):
         summarize_traces([trace(), trace()], switched, make_scenario())
+
+
+def test_hash_collection_uses_the_actual_fmu_component_path(tmp_path):
+    import hashlib
+    from types import SimpleNamespace
+
+    from evidence.trajectory import _fmu_input_hashes
+
+    archive = tmp_path / "sensor.fmu"
+    archive.write_bytes(b"actual model archive")
+    # FMUComponent stores the constructor's fmu_path in _path, not fmu_path.
+    component = SimpleNamespace(_path=str(archive))
+    hashes = _fmu_input_hashes([component, component, object()], tmp_path, expected_count=1)
+    assert hashes == {"sensor.fmu": hashlib.sha256(archive.read_bytes()).hexdigest()}
+
+
+def test_missing_fmu_inputs_cannot_silently_form_an_empty_manifest(tmp_path):
+    from evidence.trajectory import _fmu_input_hashes
+
+    with pytest.raises(ValueError, match="Expected 5 FMU inputs"):
+        _fmu_input_hashes([object()], tmp_path, expected_count=5)
